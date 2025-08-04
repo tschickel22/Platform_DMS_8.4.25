@@ -606,6 +606,8 @@ export interface Task {
   updatedAt: Date
   sourceId: string
   sourceType: string
+  link?: string
   tags?: string[]
   customFields?: Record<string, any>
+  isOverdue?: boolean
 }

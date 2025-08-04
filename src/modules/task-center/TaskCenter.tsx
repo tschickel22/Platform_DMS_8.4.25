@@ -21,6 +21,7 @@ import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskStatus, TaskPriority, TaskModule } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { TaskForm } from './components/TaskForm'
 
 export default function TaskCenter() {
   const { 
@@ -29,7 +30,8 @@ export default function TaskCenter() {
     error, 
     metrics, 
     filterTasks, 
-    getOverdueTasks 
+    getOverdueTasks,
+    createTask
   } = useTasks()
   
   const [searchTerm, setSearchTerm] = useState('')
@@ -37,6 +39,7 @@ export default function TaskCenter() {
   const [moduleFilter, setModuleFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
 
   // Filter tasks based on current filters
   const filteredTasks = tasks.filter(task => {
@@ -119,6 +122,15 @@ export default function TaskCenter() {
     }
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+    } catch (error) {
+      throw error
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -153,6 +165,14 @@ export default function TaskCenter() {
 
   return (
     <div className="space-y-6">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          onSave={handleCreateTask}
+          onCancel={() => setShowTaskForm(false)}
+        />
+      )}
+
       {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
@@ -167,6 +187,10 @@ export default function TaskCenter() {
               {filteredTasks.length} tasks
             </Badge>
             {metrics.overdueTasks > 0 && (
+          <Button onClick={() => setShowTaskForm(true)} className="shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
               <Badge className="bg-red-50 text-red-700 border-red-200">
                 {metrics.overdueTasks} overdue
               </Badge>
