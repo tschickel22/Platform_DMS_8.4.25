@@ -23,8 +23,8 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
   const [statusFilter, setStatusFilter] = useState('all')
   const [technicianFilter, setTechnicianFilter] = useState('all')
 
-  // Use mock data as fallback - in real app, fetch from API
-  const inspections = mockPDI.sampleInspections
+  // Use prop inspections first, fallback to mock data if empty
+  const inspections = propInspections.length > 0 ? propInspections : mockPDI.sampleInspections
 
   const getStatusColor = (status: string) => {
     return mockPDI.statusColors[status] || 'bg-gray-100 text-gray-800'
@@ -157,14 +157,14 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onViewInspection && onViewInspection(inspection.id)}
+                        onClick={() => onViewInspection(inspection.id)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onEditInspection && onEditInspection(inspection.id)}
+                        onClick={() => onEditInspection(inspection.id)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
