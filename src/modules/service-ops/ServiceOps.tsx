@@ -491,6 +491,7 @@ const filteredTickets = tickets.filter(ticket =>
                     Edit
                   </Button>
                   {ticket.customFields?.customerPortalAccess !== false && (
+                    <>
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -508,6 +509,7 @@ const filteredTickets = tickets.filter(ticket =>
                         <ListTodo className="h-3 w-3 mr-1" />
                         Task
                       </Button>
+                    </>
                   )}
                   <Button 
                     variant="outline" 
