@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast'
 import Papa from 'papaparse'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
+import { ListTodo } from 'lucide-react'
 
 interface InventoryTableProps {
   vehicles: Vehicle[]
@@ -22,6 +23,7 @@ interface InventoryTableProps {
   onDelete: (vehicleId: string) => void
   onView: (vehicle: Vehicle) => void
   onStatusChange: (vehicleId: string, status: VehicleStatus) => void
+  onCreateTask: (vehicle: Vehicle) => void
 }
 
 export function InventoryTable({ 
@@ -29,7 +31,8 @@ export function InventoryTable({
   onEdit, 
   onDelete, 
   onView, 
-  onStatusChange 
+  onStatusChange,
+  onCreateTask
 }: InventoryTableProps) {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
@@ -467,6 +470,9 @@ export function InventoryTable({
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => onEdit(vehicle)}>
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onCreateTask(vehicle)}>
+                          <ListTodo className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => onDelete(vehicle.id)}>
                           <Trash2 className="h-4 w-4" />

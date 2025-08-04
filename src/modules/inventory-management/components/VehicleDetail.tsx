@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { X, Edit, Package, DollarSign, Calendar, Truck, Wrench, FileText, Image as ImageIcon, Video } from 'lucide-react'
+import { ListTodo } from 'lucide-react'
 import { Vehicle, VehicleStatus, VehicleType } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -12,9 +13,10 @@ interface VehicleDetailProps {
   vehicle: Vehicle
   onClose: () => void
   onEdit: (vehicle: Vehicle) => void
+  onCreateTask: (vehicle: Vehicle) => void
 }
 
-export function VehicleDetail({ vehicle, onClose, onEdit }: VehicleDetailProps) {
+export function VehicleDetail({ vehicle, onClose, onEdit, onCreateTask }: VehicleDetailProps) {@@ .. @@
   const getStatusColor = (status: VehicleStatus) => {
     switch (status) {
       case VehicleStatus.AVAILABLE:
@@ -54,6 +56,10 @@ export function VehicleDetail({ vehicle, onClose, onEdit }: VehicleDetailProps) 
               }} size="sm">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Home/RV
+              </Button>
+              <Button onClick={() => onCreateTask(vehicle)} size="sm" variant="outline">
+                <ListTodo className="h-4 w-4 mr-2" />
+                Create Task
               </Button>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
@@ -361,6 +367,10 @@ export function VehicleDetail({ vehicle, onClose, onEdit }: VehicleDetailProps) 
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <Button variant="outline" onClick={onClose}>
               Close
+            </Button>
+            <Button variant="outline" onClick={() => onCreateTask(vehicle)}>
+              <ListTodo className="h-4 w-4 mr-2" />
+              Create Task
             </Button>
             <Button onClick={() => onEdit(vehicle)}>
               <Edit className="h-4 w-4 mr-2" />
