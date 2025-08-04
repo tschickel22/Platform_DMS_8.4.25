@@ -25,7 +25,7 @@ import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
-import { TaskModule, TaskPriority } from '@/types'
+import { TaskModule, TaskPriority, TaskStatus } from '@/types'
 
 function LeadsList() {
   const {
@@ -49,6 +49,7 @@ function LeadsList() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showNewLeadForm, setShowNewLeadForm] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
+  const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
 
   const getStatusColor = (status: LeadStatus) => {
     switch (status) {
@@ -109,27 +110,50 @@ function LeadsList() {
     try {
       await createTask(taskData)
       setShowTaskForm(false)
+      setTaskInitialData(null)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
     } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
       throw error
     }
   }
 
-  const getTaskInitialData = (lead: Lead) => ({
-    title: `Follow up with ${lead.firstName} ${lead.lastName}`,
-    description: `Follow up on ${lead.status.replace('_', ' ')} lead from ${lead.source}`,
-    module: TaskModule.CRM,
-    priority: lead.score && lead.score >= 80 ? TaskPriority.HIGH : 
-              lead.score && lead.score >= 60 ? TaskPriority.MEDIUM : TaskPriority.LOW,
-    sourceId: lead.id,
-    sourceType: 'lead',
-    assignedTo: lead.assignedTo,
-    customFields: {
-      leadScore: lead.score,
-      leadSource: lead.source,
-      leadEmail: lead.email,
-      leadPhone: lead.phone
+  const getTaskInitialData = (lead: Lead) => {
+    const lastActivity = lead.lastActivity ? new Date(lead.lastActivity) : new Date(lead.createdAt)
+    const dueDate = new Date(lastActivity)
+    dueDate.setDate(dueDate.getDate() + 3) // Due in 3 days
+
+    return {
+      title: `Follow up with ${lead.firstName} ${lead.lastName}`,
+      description: `Follow up on ${lead.status.replace('_', ' ')} lead from ${lead.source}`,
+      module: TaskModule.CRM,
+      priority: lead.score && lead.score >= 80 ? TaskPriority.HIGH : 
+                lead.score && lead.score >= 60 ? TaskPriority.MEDIUM : TaskPriority.LOW,
+      sourceId: lead.id,
+      sourceType: 'lead',
+      assignedTo: lead.assignedTo,
+      dueDate,
+      customFields: {
+        leadScore: lead.score,
+        leadSource: lead.source,
+        leadEmail: lead.email,
+        leadPhone: lead.phone
+      }
     }
-  })
+  }
+
+  const handleCreateTaskForLead = (lead: Lead) => {
+    const initialData = getTaskInitialData(lead)
+    setTaskInitialData(initialData)
+    setShowTaskForm(true)
+  }
 
   if (selectedLead) {
     const leadActivities = getActivitiesByLead(selectedLead.id)
@@ -141,7 +165,7 @@ function LeadsList() {
         {/* Task Form Modal */}
         {showTaskForm && (
           <TaskForm
-            initialData={getTaskInitialData(selectedLead)}
+            initialData={taskInitialData || undefined}
             onSave={handleCreateTask}
             onCancel={() => setShowTaskForm(false)}
           />
@@ -505,8 +529,7 @@ function LeadsList() {
                         className="shadow-sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setSelectedLead(lead)
-                          setShowTaskForm(true)
+                          handleCreateTaskForLead(lead)
                         }}
                       >
                         <ListTodo className="h-3 w-3 mr-1" />

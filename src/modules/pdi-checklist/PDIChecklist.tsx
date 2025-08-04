@@ -3,12 +3,15 @@ import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp } from 'lucide-react'
+import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
 import { PDITemplate, PDIInspection, PDIInspectionStatus } from './types'
 import { usePDIManagement } from './hooks/usePDIManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 import { PDITemplateList } from './components/PDITemplateList'
 import { PDITemplateForm } from './components/PDITemplateForm'
 import { PDIInspectionList } from './components/PDIInspectionList'
@@ -35,6 +38,7 @@ function PDIChecklistDashboard() {
   const { vehicles } = useInventoryManagement()
   const { user } = useAuth()
   const { toast } = useToast()
+  const { createTask } = useTasks()
   
   const [activeTab, setActiveTab] = useState('inspections')
   const [showTemplateForm, setShowTemplateForm] = useState(false)
@@ -43,6 +47,8 @@ function PDIChecklistDashboard() {
   const [showInspectionDetail, setShowInspectionDetail] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<PDITemplate | null>(null)
   const [selectedInspection, setSelectedInspection] = useState<PDIInspection | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
   // Template Management
   const handleCreateTemplate = () => {
@@ -237,6 +243,60 @@ function PDIChecklistDashboard() {
     }
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForInspection = (inspection: PDIInspection) => {
+    const vehicle = vehicles.find(v => v.id === inspection.vehicleId)
+    const vehicleInfo = vehicle 
+      ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+      : inspection.vehicleId
+
+    // Determine priority based on inspection status and defects
+    const hasDefects = inspection.defects && inspection.defects.length > 0
+    const priority = hasDefects ? TaskPriority.HIGH : 
+                    inspection.status === PDIInspectionStatus.IN_PROGRESS ? TaskPriority.MEDIUM : 
+                    TaskPriority.LOW
+
+    // Set due date based on inspection status
+    const dueDate = inspection.status === PDIInspectionStatus.IN_PROGRESS 
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for in-progress
+      : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days for others
+
+    setInitialTaskData({
+      sourceId: inspection.id,
+      sourceType: 'pdi_inspection',
+      module: TaskModule.PDI,
+      title: `Complete PDI for ${vehicleInfo}`,
+      description: `PDI Status: ${inspection.status}${hasDefects ? ` (${inspection.defects.length} defects found)` : ''}`,
+      priority,
+      assignedTo: inspection.inspectorId,
+      dueDate,
+      link: `/pdi`,
+      customFields: {
+        vehicleId: inspection.vehicleId,
+        templateId: inspection.templateId,
+        defectCount: inspection.defects?.length || 0
+      }
+    })
+    setShowTaskForm(true)
+  }
+
   // Stats
   const totalTemplates = templates.length
   const activeTemplates = templates.filter(t => t.isActive).length
@@ -254,6 +314,18 @@ function PDIChecklistDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+
       {/* Template Form Modal */}
       {showTemplateForm && (
         <PDITemplateForm
@@ -392,6 +464,7 @@ function PDIChecklistDashboard() {
             onCreateInspection={handleCreateInspection}
             onViewInspection={handleViewInspection}
             onContinueInspection={handleContinueInspection}
+            onCreateTask={handleCreateTaskForInspection}
           />
         </TabsContent>
 

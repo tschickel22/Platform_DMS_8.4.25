@@ -172,6 +172,7 @@ function DealsList() {
           deal={selectedDeal}
           onClose={() => setShowDealDetail(false)}
           onEdit={handleEditDeal}
+          onCreateTask={handleCreateTaskForDeal}
         />
       )}
 

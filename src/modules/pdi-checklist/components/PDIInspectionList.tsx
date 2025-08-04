@@ -5,23 +5,29 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, Plus, Eye, Edit, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Search, Plus, Eye, Edit, CheckCircle, XCircle, Clock, ListTodo } from 'lucide-react'
 import { mockPDI } from '@/mocks/pdiMock'
 import { formatDate } from '@/lib/utils'
+import { PDIInspection } from '../types'
 
 interface PDIInspectionListProps {
+  inspections: PDIInspection[]
   onNewInspection: () => void
   onViewInspection: (id: string) => void
   onEditInspection: (id: string) => void
+  onCreateTask?: (inspection: PDIInspection) => void
 }
-
-export function PDIInspectionList({ onNewInspection, onViewInspection, onEditInspection }: PDIInspectionListProps) {
+export function PDIInspectionList({ 
+  inspections, 
+  onNewInspection, 
+  onViewInspection, 
+  onEditInspection,
+  onCreateTask 
+}: PDIInspectionListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [technicianFilter, setTechnicianFilter] = useState('all')
 
-  // Use mock data as fallback - in real app, fetch from API
-  const inspections = mockPDI.sampleInspections
 
   const getStatusColor = (status: string) => {
     return mockPDI.statusColors[status] || 'bg-gray-100 text-gray-800'
@@ -165,6 +171,15 @@ export function PDIInspectionList({ onNewInspection, onViewInspection, onEditIns
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      {onCreateTask && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCreateTask(inspection)}
+                        >
+                          <ListTodo className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
