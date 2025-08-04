@@ -499,6 +499,15 @@ function ServiceTicketsList() {
                     >
                       Customer View
                     </Button>
+                   <Button 
+                     variant="outline" 
+                     size="sm" 
+                     className="shadow-sm"
+                     onClick={() => handleCreateTaskForServiceTicket(ticket)}
+                   >
+                     <ListTodo className="h-3 w-3 mr-1" />
+                     Task
+                   </Button>
                   )}
                 </div>
               </div>
