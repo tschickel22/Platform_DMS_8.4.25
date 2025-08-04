@@ -461,9 +461,9 @@ function PDIChecklistDashboard() {
         <TabsContent value="inspections">
           <PDIInspectionList
             inspections={inspections}
-            onCreateInspection={handleCreateInspection}
-            onViewInspection={handleViewInspection}
-            onContinueInspection={handleContinueInspection}
+            onNewInspection={handleCreateInspection}
+            onViewInspection={handleViewInspectionDetail}
+            onEditInspection={handleEditInspectionById}
             onCreateTask={handleCreateTaskForInspection}
           />
         </TabsContent>
