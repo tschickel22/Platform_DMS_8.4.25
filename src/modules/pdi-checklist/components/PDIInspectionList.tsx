@@ -168,6 +168,16 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      {onCreateTask && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCreateTask(inspection)}
+                          title="Create Task"
+                        >
+                          <ListTodo className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
