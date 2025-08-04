@@ -17,17 +17,14 @@ interface PDIInspectionListProps {
   onEditInspection: (id: string) => void
   onCreateTask?: (inspection: PDIInspection) => void
 }
-export function PDIInspectionList({ 
-  inspections, 
-  onNewInspection, 
-  onViewInspection, 
-  onEditInspection,
-  onCreateTask 
-}: PDIInspectionListProps) {
+
+export default function PDIInspectionList({ inspections: propInspections, onNewInspection, onViewInspection, onEditInspection, onCreateTask }: PDIInspectionListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [technicianFilter, setTechnicianFilter] = useState('all')
 
+  // Use mock data as fallback - in real app, fetch from API
+  const inspections = mockPDI.sampleInspections
 
   const getStatusColor = (status: string) => {
     return mockPDI.statusColors[status] || 'bg-gray-100 text-gray-800'
@@ -171,15 +168,6 @@ export function PDIInspectionList({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {onCreateTask && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onCreateTask(inspection)}
-                        >
-                          <ListTodo className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>
