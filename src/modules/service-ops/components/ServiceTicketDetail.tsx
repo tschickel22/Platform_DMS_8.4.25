@@ -15,19 +15,22 @@ import {
   AlertCircle,
   Edit,
   Save,
-  X
+  X,
+  ListTodo
 } from 'lucide-react'
 import { mockServiceOps } from '@/mocks/serviceOpsMock'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { ServiceTicket } from '@/types'
 
 interface ServiceTicketDetailProps {
   ticketId: string
   onUpdate?: (ticketId: string, updates: any) => void
   onClose?: () => void
+  onCreateTask?: (ticket: ServiceTicket) => void
 }
 
-export function ServiceTicketDetail({ ticketId, onUpdate, onClose }: ServiceTicketDetailProps) {
+export function ServiceTicketDetail({ ticketId, onUpdate, onClose, onCreateTask }: ServiceTicketDetailProps) {
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -79,6 +82,12 @@ export function ServiceTicketDetail({ ticketId, onUpdate, onClose }: ServiceTick
             <Edit className="h-4 w-4 mr-2" />
             {isEditing ? 'Cancel' : 'Edit'}
           </Button>
+          {onCreateTask && (
+            <Button variant="outline" onClick={() => onCreateTask(ticket)}>
+              <ListTodo className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+          )}
           {onClose && (
             <Button variant="outline" onClick={onClose}>
               <X className="h-4 w-4" />

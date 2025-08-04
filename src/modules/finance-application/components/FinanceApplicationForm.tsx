@@ -8,19 +8,23 @@ import { FinanceApplication, ApplicationTemplate, ApplicationData } from '../typ
 import { useFinanceApplications } from '../hooks/useFinanceApplications'
 import { ApplicationSectionForm } from './ApplicationSectionForm'
 import { useTenant } from '@/contexts/TenantContext'
+import { ListTodo } from 'lucide-react'
+import { FinanceApplication as FinanceApplicationType } from '../types'
 
 interface FinanceApplicationFormProps {
   application: FinanceApplication
   onSave: (data: Partial<FinanceApplication>) => void
   onCancel: () => void
   onSubmit: (data: Partial<FinanceApplication>) => void
+  onCreateTask?: (application: FinanceApplicationType) => void
 }
 
 export function FinanceApplicationForm({ 
   application, 
   onSave, 
   onCancel, 
-  onSubmit 
+  onSubmit,
+  onCreateTask
 }: FinanceApplicationFormProps) {
   const { tenant } = useTenant()
   const { getTemplateById } = useFinanceApplications()
@@ -190,6 +194,12 @@ export function FinanceApplicationForm({
             <p className="text-muted-foreground">
               {application.customerName || 'New Application'}
             </p>
+            {onCreateTask && (
+              <Button variant="outline" size="sm" onClick={() => onCreateTask(application)}>
+                <ListTodo className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-2">

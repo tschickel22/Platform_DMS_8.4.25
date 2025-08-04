@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Plus, FileText, Settings, CreditCard, Eye, Users, Search, Save, User, Clock } from 'lucide-react'
+import { ListTodo } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 import { FinanceApplicationForm } from './components/FinanceApplicationForm'
