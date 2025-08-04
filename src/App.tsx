@@ -32,6 +32,7 @@ import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
+import TaskCenter from '@/modules/task-center/TaskCenter'
 
 function App() {
   return (
@@ -71,6 +72,7 @@ function App() {
                           <Route path="/client-applications/*" element={<FinanceApplication />} />
                           <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
                           <Route path="/tags/*" element={<TaggingEngine />} />
+                          <Route path="/tasks/*" element={<TaskCenter />} />
                         </Routes>
                       </Layout>
                     </ProtectedRoute>
