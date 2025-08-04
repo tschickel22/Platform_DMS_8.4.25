@@ -273,6 +273,74 @@ export function useTasks() {
     filterTasks,
     getTasksByModule,
     getOverdueTasks,
-    getTasksByAssignee
+    getTasksByAssignee,
+    createTask,
+    updateTask,
+    deleteTask
+  }
+
+  // Create a new task
+  const createTask = async (taskData: Partial<Task>): Promise<Task> => {
+    const newTask: Task = {
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: taskData.title || '',
+      description: taskData.description || '',
+      status: taskData.status || TaskStatus.PENDING,
+      priority: taskData.priority || TaskPriority.MEDIUM,
+      module: taskData.module || TaskModule.CRM,
+      assignedTo: taskData.assignedTo,
+      assignedToName: taskData.assignedToName || getAssigneeName(taskData.assignedTo),
+      dueDate: taskData.dueDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
+      sourceId: taskData.sourceId || '',
+      sourceType: taskData.sourceType || '',
+      link: taskData.link || getModuleLink(taskData.module || TaskModule.CRM),
+      tags: taskData.tags || [],
+      isOverdue: false,
+      customFields: taskData.customFields || {},
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+
+    // In a real app, this would save to a database
+    // For now, we'll just return the created task
+    return newTask
+  }
+
+  // Update an existing task
+  const updateTask = async (taskId: string, updates: Partial<Task>): Promise<Task | null> => {
+    // In a real app, this would update the task in the database
+    // For now, we'll simulate the update
+    const updatedTask = {
+      ...tasks.find(t => t.id === taskId),
+      ...updates,
+      updatedAt: new Date()
+    } as Task
+
+    return updatedTask
+  }
+
+  // Delete a task
+  const deleteTask = async (taskId: string): Promise<void> => {
+    // In a real app, this would delete the task from the database
+    // For now, we'll just simulate the deletion
+    console.log('Deleting task:', taskId)
+  }
+
+  // Helper function to get module link
+  const getModuleLink = (module: TaskModule): string => {
+    switch (module) {
+      case TaskModule.CRM:
+        return '/crm'
+      case TaskModule.SERVICE:
+        return '/service'
+      case TaskModule.DELIVERY:
+        return '/delivery'
+      case TaskModule.FINANCE:
+        return '/finance'
+      case TaskModule.WARRANTY:
+        return '/warranty-mgmt'
+      default:
+        return '/'
+    }
   }
 }
