@@ -134,6 +134,11 @@ function PDIChecklistDashboard() {
       const newInspection = await createInspection(inspectionData)
       setShowNewInspectionForm(false)
       
+      toast({
+        title: 'Inspection Created',
+        description: 'New PDI inspection has been created successfully',
+      })
+      
       // Open the inspection form for the new inspection
       setSelectedInspection(newInspection)
       setShowInspectionForm(true)

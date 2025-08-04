@@ -438,6 +438,7 @@ export function usePDIManagement() {
 
     setInspections(updatedInspections)
     saveInspectionsToStorage(updatedInspections)
+    saveInspectionsToStorage(updatedInspections)
   }
 
   const completeInspection = async (inspectionId: string, notes?: string) => {
