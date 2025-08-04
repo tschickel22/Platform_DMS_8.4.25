@@ -265,18 +265,22 @@ export function useTasks() {
     return tasks.filter(task => task.assignedTo === assigneeId)
   }
 
-  return {
-    tasks,
-    loading,
-    error,
-    metrics,
-    filterTasks,
-    getTasksByModule,
-    getOverdueTasks,
-    getTasksByAssignee,
-    createTask,
-    updateTask,
-    deleteTask
+  // Helper function to get module link
+  const getModuleLink = (module: TaskModule): string => {
+    switch (module) {
+      case TaskModule.CRM:
+        return '/crm'
+      case TaskModule.SERVICE:
+        return '/service'
+      case TaskModule.DELIVERY:
+        return '/delivery'
+      case TaskModule.FINANCE:
+        return '/finance'
+      case TaskModule.WARRANTY:
+        return '/warranty-mgmt'
+      default:
+        return '/'
+    }
   }
 
   // Create a new task
@@ -326,21 +330,17 @@ export function useTasks() {
     console.log('Deleting task:', taskId)
   }
 
-  // Helper function to get module link
-  const getModuleLink = (module: TaskModule): string => {
-    switch (module) {
-      case TaskModule.CRM:
-        return '/crm'
-      case TaskModule.SERVICE:
-        return '/service'
-      case TaskModule.DELIVERY:
-        return '/delivery'
-      case TaskModule.FINANCE:
-        return '/finance'
-      case TaskModule.WARRANTY:
-        return '/warranty-mgmt'
-      default:
-        return '/'
-    }
+  return {
+    tasks,
+    loading,
+    error,
+    metrics,
+    filterTasks,
+    getTasksByModule,
+    getOverdueTasks,
+    getTasksByAssignee,
+    createTask,
+    updateTask,
+    deleteTask
   }
 }

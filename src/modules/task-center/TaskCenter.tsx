@@ -15,7 +15,8 @@ import {
   TrendingUp,
   ListTodo,
   Users,
-  Target
+  Target,
+  Plus
 } from 'lucide-react'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskStatus, TaskPriority, TaskModule } from '@/types'
@@ -186,15 +187,17 @@ export default function TaskCenter() {
             <Badge className="bg-blue-50 text-blue-700 border-blue-200">
               {filteredTasks.length} tasks
             </Badge>
-            {metrics.overdueTasks > 0 && (
-          <Button onClick={() => setShowTaskForm(true)} className="shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Task
-          </Button>
-              <Badge className="bg-red-50 text-red-700 border-red-200">
-                {metrics.overdueTasks} overdue
-              </Badge>
-            )}
+            <div className="flex items-center space-x-2">
+              <Button onClick={() => setShowTaskForm(true)} className="shadow-sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Task
+              </Button>
+              {metrics.overdueTasks > 0 && (
+                <Badge className="bg-red-50 text-red-700 border-red-200">
+                  {metrics.overdueTasks} overdue
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
