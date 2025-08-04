@@ -16,7 +16,7 @@ interface VehicleDetailProps {
   onCreateTask: (vehicle: Vehicle) => void
 }
 
-export function VehicleDetail({ vehicle, onClose, onEdit, onCreateTask }: VehicleDetailProps) {@@ .. @@
+export function VehicleDetail({ vehicle, onClose, onEdit, onCreateTask }: VehicleDetailProps) {
   const getStatusColor = (status: VehicleStatus) => {
     switch (status) {
       case VehicleStatus.AVAILABLE:
@@ -185,52 +185,6 @@ export function VehicleDetail({ vehicle, onClose, onEdit, onCreateTask }: Vehicl
                       <label className="text-sm font-medium text-muted-foreground">Condition</label>
                       <p className="font-medium">{vehicle.customFields.condition}</p>
                     </div>
-                  )}
-                  
-                  {/* MH-specific fields */}
-                  {(vehicle.type === VehicleType.SINGLE_WIDE || 
-                    vehicle.type === VehicleType.DOUBLE_WIDE || 
-                    vehicle.type === VehicleType.TRIPLE_WIDE || 
-                    vehicle.type === VehicleType.PARK_MODEL || 
-                    vehicle.type === VehicleType.MODULAR_HOME) && (
-                    <>
-                      {vehicle.customFields?.squareFootage && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Square Footage</label>
-                          <p className="font-medium">{vehicle.customFields.squareFootage} sq ft</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.bedrooms && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Bedrooms</label>
-                          <p className="font-medium">{vehicle.customFields.bedrooms}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.bathrooms && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Bathrooms</label>
-                          <p className="font-medium">{vehicle.customFields.bathrooms}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.constructionType && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Construction Type</label>
-                          <p className="font-medium">{vehicle.customFields.constructionType}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.exteriorSiding && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Exterior Siding</label>
-                          <p className="font-medium">{vehicle.customFields.exteriorSiding}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.roofType && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Roof Type</label>
-                          <p className="font-medium">{vehicle.customFields.roofType}</p>
-                        </div>
-                      )}
-                    </>
                   )}
                   
                   {/* MH-specific fields */}
