@@ -66,14 +66,14 @@ function ServiceTicketsList() {
     }
   }
 
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.customerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.id.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
-  .filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter)
+const filteredTickets = tickets.filter(ticket =>
+  ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.customerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.id?.toLowerCase().includes(searchTerm.toLowerCase())
+)
+.filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
+.filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter)
 
   const handleCreateTicket = () => {
     setSelectedTicket(null)
