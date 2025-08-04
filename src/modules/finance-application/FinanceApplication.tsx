@@ -20,14 +20,20 @@ import { InviteCustomerModal } from './components/InviteCustomerModal'
 import { useFinanceApplications } from './hooks/useFinanceApplications'
 import { FinanceApplication as FinanceApplicationType } from './types'
 import { mockFinanceApplications } from './mocks/financeApplicationMock'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 
 function FinanceApplicationDashboard() {
   const { tenant } = useTenant()
   const { toast } = useToast()
+  const { createTask } = useTasks()
   const [activeTab, setActiveTab] = useState('applications')
   const [showApplicationTypeSelectionModal, setShowApplicationTypeSelectionModal] = useState(false)
   const [applicationCreationMode, setApplicationCreationMode] = useState<'none' | 'completeNow' | 'inviteCustomer'>('none')
   const [selectedApplication, setSelectedApplication] = useState<FinanceApplicationType | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   
   // Search and filter states
   const [applicationSearchQuery, setApplicationSearchQuery] = useState('')
@@ -207,6 +213,57 @@ function FinanceApplicationDashboard() {
       })
     }
   }
+
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForApplication = (application: FinanceApplicationType) => {
+    // Determine priority based on application status
+    const priority = application.status === 'under_review' ? TaskPriority.HIGH :
+                    application.status === 'submitted' ? TaskPriority.MEDIUM :
+                    application.status === 'conditionally_approved' ? TaskPriority.HIGH :
+                    TaskPriority.LOW
+
+    // Set due date based on status
+    const dueDate = application.status === 'under_review' || application.status === 'conditionally_approved'
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for urgent review
+      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days for others
+
+    setInitialTaskData({
+      sourceId: application.id,
+      sourceType: 'finance_application',
+      module: TaskModule.FINANCE,
+      title: `Review application: ${application.customerName || 'Unnamed Application'}`,
+      description: `Application status: ${application.status.replace('_', ' ')}, Customer: ${application.customerEmail || 'No email'}`,
+      priority,
+      dueDate,
+      link: `/client-applications`,
+      customFields: {
+        customerId: application.customerId,
+        customerName: application.customerName,
+        customerEmail: application.customerEmail,
+        applicationStatus: application.status,
+        templateId: application.templateId
+      }
+    })
+    setShowTaskForm(true)
+  }
+
   const handleCloseApplicationForm = () => {
     setSelectedApplication(null)
     setCurrentAdminNote('')
@@ -618,6 +675,18 @@ function FinanceApplicationDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+
       {/* Application Type Selection Modal */}
       {showApplicationTypeSelectionModal && (
         <ApplicationTypeSelectionModal
@@ -789,6 +858,14 @@ function FinanceApplicationDashboard() {
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCreateTaskForApplication(application)}
+                      >
+                        <ListTodo className="h-4 w-4 mr-2" />
+                        Task
                       </Button>
                     </div>
                   </div>
