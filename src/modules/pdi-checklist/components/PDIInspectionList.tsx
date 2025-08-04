@@ -139,9 +139,14 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
             <TableBody>
               {filteredInspections.map((inspection) => (
                 <TableRow key={inspection.id}>
-                  <TableCell className="font-medium">{inspection.unitInfo}</TableCell>
-                  <TableCell>{inspection.stockNumber}</TableCell>
-                  <TableCell>{inspection.technicianName}</TableCell>
+                  <TableCell className="font-medium">
+                    {inspection.vehicle ? 
+                      `${inspection.vehicle.year} ${inspection.vehicle.make} ${inspection.vehicle.model}` : 
+                      inspection.vehicleId
+                    }
+                  </TableCell>
+                  <TableCell>{inspection.vehicleId}</TableCell>
+                  <TableCell>{inspection.inspectorId}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(inspection.status)}
@@ -153,9 +158,9 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
                   <TableCell>
                     <div className="text-sm">{calculateProgress(inspection)}% Complete</div>
                   </TableCell>
-                  <TableCell>{formatDate(inspection.startedDate)}</TableCell>
+                  <TableCell>{formatDate(inspection.startedAt)}</TableCell>
                   <TableCell>
-                    {inspection.completedDate ? formatDate(inspection.completedDate) : '-'}
+                    {inspection.completedAt ? formatDate(inspection.completedAt) : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
