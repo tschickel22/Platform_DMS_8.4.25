@@ -574,7 +574,9 @@ export enum TaskModule {
   SERVICE = 'service',
   DELIVERY = 'delivery',
   FINANCE = 'finance',
-  WARRANTY = 'warranty'
+  WARRANTY = 'warranty',
+  QUOTE = 'quote',
+  PDI = 'pdi'
 }
 
 export enum TaskStatus {
