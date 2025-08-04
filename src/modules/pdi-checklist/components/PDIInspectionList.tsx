@@ -42,7 +42,7 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
   const filteredInspections = inspections.filter(inspection => {
     const matchesSearch = inspection.unitInfo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inspection.stockNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inspection.technicianName.toLowerCase().includes(searchTerm.toLowerCase())
+                         inspection.technicianName?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || inspection.status === statusFilter
     const matchesTechnician = technicianFilter === 'all' || inspection.technicianId === technicianFilter
     
