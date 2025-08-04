@@ -568,3 +568,11 @@ export enum ColumnType {
   CURRENCY = 'currency',
   BOOLEAN = 'boolean'
 }
+
+export enum TaskModule {
+  CRM = 'crm',
+  SERVICE = 'service',
+  DELIVERY = 'delivery',
+  FINANCE = 'finance',
+  WARRANTY = 'warranty'
+}
