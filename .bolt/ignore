@@ -28,6 +28,19 @@
 !src/modules/tagging-engine/hooks/
 !src/modules/tagging-engine/types.ts
 
+# Explicitly unignore main module component files for task integration
+!src/modules/crm-prospecting/CRMProspecting.tsx
+!src/modules/quote-builder/QuoteBuilder.tsx
+!src/modules/pdi-checklist/PDIChecklist.tsx
+!src/modules/delivery-tracker/DeliveryTracker.tsx
+!src/modules/warranty-mgmt/index.tsx
+!src/modules/service-ops/ServiceOps.tsx
+!src/modules/crm-sales-deal/CRMSalesDeal.tsx
+!src/modules/invoice-payments/InvoicePayments.tsx
+!src/modules/finance/FinanceModule.tsx
+!src/modules/agreement-vault/AgreementVault.tsx
+
+
 # Aggressively IGNORE everything else
 src/pages/
 src/ClientPortal.tsx
@@ -37,7 +50,6 @@ src/modules/reporting-suite/
 src/modules/company-settings/
 src/modules/commission-engine/
 src/modules/finance-application/
-# src/modules/quote-builder/
 src/modules/tagging-engine/components/
 src/mocks/
 public/
