@@ -151,6 +151,22 @@ function PDIChecklistDashboard() {
     setShowInspectionDetail(true)
   }
 
+  const handleViewInspectionDetail = (inspectionId: string) => {
+    const inspection = inspections.find(i => i.id === inspectionId)
+    if (inspection) {
+      setSelectedInspection(inspection)
+      setShowInspectionDetail(true)
+    }
+  }
+
+  const handleEditInspectionById = (inspectionId: string) => {
+    const inspection = inspections.find(i => i.id === inspectionId)
+    if (inspection) {
+      setSelectedInspection(inspection)
+      setShowInspectionForm(true)
+    }
+  }
+
   const handleContinueInspection = (inspection: PDIInspection) => {
     setSelectedInspection(inspection)
     setShowInspectionForm(true)
