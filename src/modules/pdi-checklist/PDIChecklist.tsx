@@ -16,7 +16,7 @@ import { PDITemplateList } from './components/PDITemplateList'
 import { PDITemplateForm } from './components/PDITemplateForm'
 import PDIInspectionList from './components/PDIInspectionList'
 import { PDIInspectionForm } from './components/PDIInspectionForm'
-import { PDIInspectionDetail } from './components/PDIInspectionDetail'
+import PDIInspectionDetail from './components/PDIInspectionDetail'
 import { PDINewInspectionForm } from './components/PDINewInspectionForm'
 
 function PDIChecklistDashboard() {
