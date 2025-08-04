@@ -49,7 +49,7 @@ src/modules/platform-admin/
 src/modules/reporting-suite/
 src/modules/company-settings/
 src/modules/commission-engine/
-src/modules/finance-application/
+# src/modules/finance-application/
 src/modules/tagging-engine/components/
 src/mocks/
 public/
