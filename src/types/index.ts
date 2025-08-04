@@ -576,3 +576,36 @@ export enum TaskModule {
   FINANCE = 'finance',
   WARRANTY = 'warranty'
 }
+
+export enum TaskStatus {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  ON_HOLD = 'on_hold'
+}
+
+export enum TaskPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent'
+}
+
+export interface Task {
+  id: string
+  title: string
+  description?: string
+  status: TaskStatus
+  priority: TaskPriority
+  module: TaskModule
+  assignedTo?: string
+  assignedToName?: string
+  dueDate?: Date
+  createdAt: Date
+  updatedAt: Date
+  sourceId: string
+  sourceType: string
+  tags?: string[]
+  customFields?: Record<string, any>
+}
