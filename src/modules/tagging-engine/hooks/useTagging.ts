@@ -24,6 +24,11 @@ export function useTagging() {
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Calculate total usage across all tags
+  const totalUsage = useMemo(() => {
+    return tags.reduce((sum, tag) => sum + tag.usageCount, 0)
+  }, [tags])
+
   useEffect(() => {
     initializeTaggingData()
   }, [])
@@ -728,3 +733,5 @@ export function useTagging() {
     filterEntitiesByTags
   }
 }
+
+export { totalUsage }
