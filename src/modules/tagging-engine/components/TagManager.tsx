@@ -1,14 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Filter, Tag, Settings, BarChart3, Zap, TrendingUp, Edit, Target } from 'lucide-react'
+import { Plus, Search, Filter, Tag, Settings, BarChart3, Zap, TrendingUp, Edit, Target, Trash2 } from 'lucide-react'
 import { useTagging } from '../hooks/useTagging'
 import { TagType, TagCategory } from '../types'
 import { TagForm } from './TagForm'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 
 interface TagManagerProps {
   activeFilter?: string
@@ -23,35 +24,50 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
 
   const {
     tags,
+    assignments,
     rules,
     loading,
     searchTags,
     createTag,
     updateTag,
-    deleteTag
+    deleteTag,
+    totalUsage
   } = useTagging()
 
-  // Apply filtering based on active filter and other criteria
-  const filteredTags = React.useMemo(() => {
-    let currentTags = tags
+  // Calculate metrics
+  const systemTags = tags.filter(tag => tag.isSystem)
+  const customTags = tags.filter(tag => !tag.isSystem)
+  const activeTags = tags.filter(tag => tag.isActive)
+  const tagsWithRules = tags.filter(tag => 
+    rules.some(rule => rule.tagId === tag.id && rule.isActive)
+  )
+  const tagsWithUsage = tags.filter(tag => tag.usageCount > 0)
 
-    // Apply active filter from stat cards
-    if (activeFilter === 'system') {
-      currentTags = currentTags.filter(tag => tag.isSystem)
-    } else if (activeFilter === 'auto_rules') {
-      // Filter to show only tags that have automation rules
-      currentTags = currentTags.filter(tag => 
-        rules.some(rule => rule.tagId === tag.id && rule.isActive)
-      )
-    } else if (activeFilter === 'usage') {
-      // Sort by usage count (highest first)
-      currentTags = [...currentTags].sort((a, b) => b.usageCount - a.usageCount)
+  // Filter tags based on active filter and search
+  const filteredTags = useMemo(() => {
+    let filtered = tags
+
+    // Apply active filter
+    switch (activeFilter) {
+      case 'system':
+        filtered = tags.filter(tag => tag.isSystem)
+        break
+      case 'auto_rules':
+        filtered = tags.filter(tag => 
+          rules.some(rule => rule.tagId === tag.id && rule.isActive)
+        )
+        break
+      case 'usage':
+        filtered = [...tags].sort((a, b) => b.usageCount - a.usageCount)
+        break
+      default:
+        filtered = tags
     }
 
     // Apply search filter
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase()
-      currentTags = currentTags.filter(tag =>
+      filtered = filtered.filter(tag =>
         tag.name.toLowerCase().includes(lowerSearchTerm) ||
         tag.description?.toLowerCase().includes(lowerSearchTerm)
       )
@@ -59,15 +75,15 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
 
     // Apply type filter
     if (typeFilter !== 'all') {
-      currentTags = currentTags.filter(tag => tag.type.includes(typeFilter))
+      filtered = filtered.filter(tag => tag.type.includes(typeFilter))
     }
 
     // Apply category filter
     if (categoryFilter !== 'all') {
-      currentTags = currentTags.filter(tag => tag.category === categoryFilter)
+      filtered = filtered.filter(tag => tag.category === categoryFilter)
     }
 
-    return currentTags
+    return filtered
   }, [tags, rules, activeFilter, searchTerm, typeFilter, categoryFilter])
 
   const handleCreateTag = async (tagData: Partial<Tag>) => {
@@ -96,15 +112,6 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
       </div>
     )
   }
-
-  // Calculate metrics
-  const systemTags = tags.filter(tag => tag.isSystem)
-  const customTags = tags.filter(tag => !tag.isSystem)
-  const activeTags = tags.filter(tag => tag.isActive)
-  const tagsWithRules = tags.filter(tag => 
-    rules.some(rule => rule.tagId === tag.id && rule.isActive)
-  )
-  const totalUsage = tags.reduce((sum, tag) => sum + tag.usageCount, 0)
 
   return (
     <div className="space-y-6">
@@ -284,49 +291,66 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
                   <div className="flex items-center space-x-4 flex-1">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2" 
+                          style={{ backgroundColor: tag.color, borderColor: tag.color }}
+                        />
                         <h3 className="font-semibold text-foreground">{tag.name}</h3>
-                        <Badge 
-                          className="text-white border-0" 
-                          style={{ backgroundColor: tag.color }}
-                        >
-                          {tag.category.replace('_', ' ').toUpperCase()}
+                        <Badge className={tag.isSystem ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}>
+                          {tag.isSystem ? 'SYSTEM' : 'CUSTOM'}
                         </Badge>
-                        {tag.isSystem && (
-                          <Badge className="bg-blue-50 text-blue-700 border-blue-200">
-                            SYSTEM
-                          </Badge>
-                        )}
-                        <Badge className={tag.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}>
+                        <Badge className={tag.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}>
                           {tag.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </Badge>
-                        {rules.some(rule => rule.tagId === tag.id && rule.isActive) && (
+                        {tagsWithRules.some(t => t.id === tag.id) && (
                           <Badge className="bg-purple-50 text-purple-700 border-purple-200">
-                            <span className="mr-1">⚡</span>
+                            <Zap className="h-3 w-3 mr-1" />
                             AUTO RULE
                           </Badge>
                         )}
+                        {tag.usageCount > 0 && (
+                          <Badge className="bg-orange-50 text-orange-700 border-orange-200">
+                            <BarChart3 className="h-3 w-3 mr-1" />
+                            {tag.usageCount} uses
+                          </Badge>
+                        )}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {tag.description || 'No description'}
-                      </div>
-                      <div className="flex items-center space-x-4 mt-2 text-sm">
-                        <span className="flex items-center">
-                          <span className="font-medium">Usage:</span> 
-                          <span className="ml-1">{tag.usageCount}</span>
-                        </span>
-                        <span className="flex items-center">
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                        <div>
+                          <span className="font-medium">Category:</span> 
+                          <span className="ml-1 capitalize">{tag.category.replace('_', ' ')}</span>
+                        </div>
+                        <div>
                           <span className="font-medium">Types:</span> 
                           <span className="ml-1">{tag.type.join(', ')}</span>
-                        </span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Usage Count:</span> 
+                          <span className="ml-1">{tag.usageCount}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Created:</span> 
+                          <span className="ml-1">{formatDate(tag.createdAt)}</span>
+                        </div>
                       </div>
+                      {tag.description && (
+                        <p className="text-sm text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md">
+                          {tag.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="ri-action-buttons">
                     <Button variant="outline" size="sm" className="shadow-sm">
+                      <Edit className="h-3 w-3 mr-1" />
                       Edit
                     </Button>
                     <Button variant="outline" size="sm" className="shadow-sm">
-                      Delete
+                      <BarChart3 className="h-3 w-3 mr-1" />
+                      Analytics
+                    </Button>
+                    <Button variant="outline" size="sm" className="shadow-sm text-red-600 hover:text-red-700">
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
@@ -335,16 +359,16 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
               <div className="text-center py-12 text-muted-foreground">
                 <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>
-                  {activeFilter === 'system' ? 'No system tags found' :
-                   activeFilter === 'auto_rules' ? 'No tags with automation rules found' :
+                  {activeFilter === 'auto_rules' ? 'No tags with automation rules found' :
+                   activeFilter === 'system' ? 'No system tags found' :
                    activeFilter === 'usage' ? 'No tags with usage found' :
-                   searchTerm || typeFilter !== 'all' || categoryFilter !== 'all' ? 'No tags found matching your criteria' :
-                   'No tags found'}
+                   searchTerm ? 'No tags found matching your search' : 'No tags found'}
                 </p>
                 <p className="text-sm">
                   {activeFilter === 'auto_rules' ? 'Create automation rules for tags to see them here' :
-                   searchTerm || typeFilter !== 'all' || categoryFilter !== 'all' ? 'Try adjusting your search or filters' :
-                   'Create your first tag to get started'}
+                   activeFilter === 'system' ? 'System tags are created automatically' :
+                   activeFilter === 'usage' ? 'Tags will appear here once they are assigned to entities' :
+                   searchTerm ? 'Try adjusting your search terms' : 'Create your first tag to get started'}
                 </p>
               </div>
             )}
