@@ -157,14 +157,14 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onViewInspection(inspection.id)}
+                        onClick={() => onViewInspection && onViewInspection(inspection.id)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onEditInspection(inspection.id)}
+                        onClick={() => onEditInspection && onEditInspection(inspection.id)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
