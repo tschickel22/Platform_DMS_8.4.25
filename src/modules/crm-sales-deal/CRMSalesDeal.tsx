@@ -24,6 +24,8 @@ import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManage
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
 
 function DealsList() {
   const {
@@ -42,6 +44,7 @@ function DealsList() {
 
   const { leads, salesReps } = useLeadManagement()
   const { vehicles } = useInventoryManagement()
+  const { createTask } = useTasks()
   
   const [searchTerm, setSearchTerm] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('all')
@@ -50,6 +53,8 @@ function DealsList() {
   const [showDealForm, setShowDealForm] = useState(false)
   const [activeTab, setActiveTab] = useState('pipeline')
   const [showDealDetail, setShowDealDetail] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const { toast } = useToast()
 
   const getStatusColor = (status: DealStatus) => {
@@ -162,6 +167,24 @@ function DealsList() {
     setShowTaskForm(true)
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
   const metrics = getDealMetrics()
 
   // Mock products for the form
@@ -193,6 +216,18 @@ function DealsList() {
 
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+
       {/* Deal Detail Modal */}
       {showDealDetail && selectedDeal && (
         <DealDetail
