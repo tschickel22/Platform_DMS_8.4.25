@@ -23,8 +23,8 @@ export default function PDIInspectionList({ inspections: propInspections, onNewI
   const [statusFilter, setStatusFilter] = useState('all')
   const [technicianFilter, setTechnicianFilter] = useState('all')
 
-  // Use prop inspections first, fallback to mock data if empty
-  const inspections = propInspections.length > 0 ? propInspections : mockPDI.sampleInspections
+  // Always use prop inspections - don't fallback to mock data
+  const inspections = propInspections
 
   const getStatusColor = (status: string) => {
     return mockPDI.statusColors[status] || 'bg-gray-100 text-gray-800'
