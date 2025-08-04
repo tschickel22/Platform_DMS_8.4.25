@@ -2,15 +2,28 @@ import { useState, useEffect, useMemo } from 'react'
 import { Task, TaskStatus, TaskModule, TaskPriority, Lead, ServiceTicket } from '@/types'
 import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManagement'
 import { useServiceManagement } from '@/modules/service-ops/hooks/useServiceManagement'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [userCreatedTasks, setUserCreatedTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Import data from modules
   const { leads, salesReps } = useLeadManagement()
   const { tickets } = useServiceManagement()
+
+  // Load user-created tasks from localStorage on mount
+  useEffect(() => {
+    const savedTasks = loadFromLocalStorage<Task[]>('renter-insight-user-tasks', [])
+    setUserCreatedTasks(savedTasks)
+  }, [])
+
+  // Save user-created tasks to localStorage whenever they change
+  useEffect(() => {
+    saveToLocalStorage('renter-insight-user-tasks', userCreatedTasks)
+  }, [userCreatedTasks])
 
   // Helper function to map lead status to task status
   const mapLeadStatusToTaskStatus = (leadStatus: string): TaskStatus => {
@@ -178,7 +191,8 @@ export function useTasks() {
   const allTasks = useMemo(() => {
     const combined = [
       ...transformLeadsToTasks,
-      ...transformServiceTicketsToTasks
+      ...transformServiceTicketsToTasks,
+      ...userCreatedTasks
     ]
     
     // Sort by due date (overdue first, then by date)
@@ -187,7 +201,7 @@ export function useTasks() {
       if (!a.isOverdue && b.isOverdue) return 1
       return a.dueDate.getTime() - b.dueDate.getTime()
     })
-  }, [transformLeadsToTasks, transformServiceTicketsToTasks])
+  }, [transformLeadsToTasks, transformServiceTicketsToTasks, userCreatedTasks])
 
   // Update tasks when data changes
   useEffect(() => {
@@ -285,6 +299,8 @@ export function useTasks() {
 
   // Create a new task
   const createTask = async (taskData: Partial<Task>): Promise<Task> => {
+    setLoading(true)
+    try {
     const newTask: Task = {
       id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: taskData.title || '',
@@ -305,29 +321,34 @@ export function useTasks() {
       updatedAt: new Date()
     }
 
-    // In a real app, this would save to a database
-    // For now, we'll just return the created task
-    return newTask
+      // Add to user-created tasks
+      setUserCreatedTasks(prev => [newTask, ...prev])
+      
+      return newTask
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Update an existing task
   const updateTask = async (taskId: string, updates: Partial<Task>): Promise<Task | null> => {
-    // In a real app, this would update the task in the database
-    // For now, we'll simulate the update
+    const existingTask = userCreatedTasks.find(t => t.id === taskId)
+    if (!existingTask) return null
+
     const updatedTask = {
-      ...tasks.find(t => t.id === taskId),
+      ...existingTask,
       ...updates,
       updatedAt: new Date()
-    } as Task
+    }
+
+    setUserCreatedTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t))
 
     return updatedTask
   }
 
   // Delete a task
   const deleteTask = async (taskId: string): Promise<void> => {
-    // In a real app, this would delete the task from the database
-    // For now, we'll just simulate the deletion
-    console.log('Deleting task:', taskId)
+    setUserCreatedTasks(prev => prev.filter(t => t.id !== taskId))
   }
 
   return {
