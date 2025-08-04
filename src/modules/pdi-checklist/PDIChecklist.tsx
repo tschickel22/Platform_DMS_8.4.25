@@ -172,11 +172,10 @@ function PDIChecklistDashboard() {
     setShowInspectionForm(true)
   }
 
-  const handleSaveInspection = async (inspectionData: Partial<PDIInspection>) => {
-    if (!selectedInspection) return
+  const handleSaveInspection = async (inspectionId: string, inspectionData: Partial<PDIInspection>) => {
     
     try {
-      await updateInspection(selectedInspection.id, inspectionData)
+      await updateInspection(inspectionId, inspectionData)
       toast({
         title: 'Success',
         description: 'Inspection saved successfully',

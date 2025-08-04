@@ -102,9 +102,9 @@ export default function PDIInspectionForm({
   const handleSave = async () => {
     setLoading(true)
     try {
-      await onSave({
+      await onSave(inspection.id, {
         notes,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       toast({
         title: 'Success',
