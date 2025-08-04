@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Filter, Tag, Settings, BarChart3, Zap, TrendingUp } from 'lucide-react'
+import { Plus, Search, Filter, Tag, Settings, BarChart3, Zap, TrendingUp, Edit, Target } from 'lucide-react'
 import { useTagging } from '../hooks/useTagging'
 import { TagType, TagCategory } from '../types'
 import { TagForm } from './TagForm'
@@ -16,56 +16,77 @@ interface TagManagerProps {
 }
 
 export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerProps) {
-  const { tags, loading } = useTagging()
   const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [showTagForm, setShowTagForm] = useState(false)
-  const [selectedTag, setSelectedTag] = useState(null)
+  const [typeFilter, setTypeFilter] = useState<TagType | 'all'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<TagCategory | 'all'>('all')
+  const [showNewTagForm, setShowNewTagForm] = useState(false)
 
-  // Calculate metrics
-  const totalTags = tags.length
-  const activeTags = tags.filter(tag => tag.isActive).length
-  const systemTags = tags.filter(tag => tag.isSystem).length
-  const autoRules = 2 // Mock data for auto rules
-  const totalUsage = 0 // Mock data for total usage
+  const {
+    tags,
+    rules,
+    loading,
+    searchTags,
+    createTag,
+    updateTag,
+    deleteTag
+  } = useTagging()
 
-  // Filter tags based on active filter and other filters
-  const filteredTags = tags.filter(tag => {
-    const matchesSearch = tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tag.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesType = typeFilter === 'all' || tag.type.includes(typeFilter as TagType)
-    const matchesCategory = categoryFilter === 'all' || tag.category === categoryFilter
-    
+  // Apply filtering based on active filter and other criteria
+  const filteredTags = React.useMemo(() => {
+    let currentTags = tags
+
     // Apply active filter from stat cards
-    let matchesActiveFilter = true
     if (activeFilter === 'system') {
-      matchesActiveFilter = tag.isSystem
-    } else if (activeFilter === 'custom') {
-      matchesActiveFilter = !tag.isSystem
-    } else if (activeFilter === 'active') {
-      matchesActiveFilter = tag.isActive
+      currentTags = currentTags.filter(tag => tag.isSystem)
+    } else if (activeFilter === 'auto_rules') {
+      // Filter to show only tags that have automation rules
+      currentTags = currentTags.filter(tag => 
+        rules.some(rule => rule.tagId === tag.id && rule.isActive)
+      )
+    } else if (activeFilter === 'usage') {
+      // Sort by usage count (highest first)
+      currentTags = [...currentTags].sort((a, b) => b.usageCount - a.usageCount)
     }
 
-    return matchesSearch && matchesType && matchesCategory && matchesActiveFilter
-  })
+    // Apply search filter
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase()
+      currentTags = currentTags.filter(tag =>
+        tag.name.toLowerCase().includes(lowerSearchTerm) ||
+        tag.description?.toLowerCase().includes(lowerSearchTerm)
+      )
+    }
 
-  const handleStatCardClick = (filterType: string) => {
-    // Toggle filter if clicking the same card, otherwise set new filter
-    const newFilter = activeFilter === filterType ? 'all' : filterType
-    onFilterChange?.(newFilter)
-    
-    // Reset other filters when using stat card filters
-    if (newFilter !== 'all') {
-      setTypeFilter('all')
-      setCategoryFilter('all')
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      currentTags = currentTags.filter(tag => tag.type.includes(typeFilter))
+    }
+
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      currentTags = currentTags.filter(tag => tag.category === categoryFilter)
+    }
+
+    return currentTags
+  }, [tags, rules, activeFilter, searchTerm, typeFilter, categoryFilter])
+
+  const handleCreateTag = async (tagData: Partial<Tag>) => {
+    try {
+      await createTag(tagData)
+      setShowNewTagForm(false)
+    } catch (error) {
+      console.error('Failed to create tag:', error)
     }
   }
 
-  const handleCreateTag = () => {
-    setSelectedTag(null)
-    setShowTagForm(true)
+  const handleFilterChange = (newFilter: string) => {
+    // Reset other filters when using stat card filters
+    if (newFilter !== 'all') {
+      setSearchTerm('')
+      setTypeFilter('all')
+      setCategoryFilter('all')
+    }
+    onFilterChange(newFilter)
   }
 
   if (loading) {
@@ -76,24 +97,17 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
     )
   }
 
+  // Calculate metrics
+  const systemTags = tags.filter(tag => tag.isSystem)
+  const customTags = tags.filter(tag => !tag.isSystem)
+  const activeTags = tags.filter(tag => tag.isActive)
+  const tagsWithRules = tags.filter(tag => 
+    rules.some(rule => rule.tagId === tag.id && rule.isActive)
+  )
+  const totalUsage = tags.reduce((sum, tag) => sum + tag.usageCount, 0)
+
   return (
     <div className="space-y-6">
-      {/* Tag Form Modal */}
-      {showTagForm && (
-        <TagForm
-          tag={selectedTag}
-          onSave={async (tagData) => {
-            // Handle tag save
-            setShowTagForm(false)
-            setSelectedTag(null)
-          }}
-          onCancel={() => {
-            setShowTagForm(false)
-            setSelectedTag(null)
-          }}
-        />
-      )}
-
       {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
@@ -103,10 +117,6 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
               Manage tags and tagging rules across all modules
             </p>
           </div>
-          <Button onClick={handleCreateTag} className="shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Tag
-          </Button>
         </div>
       </div>
 
@@ -116,17 +126,17 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
           className={`shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer transition-all hover:shadow-md ${
             activeFilter === 'all' ? 'ring-2 ring-blue-300' : ''
           }`}
-          onClick={() => handleStatCardClick('all')}
+          onClick={() => handleFilterChange(activeFilter === 'all' ? 'all' : 'all')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Tags</CardTitle>
             <Tag className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{totalTags}</div>
+            <div className="text-2xl font-bold text-blue-900">{tags.length}</div>
             <p className="text-xs text-blue-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
-              {activeTags} active
+              {activeTags.length} active
             </p>
           </CardContent>
         </Card>
@@ -135,14 +145,14 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
           className={`shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer transition-all hover:shadow-md ${
             activeFilter === 'system' ? 'ring-2 ring-green-300' : ''
           }`}
-          onClick={() => handleStatCardClick('system')}
+          onClick={() => handleFilterChange(activeFilter === 'system' ? 'all' : 'system')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">System Tags</CardTitle>
             <Settings className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">{systemTags}</div>
+            <div className="text-2xl font-bold text-green-900">{systemTags.length}</div>
             <p className="text-xs text-green-600 flex items-center mt-1">
               <Settings className="h-3 w-3 mr-1" />
               Built-in tags
@@ -154,14 +164,14 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
           className={`shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer transition-all hover:shadow-md ${
             activeFilter === 'auto_rules' ? 'ring-2 ring-purple-300' : ''
           }`}
-          onClick={() => handleStatCardClick('auto_rules')}
+          onClick={() => handleFilterChange(activeFilter === 'auto_rules' ? 'all' : 'auto_rules')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Auto Rules</CardTitle>
             <Zap className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{autoRules}</div>
+            <div className="text-2xl font-bold text-purple-900">{tagsWithRules.length}</div>
             <p className="text-xs text-purple-600 flex items-center mt-1">
               <Zap className="h-3 w-3 mr-1" />
               Active rules
@@ -173,7 +183,7 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
           className={`shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50 cursor-pointer transition-all hover:shadow-md ${
             activeFilter === 'usage' ? 'ring-2 ring-orange-300' : ''
           }`}
-          onClick={() => handleStatCardClick('usage')}
+          onClick={() => handleFilterChange(activeFilter === 'usage' ? 'all' : 'usage')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Total Usage</CardTitle>
@@ -199,44 +209,46 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
                 placeholder="Search tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="ri-search-input shadow-sm"
+                className="pl-10"
               />
             </div>
-            
-            <div className="flex gap-2">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value={TagType.LEAD}>Lead</SelectItem>
-                  <SelectItem value={TagType.DEAL}>Deal</SelectItem>
-                  <SelectItem value={TagType.CLIENT}>Client</SelectItem>
-                  <SelectItem value={TagType.INVENTORY}>Inventory</SelectItem>
-                  <SelectItem value={TagType.CUSTOM}>Custom</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value={TagCategory.STATUS}>Status</SelectItem>
-                  <SelectItem value={TagCategory.PRIORITY}>Priority</SelectItem>
-                  <SelectItem value={TagCategory.SOURCE}>Source</SelectItem>
-                  <SelectItem value={TagCategory.BEHAVIOR}>Behavior</SelectItem>
-                  <SelectItem value={TagCategory.CUSTOM}>Custom</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" className="shadow-sm">
-                <Filter className="h-4 w-4 mr-2" />
-                More Filters
-              </Button>
-            </div>
+            <Select value={typeFilter} onValueChange={(value: TagType | 'all') => setTypeFilter(value)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value={TagType.LEAD}>Lead</SelectItem>
+                <SelectItem value={TagType.DEAL}>Deal</SelectItem>
+                <SelectItem value={TagType.CLIENT}>Client</SelectItem>
+                <SelectItem value={TagType.INVENTORY}>Inventory</SelectItem>
+                <SelectItem value={TagType.CUSTOM}>Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={(value: TagCategory | 'all') => setCategoryFilter(value)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value={TagCategory.STATUS}>Status</SelectItem>
+                <SelectItem value={TagCategory.PRIORITY}>Priority</SelectItem>
+                <SelectItem value={TagCategory.SOURCE}>Source</SelectItem>
+                <SelectItem value={TagCategory.BEHAVIOR}>Behavior</SelectItem>
+                <SelectItem value={TagCategory.DEMOGRAPHIC}>Demographic</SelectItem>
+                <SelectItem value={TagCategory.PRODUCT}>Product</SelectItem>
+                <SelectItem value={TagCategory.LOCATION}>Location</SelectItem>
+                <SelectItem value={TagCategory.CUSTOM}>Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" className="shadow-sm">
+              <Filter className="h-4 w-4 mr-2" />
+              More Filters
+            </Button>
+            <Button onClick={() => setShowNewTagForm(true)} className="shadow-sm">
+              <Plus className="h-4 w-4 mr-2" />
+              New Tag
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -244,82 +256,90 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
       {/* Tags List */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Tags ({filteredTags.length})</CardTitle>
+          <CardTitle className="text-xl">
+            Tags ({filteredTags.length})
+            {activeFilter !== 'all' && (
+              <Badge className="ml-2" variant="outline">
+                Filtered by: {activeFilter.replace('_', ' ')}
+              </Badge>
+            )}
+          </CardTitle>
           <CardDescription>
             Manage tags and their assignments across all modules
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* New Tag Form */}
+          {showNewTagForm && (
+            <TagForm
+              onSave={handleCreateTag}
+              onCancel={() => setShowNewTagForm(false)}
+            />
+          )}
+
           <div className="space-y-4">
-            {filteredTags.length > 0 ? (
-              filteredTags.map((tag) => (
-                <div key={tag.id} className="ri-table-row">
-                  <div className="flex items-center space-x-4 flex-1">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        ></div>
-                        <h3 className="font-semibold text-foreground">{tag.name}</h3>
-                        <Badge className={tag.isSystem ? 'bg-green-50 text-green-700 border-green-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
-                          {tag.isSystem ? 'SYSTEM' : 'CUSTOM'}
+            {filteredTags.map((tag) => (
+              <div key={tag.id} className="ri-table-row">
+                <div className="flex items-center space-x-4 flex-1">
+                  <div 
+                    className="w-4 h-4 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: tag.color }}
+                  ></div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-semibold text-foreground">{tag.name}</h3>
+                      <Badge className={`text-xs ${tag.isSystem ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        {tag.isSystem ? 'SYSTEM' : 'CUSTOM'}
+                      </Badge>
+                      {rules.some(rule => rule.tagId === tag.id && rule.isActive) && (
+                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          AUTO RULE
                         </Badge>
-                        <Badge className={tag.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}>
-                          {tag.isActive ? 'ACTIVE' : 'INACTIVE'}
-                        </Badge>
-                      </div>
-                      
-                      {tag.description && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {tag.description}
-                        </p>
                       )}
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
-                        <div>
-                          <span className="font-medium">Category:</span> 
-                          <span className="ml-1">{tag.category}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Types:</span> 
-                          <span className="ml-1">{tag.type.join(', ')}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Usage:</span> 
-                          <span className="ml-1">{tag.usageCount}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Created:</span> 
-                          <span className="ml-1">{tag.createdAt.toLocaleDateString()}</span>
-                        </div>
-                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {tag.description || 'No description'}
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center">
+                        <BarChart3 className="h-3 w-3 mr-1" />
+                        {tag.usageCount} uses
+                      </span>
+                      <span className="flex items-center">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {tag.category.replace('_', ' ')}
+                      </span>
+                      <span className="flex items-center">
+                        <Target className="h-3 w-3 mr-1" />
+                        {tag.type.join(', ')}
+                      </span>
                     </div>
                   </div>
-                  
-                  <div className="ri-action-buttons">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="shadow-sm"
-                      onClick={() => {
-                        setSelectedTag(tag)
-                        setShowTagForm(true)
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </div>
                 </div>
-              ))
-            ) : (
+                <div className="ri-action-buttons">
+                  <Button variant="outline" size="sm" className="shadow-sm">
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" className="shadow-sm">
+                    <BarChart3 className="h-3 w-3 mr-1" />
+                    Analytics
+                  </Button>
+                </div>
+              </div>
+            ))}
+            
+            {filteredTags.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No tags found</p>
                 <p className="text-sm">
-                  {searchTerm || typeFilter !== 'all' || categoryFilter !== 'all' || activeFilter !== 'all'
-                    ? 'Try adjusting your filters'
-                    : 'Create your first tag to get started'
+                  {activeFilter !== 'all' 
+                    ? `No tags match the "${activeFilter.replace('_', ' ')}" filter`
+                    : searchTerm || typeFilter !== 'all' || categoryFilter !== 'all'
+                      ? 'Try adjusting your search or filters'
+                      : 'Create your first tag to get started'
                   }
                 </p>
               </div>
