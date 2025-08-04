@@ -278,69 +278,73 @@ export function TagManager({ activeFilter = 'all', onFilterChange }: TagManagerP
           )}
 
           <div className="space-y-4">
-            {filteredTags.map((tag) => (
-              <div key={tag.id} className="ri-table-row">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div 
-                    className="w-4 h-4 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: tag.color }}
-                  ></div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="font-semibold text-foreground">{tag.name}</h3>
-                      <Badge className={`text-xs ${tag.isSystem ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                        {tag.isSystem ? 'SYSTEM' : 'CUSTOM'}
-                      </Badge>
-                      {rules.some(rule => rule.tagId === tag.id && rule.isActive) && (
-                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
-                          <Zap className="h-3 w-3 mr-1" />
-                          AUTO RULE
+            {filteredTags.length > 0 ? (
+              filteredTags.map((tag) => (
+                <div key={tag.id} className="ri-table-row">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="font-semibold text-foreground">{tag.name}</h3>
+                        <Badge 
+                          className="text-white border-0" 
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          {tag.category.replace('_', ' ').toUpperCase()}
                         </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {tag.description || 'No description'}
-                    </p>
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center">
-                        <BarChart3 className="h-3 w-3 mr-1" />
-                        {tag.usageCount} uses
-                      </span>
-                      <span className="flex items-center">
-                        <Tag className="h-3 w-3 mr-1" />
-                        {tag.category.replace('_', ' ')}
-                      </span>
-                      <span className="flex items-center">
-                        <Target className="h-3 w-3 mr-1" />
-                        {tag.type.join(', ')}
-                      </span>
+                        {tag.isSystem && (
+                          <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                            SYSTEM
+                          </Badge>
+                        )}
+                        <Badge className={tag.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}>
+                          {tag.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </Badge>
+                        {rules.some(rule => rule.tagId === tag.id && rule.isActive) && (
+                          <Badge className="bg-purple-50 text-purple-700 border-purple-200">
+                            <span className="mr-1">⚡</span>
+                            AUTO RULE
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {tag.description || 'No description'}
+                      </div>
+                      <div className="flex items-center space-x-4 mt-2 text-sm">
+                        <span className="flex items-center">
+                          <span className="font-medium">Usage:</span> 
+                          <span className="ml-1">{tag.usageCount}</span>
+                        </span>
+                        <span className="flex items-center">
+                          <span className="font-medium">Types:</span> 
+                          <span className="ml-1">{tag.type.join(', ')}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="ri-action-buttons">
+                    <Button variant="outline" size="sm" className="shadow-sm">
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="shadow-sm">
+                      Delete
+                    </Button>
+                  </div>
                 </div>
-                <div className="ri-action-buttons">
-                  <Button variant="outline" size="sm" className="shadow-sm">
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="shadow-sm">
-                    <BarChart3 className="h-3 w-3 mr-1" />
-                    Analytics
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
-            {filteredTags.length === 0 && (
+              ))
+            ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No tags found</p>
+                <p>
+                  {activeFilter === 'system' ? 'No system tags found' :
+                   activeFilter === 'auto_rules' ? 'No tags with automation rules found' :
+                   activeFilter === 'usage' ? 'No tags with usage found' :
+                   searchTerm || typeFilter !== 'all' || categoryFilter !== 'all' ? 'No tags found matching your criteria' :
+                   'No tags found'}
+                </p>
                 <p className="text-sm">
-                  {activeFilter !== 'all' 
-                    ? `No tags match the "${activeFilter.replace('_', ' ')}" filter`
-                    : searchTerm || typeFilter !== 'all' || categoryFilter !== 'all'
-                      ? 'Try adjusting your search or filters'
-                      : 'Create your first tag to get started'
-                  }
+                  {activeFilter === 'auto_rules' ? 'Create automation rules for tags to see them here' :
+                   searchTerm || typeFilter !== 'all' || categoryFilter !== 'all' ? 'Try adjusting your search or filters' :
+                   'Create your first tag to get started'}
                 </p>
               </div>
             )}
