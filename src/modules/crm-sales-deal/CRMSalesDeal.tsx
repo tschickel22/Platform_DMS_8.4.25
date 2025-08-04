@@ -135,6 +135,32 @@ function DealsList() {
     await createWinLossReport(dealId, outcome, reportData)
   }
 
+  const handleCreateTaskForDeal = (deal: Deal) => {
+    const dueDate = new Date(deal.expectedCloseDate)
+    const isOverdue = dueDate < new Date()
+    const priority = deal.value > 100000 ? TaskPriority.HIGH : 
+                    deal.value > 50000 ? TaskPriority.MEDIUM : TaskPriority.LOW
+
+    setInitialTaskData({
+      sourceId: deal.id,
+      sourceType: 'deal',
+      module: TaskModule.CRM,
+      title: `Follow up on deal: ${deal.name}`,
+      description: `Deal value: ${formatCurrency(deal.value)}, Stage: ${deal.stage.replace('_', ' ')}`,
+      priority,
+      assignedTo: deal.assignedTo,
+      dueDate: isOverdue ? new Date(Date.now() + 24 * 60 * 60 * 1000) : dueDate,
+      link: `/deals`,
+      customFields: {
+        dealValue: deal.value,
+        dealProbability: deal.probability,
+        customerName: deal.customerName,
+        dealStage: deal.stage
+      }
+    })
+    setShowTaskForm(true)
+  }
+
   const metrics = getDealMetrics()
 
   // Mock products for the form
