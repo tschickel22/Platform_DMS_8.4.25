@@ -61,8 +61,8 @@ export function CommunicationCenter({ leadId, leadData }: CommunicationCenterPro
 
   const replaceVariables = (content: string, leadData: Lead) => {
     return content
-      .replace(/\{\{first_name\}\}/g, leadData.firstName)
-      .replace(/\{\{last_name\}\}/g, leadData.lastName)
+      .replace(/\{\{first_name\}\}/g, leadData.firstName || '')
+      .replace(/\{\{last_name\}\}/g, leadData.lastName || '')
       .replace(/\{\{company_name\}\}/g, 'Renter Insight RV')
       .replace(/\{\{rep_name\}\}/g, 'Your Sales Representative')
       .replace(/\{\{rep_phone\}\}/g, '(555) 123-4567')
