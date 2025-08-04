@@ -11,6 +11,7 @@ import { Deal, DealStage, DealStatus, Territory, ApprovalWorkflow, WinLossReport
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { Task, TaskModule, TaskPriority } from '@/types'
 import { useDealManagement } from './hooks/useDealManagement.ts'
 import { DealPipeline } from './components/DealPipeline'
 import { DealMetrics } from './components/DealMetrics'
