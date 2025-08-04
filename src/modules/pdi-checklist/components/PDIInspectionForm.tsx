@@ -37,7 +37,7 @@ import { useDropzone } from 'react-dropzone'
 interface PDIInspectionFormProps {
   inspection: PDIInspection
   vehicles: Vehicle[]
-  onSave: (inspectionData: Partial<PDIInspection>) => Promise<void>
+  onSave: (inspectionId: string, inspectionData: Partial<PDIInspection>) => Promise<void>
   onComplete: (inspectionId: string, notes?: string) => Promise<void>
   onUpdateItem: (inspectionId: string, itemId: string, itemData: Partial<PDIInspectionItem>) => Promise<void>
   onAddDefect: (inspectionId: string, defectData: Partial<PDIDefect>) => Promise<void>
