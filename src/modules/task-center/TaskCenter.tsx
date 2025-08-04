@@ -41,6 +41,7 @@ export default function TaskCenter() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<string>('all')
 
   // Filter tasks based on current filters
   const filteredTasks = tasks.filter(task => {
@@ -53,8 +54,18 @@ export default function TaskCenter() {
     const matchesModule = moduleFilter === 'all' || task.module === moduleFilter
     const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
     const matchesOverdue = !showOverdueOnly || task.isOverdue
+    
+    // Apply active filter from stat cards
+    let matchesActiveFilter = true
+    if (activeFilter === 'overdue') {
+      matchesActiveFilter = task.isOverdue
+    } else if (activeFilter === 'in_progress') {
+      matchesActiveFilter = task.status === TaskStatus.IN_PROGRESS
+    } else if (activeFilter === 'completed') {
+      matchesActiveFilter = task.status === TaskStatus.COMPLETED
+    }
 
-    return matchesSearch && matchesStatus && matchesModule && matchesPriority && matchesOverdue
+    return matchesSearch && matchesStatus && matchesModule && matchesPriority && matchesOverdue && matchesActiveFilter
   })
 
   const getStatusColor = (status: TaskStatus) => {
@@ -132,6 +143,18 @@ export default function TaskCenter() {
     }
   }
 
+  const handleStatCardClick = (filterType: string) => {
+    // Toggle filter if clicking the same card, otherwise set new filter
+    if (activeFilter === filterType) {
+      setActiveFilter('all')
+    } else {
+      setActiveFilter(filterType)
+      // Reset other filters when using stat card filters
+      setStatusFilter('all')
+      setShowOverdueOnly(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -204,7 +227,12 @@ export default function TaskCenter() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card 
+          className={`shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'all' ? 'ring-2 ring-blue-300' : ''
+          }`}
+          onClick={() => handleStatCardClick('all')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Tasks</CardTitle>
             <ListTodo className="h-4 w-4 text-blue-600" />
@@ -218,7 +246,12 @@ export default function TaskCenter() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
+        <Card 
+          className={`shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50 cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'overdue' ? 'ring-2 ring-red-300' : ''
+          }`}
+          onClick={() => handleStatCardClick('overdue')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-900">Overdue</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -232,7 +265,12 @@ export default function TaskCenter() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+        <Card 
+          className={`shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'in_progress' ? 'ring-2 ring-yellow-300' : ''
+          }`}
+          onClick={() => handleStatCardClick('in_progress')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">In Progress</CardTitle>
             <Target className="h-4 w-4 text-yellow-600" />
@@ -246,7 +284,12 @@ export default function TaskCenter() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card 
+          className={`shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'completed' ? 'ring-2 ring-green-300' : ''
+          }`}
+          onClick={() => handleStatCardClick('completed')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Completed</CardTitle>
             <CheckSquare className="h-4 w-4 text-green-600" />
