@@ -4,18 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, XCircle, Clock, User, Calendar, FileText, Camera, ListTodo } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, User, Calendar, FileText, Camera } from 'lucide-react'
 import { mockPDI } from '@/mocks/pdiMock'
 import { formatDate } from '@/lib/utils'
 
 interface PDIInspectionDetailProps {
   inspectionId: string
-  onEdit?: () => void
-  onApprove?: () => void
-  onCreateTask?: (inspection: any) => void
+  onCreateTask?: (inspectionId: string) => void
+  onClose?: () => void
 }
 
-export function PDIInspectionDetail({ inspectionId, onEdit, onApprove, onCreateTask }: PDIInspectionDetailProps) {
+export function PDIInspectionDetail({ inspectionId, onCreateTask, onClose }: PDIInspectionDetailProps) {
   // Use mock data as fallback - in real app, fetch by inspectionId
   const inspection = mockPDI.sampleInspections.find(insp => insp.id === inspectionId) || mockPDI.sampleInspections[0]
 
@@ -51,19 +50,13 @@ export function PDIInspectionDetail({ inspectionId, onEdit, onApprove, onCreateT
             {inspection.status}
           </Badge>
           {onCreateTask && (
-            <Button variant="outline" onClick={() => onCreateTask(inspection)}>
-              <ListTodo className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={() => onCreateTask(inspectionId)}>
               Create Task
             </Button>
           )}
-          {onEdit && (
-            <Button variant="outline" onClick={onEdit}>
-              Edit
-            </Button>
-          )}
-          {onApprove && inspection.status === 'Complete' && (
-            <Button onClick={onApprove}>
-              Approve for Delivery
+          {onClose && (
+            <Button onClick={onClose}>
+              Close
             </Button>
           )}
         </div>
