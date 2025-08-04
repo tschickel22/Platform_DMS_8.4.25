@@ -37,7 +37,7 @@ src/modules/reporting-suite/
 src/modules/company-settings/
 src/modules/commission-engine/
 src/modules/finance-application/
-src/modules/quote-builder/
+# src/modules/quote-builder/
 src/modules/tagging-engine/components/
 src/mocks/
 public/
