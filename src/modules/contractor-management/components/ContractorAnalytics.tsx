@@ -39,7 +39,7 @@ export function ContractorAnalytics() {
     error
   } = useContractorManagement()
 
-  // Calculate analytics data
+  // Calculate analytics data - moved after hook call
   const analytics = useMemo(() => {
     const completedJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.COMPLETED)
     const pendingJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.PENDING)
