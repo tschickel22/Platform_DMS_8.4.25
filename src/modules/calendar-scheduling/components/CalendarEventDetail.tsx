@@ -21,7 +21,8 @@ import {
   CheckCircle,
   Phone,
   Edit
-} from 'lucide-react'
+} from 'lucide-react';
+import { loadFromLocalStorage } from '@/lib/utils';
 
 interface CalendarEventDetailProps {
   event: CalendarEvent
@@ -29,6 +30,7 @@ interface CalendarEventDetailProps {
   onEdit?: () => void
   onNavigateToSource: (sourceModule: string, sourceId: string) => void
 }
+
 
 export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource }: CalendarEventDetailProps) {
   const getModuleIcon = (module: string) => {
@@ -378,6 +380,42 @@ export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource
               <span className="text-sm">
                 {Math.round((event.end.getTime() - event.start.getTime()) / (1000 * 60))} minutes
               </span>
+            </div>
+          </div>
+
+          {/* Export to External Calendar */}
+          <div className="pt-4 border-t">
+            <h3 className="text-lg font-semibold mb-3">Export to External Calendar</h3>
+            <div className="flex flex-wrap gap-2">
+              {loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).google && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Simulate export to Google Calendar
+                    alert(`Simulating export of "${event.title}" to Google Calendar!`)
+                  }}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Export to Google Calendar
+                </Button>
+              )}
+              {loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).outlook && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Simulate export to Outlook Calendar
+                    alert(`Simulating export of "${event.title}" to Outlook Calendar!`)
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Export to Outlook Calendar
+                </Button>
+              )}
+              {!loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).google && !loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).outlook && (
+                <p className="text-sm text-muted-foreground">Connect an external calendar in the Integrations tab to export events.</p>
+              )}
             </div>
           </div>
 
