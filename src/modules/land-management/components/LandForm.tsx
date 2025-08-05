@@ -8,20 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Plus, X, Upload, Image } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Save, 
-  ArrowLeft, 
-  Plus, 
-  X, 
-  MapPin,
-  DollarSign,
-  Ruler,
-  FileText,
-  Zap,
-  AlertCircle
-} from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, Upload, Image, MapPin, DollarSign, Ruler, FileText, Zap, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface LandFormData {
@@ -99,13 +88,6 @@ export function LandForm() {
   
   const [formData, setFormData] = useState<LandFormData>(initialFormData)
   const [loading, setLoading] = useState(false)
-  const [newFeature, setNewFeature] = useState('')
-  const [newRestriction, setNewRestriction] = useState('')
-  const [newImage, setNewImage] = useState('')
-  
-  const [features, setFeatures] = useState<string[]>([])
-  const [restrictions, setRestrictions] = useState<string[]>([])
-  const [images, setImages] = useState<string[]>([])
   const [newFeature, setNewFeature] = useState('')
   const [newRestriction, setNewRestriction] = useState('')
 
@@ -206,45 +188,6 @@ export function LandForm() {
     }))
   }
 
-  const addImage = () => {
-    if (newImage.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, newImage.trim()]
-      }))
-      setNewImage('')
-    }
-  }
-
-  const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }))
-  }
-  
-  const addFeature = () => {
-    if (newFeature.trim() && !features.includes(newFeature.trim())) {
-      setFeatures(prev => [...prev, newFeature.trim()])
-      setNewFeature('')
-    }
-  }
-  
-  const removeFeature = (feature: string) => {
-    setFeatures(prev => prev.filter(f => f !== feature))
-  }
-  
-  const addRestriction = () => {
-    if (newRestriction.trim() && !restrictions.includes(newRestriction.trim())) {
-      setRestrictions(prev => [...prev, newRestriction.trim()])
-      setNewRestriction('')
-    }
-  }
-  
-  const removeRestriction = (restriction: string) => {
-    setRestrictions(prev => prev.filter(r => r !== restriction))
-  }
-  
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (files) {
@@ -252,7 +195,10 @@ export function LandForm() {
         const reader = new FileReader()
         reader.onload = (e) => {
           if (e.target?.result) {
-            setImages(prev => [...prev, e.target!.result as string])
+            setFormData(prev => ({
+              ...prev,
+              images: [...prev.images, e.target!.result as string]
+            }))
           }
         }
         reader.readAsDataURL(file)
@@ -261,7 +207,10 @@ export function LandForm() {
   }
   
   const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index))
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -305,45 +254,57 @@ export function LandForm() {
         variant: "destructive"
       })
     } finally {
-    console.log('Form submitted:', { 
-      ...formData, 
-      features, 
-      restrictions, 
-      images: images.length 
-    })
+      setLoading(false)
     }
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/land')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Land List
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {isEditing ? 'Edit Land Record' : 'Add New Land'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEditing ? 'Update land information' : 'Create a new land record'}
+          </p>
+        </div>
+      </div>
       
       {/* Features Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Features</CardTitle>
-          <CardDescription>Add key features and amenities</CardDescription>
+          <CardTitle className="flex items-center">
+            <FileText className="mr-2 h-4 w-4" />
+            Features
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex space-x-2">
             <Input
-              placeholder="Enter a feature (e.g., Water access, Utilities available)"
+              placeholder="Add a feature (e.g., Wooded, Level, Corner Lot)"
               value={newFeature}
               onChange={(e) => setNewFeature(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
             />
-            <Button type="button" onClick={addFeature}>
+            <Button type="button" onClick={addFeature} size="sm">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
           
-          {features.length > 0 && (
+          {formData.features.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {features.map((feature, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {feature}
+              {formData.features.map((feature, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center space-x-1">
+                  <span>{feature}</span>
                   <button
                     type="button"
-                    onClick={() => removeFeature(feature)}
+                    onClick={() => removeFeature(index)}
                     className="ml-1 hover:text-destructive"
                   >
                     <X className="h-3 w-3" />
@@ -358,31 +319,33 @@ export function LandForm() {
       {/* Restrictions Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Restrictions</CardTitle>
-          <CardDescription>Add any restrictions or limitations</CardDescription>
+          <CardTitle className="flex items-center">
+            <AlertCircle className="mr-2 h-4 w-4" />
+            Restrictions
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex space-x-2">
             <Input
-              placeholder="Enter a restriction (e.g., No pets, Minimum lease term)"
+              placeholder="Add a restriction (e.g., No mobile homes, Minimum 2000 sq ft)"
               value={newRestriction}
               onChange={(e) => setNewRestriction(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRestriction())}
             />
-            <Button type="button" onClick={addRestriction}>
+            <Button type="button" onClick={addRestriction} size="sm">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
           
-          {restrictions.length > 0 && (
+          {formData.restrictions.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {restrictions.map((restriction, index) => (
-                <Badge key={index} variant="destructive" className="flex items-center gap-1">
-                  {restriction}
+              {formData.restrictions.map((restriction, index) => (
+                <Badge key={index} variant="outline" className="flex items-center space-x-1">
+                  <span>{restriction}</span>
                   <button
                     type="button"
-                    onClick={() => removeRestriction(restriction)}
-                    className="ml-1 hover:text-white"
+                    onClick={() => removeRestriction(index)}
+                    className="ml-1 hover:text-destructive"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -397,7 +360,6 @@ export function LandForm() {
       <Card>
         <CardHeader>
           <CardTitle>Images</CardTitle>
-          <CardDescription>Upload photos of the land</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex space-x-2">
@@ -419,19 +381,19 @@ export function LandForm() {
             </Button>
           </div>
           
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {images.map((image, index) => (
-                <div key={index} className="relative group">
+          {formData.images.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {formData.images.map((image, index) => (
+                <div key={index} className="relative">
                   <img
                     src={image}
                     alt={`Land image ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-md border"
+                    className="w-full h-32 object-cover rounded-md"
                   />
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -440,7 +402,7 @@ export function LandForm() {
             </div>
           )}
           
-          {images.length === 0 && (
+          {formData.images.length === 0 && (
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
               <Image className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">No images uploaded yet</p>
@@ -449,21 +411,6 @@ export function LandForm() {
           )}
         </CardContent>
       </Card>
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/land')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Land List
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {isEditing ? 'Edit Land Record' : 'Add New Land'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isEditing ? 'Update land information' : 'Create a new land record'}
-          </p>
-        </div>
-      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Address Information */}
@@ -710,115 +657,6 @@ export function LandForm() {
                   <Label htmlFor={utility} className="capitalize">
                     {utility}
                   </Label>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Features */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Features</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
-              <Input
-                value={newFeature}
-                onChange={(e) => setNewFeature(e.target.value)}
-                placeholder="Add a feature (e.g., Wooded, Level, Corner Lot)"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
-              />
-              <Button type="button" onClick={addFeature} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.features.map((feature, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                  <span>{feature}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFeature(index)}
-                    className="ml-1 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Restrictions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <AlertCircle className="mr-2 h-4 w-4" />
-              Restrictions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
-              <Input
-                value={newRestriction}
-                onChange={(e) => setNewRestriction(e.target.value)}
-                placeholder="Add a restriction (e.g., No mobile homes, Minimum 2000 sq ft)"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRestriction())}
-              />
-              <Button type="button" onClick={addRestriction} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.restrictions.map((restriction, index) => (
-                <Badge key={index} variant="outline" className="flex items-center space-x-1">
-                  <span>{restriction}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeRestriction(index)}
-                    className="ml-1 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Images */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Images</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
-              <Input
-                value={newImage}
-                onChange={(e) => setNewImage(e.target.value)}
-                placeholder="Add image URL"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
-              />
-              <Button type="button" onClick={addImage} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {formData.images.map((image, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={image}
-                    alt={`Land image ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-md"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
                 </div>
               ))}
             </div>
