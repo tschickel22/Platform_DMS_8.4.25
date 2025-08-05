@@ -33,12 +33,12 @@ export function ExternalCalendarIntegration() {
       setConnections(prev => ({ ...prev, [provider]: true }))
       toast({
         title: 'Connection Successful',
-        description: `${provider === 'google' ? 'Google' : 'Outlook'} Calendar connected.`,
+        description: \`${provider === 'google' ? 'Google' : 'Outlook'} Calendar connected.`,
       })
     } catch (error) {
       toast({
         title: 'Connection Failed',
-        description: `Failed to connect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
+        description: \`Failed to connect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
         variant: 'destructive'
       })
     } finally {
@@ -55,12 +55,12 @@ export function ExternalCalendarIntegration() {
       setConnections(prev => ({ ...prev, [provider]: false }))
       toast({
         title: 'Disconnected',
-        description: `${provider === 'google' ? 'Google' : 'Outlook'} Calendar disconnected.`,
+        description: \`${provider === 'google' ? 'Google' : 'Outlook'} Calendar disconnected.`,
       })
     } catch (error) {
       toast({
         title: 'Disconnection Failed',
-        description: `Failed to disconnect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
+        description: \`Failed to disconnect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
         variant: 'destructive'
       })
     } finally {
