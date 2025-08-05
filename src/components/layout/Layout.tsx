@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   ListTodo,
   Calendar,
-  HardHat
+  HardHat,
+  MapPin
 } from 'lucide-react'
 import { Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -74,6 +75,7 @@ export default function Layout({ children }: LayoutProps) {
       icon: Package,
       children: [
         { name: 'Inventory', path: '/inventory', icon: Package },
+        { name: 'Land Management', path: '/land', icon: MapPin },
         { name: 'PDI Checklist', path: '/pdi', icon: CheckSquare },
         { name: 'Delivery', path: '/delivery', icon: Truck },
         { name: 'Warranty Mgmt', path: '/inventory/warranty', icon: ShieldCheck }

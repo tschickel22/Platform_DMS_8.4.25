@@ -334,6 +334,60 @@ export interface Loan {
   updatedAt: string
 }
 
+// Land Management Types
+export enum LandStatus {
+  AVAILABLE = 'AVAILABLE',
+  UNDER_CONTRACT = 'UNDER_CONTRACT',
+  SOLD = 'SOLD',
+  RESERVED = 'RESERVED',
+  OFF_MARKET = 'OFF_MARKET'
+}
+
+export interface LandAddress {
+  street: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+  coordinates?: {
+    latitude: number
+    longitude: number
+  }
+}
+
+export interface Land {
+  id: string
+  address: LandAddress
+  zoning: string
+  status: LandStatus
+  size: number // in acres
+  sizeUnit: 'acres' | 'sqft' | 'hectares'
+  price: number
+  cost: number
+  pricePerUnit?: number // calculated field
+  description?: string
+  notes?: string
+  images: string[]
+  features?: string[] // e.g., ['utilities', 'road_access', 'waterfront']
+  restrictions?: string[] // e.g., ['no_mobile_homes', 'residential_only']
+  utilities?: {
+    water: boolean
+    sewer: boolean
+    electric: boolean
+    gas: boolean
+    internet: boolean
+  }
+  taxes?: {
+    annual: number
+    assessedValue: number
+    lastAssessment: string
+  }
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  updatedBy: string
+}
+
 export interface LoanHistoryEntry {
   id: string
   timestamp: string
