@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { DispatchBoard } from './components/DispatchBoard'
+import { ContractorDetail } from './components/ContractorDetail'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +22,7 @@ import {
 import { useContractorManagement } from './hooks/useContractorManagement'
 import { ContractorTrade, AvailabilityStatus } from '@/types'
 import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Helper function to get trade display name
 const getTradeDisplayName = (trade: ContractorTrade): string => {
@@ -70,6 +73,7 @@ const getAvailabilityBadgeVariant = (status: string) => {
 }
 
 function ContractorDirectory() {
+  const location = useLocation()
   const { 
     contractors, 
     availabilitySlots, 
@@ -117,11 +121,27 @@ function ContractorDirectory() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="ri-page-header">
-        <h1 className="ri-page-title">Contractor Directory</h1>
-        <p className="ri-page-description">
-          Manage your network of contractors and their availability
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="ri-page-header">
+          <h1 className="ri-page-title">Contractor Management</h1>
+          <p className="ri-page-description">
+            Manage your network of contractors and their availability
+          </p>
+        </div>
+        
+        {/* Navigation Tabs */}
+        <div className="flex space-x-2">
+          <Link to="/contractors/directory">
+            <Button variant={location.pathname.includes('/directory') || location.pathname === '/contractors' ? 'default' : 'outline'}>
+              Directory
+            </Button>
+          </Link>
+          <Link to="/contractors/dispatch">
+            <Button variant={location.pathname.includes('/dispatch') ? 'default' : 'outline'}>
+              Dispatch Board
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -334,9 +354,11 @@ function ContractorDirectory() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
+                            <Link to={`/contractors/contractor/${contractor.id}`}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
                             <Button variant="outline" size="sm">
                               Schedule
                             </Button>
@@ -360,9 +382,8 @@ export default function ContractorManagement() {
     <Routes>
       <Route path="/" element={<ContractorDirectory />} />
       <Route path="/directory" element={<ContractorDirectory />} />
-      {/* Future routes will be added here */}
-      {/* <Route path="/dispatch" element={<DispatchBoard />} /> */}
-      {/* <Route path="/contractor/:id" element={<ContractorDetail />} /> */}
+      <Route path="/dispatch" element={<DispatchBoard />} />
+      <Route path="/contractor/:id" element={<ContractorDetail />} />
     </Routes>
   )
 }
