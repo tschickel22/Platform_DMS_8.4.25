@@ -194,6 +194,13 @@ export function usePDIManagement() {
     saveToLocalStorage('renter-insight-pdi-inspections', updatedInspections)
   }
 
+  // Save inspections to localStorage whenever inspections change
+  useEffect(() => {
+    if (inspections.length > 0) {
+      saveInspectionsToStorage(inspections)
+    }
+  }, [inspections])
+
   // Template Management
   const getTemplatesByVehicleType = (vehicleType: string) => {
     return templates.filter(t => t.vehicleType === vehicleType && t.isActive)
@@ -430,6 +437,7 @@ export function usePDIManagement() {
     updatedInspections[inspectionIndex] = updatedInspection
 
     setInspections(updatedInspections)
+    saveInspectionsToStorage(updatedInspections)
     saveInspectionsToStorage(updatedInspections)
   }
 

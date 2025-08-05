@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Plus, Search, Filter, Send, Edit, Eye, TrendingUp, DollarSign, Copy, Trash2, Download, X } from 'lucide-react'
+import { FileText, Plus, Search, Filter, Send, Edit, Eye, TrendingUp, DollarSign, Copy, Trash2, Download, X, ListTodo } from 'lucide-react'
 import { Quote, QuoteStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { mockQuoteBuilder } from '@/mocks/quoteBuilderMock'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 
 // Import the QuoteBuilder component from CRM module
 import { QuoteBuilder as QuoteBuilderComponent } from '@/modules/crm-prospecting/components/QuoteBuilder'
@@ -200,6 +203,7 @@ function QuoteDetailModal({ quote, onClose, onEdit }: QuoteDetailModalProps) {
 
 function QuotesList() {
   const { toast } = useToast()
+  const { createTask } = useTasks()
   const [quotes, setQuotes] = useState<Quote[]>(mockQuotes)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -207,6 +211,8 @@ function QuotesList() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null)
   const [viewingQuote, setViewingQuote] = useState<Quote | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
   const getStatusColor = (status: QuoteStatus) => {
     switch (status) {
@@ -358,6 +364,49 @@ function QuotesList() {
     }
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForQuote = (quote: Quote) => {
+    const dueDate = new Date(quote.validUntil)
+    // If quote is expiring soon, make it high priority
+    const daysUntilExpiry = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const priority = daysUntilExpiry <= 3 ? TaskPriority.HIGH : 
+                    daysUntilExpiry <= 7 ? TaskPriority.MEDIUM : TaskPriority.LOW
+
+    setInitialTaskData({
+      sourceId: quote.id,
+      sourceType: 'quote',
+      module: TaskModule.QUOTE,
+      title: `Follow up on quote #${quote.id}`,
+      description: `Quote total: ${formatCurrency(quote.total)}, Status: ${quote.status}`,
+      priority,
+      dueDate,
+      link: `/quotes`,
+      customFields: {
+        quoteTotal: quote.total,
+        customerId: quote.customerId,
+        quoteStatus: quote.status
+      }
+    })
+    setShowTaskForm(true)
+  }
+
   const stats = {
     total: quotes.length,
     draft: quotes.filter(q => q.status === 'draft').length,
@@ -369,6 +418,18 @@ function QuotesList() {
 
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+
       {/* Quote Builder Modal */}
       {showQuoteBuilder && (
         <QuoteBuilderComponent
@@ -581,6 +642,15 @@ function QuotesList() {
                   >
                     <Copy className="h-3 w-3 mr-1" />
                     Copy
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="shadow-sm"
+                    onClick={() => handleCreateTaskForQuote(quote)}
+                  >
+                    <ListTodo className="h-3 w-3 mr-1" />
+                    Task
                   </Button>
                   <Button 
                     variant="outline" 

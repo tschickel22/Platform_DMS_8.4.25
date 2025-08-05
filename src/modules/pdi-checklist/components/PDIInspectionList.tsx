@@ -5,23 +5,26 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, Plus, Eye, Edit, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Search, Plus, Eye, Edit, CheckCircle, XCircle, Clock, ListTodo } from 'lucide-react'
 import { mockPDI } from '@/mocks/pdiMock'
 import { formatDate } from '@/lib/utils'
+import { PDIInspection } from '../types'
 
 interface PDIInspectionListProps {
+  inspections: PDIInspection[]
   onNewInspection: () => void
   onViewInspection: (id: string) => void
   onEditInspection: (id: string) => void
+  onCreateTask?: (inspection: PDIInspection) => void
 }
 
-export function PDIInspectionList({ onNewInspection, onViewInspection, onEditInspection }: PDIInspectionListProps) {
+export default function PDIInspectionList({ inspections: propInspections, onNewInspection, onViewInspection, onEditInspection, onCreateTask }: PDIInspectionListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [technicianFilter, setTechnicianFilter] = useState('all')
 
-  // Use mock data as fallback - in real app, fetch from API
-  const inspections = mockPDI.sampleInspections
+  // Always use prop inspections - don't fallback to mock data
+  const inspections = propInspections
 
   const getStatusColor = (status: string) => {
     return mockPDI.statusColors[status] || 'bg-gray-100 text-gray-800'
@@ -37,12 +40,17 @@ export function PDIInspectionList({ onNewInspection, onViewInspection, onEditIns
   }
 
   const filteredInspections = inspections.filter(inspection => {
-    const matchesSearch = inspection.unitInfo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inspection.stockNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inspection.technicianName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || inspection.status === statusFilter
-    const matchesTechnician = technicianFilter === 'all' || inspection.technicianId === technicianFilter
-    
+    const matchesSearch =
+      inspection.unitInfo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inspection.stockNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inspection.technicianName?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus =
+      statusFilter === 'all' || inspection.status === statusFilter
+
+    const matchesTechnician =
+      technicianFilter === 'all' || inspection.technicianId === technicianFilter
+
     return matchesSearch && matchesStatus && matchesTechnician
   })
 
@@ -131,9 +139,14 @@ export function PDIInspectionList({ onNewInspection, onViewInspection, onEditIns
             <TableBody>
               {filteredInspections.map((inspection) => (
                 <TableRow key={inspection.id}>
-                  <TableCell className="font-medium">{inspection.unitInfo}</TableCell>
-                  <TableCell>{inspection.stockNumber}</TableCell>
-                  <TableCell>{inspection.technicianName}</TableCell>
+                  <TableCell className="font-medium">
+                    {inspection.vehicle ? 
+                      `${inspection.vehicle.year} ${inspection.vehicle.make} ${inspection.vehicle.model}` : 
+                      inspection.vehicleId
+                    }
+                  </TableCell>
+                  <TableCell>{inspection.vehicleId}</TableCell>
+                  <TableCell>{inspection.inspectorId}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(inspection.status)}
@@ -145,9 +158,9 @@ export function PDIInspectionList({ onNewInspection, onViewInspection, onEditIns
                   <TableCell>
                     <div className="text-sm">{calculateProgress(inspection)}% Complete</div>
                   </TableCell>
-                  <TableCell>{formatDate(inspection.startedDate)}</TableCell>
+                  <TableCell>{formatDate(inspection.startedAt)}</TableCell>
                   <TableCell>
-                    {inspection.completedDate ? formatDate(inspection.completedDate) : '-'}
+                    {inspection.completedAt ? formatDate(inspection.completedAt) : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -165,6 +178,16 @@ export function PDIInspectionList({ onNewInspection, onViewInspection, onEditIns
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      {onCreateTask && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCreateTask(inspection)}
+                          title="Create Task"
+                        >
+                          <ListTodo className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

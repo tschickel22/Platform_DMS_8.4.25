@@ -14,15 +14,21 @@ import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle } = useInventoryManagement()
   const { toast } = useToast()
+  const { createTask } = useTasks()
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [showVehicleDetail, setShowVehicleDetail] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
@@ -39,6 +45,54 @@ function InventoryList() {
     setShowVehicleDetail(true)
   }
   
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForVehicle = (vehicle: Vehicle) => {
+    // Determine priority based on vehicle status
+    const priority = vehicle.status === 'service' ? TaskPriority.HIGH :
+                    vehicle.status === 'reserved' ? TaskPriority.MEDIUM :
+                    TaskPriority.LOW
+
+    // Set due date based on vehicle status
+    const dueDate = vehicle.status === 'service' 
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for service
+      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days for others
+
+    setInitialTaskData({
+      sourceId: vehicle.id,
+      sourceType: 'vehicle',
+      module: TaskModule.CRM,
+      title: `Follow up on ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      description: `Vehicle Status: ${vehicle.status}, Location: ${vehicle.location}`,
+      priority,
+      dueDate,
+      link: `/inventory`,
+      customFields: {
+        vehicleVin: vehicle.vin,
+        vehiclePrice: vehicle.price,
+        vehicleLocation: vehicle.location,
+        vehicleStatus: vehicle.status
+      }
+    })
+    setShowTaskForm(true)
+  }
+
   const handleDeleteVehicle = async (vehicleId: string) => {
     if (window.confirm('Are you sure you want to delete this vehicle?')) {
       try {
@@ -160,6 +214,18 @@ function InventoryList() {
 
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+      
       {/* Vehicle Form Modal */}
       {showVehicleForm && (
         <VehicleForm
@@ -178,6 +244,7 @@ function InventoryList() {
           vehicle={selectedVehicle}
           onClose={() => setShowVehicleDetail(false)}
           onEdit={handleEditVehicle}
+          onCreateTask={handleCreateTaskForVehicle}
         />
       )}
       
@@ -292,6 +359,7 @@ function InventoryList() {
         onDelete={handleDeleteVehicle}
         onView={handleViewVehicle}
         onStatusChange={handleStatusChange}
+        onCreateTask={handleCreateTaskForVehicle}
       />
     </div>
   )

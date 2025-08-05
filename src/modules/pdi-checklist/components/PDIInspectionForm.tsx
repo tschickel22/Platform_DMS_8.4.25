@@ -37,7 +37,7 @@ import { useDropzone } from 'react-dropzone'
 interface PDIInspectionFormProps {
   inspection: PDIInspection
   vehicles: Vehicle[]
-  onSave: (inspectionData: Partial<PDIInspection>) => Promise<void>
+  onSave: (inspectionId: string, inspectionData: Partial<PDIInspection>) => Promise<void>
   onComplete: (inspectionId: string, notes?: string) => Promise<void>
   onUpdateItem: (inspectionId: string, itemId: string, itemData: Partial<PDIInspectionItem>) => Promise<void>
   onAddDefect: (inspectionId: string, defectData: Partial<PDIDefect>) => Promise<void>
@@ -102,8 +102,9 @@ export default function PDIInspectionForm({
   const handleSave = async () => {
     setLoading(true)
     try {
-      await onSave({
-        notes
+      await onSave(inspection.id, {
+        notes,
+        updatedAt: new Date()
       })
       toast({
         title: 'Success',
@@ -163,11 +164,27 @@ export default function PDIInspectionForm({
         notes
       })
       
+      // Update the local inspection state to reflect changes immediately
+      const updatedInspection = {
+        ...inspection,
+        items: inspection.items.map(item => 
+          item.id === itemId 
+            ? { ...item, status, value, notes, updatedAt: new Date() }
+            : item
+        ),
+        updatedAt: new Date()
+      }
+      
       // If status is failed, prompt to add a defect
       if (status === PDIInspectionItemStatus.FAILED) {
         setCurrentItemId(itemId)
         setShowDefectForm(true)
       }
+      
+      toast({
+        title: 'Item Updated',
+        description: `Inspection item marked as ${status}`,
+      })
     } catch (error) {
       toast({
         title: 'Error',

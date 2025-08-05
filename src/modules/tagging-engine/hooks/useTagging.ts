@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useState, useEffect } from 'react'
 import { 
   Tag, 
@@ -23,6 +24,11 @@ export function useTagging() {
   const [bulkOperations, setBulkOperations] = useState<BulkTagOperation[]>([])
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Calculate total usage across all tags
+  const totalUsage = useMemo(() => {
+    return tags.reduce((sum, tag) => sum + tag.usageCount, 0)
+  }, [tags])
 
   useEffect(() => {
     initializeTaggingData()
@@ -728,3 +734,5 @@ export function useTagging() {
     filterEntitiesByTags
   }
 }
+
+export { totalUsage }

@@ -23,7 +23,10 @@ import {
   User,
   LogOut,
   ChevronDown,
-  ShieldCheck
+  ShieldCheck,
+  ListTodo,
+  Calendar,
+  HardHat
 } from 'lucide-react'
 import { Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -100,7 +103,10 @@ export default function Layout({ children }: LayoutProps) {
       children: [
         { name: 'Reports', path: '/reports', icon: BarChart2 },
         { name: 'Commissions', path: '/commissions', icon: Percent },
-        { name: 'Tag Manager', path: '/tags', icon: Tag }
+        { name: 'Tag Manager', path: '/tags', icon: Tag },
+        { name: 'Task Center', path: '/tasks', icon: ListTodo },
+        { name: 'Calendar', path: '/calendar', icon: Calendar },
+        { name: 'Contractors', path: '/contractors', icon: HardHat }
       ]
     },
     {

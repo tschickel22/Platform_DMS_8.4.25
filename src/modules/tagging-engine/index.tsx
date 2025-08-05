@@ -5,7 +5,9 @@ import { TagFilter } from './components/TagFilter'
 import { BulkTagOperations } from './components/BulkTagOperations'
 
 function TaggingEngineMain() {
-  return <TagManager />
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  
+  return <TagManager activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 }
 
 export default function TaggingEngine() {

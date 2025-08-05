@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Wrench, Plus, Search, Filter, Calendar, Clock, User, TrendingUp, DollarSign } from 'lucide-react'
+import { Wrench, Plus, Search, Filter, Calendar, Clock, User, TrendingUp, DollarSign, ListTodo } from 'lucide-react'
 import { ServiceTicket, ServiceStatus, Priority } from '@/types'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -15,10 +15,14 @@ import { ServiceTicketForm } from './components/ServiceTicketForm'
 import { ServiceTicketDetail } from './components/ServiceTicketDetail'
 import { CustomerPortalView } from './components/CustomerPortalView'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 
 function ServiceTicketsList() {
   const { tickets, createTicket, updateTicket, deleteTicket, updateTicketStatus } = useServiceManagement()
   const { toast } = useToast()
+  const { createTask } = useTasks()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setpriorityFilter] = useState<string>('all')
@@ -27,6 +31,8 @@ function ServiceTicketsList() {
   const [showCustomerPortal, setShowCustomerPortal] = useState(false)
   const [showLeadModal, setShowLeadModal] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicket | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
   const getStatusColor = (status: ServiceStatus) => {
     switch (status) {
@@ -60,14 +66,14 @@ function ServiceTicketsList() {
     }
   }
 
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.customerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.id.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
-  .filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter)
+const filteredTickets = tickets.filter(ticket =>
+  ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.customerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  ticket.id?.toLowerCase().includes(searchTerm.toLowerCase())
+)
+.filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
+.filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter)
 
   const handleCreateTicket = () => {
     setSelectedTicket(null)
@@ -163,8 +169,75 @@ function ServiceTicketsList() {
     setShowTicketForm(true)
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForServiceTicket = (ticket: ServiceTicket) => {
+    // Determine priority based on ticket priority and status
+    const priority = ticket.priority === Priority.URGENT ? TaskPriority.URGENT :
+                    ticket.priority === Priority.HIGH ? TaskPriority.HIGH :
+                    ticket.priority === Priority.MEDIUM ? TaskPriority.MEDIUM :
+                    TaskPriority.LOW
+
+    // Set due date based on priority and scheduled date
+    const dueDate = ticket.scheduledDate || 
+                   (ticket.priority === Priority.URGENT 
+                     ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for urgent
+                     : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) // 3 days for others
+
+    const totalCost = ticket.parts.reduce((sum, p) => sum + p.total, 0) + 
+                     ticket.labor.reduce((sum, l) => sum + l.total, 0)
+
+    setInitialTaskData({
+      sourceId: ticket.id,
+      sourceType: 'service_ticket',
+      module: TaskModule.SERVICE,
+      title: `Service: ${ticket.title}`,
+      description: `${ticket.description} - Status: ${ticket.status}, Total: ${formatCurrency(totalCost)}`,
+      priority,
+      assignedTo: ticket.assignedTo,
+      dueDate,
+      link: `/service`,
+      customFields: {
+        customerId: ticket.customerId,
+        vehicleId: ticket.vehicleId,
+        ticketPriority: ticket.priority,
+        partsTotal: ticket.parts.reduce((sum, p) => sum + p.total, 0),
+        laborTotal: ticket.labor.reduce((sum, l) => sum + l.total, 0),
+        totalCost
+      }
+    })
+    setShowTaskForm(true)
+  }
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+      
       {/* New Customer Form Modal */}
       {showLeadModal && (
         <NewLeadForm
@@ -191,6 +264,7 @@ function ServiceTicketsList() {
           ticket={selectedTicket}
           onClose={() => setShowTicketDetail(false)}
           onEdit={handleEditTicket}
+          onCreateTask={handleCreateTaskForServiceTicket}
         />
       )}
       
@@ -417,15 +491,35 @@ function ServiceTicketsList() {
                     Edit
                   </Button>
                   {ticket.customFields?.customerPortalAccess !== false && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="shadow-sm"
-                      onClick={() => handleViewCustomerPortal(ticket)}
-                    >
-                      Customer View
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="shadow-sm"
+                        onClick={() => handleViewCustomerPortal(ticket)}
+                      >
+                        Customer View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="shadow-sm"
+                        onClick={() => handleCreateTaskForServiceTicket(ticket)}
+                      >
+                        <ListTodo className="h-3 w-3 mr-1" />
+                        Task
+                      </Button>
+                    </>
                   )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="shadow-sm"
+                    onClick={() => handleCreateTaskForServiceTicket(ticket)}
+                  >
+                    <ListTodo className="h-3 w-3 mr-1" />
+                    Task
+                  </Button>
                 </div>
               </div>
             ))}

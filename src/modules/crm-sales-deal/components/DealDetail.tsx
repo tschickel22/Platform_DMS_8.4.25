@@ -7,15 +7,16 @@ import { X, Edit, DollarSign, Calendar, User, Target, Package, MapPin, Clock, Al
 import { Deal, DealStage, DealStatus, DealPriority } from '../types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
+import { ListTodo } from 'lucide-react'
 
 interface DealDetailProps {
   deal: Deal
   onClose: () => void
   onEdit: (deal: Deal) => void
+  onCreateTask?: (deal: Deal) => void
 }
 
-export function DealDetail({ deal, onClose, onEdit }: DealDetailProps) {
+export function DealDetail({ deal, onClose, onEdit, onCreateTask }: DealDetailProps) {
   const getStatusColor = (status: DealStatus) => {
     switch (status) {
       case DealStatus.ACTIVE:
@@ -307,6 +308,12 @@ export function DealDetail({ deal, onClose, onEdit }: DealDetailProps) {
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
+            {onCreateTask && (
+              <Button variant="outline" onClick={() => onCreateTask(deal)}>
+                <ListTodo className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            )}
             <Button onClick={() => onEdit(deal)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Deal

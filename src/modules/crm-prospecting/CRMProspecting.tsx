@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, Plus, Search, Filter, Phone, Mail, Calendar, TrendingUp, Target, BarChart3, Settings, Brain, MessageSquare } from 'lucide-react'
-import { Lead, LeadStatus } from '@/types'
+import { Users, Plus, Search, Filter, Phone, Mail, Calendar, TrendingUp, Target, BarChart3, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
+import { Lead, LeadStatus, Task } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useLeadManagement } from './hooks/useLeadManagement'
@@ -23,6 +23,9 @@ import { NewLeadForm } from './components/NewLeadForm'
 import { QuotesList } from './components/QuotesList'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { TaskModule, TaskPriority, TaskStatus } from '@/types'
 
 function LeadsList() {
   const {
@@ -37,12 +40,16 @@ function LeadsList() {
     getLeadScore
   } = useLeadManagement()
   
+  const { createTask } = useTasks()
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showNewLeadForm, setShowNewLeadForm] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
 
   const getStatusColor = (status: LeadStatus) => {
     switch (status) {
@@ -99,6 +106,55 @@ function LeadsList() {
     console.log('New lead created:', newLead)
   }
 
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setTaskInitialData(null)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const getTaskInitialData = (lead: Lead) => {
+    const lastActivity = lead.lastActivity ? new Date(lead.lastActivity) : new Date(lead.createdAt)
+    const dueDate = new Date(lastActivity)
+    dueDate.setDate(dueDate.getDate() + 3) // Due in 3 days
+
+    return {
+      title: `Follow up with ${lead.firstName} ${lead.lastName}`,
+      description: `Follow up on ${lead.status.replace('_', ' ')} lead from ${lead.source}`,
+      module: TaskModule.CRM,
+      priority: lead.score && lead.score >= 80 ? TaskPriority.HIGH : 
+                lead.score && lead.score >= 60 ? TaskPriority.MEDIUM : TaskPriority.LOW,
+      sourceId: lead.id,
+      sourceType: 'lead',
+      assignedTo: lead.assignedTo,
+      dueDate,
+      customFields: {
+        leadScore: lead.score,
+        leadSource: lead.source,
+        leadEmail: lead.email,
+        leadPhone: lead.phone
+      }
+    }
+  }
+
+  const handleCreateTaskForLead = (lead: Lead) => {
+    const initialData = getTaskInitialData(lead)
+    setTaskInitialData(initialData)
+    setShowTaskForm(true)
+  }
+
   if (selectedLead) {
     const leadActivities = getActivitiesByLead(selectedLead.id)
     const leadReminders = getRemindersByUser('current-user').filter(r => r.leadId === selectedLead.id)
@@ -106,6 +162,15 @@ function LeadsList() {
 
     return (
       <div className="space-y-6">
+        {/* Task Form Modal */}
+        {showTaskForm && (
+          <TaskForm
+            initialData={taskInitialData || undefined}
+            onSave={handleCreateTask}
+            onCancel={() => setShowTaskForm(false)}
+          />
+        )}
+
         {/* Lead Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -128,6 +193,14 @@ function LeadsList() {
                 Score: {selectedLead.score}
               </Badge>
             )}
+            <Button 
+              onClick={() => setShowTaskForm(true)}
+              size="sm"
+              variant="outline"
+            >
+              <ListTodo className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
           </div>
         </div>
 
@@ -450,6 +523,18 @@ function LeadsList() {
                       </div>
                     </div>
                     <div className="ri-action-buttons">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleCreateTaskForLead(lead)
+                        }}
+                      >
+                        <ListTodo className="h-3 w-3 mr-1" />
+                        Task
+                      </Button>
                       <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => {
                         e.stopPropagation()
                         // Handle quick actions
