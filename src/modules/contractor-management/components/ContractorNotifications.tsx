@@ -547,35 +547,203 @@ export function ContractorNotifications() {
         <TabsContent value="templates">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Notification Templates
-              </CardTitle>
-              <CardDescription>
-                Manage your notification templates
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Notification Templates
+                  </CardTitle>
+                  <CardDescription>
+                    Create and manage your notification templates with merge fields
+                  </CardDescription>
+                </div>
+                <Button onClick={handleCreateTemplate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Template
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {defaultTemplates.map((template) => (
+                {templates.map((template) => (
                   <div key={template.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{template.name}</h4>
-                      <Badge variant="outline">{template.type.replace('_', ' ')}</Badge>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium">{template.name}</h4>
+                          <Badge variant="outline">{template.type.replace('_', ' ')}</Badge>
+                          {template.isCustom && (
+                            <Badge variant="secondary">Custom</Badge>
+                          )}
+                        </div>
+                        {template.updatedAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Last updated: {template.updatedAt.toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTemplate(template)}
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDuplicateTemplate(template)}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Duplicate
+                        </Button>
+                        {template.isCustom && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm text-muted-foreground mb-2">
                       <strong>Subject:</strong> {template.subject}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <strong>Message:</strong> {template.message.substring(0, 150)}...
+                      <strong>Message:</strong> {template.message.substring(0, 200)}
+                      {template.message.length > 200 && '...'}
                     </div>
                   </div>
                 ))}
+                
+                {templates.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm">No templates found</p>
+                    <Button onClick={handleCreateTemplate} className="mt-4">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Template
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Template Creation/Edit Modal */}
+      <Dialog open={isTemplateModalOpen} onOpenChange={setIsTemplateModalOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplate ? 'Edit Template' : 'Create New Template'}
+            </DialogTitle>
+            <DialogDescription>
+              Create a notification template with merge fields for dynamic content
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Template Form */}
+            <div className="lg:col-span-2 space-y-4">
+              <div>
+                <Label htmlFor="template-name">Template Name</Label>
+                <Input
+                  id="template-name"
+                  value={templateForm.name}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter template name..."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="template-type">Template Type</Label>
+                <Select 
+                  value={templateForm.type} 
+                  onValueChange={(value) => setTemplateForm(prev => ({ ...prev, type: value as NotificationTemplate['type'] }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="job_assigned">Job Assignment</SelectItem>
+                    <SelectItem value="job_reminder">Job Reminder</SelectItem>
+                    <SelectItem value="job_completed">Job Completed</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="template-subject">Subject</Label>
+                <Input
+                  id="template-subject"
+                  value={templateForm.subject}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, subject: e.target.value }))}
+                  placeholder="Enter email subject..."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="template-message">Message</Label>
+                <Textarea
+                  id="template-message"
+                  value={templateForm.message}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Enter your message template..."
+                  rows={12}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsTemplateModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveTemplate}>
+                  {editingTemplate ? 'Update Template' : 'Create Template'}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Merge Fields Panel */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Available Merge Fields</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Click to insert into your message
+                </p>
+              </div>
+              
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {availableMergeFields.map((field) => (
+                  <div
+                    key={field.key}
+                    className="p-2 border rounded cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => insertMergeField(field.key)}
+                  >
+                    <div className="font-medium text-sm">{field.label}</div>
+                    <div className="text-xs text-muted-foreground">{field.description}</div>
+                    <div className="text-xs font-mono text-primary mt-1">
+                      {`{{${field.key}}}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                <strong>Tip:</strong> Merge fields will be automatically replaced with actual values when sending notifications.
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
