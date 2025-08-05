@@ -17,7 +17,8 @@ import {
   Lightbulb,
   Settings,
   Play,
-  Pause
+  Pause,
+  RefreshCw
 } from 'lucide-react'
 import { CalendarEvent } from '../types'
 import { useToast } from '@/hooks/use-toast'
