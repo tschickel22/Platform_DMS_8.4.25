@@ -328,9 +328,32 @@ export function useContractorManagement() {
       const savedAvailability = loadFromLocalStorage('contractor-management-availability', mockAvailabilitySlots)
       const savedJobs = loadFromLocalStorage('contractor-management-jobs', mockContractorJobs)
 
-      setContractors(savedContractors)
-      setAvailabilitySlots(savedAvailability)
-      setContractorJobs(savedJobs)
+      // Convert date strings back to Date objects for contractors
+      const contractorsWithDates = savedContractors.map(contractor => ({
+        ...contractor,
+        createdAt: new Date(contractor.createdAt),
+        updatedAt: new Date(contractor.updatedAt)
+      }))
+
+      // Convert date strings back to Date objects for availability slots
+      const availabilityWithDates = savedAvailability.map(slot => ({
+        ...slot,
+        createdAt: new Date(slot.createdAt),
+        updatedAt: new Date(slot.updatedAt)
+      }))
+
+      // Convert date strings back to Date objects for contractor jobs
+      const jobsWithDates = savedJobs.map(job => ({
+        ...job,
+        scheduledDate: new Date(job.scheduledDate),
+        createdAt: new Date(job.createdAt),
+        updatedAt: new Date(job.updatedAt),
+        ...(job.completedAt && { completedAt: new Date(job.completedAt) })
+      }))
+
+      setContractors(contractorsWithDates)
+      setAvailabilitySlots(availabilityWithDates)
+      setContractorJobs(jobsWithDates)
     } catch (err) {
       console.error('Error loading contractor data:', err)
       setError('Failed to load contractor data')
