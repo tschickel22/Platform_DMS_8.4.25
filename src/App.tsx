@@ -34,6 +34,7 @@ import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
 import TaskCenter from '@/modules/task-center/TaskCenter'
 import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
+import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
 
 function App() {
   return (
@@ -75,6 +76,7 @@ function App() {
                           <Route path="/tags/*" element={<TaggingEngine />} />
                           <Route path="/tasks/*" element={<TaskCenter />} />
                           <Route path="/calendar/*" element={<CalendarScheduling />} />
+                          <Route path="/contractors/*" element={<ContractorManagement />} />
                         </Routes>
                       </Layout>
                     </ProtectedRoute>
