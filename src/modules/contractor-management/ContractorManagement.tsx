@@ -92,6 +92,7 @@ function ContractorDirectory() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTrade, setSelectedTrade] = useState<string>('all')
   const [selectedAvailability, setSelectedAvailability] = useState<string>('all')
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [isNewJobFormOpen, setIsNewJobFormOpen] = useState(false)
   const [isNewContractorFormOpen, setIsNewContractorFormOpen] = useState(false)
 
@@ -110,8 +111,40 @@ function ContractorDirectory() {
       matchesAvailability = availabilityStatus === selectedAvailability
     }
     
-    return matchesSearch && matchesTrade && matchesAvailability
+    // Apply active filter from stats cards
+    let matchesActiveFilter = true
+    if (activeFilter) {
+      switch (activeFilter) {
+        case 'available':
+          const availabilityStatus = getContractorAvailabilityStatus(contractor.id, availabilitySlots)
+          matchesActiveFilter = availabilityStatus === 'Available'
+          break
+        case 'high-rated':
+          matchesActiveFilter = contractor.ratings.averageRating >= 4.5
+          break
+        case 'with-reviews':
+          matchesActiveFilter = contractor.ratings.reviewCount > 0
+          break
+        default:
+          matchesActiveFilter = true
+      }
+    }
+    
+    return matchesSearch && matchesTrade && matchesAvailability && matchesActiveFilter
   })
+
+  const handleStatsCardClick = (filterType: string) => {
+    if (activeFilter === filterType) {
+      // If clicking the same filter, clear it
+      setActiveFilter(null)
+    } else {
+      // Set new filter and clear other filters
+      setActiveFilter(filterType)
+      setSelectedTrade('all')
+      setSelectedAvailability('all')
+      setSearchTerm('')
+    }
+  }
 
   if (loading) {
     return (
@@ -189,27 +222,37 @@ function ContractorDirectory() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="bg-blue-50">
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'total' ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-blue-50 hover:bg-blue-100'
+          }`}
+          onClick={() => handleStatsCardClick('total')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Contractors</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-blue-700">{contractors.length}</div>
+            <div className="text-2xl font-bold text-blue-700">{filteredContractors.length}</div>
             <p className="text-xs text-muted-foreground">
               {activeContractors.length} active
             </p>
           </CardContent>
         </Card>
         
-        <Card className="bg-green-50">
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'available' ? 'bg-green-100 ring-2 ring-green-500' : 'bg-green-50 hover:bg-green-100'
+          }`}
+          onClick={() => handleStatsCardClick('available')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Available Today</CardTitle>
             <Calendar className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold text-green-700">
-              {activeContractors.filter(c => 
+              {filteredContractors.filter(c => 
                 getContractorAvailabilityStatus(c.id, availabilitySlots) === 'Available'
               ).length}
             </div>
@@ -219,32 +262,42 @@ function ContractorDirectory() {
           </CardContent>
         </Card>
         
-        <Card className="bg-yellow-50">
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'high-rated' ? 'bg-yellow-100 ring-2 ring-yellow-500' : 'bg-yellow-50 hover:bg-yellow-100'
+          }`}
+          onClick={() => handleStatsCardClick('high-rated')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
             <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold text-yellow-700">
-              {activeContractors.length > 0 
-                ? (activeContractors.reduce((sum, c) => sum + c.ratings.averageRating, 0) / activeContractors.length).toFixed(1)
+              {filteredContractors.length > 0 
+                ? (filteredContractors.reduce((sum, c) => sum + c.ratings.averageRating, 0) / filteredContractors.length).toFixed(1)
                 : '0.0'
               }
             </div>
             <p className="text-xs text-muted-foreground">
-              Across all contractors
+              {activeFilter === 'high-rated' ? '4.5+ rated contractors' : 'Across all contractors'}
             </p>
           </CardContent>
         </Card>
         
-        <Card className="bg-purple-50">
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md ${
+            activeFilter === 'with-reviews' ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-purple-50 hover:bg-purple-100'
+          }`}
+          onClick={() => handleStatsCardClick('with-reviews')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
             <Star className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold text-purple-700">
-              {activeContractors.reduce((sum, c) => sum + c.ratings.reviewCount, 0)}
+              {filteredContractors.reduce((sum, c) => sum + c.ratings.reviewCount, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Customer reviews
