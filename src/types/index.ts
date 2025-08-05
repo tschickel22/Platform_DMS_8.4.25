@@ -1,0 +1,707 @@
+export interface User {
+  id: string
+  email: string
+  name: string
+  role: UserRole
+  tenantId: string
+  permissions: Permission[]
+  avatar?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Tenant {
+  id: string
+  name: string
+  domain: string
+  settings: TenantSettings
+  customFields: CustomField[]
+  branding: TenantBranding
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TenantSettings {
+  timezone: string
+  currency: string
+  dateFormat: string
+  businessHours: BusinessHours
+  features: FeatureFlags
+  labelOverrides?: Record<string, string>
+  platformType?: string
+  emailProvider?: string
+  emailApiKey?: string
+  emailFromAddress?: string
+  emailFromName?: string
+  smsProvider?: string
+  smsApiKey?: string
+  smsFromNumber?: string
+  webhooks?: Array<{id: string, event: string, url: string, active: boolean}>
+  apiEnabled?: boolean
+  apiKey?: string
+  allowedOrigins?: string[]
+  emailTemplates?: Array<any>
+  smsTemplates?: Array<any>
+}
+
+export interface TenantBranding {
+  logo?: string
+  primaryColor: string
+  secondaryColor: string
+  sideMenuColor?: string | null
+  fontFamily: string
+  portalName?: string
+  portalLogo?: string
+}
+
+export interface BusinessHours {
+  monday: DayHours
+  tuesday: DayHours
+  wednesday: DayHours
+  thursday: DayHours
+  friday: DayHours
+  saturday: DayHours
+  sunday: DayHours
+}
+
+export interface DayHours {
+  open: string
+  close: string
+  closed: boolean
+}
+
+export interface FeatureFlags {
+  [key: string]: boolean
+}
+
+export interface CustomField {
+  id: string
+  name: string
+  type: CustomFieldType
+  required: boolean
+  options?: string[]
+  defaultValue?: any
+  module: string
+  section: string
+}
+
+export interface Permission {
+  id: string
+  name: string
+  resource: string
+  action: string
+}
+
+export interface Lead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  source: string
+  sourceId?: string
+  status: LeadStatus
+  assignedTo?: string
+  notes: string
+  score?: number
+  lastActivity?: Date
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Vehicle {
+  id: string
+  vin: string
+  make: string
+  model: string
+  year: number
+  type: VehicleType
+  status: VehicleStatus
+  price: number
+  cost: number
+  location: string
+  features: string[]
+  images: string[]
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Quote {
+  id: string
+  customerId: string
+  vehicleId: string
+  items: QuoteItem[]
+  subtotal: number
+  tax: number
+  total: number
+  status: QuoteStatus
+  validUntil: Date
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface QuoteItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
+
+export interface Agreement {
+  id: string
+  type: AgreementType
+  customerId: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  vehicleId?: string
+  vehicleInfo?: string
+  quoteId?: string
+  terms: string
+  customerId: string
+  signedDate?: Date
+  effectiveDate: Date | string
+  expirationDate?: Date
+  signedBy?: string
+  signedAt?: Date | string
+  ipAddress?: string
+  signatureData?: string
+  documents: Document[]
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+  createdBy?: string
+  totalAmount?: number
+  downPayment?: number
+  financingAmount?: number
+  monthlyPayment?: number
+  securityDeposit?: number
+  annualFee?: number
+  coverageLevel?: string
+}
+
+export interface Document {
+  id: string
+  name: string
+  type: string
+  url: string
+  size: number
+  uploadedAt: Date
+}
+
+export interface ServiceTicket {
+  id: string
+  customerId: string
+  vehicleId?: string
+  title: string
+  description: string
+  priority: Priority
+  status: ServiceStatus
+  assignedTo?: string
+  scheduledDate?: Date
+  completedDate?: Date
+  parts: ServicePart[]
+  labor: ServiceLabor[]
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ServicePart {
+  id: string
+  partNumber: string
+  description: string
+  quantity: number
+  unitCost: number
+  total: number
+}
+
+export interface ServiceLabor {
+  id: string
+  description: string
+  hours: number
+  rate: number
+  total: number
+}
+
+export interface Delivery {
+  id: string
+  customerId: string
+  vehicleId: string
+  status: DeliveryStatus
+  scheduledDate: Date
+  deliveredDate?: Date
+  address: Address
+  driver?: string
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Address {
+  street: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+}
+
+export interface Commission {
+  id: string
+  salesPersonId: string
+  dealId: string
+  type: CommissionType
+  rate: number
+  amount: number
+  status: CommissionStatus
+  paidDate?: Date
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Invoice {
+  id: string
+  customerId: string
+  number: string
+  items: InvoiceItem[]
+  subtotal: number
+  tax: number
+  total: number
+  status: InvoiceStatus
+  dueDate: Date
+  paidDate?: Date
+  paymentMethod?: string
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface InvoiceItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
+
+export interface Payment {
+  id: string
+  invoiceId: string
+  amount: number
+  method: PaymentMethod
+  status: PaymentStatus
+  transactionId?: string
+  processedDate: Date
+  notes: string
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Loan {
+  id: string
+  customerId: string
+  customerName: string
+  customerEmail?: string
+  customerPhone?: string
+  vehicleId?: string
+  vehicleInfo?: string
+  loanAmount: number
+  downPayment: number
+  interestRate: number
+  termMonths: number
+  monthlyPayment: number
+  startDate: string
+  status: LoanStatus
+  remainingBalance: number
+  nextPaymentDate: string
+  totalPaid: number
+  paymentsRemaining: number
+  history: LoanHistoryEntry[]
+  isPortalVisible: boolean
+  portalNotes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LoanHistoryEntry {
+  id: string
+  timestamp: string
+  type: LoanHistoryType
+  amount?: number
+  principalAmount?: number
+  interestAmount?: number
+  description: string
+  userId?: string
+  userName?: string
+  paymentMethod?: string
+  transactionId?: string
+  status?: string
+}
+
+export interface LoanPayment {
+  id: string
+  loanId: string
+  paymentDate: string
+  amount: number
+  principalAmount: number
+  interestAmount: number
+  status: PaymentStatus
+  paymentMethod: string
+  transactionId?: string
+  processedDate?: string
+  notes?: string
+}
+
+export interface Report {
+  id: string
+  name: string
+  type: ReportType
+  module: string
+  filters: ReportFilter[]
+  columns: ReportColumn[]
+  data: any[]
+  generatedAt: Date
+  generatedBy: string
+}
+
+export interface ReportFilter {
+  field: string
+  operator: FilterOperator
+  value: any
+}
+
+export interface ReportColumn {
+  field: string
+  label: string
+  type: ColumnType
+  width?: number
+}
+
+// Enums
+export enum UserRole {
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  SALES = 'sales',
+  SERVICE = 'service',
+  USER = 'user'
+}
+
+export enum CustomFieldType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DATE = 'date',
+  BOOLEAN = 'boolean',
+  SELECT = 'select',
+  MULTISELECT = 'multiselect'
+}
+
+export enum LeadStatus {
+  NEW = 'new',
+  CONTACTED = 'contacted',
+  QUALIFIED = 'qualified',
+  PROPOSAL = 'proposal',
+  NEGOTIATION = 'negotiation',
+  CLOSED_WON = 'closed_won',
+  CLOSED_LOST = 'closed_lost'
+}
+
+export enum VehicleType {
+  RV = 'rv',
+  MOTORHOME = 'motorhome',
+  TRAVEL_TRAILER = 'travel_trailer',
+  FIFTH_WHEEL = 'fifth_wheel',
+  TOY_HAULER = 'toy_hauler',
+  SINGLE_WIDE = 'single_wide',
+  DOUBLE_WIDE = 'double_wide',
+  TRIPLE_WIDE = 'triple_wide',
+  PARK_MODEL = 'park_model',
+  MODULAR_HOME = 'modular_home'
+}
+
+export enum VehicleStatus {
+  AVAILABLE = 'available',
+  RESERVED = 'reserved',
+  SOLD = 'sold',
+  SERVICE = 'service',
+  DELIVERED = 'delivered'
+}
+
+export enum QuoteStatus {
+  DRAFT = 'draft',
+  SENT = 'sent',
+  VIEWED = 'viewed',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+  EXPIRED = 'expired'
+}
+
+export enum AgreementType {
+  PURCHASE = 'purchase',
+  LEASE = 'lease',
+  SERVICE = 'service',
+  WARRANTY = 'warranty'
+}
+
+export enum AgreementStatus {
+  DRAFT = 'draft',
+  PENDING = 'pending',
+  SIGNED = 'signed',
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  CANCELLED = 'cancelled'
+}
+
+export enum Priority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent'
+}
+
+export enum ServiceStatus {
+  OPEN = 'open',
+  IN_PROGRESS = 'in_progress',
+  WAITING_PARTS = 'waiting_parts',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
+
+export enum DeliveryStatus {
+  SCHEDULED = 'scheduled',
+  IN_TRANSIT = 'in_transit',
+  DELIVERED = 'delivered',
+  CANCELLED = 'cancelled'
+}
+
+export enum CommissionType {
+  FLAT = 'flat',
+  PERCENTAGE = 'percentage',
+  TIERED = 'tiered'
+}
+
+export enum CommissionStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  PAID = 'paid',
+  CANCELLED = 'cancelled'
+}
+
+export enum InvoiceStatus {
+  DRAFT = 'draft',
+  SENT = 'sent',
+  VIEWED = 'viewed',
+  PAID = 'paid',
+  OVERDUE = 'overdue',
+  CANCELLED = 'cancelled'
+}
+
+export enum PaymentMethod {
+  CASH = 'cash',
+  CHECK = 'check',
+  CREDIT_CARD = 'credit_card',
+  BANK_TRANSFER = 'bank_transfer',
+  FINANCING = 'financing'
+}
+
+export enum PaymentStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  REFUNDED = 'refunded'
+}
+
+export enum LoanStatus {
+  ACTIVE = 'active',
+  CURRENT = 'current',
+  LATE = 'late',
+  DEFAULT = 'default',
+  PAID_OFF = 'paid_off',
+  CANCELLED = 'cancelled'
+}
+
+export enum LoanHistoryType {
+  PAYMENT = 'payment',
+  STATUS_CHANGE = 'status_change',
+  RATE_CHANGE = 'rate_change',
+  NOTE_ADDED = 'note_added',
+  LATE_FEE = 'late_fee',
+  PAYOFF = 'payoff'
+}
+
+export enum ReportType {
+  SALES = 'sales',
+  INVENTORY = 'inventory',
+  SERVICE = 'service',
+  FINANCIAL = 'financial',
+  CUSTOM = 'custom'
+}
+
+export enum FilterOperator {
+  EQUALS = 'equals',
+  NOT_EQUALS = 'not_equals',
+  CONTAINS = 'contains',
+  STARTS_WITH = 'starts_with',
+  ENDS_WITH = 'ends_with',
+  GREATER_THAN = 'greater_than',
+  LESS_THAN = 'less_than',
+  BETWEEN = 'between',
+  IN = 'in',
+  NOT_IN = 'not_in'
+}
+
+export enum ColumnType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DATE = 'date',
+  CURRENCY = 'currency',
+  BOOLEAN = 'boolean'
+}
+
+export enum ContractorTrade {
+  ELECTRICAL = 'electrical',
+  PLUMBING = 'plumbing',
+  SKIRTING = 'skirting',
+  HVAC = 'hvac',
+  FLOORING = 'flooring',
+  ROOFING = 'roofing',
+  GENERAL = 'general',
+  LANDSCAPING = 'landscaping'
+}
+
+export enum ContractorJobType {
+  INSTALLATION = 'installation',
+  REPAIR = 'repair',
+  MAINTENANCE = 'maintenance',
+  INSPECTION = 'inspection',
+  SETUP = 'setup',
+  REMOVAL = 'removal'
+}
+
+export enum ContractorJobStatus {
+  PENDING = 'pending',
+  ASSIGNED = 'assigned',
+  EN_ROUTE = 'en_route',
+  ON_SITE = 'on_site',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
+
+export enum AvailabilityStatus {
+  AVAILABLE = 'available',
+  BOOKED = 'booked',
+  UNAVAILABLE = 'unavailable'
+}
+
+export enum TaskModule {
+  CRM = 'crm',
+  SERVICE = 'service',
+  DELIVERY = 'delivery',
+  FINANCE = 'finance',
+  WARRANTY = 'warranty',
+  QUOTE = 'quote',
+  PDI = 'pdi'
+}
+
+export enum TaskStatus {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  ON_HOLD = 'on_hold'
+}
+
+export enum TaskPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent'
+}
+
+export interface Task {
+  id: string
+  title: string
+  description?: string
+  status: TaskStatus
+  priority: TaskPriority
+  module: TaskModule
+  assignedTo?: string
+  assignedToName?: string
+  dueDate?: Date
+  createdAt: Date
+  updatedAt: Date
+  sourceId: string
+  sourceType: string
+  link?: string
+  tags?: string[]
+  customFields?: Record<string, any>
+  isOverdue?: boolean
+}
+
+export interface Contractor {
+  id: string
+  name: string
+  trade: ContractorTrade
+  contactInfo: {
+    email: string
+    phone: string
+    address?: string
+  }
+  ratings: {
+    averageRating: number
+    reviewCount: number
+  }
+  assignedJobIds: string[]
+  isActive: boolean
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AvailabilitySlot {
+  id: string
+  contractorId: string
+  date: string // YYYY-MM-DD format
+  startTime: string // HH:MM format
+  endTime: string // HH:MM format
+  status: AvailabilityStatus
+  jobId?: string
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ContractorJob {
+  id: string
+  unitAddress: string
+  jobType: ContractorJobType
+  trade: ContractorTrade
+  scheduledDate: Date
+  estimatedDuration: number // in hours
+  status: ContractorJobStatus
+  assignedContractorId?: string
+  assignedContractorName?: string
+  description: string
+  priority: Priority
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
+  specialInstructions?: string
+  photos: string[]
+  notes: string
+  completedAt?: Date
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
