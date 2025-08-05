@@ -373,3 +373,4 @@ export function LandList() {
     </div>
   )
 }
+export default LandList;
