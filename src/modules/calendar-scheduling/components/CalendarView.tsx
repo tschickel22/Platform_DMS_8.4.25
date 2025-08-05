@@ -8,6 +8,7 @@ import { CalendarEvent } from '../types'
 import { CalendarEventDetail } from './CalendarEventDetail'
 import { EventCreateModal } from './EventCreateModal'
 import { EventEditModal } from './EventEditModal'
+import { RecurringEventForm } from './RecurringEventForm'
 import { cn } from '@/lib/utils'
 import { 
   Calendar as CalendarIcon, 
@@ -18,7 +19,8 @@ import {
   Columns,
   Square,
   List,
-  Plus
+  Plus,
+  Repeat
 } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 

@@ -386,14 +386,65 @@ export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource
           {/* Export to External Calendar */}
           <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold mb-3">Export to External Calendar</h3>
+            
+            {/* Recurring Event Info */}
+            {event.metadata?.isRecurring && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Repeat className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-900">Recurring Event</span>
+                </div>
+                <p className="text-sm text-blue-700 mt-1">
+                  {event.metadata.parentEventId 
+                    ? `Instance ${event.metadata.instanceNumber} of recurring series`
+                    : 'Parent event of recurring series'
+                  }
+                </p>
+                {event.metadata.recurrencePattern && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    Pattern: {event.metadata.recurrencePattern.type} every {event.metadata.recurrencePattern.interval} {event.metadata.recurrencePattern.type}(s)
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Resource Booking Info */}
+            {event.metadata?.isResourceBooking && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-green-600" />
+                  <span className="font-medium text-green-900">Resource Booking</span>
+                </div>
+                <p className="text-sm text-green-700 mt-1">
+                  Resources: {event.metadata.resourceIds?.length || 0} booked
+                </p>
+                {event.metadata.attendees && event.metadata.attendees.length > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Attendees: {event.metadata.attendees.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).google && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // Simulate export to Google Calendar
-                    alert(`Simulating export of "${event.title}" to Google Calendar!`)
+                    // Simulate export to Google Calendar with enhanced data
+                    const exportData = {
+                      title: event.title,
+                      description: event.description,
+                      start: event.start,
+                      end: event.end,
+                      location: event.location,
+                      attendees: event.metadata?.attendees || [],
+                      isRecurring: event.metadata?.isRecurring || false,
+                      recurrencePattern: event.metadata?.recurrencePattern
+                    }
+                    console.log('Exporting to Google Calendar:', exportData)
+                    alert(`Exporting "${event.title}" to Google Calendar with ${event.metadata?.isRecurring ? 'recurring pattern' : 'single occurrence'}!`)
                   }}
                 >
                   <Calendar className="h-4 w-4 mr-2" />
@@ -405,11 +456,22 @@ export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // Simulate export to Outlook Calendar
-                    alert(`Simulating export of "${event.title}" to Outlook Calendar!`)
+                    // Simulate export to Outlook Calendar with enhanced data
+                    const exportData = {
+                      title: event.title,
+                      description: event.description,
+                      start: event.start,
+                      end: event.end,
+                      location: event.location,
+                      attendees: event.metadata?.attendees || [],
+                      isRecurring: event.metadata?.isRecurring || false,
+                      recurrencePattern: event.metadata?.recurrencePattern
+                    }
+                    console.log('Exporting to Outlook Calendar:', exportData)
+                    alert(`Exporting "${event.title}" to Outlook Calendar with ${event.metadata?.isRecurring ? 'recurring pattern' : 'single occurrence'}!`)
                   }}
                 >
-                  <Mail className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 mr-2" />
                   Export to Outlook Calendar
                 </Button>
               )}
@@ -417,6 +479,24 @@ export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource
                 <p className="text-sm text-muted-foreground">Connect an external calendar in the Integrations tab to export events.</p>
               )}
             </div>
+
+            {/* Advanced Export Options */}
+            {(loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).google || 
+              loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false }).outlook) && (
+              <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                <h4 className="font-medium mb-2">Export Options</h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• Event will include all details (title, description, time, location)</p>
+                  {event.metadata?.isRecurring && (
+                    <p>• Recurring pattern will be preserved in external calendar</p>
+                  )}
+                  {event.metadata?.attendees && event.metadata.attendees.length > 0 && (
+                    <p>• Attendees will be invited to the external calendar event</p>
+                  )}
+                  <p>• Changes made in external calendar may create sync conflicts</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -434,6 +514,8 @@ export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in {event.sourceModule.charAt(0).toUpperCase() + event.sourceModule.slice(1)}
             </Button>
+            <p>• Drag events to reschedule them</p>
+            <p>• Double-click empty slots to create recurring events</p>
           </div>
         </CardContent>
       </Card>

@@ -11,6 +11,11 @@ import { CalendarView } from './components/CalendarView'
 import { CalendarFilters } from './components/CalendarFilters'
 import { EventSyncStatus } from './components/EventSyncStatus'
 import { ExternalCalendarIntegration } from './components/ExternalCalendarIntegration'
+import { RecurringEventForm } from './components/RecurringEventForm'
+import { ResourceBookingForm } from './components/ResourceBookingForm'
+import { SyncSettingsForm } from './components/SyncSettingsForm'
+import { ConflictResolutionModal } from './components/ConflictResolutionModal'
+import { useAdvancedSync } from './hooks/useAdvancedSync'
 import { useToast } from '@/hooks/use-toast'
 
 function CalendarDashboard() {
@@ -38,6 +43,20 @@ function CalendarDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [activeTab, setActiveTab] = useState('calendar')
   const [showSyncStatus, setShowSyncStatus] = useState(false)
+  const [showRecurringForm, setShowRecurringForm] = useState(false)
+  const [showResourceBooking, setShowResourceBooking] = useState(false)
+  const [showConflictResolution, setShowConflictResolution] = useState(false)
+  const [resourceBookingDate, setResourceBookingDate] = useState<Date | undefined>(undefined)
+
+  // Advanced sync functionality
+  const {
+    syncStatus,
+    loading: syncLoading,
+    createRecurringEvent,
+    resolveConflict,
+    createResourceBooking,
+    getSyncStatistics
+  } = useAdvancedSync()
 
   // Calculate additional stats
   const todayEvents = allEvents.filter(event => {
@@ -182,8 +201,88 @@ function CalendarDashboard() {
     await new Promise(resolve => setTimeout(resolve, 2000))
   }
 
+  const handleCreateRecurringEvent = async (eventData: Partial<CalendarEvent> & { recurrence: any }) => {
+    try {
+      const { recurrence, ...baseEventData } = eventData
+      await createRecurringEvent(baseEventData, recurrence)
+      setShowRecurringForm(false)
+      toast({
+        title: 'Recurring Event Created',
+        description: 'Recurring event series has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create recurring event',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateResourceBooking = async (bookingData: any) => {
+    try {
+      await createResourceBooking(bookingData)
+      setShowResourceBooking(false)
+      setResourceBookingDate(undefined)
+      toast({
+        title: 'Resources Booked',
+        description: 'Resources have been successfully booked',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to book resources',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleResolveConflict = async (conflictId: string, resolution: any) => {
+    try {
+      await resolveConflict(conflictId, resolution)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to resolve conflict',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  // Get sync statistics
+  const syncStats = getSyncStatistics()
+  const pendingConflicts = syncStatus.conflicts.filter(c => c.status === 'pending')
   return (
     <div className="space-y-6">
+      {/* Recurring Event Form Modal */}
+      {showRecurringForm && (
+        <RecurringEventForm
+          onSave={handleCreateRecurringEvent}
+          onCancel={() => setShowRecurringForm(false)}
+        />
+      )}
+
+      {/* Resource Booking Form Modal */}
+      {showResourceBooking && (
+        <ResourceBookingForm
+          selectedDate={resourceBookingDate}
+          onSave={handleCreateResourceBooking}
+          onCancel={() => {
+            setShowResourceBooking(false)
+            setResourceBookingDate(undefined)
+          }}
+        />
+      )}
+
+      {/* Conflict Resolution Modal */}
+      {showConflictResolution && pendingConflicts.length > 0 && (
+        <ConflictResolutionModal
+          conflicts={pendingConflicts}
+          onResolve={handleResolveConflict}
+          onClose={() => setShowConflictResolution(false)}
+        />
+      )}
+
       {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
@@ -197,6 +296,15 @@ function CalendarDashboard() {
             <Badge className="bg-blue-50 text-blue-700 border-blue-200">
               {events.length} events shown
             </Badge>
+            {pendingConflicts.length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConflictResolution(true)}
+                className="shadow-sm bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+              >
+                {pendingConflicts.length} Conflicts
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={() => setShowSyncStatus(!showSyncStatus)}
@@ -210,6 +318,20 @@ function CalendarDashboard() {
               className="shadow-sm"
             >
               {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            <Button 
+              onClick={() => setShowRecurringForm(true)}
+              className="shadow-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Recurring Event
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setShowResourceBooking(true)}
+              className="shadow-sm"
+            >
+              Book Resources
             </Button>
           </div>
         </div>
@@ -297,10 +419,11 @@ function CalendarDashboard() {
             onRefreshAll={handleRefreshAllSync}
           />
         )}
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="sync-status">Sync Status</TabsTrigger>
+          <TabsTrigger value="sync-settings">Sync Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar">
@@ -318,6 +441,9 @@ function CalendarDashboard() {
         </TabsContent>
         <TabsContent value="sync-status">
           <EventSyncStatus syncStatuses={syncStatuses} onRefreshSync={handleRefreshSync} onRefreshAll={handleRefreshAllSync} />
+        </TabsContent>
+        <TabsContent value="sync-settings">
+          <SyncSettingsForm />
         </TabsContent>
       </Tabs>
     </div>
