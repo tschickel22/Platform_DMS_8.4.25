@@ -27,37 +27,6 @@ import { mockServiceOps } from '@/mocks/serviceOpsMock'
 import { mockFinanceApplications } from '@/modules/finance-application/mocks/financeApplicationMock'
 import { useMockDataDiscovery, getPortalSectionsWithCounts } from '@/utils/mockDataDiscovery'
 
-function ClientProfile() {
-  const { getDisplayName, getDisplayEmail } = usePortal()
-  
- return (
- <>
- <div className="space-y-6">
- <div className="space-y-2">
- <h1 className="text-2xl font-bold">Profile</h1>
- <p className="text-muted-foreground">
- Manage your profile information
- </p>
- </div>
- 
- <Card>
- <CardHeader>
- <CardTitle>Personal Information</CardTitle>
- <CardDescription>
- Settings options will be available here.
- </CardDescription>
- </CardHeader>
- <CardContent>
- <p className="text-sm text-muted-foreground">
- Profile settings will be implemented here.
- </p>
- </CardContent>
- </Card>
- </div>
- </>
- )
-}
-
 function ClientDashboard() {
   const { getDisplayName, getDisplayEmail, getCustomerId, isProxying, proxiedClient } = usePortal()
   const [searchParams] = useSearchParams()
@@ -81,6 +50,69 @@ function ClientDashboard() {
   const paidOffLoans = customerLoans.filter(loan => loan.status === 'Paid Off')
   const pendingAgreements = customerAgreements.filter(agreement => agreement.status === 'PENDING')
   const inProgressTickets = customerServiceTickets.filter(ticket => ticket.status === 'In Progress')
+  
+  // Get recent activity from various sources
+  const recentActivity = [
+    // Recent loan payments
+    ...mockFinance.samplePayments
+      .filter(payment => {
+        const loan = customerLoans.find(l => l.id === payment.loanId)
+        return loan && payment.status === 'Completed'
+      })
+      .slice(0, 2)
+      .map(payment => {
+        const loan = customerLoans.find(l => l.id === payment.loanId)
+        return {
+          id: `payment-${payment.id}`,
+          type: 'payment',
+          title: 'Loan payment processed',
+          description: `Your monthly payment of $${payment.amount.toFixed(2)} was successfully processed.`,
+          time: new Date(payment.paymentDate).toLocaleDateString()
+        }
+      }),
+    
+    // Recent agreements
+    ...customerAgreements
+      .filter(agreement => agreement.status === 'PENDING')
+      .slice(0, 1)
+      .map(agreement => ({
+        id: `agreement-${agreement.id}`,
+        type: 'agreement',
+        title: 'New agreement available',
+        description: `A new ${agreement.type.toLowerCase()} agreement is available for your review and signature.`,
+        time: new Date(agreement.createdAt).toLocaleDateString()
+      })),
+    
+    // Recent service tickets
+    ...customerServiceTickets
+      .slice(0, 1)
+      .map(ticket => ({
+        id: `ticket-${ticket.id}`,
+        type: 'service',
+        title: 'Service ticket update',
+        description: `Service ticket "${ticket.title}" status: ${ticket.status}.`,
+        time: new Date(ticket.updatedAt).toLocaleDateString()
+      })),
+    
+    // Recent applications
+    ...customerApplications
+      .filter(app => ['submitted', 'under_review', 'approved'].includes(app.status))
+      .slice(0, 1)
+      .map(app => ({
+        id: `app-${app.id}`,
+        type: 'application',
+        title: 'Finance application update',
+        description: `Your finance application status: ${app.status.replace('_', ' ')}.`,
+        time: new Date(app.updatedAt).toLocaleDateString()
+      }))
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 3)
+
+  const clearImpersonation = () => {
+    const newSearchParams = new URLSearchParams(searchParams)
+    newSearchParams.delete('impersonateClientId')
+    navigate({ pathname: '/portalclient', search: newSearchParams.toString() })
+  }
+
   return (
     <div className="space-y-6">
       {/* Impersonation Banner - shown when proxying */}

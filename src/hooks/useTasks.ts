@@ -1,3 +1,15 @@
+import { useState, useEffect, useMemo } from 'react'
+import { Task, TaskStatus, TaskModule, TaskPriority, Lead, ServiceTicket } from '@/types'
+import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManagement'
+import { useServiceManagement } from '@/modules/service-ops/hooks/useServiceManagement'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+
+export function useTasks() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [userCreatedTasks, setUserCreatedTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   // Import data from modules
   const { leads, salesReps } = useLeadManagement()
   const { tickets } = useServiceManagement()
@@ -310,9 +322,7 @@
     }
 
       // Add to user-created tasks
-      const updatedUserCreatedTasks = [newTask, ...userCreatedTasks]
-      setUserCreatedTasks(updatedUserCreatedTasks)
-      saveToLocalStorage('renter-insight-user-tasks', updatedUserCreatedTasks)
+      setUserCreatedTasks(prev => [newTask, ...prev])
       
       return newTask
     } finally {
@@ -331,9 +341,7 @@
       updatedAt: new Date()
     }
 
-    const updatedUserCreatedTasks = userCreatedTasks.map(t => t.id === taskId ? updatedTask : t)
-    setUserCreatedTasks(updatedUserCreatedTasks)
-    saveToLocalStorage('renter-insight-user-tasks', updatedUserCreatedTasks)
+    setUserCreatedTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t))
 
     return updatedTask
   }
@@ -341,9 +349,6 @@
   // Delete a task
   const deleteTask = async (taskId: string): Promise<void> => {
     setUserCreatedTasks(prev => prev.filter(t => t.id !== taskId))
-    const updatedUserCreatedTasks = userCreatedTasks.filter(t => t.id !== taskId)
-    setUserCreatedTasks(updatedUserCreatedTasks)
-    saveToLocalStorage('renter-insight-user-tasks', updatedUserCreatedTasks)
   }
 
   return {
@@ -359,3 +364,4 @@
     updateTask,
     deleteTask
   }
+}
