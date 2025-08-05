@@ -39,7 +39,7 @@ export function ContractorAnalytics() {
     error
   } = useContractorManagement()
 
-  // Calculate analytics data - moved after hook call
+  // Calculate analytics data
   const analytics = useMemo(() => {
     const completedJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.COMPLETED)
     const pendingJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.PENDING)
@@ -72,17 +72,17 @@ export function ContractorAnalytics() {
 
     // Contractor performance
     const contractorPerformance = activeContractors.map(contractor => {
-      const contractorJobs = contractorJobs.filter(job => job.assignedContractorId === contractor.id)
-      const completedJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.COMPLETED)
-      const completionRate = contractorJobs.length > 0 ? (completedJobs.length / contractorJobs.length) * 100 : 0
+      const jobsForContractor = contractorJobs.filter(job => job.assignedContractorId === contractor.id)
+      const completedForContractor = jobsForContractor.filter(job => job.status === ContractorJobStatus.COMPLETED)
+      const completionRate = jobsForContractor.length > 0 ? (completedForContractor.length / jobsForContractor.length) * 100 : 0
       
       return {
         id: contractor.id,
         name: contractor.name,
         trade: contractor.trade,
         rating: contractor.ratings.averageRating,
-        totalJobs: contractorJobs.length,
-        completedJobs: completedJobs.length,
+        totalJobs: jobsForContractor.length,
+        completedJobs: completedForContractor.length,
         completionRate,
         reviewCount: contractor.ratings.reviewCount
       }
@@ -112,7 +112,7 @@ export function ContractorAnalytics() {
       contractorPerformance,
       thisWeekJobs: thisWeekJobs.length
     }
-  }, [contractors, contractorJobs, activeContractors])
+  }, [contractorJobs, activeContractors])
 
   if (loading) {
     return (
