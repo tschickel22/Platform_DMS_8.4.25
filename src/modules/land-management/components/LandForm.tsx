@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, Save, Plus, X, Upload, Image } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Badge } from '@/components/ui/badge'
 import { 
   Save, 
@@ -102,6 +103,12 @@ export function LandForm() {
   const [newFeature, setNewFeature] = useState('')
   const [newRestriction, setNewRestriction] = useState('')
   const [newImage, setNewImage] = useState('')
+  
+  const [features, setFeatures] = useState<string[]>([])
+  const [restrictions, setRestrictions] = useState<string[]>([])
+  const [images, setImages] = useState<string[]>([])
+  const [newFeature, setNewFeature] = useState('')
+  const [newRestriction, setNewRestriction] = useState('')
 
   const isEditing = Boolean(id)
 
@@ -216,6 +223,47 @@ export function LandForm() {
       images: prev.images.filter((_, i) => i !== index)
     }))
   }
+  
+  const addFeature = () => {
+    if (newFeature.trim() && !features.includes(newFeature.trim())) {
+      setFeatures(prev => [...prev, newFeature.trim()])
+      setNewFeature('')
+    }
+  }
+  
+  const removeFeature = (feature: string) => {
+    setFeatures(prev => prev.filter(f => f !== feature))
+  }
+  
+  const addRestriction = () => {
+    if (newRestriction.trim() && !restrictions.includes(newRestriction.trim())) {
+      setRestrictions(prev => [...prev, newRestriction.trim()])
+      setNewRestriction('')
+    }
+  }
+  
+  const removeRestriction = (restriction: string) => {
+    setRestrictions(prev => prev.filter(r => r !== restriction))
+  }
+  
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setImages(prev => [...prev, e.target!.result as string])
+          }
+        }
+        reader.readAsDataURL(file)
+      })
+    }
+  }
+  
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,12 +306,150 @@ export function LandForm() {
         variant: "destructive"
       })
     } finally {
-      setLoading(false)
+    console.log('Form submitted:', { 
+      ...formData, 
+      features, 
+      restrictions, 
+      images: images.length 
+    })
     }
   }
 
   return (
     <div className="space-y-6">
+      
+      {/* Features Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Features</CardTitle>
+          <CardDescription>Add key features and amenities</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Enter a feature (e.g., Water access, Utilities available)"
+              value={newFeature}
+              onChange={(e) => setNewFeature(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+            />
+            <Button type="button" onClick={addFeature}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {features.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {features.map((feature, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {feature}
+                  <button
+                    type="button"
+                    onClick={() => removeFeature(feature)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Restrictions Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Restrictions</CardTitle>
+          <CardDescription>Add any restrictions or limitations</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Enter a restriction (e.g., No pets, Minimum lease term)"
+              value={newRestriction}
+              onChange={(e) => setNewRestriction(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRestriction())}
+            />
+            <Button type="button" onClick={addRestriction}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {restrictions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {restrictions.map((restriction, index) => (
+                <Badge key={index} variant="destructive" className="flex items-center gap-1">
+                  {restriction}
+                  <button
+                    type="button"
+                    onClick={() => removeRestriction(restriction)}
+                    className="ml-1 hover:text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Images Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Images</CardTitle>
+          <CardDescription>Upload photos of the land</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-2">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+              id="image-upload"
+            />
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => document.getElementById('image-upload')?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Images
+            </Button>
+          </div>
+          
+          {images.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {images.map((image, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={image}
+                    alt={`Land image ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-md border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {images.length === 0 && (
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+              <Image className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">No images uploaded yet</p>
+              <p className="text-sm text-muted-foreground">Click "Upload Images" to add photos</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       {/* Header */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => navigate('/land')}>
