@@ -82,61 +82,14 @@ function App() {
                     </ProtectedRoute>
                   } />
                 </Routes>
-    <AuthProvider>
-      <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
-        <MenuManagerProvider>
-          <Router>
-            <AppContent />
+                <Toaster />
+              </div>
+            </TenantProvider>
           </Router>
         </MenuManagerProvider>
-      </ThemeProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
 export default App
-    <TenantProvider>
-      <div className="min-h-screen bg-background">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          {/* Client Portal Routes - these will render ClientPortal directly */}
-          <Route path="/portalclient/*" element={<ClientPortalLayout />} />
-          {/* Main Application Routes - these will render the Layout */}
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/crm/*" element={<CRMProspecting />} />
-                  <Route path="/inventory/*" element={<InventoryManagement />} />
-                  <Route path="/deals/*" element={<CRMSalesDeal />} />
-                  <Route path="/finance/*" element={<FinanceModule />} />
-                  <Route path="/quotes/*" element={<QuoteBuilder />} />
-                  <Route path="/agreements/*" element={<AgreementVault />} />
-                  <Route path="/service/*" element={<ServiceOps />} />
-                  <Route path="/pdi/*" element={<PDIChecklist />} />
-                  <Route path="/delivery/*" element={<DeliveryTracker />} />
-                  <Route path="/inventory/warranty/*" element={<WarrantyMgmt />} />
-                  <Route path="/commissions/*" element={<CommissionEngine />} />
-                  <Route path="/portal/*" element={<ClientPortalAdmin />} />
-                  <Route path="/invoices/*" element={<InvoicePayments />} />
-                  <Route path="/settings/*" element={<CompanySettings />} />
-                  <Route path="/admin/*" element={<PlatformAdmin />} />
-                  <Route path="/admin/settings/*" element={<PlatformSettings />} />
-                  <Route path="/reports/*" element={<ReportingSuite />} />
-                  <Route path="/client-applications/*" element={<FinanceApplication />} />
-                  <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
-                  <Route path="/tags/*" element={<TaggingEngine />} />
-                  <Route path="/tasks/*" element={<TaskCenter />} />
-                  <Route path="/calendar/*" element={<CalendarScheduling />} />
-                  {tenant?.features?.contractorManagement && (
-                    <Route path="/contractors/*" element={<ContractorManagement />} />
-                  )}
-                </Routes>
-              </Layout>
-            </ProtectedRoute>
-          } />
-        </Routes>
-        <Toaster />
-      </div>
-    </TenantProvider>
