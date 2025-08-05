@@ -394,6 +394,5 @@ export function LandDetail() {
     </div>
   )
 }
-
 export default LandDetail;
 export default LandDetail
