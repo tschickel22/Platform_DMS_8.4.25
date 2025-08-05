@@ -8,6 +8,7 @@ import { useCalendarData } from './hooks/useCalendarData'
 import { useCalendarManagement } from './hooks/useCalendarManagement'
 import { CalendarView } from './components/CalendarView'
 import { CalendarFilters } from './components/CalendarFilters'
+import { EventSyncStatus } from './components/EventSyncStatus'
 import { useToast } from '@/hooks/use-toast'
 
 function CalendarDashboard() {
@@ -33,6 +34,7 @@ function CalendarDashboard() {
     rescheduleEvent
   } = useCalendarManagement()
   const [showFilters, setShowFilters] = useState(false)
+  const [showSyncStatus, setShowSyncStatus] = useState(false)
 
   // Calculate additional stats
   const todayEvents = allEvents.filter(event => {
@@ -138,6 +140,45 @@ function CalendarDashboard() {
       throw error
     }
   }
+
+  // Mock sync statuses - in a real app, this would track actual sync state
+  const syncStatuses = [
+    {
+      module: 'service',
+      lastSync: new Date(),
+      status: 'synced' as const,
+      eventCount: stats.service
+    },
+    {
+      module: 'delivery',
+      lastSync: new Date(),
+      status: 'synced' as const,
+      eventCount: stats.delivery
+    },
+    {
+      module: 'tasks',
+      lastSync: new Date(),
+      status: 'synced' as const,
+      eventCount: stats.tasks
+    },
+    {
+      module: 'pdi',
+      lastSync: new Date(),
+      status: 'synced' as const,
+      eventCount: stats.pdi
+    }
+  ]
+
+  const handleRefreshSync = async (module: string) => {
+    // In a real app, this would trigger a sync refresh for the specific module
+    await new Promise(resolve => setTimeout(resolve, 1000))
+  }
+
+  const handleRefreshAllSync = async () => {
+    // In a real app, this would trigger a sync refresh for all modules
+    await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -153,6 +194,13 @@ function CalendarDashboard() {
             <Badge className="bg-blue-50 text-blue-700 border-blue-200">
               {events.length} events shown
             </Badge>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSyncStatus(!showSyncStatus)}
+              className="shadow-sm"
+            >
+              Sync Status
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => setShowFilters(!showFilters)}
@@ -233,6 +281,15 @@ function CalendarDashboard() {
           filterOptions={filterOptions}
           getAssigneeName={getAssigneeName}
           stats={stats}
+        />
+      )}
+
+      {/* Sync Status (Collapsible) */}
+      {showSyncStatus && (
+        <EventSyncStatus
+          syncStatuses={syncStatuses}
+          onRefreshSync={handleRefreshSync}
+          onRefreshAll={handleRefreshAllSync}
         />
       )}
 
