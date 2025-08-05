@@ -4,7 +4,6 @@ import LandList from './components/LandList'
 import LandForm from './components/LandForm'
 import LandDetail from './components/LandDetail'
 
-export default LandManagement;
 export default function LandManagement() {
   return (
     <div className="space-y-6">
