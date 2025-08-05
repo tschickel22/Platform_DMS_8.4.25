@@ -93,10 +93,23 @@ export function LandForm() {
 
   const isEditing = Boolean(id)
 
+  // Debug log for component render
+  console.log('🔄 LandForm render:', {
+    formData: {
+      features: formData.features,
+      restrictions: formData.restrictions,
+      images: formData.images
+    },
+    newFeature,
+    newRestriction,
+    isEditing
+  })
   // Load existing land data if editing
   useEffect(() => {
+    console.log('📥 useEffect triggered:', { id, isEditing })
     if (isEditing && id) {
       const land = getLandById(id)
+      console.log('🏞️ Loaded land data:', land)
       if (land) {
         setFormData({
           address: land.address,
@@ -126,6 +139,7 @@ export function LandForm() {
   }, [id, isEditing, getLandById, navigate, toast])
 
   const handleInputChange = (field: string, value: any) => {
+    console.log('📝 handleInputChange:', { field, value })
     setFormData(prev => {
       const keys = field.split('.')
       if (keys.length === 1) {
@@ -144,60 +158,83 @@ export function LandForm() {
   }
 
   const addFeature = () => {
+    console.log('🎯 addFeature called:', { newFeature, currentFeatures: formData.features })
     if (newFeature.trim()) {
+      console.log('✅ Adding feature:', newFeature.trim())
       setFormData(prev => ({
         ...prev,
         features: [...prev.features, newFeature.trim()]
       }))
       setNewFeature('')
+      console.log('🔄 Feature added, clearing input')
+    } else {
+      console.log('❌ Feature not added - empty or whitespace only')
     }
   }
 
   const removeFeature = (index: number) => {
+    console.log('🗑️ removeFeature called:', { index, currentFeatures: formData.features })
     setFormData(prev => ({
       ...prev,
       features: prev.features.filter((_, i) => i !== index)
     }))
+    console.log('✅ Feature removed at index:', index)
   }
 
   const addRestriction = () => {
+    console.log('🚫 addRestriction called:', { newRestriction, currentRestrictions: formData.restrictions })
     if (newRestriction.trim()) {
+      console.log('✅ Adding restriction:', newRestriction.trim())
       setFormData(prev => ({
         ...prev,
         restrictions: [...prev.restrictions, newRestriction.trim()]
       }))
       setNewRestriction('')
+      console.log('🔄 Restriction added, clearing input')
+    } else {
+      console.log('❌ Restriction not added - empty or whitespace only')
     }
   }
 
   const removeRestriction = (index: number) => {
+    console.log('🗑️ removeRestriction called:', { index, currentRestrictions: formData.restrictions })
     setFormData(prev => ({
       ...prev,
       restrictions: prev.restrictions.filter((_, i) => i !== index)
     }))
+    console.log('✅ Restriction removed at index:', index)
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 handleImageUpload called:', { files: event.target.files })
     const files = event.target.files
     if (files) {
+      console.log('📁 Processing files:', files.length)
       // Convert files to URLs (in a real app, you'd upload to a server)
       const newImages = Array.from(files).map(file => URL.createObjectURL(file))
+      console.log('🖼️ Created image URLs:', newImages)
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, ...newImages]
       }))
+      console.log('✅ Images added to formData')
+    } else {
+      console.log('❌ No files selected')
     }
   }
 
   const removeImage = (index: number) => {
+    console.log('🗑️ removeImage called:', { index, currentImages: formData.images })
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }))
+    console.log('✅ Image removed at index:', index)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('📤 Form submitted with data:', formData)
     setLoading(true)
 
     try {
@@ -216,6 +253,7 @@ export function LandForm() {
       }
       navigate('/land')
     } catch (error) {
+      console.error('❌ Form submission error:', error)
       toast({
         title: "Error",
         description: "Failed to save land record",
@@ -413,6 +451,7 @@ export function LandForm() {
               />
               <Button type="button" onClick={addFeature} size="sm">
                 <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
             
@@ -452,6 +491,7 @@ export function LandForm() {
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRestriction())}
               />
               <Button type="button" onClick={addRestriction} size="sm">
+                <Plus className="h-4 w-4" />
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -493,7 +533,10 @@ export function LandForm() {
               <Button 
                 type="button" 
                 variant="outline"
-                onClick={() => document.getElementById('image-upload')?.click()}
+                onClick={() => {
+                  console.log('📸 Upload button clicked')
+                  document.getElementById('image-upload')?.click()
+                }}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Images
