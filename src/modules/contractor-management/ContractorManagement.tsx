@@ -24,6 +24,7 @@ import { useContractorManagement } from './hooks/useContractorManagement'
 import { ContractorTrade, AvailabilityStatus } from '@/types'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { NewContractorJobForm } from './components/NewContractorJobForm'
 
 // Helper function to get trade display name
 const getTradeDisplayName = (trade: ContractorTrade): string => {
@@ -86,6 +87,7 @@ function ContractorDirectory() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTrade, setSelectedTrade] = useState<string>('all')
   const [selectedAvailability, setSelectedAvailability] = useState<string>('all')
+  const [isNewJobFormOpen, setIsNewJobFormOpen] = useState(false)
 
   // Filter contractors based on search and filters
   const filteredContractors = activeContractors.filter(contractor => {
@@ -121,6 +123,11 @@ function ContractorDirectory() {
 
   return (
     <div className="space-y-6">
+      <NewContractorJobForm
+        isOpen={isNewJobFormOpen}
+        onClose={() => setIsNewJobFormOpen(false)}
+        onSuccess={() => { /* Optionally refresh data or show toast */ }}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="ri-page-header">
@@ -145,6 +152,9 @@ function ContractorDirectory() {
           <Link to="/contractors/portal">
             <Button variant={location.pathname.includes('/portal') ? 'default' : 'outline'}>
               Contractor Portal
+            </Button>
+            <Button onClick={() => setIsNewJobFormOpen(true)} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" /> New Job
             </Button>
           </Link>
         </div>
@@ -267,7 +277,7 @@ function ContractorDirectory() {
             </Select>
             
             {/* Add Contractor Button */}
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto" onClick={() => setIsNewJobFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Contractor
             </Button>

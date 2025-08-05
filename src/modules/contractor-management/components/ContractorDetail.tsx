@@ -190,6 +190,33 @@ export function ContractorDetail() {
     )
   }
 
+  const [newSlotDate, setNewSlotDate] = useState('')
+  const [newSlotStartTime, setNewSlotStartTime] = useState('09:00')
+  const [newSlotEndTime, setNewSlotEndTime] = useState('17:00')
+  const [newSlotStatus, setNewSlotStatus] = useState<AvailabilityStatus>(AvailabilityStatus.AVAILABLE)
+
+  const handleAddAvailability = async () => {
+    if (!newSlotDate || !newSlotStartTime || !newSlotEndTime) {
+      alert('Please fill all availability fields.')
+      return
+    }
+    try {
+      await addAvailabilitySlot({
+        contractorId: contractor.id,
+        date: newSlotDate,
+        startTime: newSlotStartTime,
+        endTime: newSlotEndTime,
+        status: newSlotStatus,
+      })
+      setNewSlotDate('')
+      setNewSlotStartTime('09:00')
+      setNewSlotEndTime('17:00')
+      setNewSlotStatus(AvailabilityStatus.AVAILABLE)
+    } catch (error) {
+      console.error('Failed to add availability slot:', error)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -514,6 +541,151 @@ export function ContractorDetail() {
                                 </div>
                               )}
                             </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Add New Availability Slot */}
+                      <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+                        <h4 className="font-semibold text-lg mb-3">Add New Availability</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div>
+                            <Label htmlFor="newSlotDate">Date</Label>
+                            <Input
+                              id="newSlotDate"
+                              type="date"
+                              value={newSlotDate}
+                              onChange={(e) => setNewSlotDate(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newSlotStartTime">Start Time</Label>
+                            <Input
+                              id="newSlotStartTime"
+                              type="time"
+                              value={newSlotStartTime}
+                              onChange={(e) => setNewSlotStartTime(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newSlotEndTime">End Time</Label>
+                            <Input
+                              id="newSlotEndTime"
+                              type="time"
+                              value={newSlotEndTime}
+                              onChange={(e) => setNewSlotEndTime(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newSlotStatus">Status</Label>
+                            <Select value={newSlotStatus} onValueChange={(value) => setNewSlotStatus(value as AvailabilityStatus)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.values(AvailabilityStatus).map(status => (
+                                  <SelectItem key={status} value={status}>
+                                    {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button onClick={handleAddAvailability} className="mt-4 w-full">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Availability Slot
+                        </Button>
+                      </div>
+
+                      {/* Week Navigation */}
+                      <div className="flex items-center justify-center space-x-2 mt-6">
+                        <Button variant="outline" size="sm" onClick={() => setCurrentWeek(prev => {
+                          const newWeek = new Date(prev); newWeek.setDate(prev.getDate() - 7); return newWeek;
+                        })}>
+                          <ArrowLeft className="h-4 w-4" /> Previous Week
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setCurrentWeek(new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 1)))}>
+                          Today
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setCurrentWeek(prev => {
+                          const newWeek = new Date(prev); newWeek.setDate(prev.getDate() + 7); return newWeek;
+                        })}>
+                          Next Week <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="jobs">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assigned Jobs</CardTitle>
+                      <CardDescription>
+                        All jobs assigned to this contractor
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {contractorJobs.map((job) => (
+                          <div key={job.id} className="p-4 border rounded-lg">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-medium">{job.description}</h4>
+                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {job.unitAddress}
+                                </div>
+                              </div>
+                              <Badge variant={
+                                job.status === 'completed' ? 'default' :
+                                job.status === 'in_progress' ? 'secondary' :
+                                job.status === 'assigned' ? 'outline' : 'destructive'
+                              }>
+                                {job.status.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Scheduled:</span>
+                                <div>{job.scheduledDate.toLocaleDateString()}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Duration:</span>
+                                <div>{job.estimatedDuration} hours</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Priority:</span>
+                                <div>{job.priority}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Customer:</span>
+                                <div>{job.customerName || 'N/A'}</div>
+                              </div>
+                            </div>
+
+                            {job.specialInstructions && (
+                              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                                <strong>Special Instructions:</strong> {job.specialInstructions}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {contractorJobs.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No jobs assigned to this contractor</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
                           )
                         })}
                       </div>

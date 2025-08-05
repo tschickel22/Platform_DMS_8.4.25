@@ -573,6 +573,30 @@ export function useContractorManagement() {
     [contractorJobs]
   )
 
+  // Overall performance metrics
+  const overallMetrics = useMemo(() => {
+    const completedJobs = contractorJobs.filter(job => job.status === ContractorJobStatus.COMPLETED)
+    const totalCompletedJobs = completedJobs.length
+
+    const totalRatingSum = contractors.reduce((sum, c) => sum + c.ratings.averageRating, 0)
+    const averageContractorRating = contractors.length > 0
+      ? (totalRatingSum / contractors.length).toFixed(1)
+      : '0.0'
+
+    // This would require tracking actual time spent on jobs, which is not fully implemented yet
+    // For now, we can use estimated duration for completed jobs as a placeholder
+    const totalEstimatedDurationCompletedJobs = completedJobs.reduce((sum, job) => sum + job.estimatedDuration, 0)
+    const averageJobDuration = totalCompletedJobs > 0
+      ? (totalEstimatedDurationCompletedJobs / totalCompletedJobs).toFixed(1)
+      : '0.0'
+
+    return {
+      totalCompletedJobs,
+      averageContractorRating,
+      averageJobDuration
+    }
+  }, [contractorJobs, contractors])
+
   return {
     // Data
     contractors,
@@ -586,6 +610,7 @@ export function useContractorManagement() {
     availableContractors,
     pendingJobs,
     assignedJobs,
+    overallMetrics,
 
     // Contractor functions
     getContractors,
