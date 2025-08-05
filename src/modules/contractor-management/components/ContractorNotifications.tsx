@@ -21,6 +21,7 @@ import {
 import { useContractorManagement } from '../hooks/useContractorManagement'
 import { ContractorTrade } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+import { useTenant } from '@/contexts/TenantContext'
 
 // Helper function to get trade display name
 const getTradeDisplayName = (trade: ContractorTrade): string => {
@@ -111,6 +112,7 @@ Best regards,
 export function ContractorNotifications() {
   const { activeContractors, contractorJobs, loading, error } = useContractorManagement()
   const { toast } = useToast()
+  const { tenant } = useTenant()
 
   const [selectedContractors, setSelectedContractors] = useState<string[]>([])
   const [selectedTrade, setSelectedTrade] = useState<string>('all')
@@ -182,6 +184,22 @@ export function ContractorNotifications() {
     }
   }
 
+  // Helper function to replace placeholders in templates
+  const replacePlaceholders = (template: string, contractor: any, companyName: string) => {
+    return template
+      .replace(/\{\{contractorName\}\}/g, contractor.name || 'N/A')
+      .replace(/\{\{companyName\}\}/g, companyName || 'Company')
+      .replace(/\{\{jobDescription\}\}/g, 'N/A')
+      .replace(/\{\{jobAddress\}\}/g, 'N/A')
+      .replace(/\{\{scheduledDate\}\}/g, 'N/A')
+      .replace(/\{\{scheduledTime\}\}/g, 'N/A')
+      .replace(/\{\{priority\}\}/g, 'N/A')
+      .replace(/\{\{customerName\}\}/g, 'N/A')
+      .replace(/\{\{customerPhone\}\}/g, 'N/A')
+      .replace(/\{\{completedDate\}\}/g, 'N/A')
+      .replace(/\{\{portalLink\}\}/g, 'N/A')
+  }
+
   const handleSendNotification = () => {
     if (selectedContractors.length === 0) {
       toast({
@@ -201,15 +219,23 @@ export function ContractorNotifications() {
       return
     }
 
-    // Simulate sending notifications
-    const selectedContractorNames = activeContractors
+    // Get selected contractors and process notifications
+    const selectedContractorObjects = activeContractors
       .filter(c => selectedContractors.includes(c.id))
-      .map(c => c.name)
+    
+    const companyName = tenant?.name || 'Company'
 
     console.log(`📧 ${notificationType.toUpperCase()} Notifications Sent:`)
-    console.log(`Recipients: ${selectedContractorNames.join(', ')}`)
-    console.log(`Subject: ${subject}`)
-    console.log(`Message: ${message}`)
+    
+    selectedContractorObjects.forEach(contractor => {
+      const personalizedSubject = replacePlaceholders(subject, contractor, companyName)
+      const personalizedMessage = replacePlaceholders(message, contractor, companyName)
+      
+      console.log(`To: ${contractor.name}`)
+      console.log(`Subject: ${personalizedSubject}`)
+      console.log(`Message: ${personalizedMessage}`)
+      console.log('---')
+    })
 
     toast({
       title: 'Notifications Sent',
