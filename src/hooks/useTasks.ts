@@ -359,4 +359,3 @@
     updateTask,
     deleteTask
   }
-}
