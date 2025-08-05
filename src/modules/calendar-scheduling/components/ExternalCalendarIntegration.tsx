@@ -1,10 +1,9 @@
-```typescript
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Mail, Calendar, Link, XCircle, CheckCircle, RefreshCw } from 'lucide-react'
+import { Mail, Calendar, Link as LinkIcon, XCircle, CheckCircle, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
@@ -16,9 +15,9 @@ interface ExternalCalendarConnection {
 export function ExternalCalendarIntegration() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [connections, setConnections] = useState<ExternalCalendarConnection>(() => {
-    return loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false })
-  })
+  const [connections, setConnections] = useState<ExternalCalendarConnection>(() =>
+    loadFromLocalStorage('external_calendar_connections', { google: false, outlook: false })
+  )
 
   useEffect(() => {
     saveToLocalStorage('external_calendar_connections', connections)
@@ -33,13 +32,13 @@ export function ExternalCalendarIntegration() {
       setConnections(prev => ({ ...prev, [provider]: true }))
       toast({
         title: 'Connection Successful',
-        description: \`${provider === 'google' ? 'Google' : 'Outlook'} Calendar connected.`,
+        description: `${provider === 'google' ? 'Google' : 'Outlook'} Calendar connected.`,
       })
-    } catch (error) {
+    } catch {
       toast({
         title: 'Connection Failed',
-        description: \`Failed to connect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
-        variant: 'destructive'
+        description: `Failed to connect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
@@ -55,13 +54,13 @@ export function ExternalCalendarIntegration() {
       setConnections(prev => ({ ...prev, [provider]: false }))
       toast({
         title: 'Disconnected',
-        description: \`${provider === 'google' ? 'Google' : 'Outlook'} Calendar disconnected.`,
+        description: `${provider === 'google' ? 'Google' : 'Outlook'} Calendar disconnected.`,
       })
-    } catch (error) {
+    } catch {
       toast({
         title: 'Disconnection Failed',
-        description: \`Failed to disconnect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
-        variant: 'destructive'
+        description: `Failed to disconnect ${provider === 'google' ? 'Google' : 'Outlook'} Calendar.`,
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
@@ -72,7 +71,7 @@ export function ExternalCalendarIntegration() {
     <Card className="shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center">
-          <Link className="h-5 w-5 mr-2 text-primary" />
+          <LinkIcon className="h-5 w-5 mr-2 text-primary" />
           External Calendar Integration
         </CardTitle>
         <CardDescription>
@@ -86,7 +85,9 @@ export function ExternalCalendarIntegration() {
             <Calendar className="h-6 w-6 text-blue-500" />
             <div>
               <h4 className="font-medium">Google Calendar</h4>
-              <p className="text-sm text-muted-foreground">Sync events with your Google account.</p>
+              <p className="text-sm text-muted-foreground">
+                Sync events with your Google account.
+              </p>
             </div>
           </div>
           {connections.google ? (
@@ -110,7 +111,7 @@ export function ExternalCalendarIntegration() {
               onClick={() => handleConnect('google')}
               disabled={loading}
             >
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
               <span className="ml-2">Connect</span>
             </Button>
           )}
@@ -122,7 +123,9 @@ export function ExternalCalendarIntegration() {
             <Mail className="h-6 w-6 text-orange-500" />
             <div>
               <h4 className="font-medium">Outlook Calendar</h4>
-              <p className="text-sm text-muted-foreground">Sync events with your Outlook account.</p>
+              <p className="text-sm text-muted-foreground">
+                Sync events with your Outlook account.
+              </p>
             </div>
           </div>
           {connections.outlook ? (
@@ -146,7 +149,7 @@ export function ExternalCalendarIntegration() {
               onClick={() => handleConnect('outlook')}
               disabled={loading}
             >
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
               <span className="ml-2">Connect</span>
             </Button>
           )}
@@ -162,4 +165,3 @@ export function ExternalCalendarIntegration() {
     </Card>
   )
 }
-```
