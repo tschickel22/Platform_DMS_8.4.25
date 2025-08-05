@@ -171,12 +171,13 @@ export function useCalendarData() {
       
       // PDI start event
       const estimatedDuration = 4 * 60 * 60 * 1000 // 4 hours for PDI
-      const endTime = inspection.completedAt || new Date(inspection.startedAt.getTime() + estimatedDuration)
+      const startDate = new Date(inspection.startedAt)
+      const endTime = inspection.completedAt ? new Date(inspection.completedAt) : new Date(startDate.getTime() + estimatedDuration)
       
       events.push({
         id: `pdi-${inspection.id}`,
         title: `PDI: ${vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : inspection.vehicleId}`,
-        start: inspection.startedAt,
+        start: startDate,
         end: endTime,
         sourceModule: 'pdi' as const,
         sourceId: inspection.id,
