@@ -658,3 +658,5 @@ export function LandForm() {
     </div>
   )
 }
+
+export default LandForm;
