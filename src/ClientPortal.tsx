@@ -30,30 +30,32 @@ import { useMockDataDiscovery, getPortalSectionsWithCounts } from '@/utils/mockD
 function ClientProfile() {
   const { getDisplayName, getDisplayEmail } = usePortal()
   
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your profile information
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>
-            Settings options will be available here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Profile settings will be implemented here.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  )
+ return (
+ <>
+ <div className="space-y-6">
+ <div className="space-y-2">
+ <h1 className="text-2xl font-bold">Profile</h1>
+ <p className="text-muted-foreground">
+ Manage your profile information
+ </p>
+ </div>
+ 
+ <Card>
+ <CardHeader>
+ <CardTitle>Personal Information</CardTitle>
+ <CardDescription>
+ Settings options will be available here.
+ </CardDescription>
+ </CardHeader>
+ <CardContent>
+ <p className="text-sm text-muted-foreground">
+ Profile settings will be implemented here.
+ </p>
+ </CardContent>
+ </Card>
+ </div>
+ </>
+ )
 }
 
 function ClientDashboard() {
