@@ -687,83 +687,76 @@ export function ContractorDetail() {
                 </TabsContent>
               </Tabs>
                           )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            <TabsContent value="jobs">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assigned Jobs</CardTitle>
-                  <CardDescription>
-                    All jobs assigned to this contractor
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {contractorJobs.map((job) => (
-                      <div key={job.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-medium">{job.description}</h4>
-                            <div className="flex items-center text-sm text-muted-foreground mt-1">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              {job.unitAddress}
+                <TabsContent value="jobs">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assigned Jobs</CardTitle>
+                      <CardDescription>
+                        All jobs assigned to this contractor
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {contractorJobs.map((job) => (
+                          <div key={job.id} className="p-4 border rounded-lg">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-medium">{job.description}</h4>
+                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {job.unitAddress}
+                                </div>
+                              </div>
+                              <Badge variant={
+                                job.status === 'completed' ? 'default' :
+                                job.status === 'in_progress' ? 'secondary' :
+                                job.status === 'assigned' ? 'outline' : 'destructive'
+                              }>
+                                {job.status.replace('_', ' ')}
+                              </Badge>
                             </div>
-                          </div>
-                          <Badge variant={
-                            job.status === 'completed' ? 'default' :
-                            job.status === 'in_progress' ? 'secondary' :
-                            job.status === 'assigned' ? 'outline' : 'destructive'
-                          }>
-                            {job.status.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Scheduled:</span>
-                            <div>{job.scheduledDate.toLocaleDateString()}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Duration:</span>
-                            <div>{job.estimatedDuration} hours</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Priority:</span>
-                            <div>{job.priority}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Customer:</span>
-                            <div>{job.customerName || 'N/A'}</div>
-                          </div>
-                        </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Scheduled:</span>
+                                <div>{job.scheduledDate.toLocaleDateString()}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Duration:</span>
+                                <div>{job.estimatedDuration} hours</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Priority:</span>
+                                <div>{job.priority}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Customer:</span>
+                                <div>{job.customerName || 'N/A'}</div>
+                              </div>
+                            </div>
 
-                        {job.specialInstructions && (
-                          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                            <strong>Special Instructions:</strong> {job.specialInstructions}
+                            {job.specialInstructions && (
+                              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                                <strong>Special Instructions:</strong> {job.specialInstructions}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {contractorJobs.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No jobs assigned to this contractor</p>
                           </div>
                         )}
                       </div>
-                    ))}
-
-                    {contractorJobs.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No jobs assigned to this contractor</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )
+    }
