@@ -85,11 +85,12 @@ export function useCalendarData() {
       const events: CalendarEvent[] = []
       
       // Scheduled delivery event
-      const scheduledEndTime = new Date(delivery.scheduledDate.getTime() + (4 * 60 * 60 * 1000)) // 4 hours for delivery
+      const scheduledDate = new Date(delivery.scheduledDate)
+      const scheduledEndTime = new Date(scheduledDate.getTime() + (4 * 60 * 60 * 1000)) // 4 hours for delivery
       events.push({
         id: `delivery-scheduled-${delivery.id}`,
         title: `Delivery: ${customer ? `${customer.firstName} ${customer.lastName}` : delivery.customerId}`,
-        start: delivery.scheduledDate,
+        start: scheduledDate,
         end: scheduledEndTime,
         sourceModule: 'delivery' as const,
         sourceId: delivery.id,
@@ -110,11 +111,12 @@ export function useCalendarData() {
       
       // Delivered event (if completed)
       if (delivery.deliveredDate && delivery.status === 'delivered') {
+        const deliveredDate = new Date(delivery.deliveredDate)
         events.push({
           id: `delivery-completed-${delivery.id}`,
           title: `✓ Delivered: ${customer ? `${customer.firstName} ${customer.lastName}` : delivery.customerId}`,
-          start: delivery.deliveredDate,
-          end: new Date(delivery.deliveredDate.getTime() + (30 * 60 * 1000)), // 30 minutes
+          start: deliveredDate,
+          end: new Date(deliveredDate.getTime() + (30 * 60 * 1000)), // 30 minutes
           sourceModule: 'delivery' as const,
           sourceId: delivery.id,
           status: 'completed',
@@ -124,7 +126,7 @@ export function useCalendarData() {
           location: `${delivery.address.city}, ${delivery.address.state}`,
           metadata: {
             isCompletion: true,
-            originalScheduledDate: delivery.scheduledDate,
+            originalScheduledDate: scheduledDate,
             vehicleInfo: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : delivery.vehicleId,
             customerName: customer ? `${customer.firstName} ${customer.lastName}` : delivery.customerId
           }
@@ -143,12 +145,13 @@ export function useCalendarData() {
       const assignedRep = salesReps.find(r => r.id === task.assignedTo)
       
       // Tasks are typically shorter events
-      const endDate = new Date(task.dueDate.getTime() + (60 * 60 * 1000)) // 1 hour default
+      const dueDate = new Date(task.dueDate)
+      const endDate = new Date(dueDate.getTime() + (60 * 60 * 1000)) // 1 hour default
       
       return {
         id: `task-${task.id}`,
         title: `Task: ${task.title}`,
-        start: task.dueDate,
+        start: dueDate,
         end: endDate,
         sourceModule: 'task' as const,
         sourceId: task.id,
