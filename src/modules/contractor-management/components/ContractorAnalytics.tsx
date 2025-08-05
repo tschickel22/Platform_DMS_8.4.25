@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { 
@@ -10,7 +12,8 @@ import {
   Users,
   CheckCircle,
   AlertTriangle,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from 'lucide-react'
 import { useContractorManagement } from '../hooks/useContractorManagement'
 import { ContractorTrade, ContractorJobStatus, Priority } from '@/types'
@@ -133,11 +136,21 @@ export function ContractorAnalytics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="ri-page-header">
-        <h1 className="ri-page-title">Contractor Analytics</h1>
-        <p className="ri-page-description">
-          Performance insights and analytics for your contractor network
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link to="/contractors">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Directory
+            </Button>
+          </Link>
+          <div className="ri-page-header">
+            <h1 className="ri-page-title">Contractor Analytics</h1>
+            <p className="ri-page-description">
+              Performance insights and analytics for your contractor network
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Key Metrics */}
