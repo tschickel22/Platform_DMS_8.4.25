@@ -15,6 +15,14 @@ export function useCalendarData() {
   const { vehicles } = useInventoryManagement()
   const { leads, salesReps } = useLeadManagement()
   
+  // Add refresh trigger to force re-render when data changes
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  
+  // Trigger refresh when any source data changes
+  useEffect(() => {
+    setRefreshTrigger(prev => prev + 1)
+  }, [tickets, deliveries, tasks, inspections])
+  
   const [filters, setFilters] = useState<CalendarFilter>({
     showService: true,
     showDelivery: true,
@@ -272,6 +280,7 @@ export function useCalendarData() {
   return {
     events: filteredEvents,
     allEvents,
+    refreshTrigger,
     filters,
     setFilters,
     searchTerm,

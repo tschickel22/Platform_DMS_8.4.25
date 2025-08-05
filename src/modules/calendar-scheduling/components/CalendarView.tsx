@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CalendarEvent } from '../types'
 import { CalendarEventDetail } from './CalendarEventDetail'
+import { EventCreateModal } from './EventCreateModal'
+import { EventEditModal } from './EventEditModal'
 import { cn } from '@/lib/utils'
 import { 
   Calendar as CalendarIcon, 
@@ -15,7 +17,8 @@ import {
   Grid3X3,
   Columns,
   Square,
-  List
+  List,
+  Plus
 } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -25,12 +28,26 @@ const localizer = momentLocalizer(moment)
 interface CalendarViewProps {
   events: CalendarEvent[]
   onNavigateToSource: (sourceModule: string, sourceId: string) => void
+  onCreateEvent: (eventData: Partial<CalendarEvent>) => Promise<void>
+  onUpdateEvent: (eventId: string, eventData: Partial<CalendarEvent>) => Promise<void>
+  onDeleteEvent: (eventId: string) => Promise<void>
+  onRescheduleEvent: (eventId: string, newStart: Date, newEnd: Date) => Promise<void>
 }
 
-export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) {
+export function CalendarView({ 
+  events, 
+  onNavigateToSource, 
+  onCreateEvent, 
+  onUpdateEvent, 
+  onDeleteEvent, 
+  onRescheduleEvent 
+}: CalendarViewProps) {
   const [currentView, setCurrentView] = useState<View>(Views.MONTH)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [createEventDate, setCreateEventDate] = useState<Date | undefined>(undefined)
 
   // Custom event style getter
   const eventStyleGetter = useCallback((event: CalendarEvent) => {
@@ -108,6 +125,41 @@ export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) 
     setSelectedEvent(event)
   }
 
+  const handleSelectSlot = ({ start }: { start: Date }) => {
+    setCreateEventDate(start)
+    setShowCreateModal(true)
+  }
+
+  const handleEditEvent = (event: CalendarEvent) => {
+    setSelectedEvent(event)
+    setShowEditModal(true)
+  }
+
+  const handleEventDrop = async ({ event, start, end }: { event: CalendarEvent, start: Date, end: Date }) => {
+    try {
+      await onRescheduleEvent(event.id, start, end)
+    } catch (error) {
+      console.error('Failed to reschedule event:', error)
+    }
+  }
+
+  const handleCreateEvent = async (eventData: Partial<CalendarEvent>) => {
+    await onCreateEvent(eventData)
+    setShowCreateModal(false)
+    setCreateEventDate(undefined)
+  }
+
+  const handleUpdateEvent = async (eventId: string, eventData: Partial<CalendarEvent>) => {
+    await onUpdateEvent(eventId, eventData)
+    setShowEditModal(false)
+    setSelectedEvent(null)
+  }
+
+  const handleDeleteEvent = async (eventId: string) => {
+    await onDeleteEvent(eventId)
+    setShowEditModal(false)
+    setSelectedEvent(null)
+  }
   const handleNavigate = (date: Date) => {
     setCurrentDate(date)
   }
@@ -201,10 +253,36 @@ export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) 
         <CalendarEventDetail
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onEdit={() => handleEditEvent(selectedEvent)}
           onNavigateToSource={onNavigateToSource}
         />
       )}
 
+      {/* Create Event Modal */}
+      {showCreateModal && (
+        <EventCreateModal
+          initialDate={createEventDate}
+          onSave={handleCreateEvent}
+          onCancel={() => {
+            setShowCreateModal(false)
+            setCreateEventDate(undefined)
+          }}
+        />
+      )}
+
+      {/* Edit Event Modal */}
+      {showEditModal && selectedEvent && (
+        <EventEditModal
+          event={selectedEvent}
+          onSave={handleUpdateEvent}
+          onDelete={handleDeleteEvent}
+          onNavigateToSource={onNavigateToSource}
+          onCancel={() => {
+            setShowEditModal(false)
+            setSelectedEvent(null)
+          }}
+        />
+      )}
       {/* Calendar Header */}
       <Card className="shadow-sm">
         <CardContent className="pt-6">
@@ -221,6 +299,10 @@ export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) 
                 <Button variant="outline" size="sm" onClick={goToToday}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Today
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Event
                 </Button>
               </div>
               
@@ -267,10 +349,15 @@ export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) 
               date={currentDate}
               onNavigate={handleNavigate}
               onSelectEvent={handleSelectEvent}
+              onSelectSlot={handleSelectSlot}
+              onEventDrop={handleEventDrop}
+              onEventResize={handleEventDrop}
               eventPropGetter={eventStyleGetter}
               components={{
                 event: EventComponent
               }}
+              selectable
+              resizable
               popup
               showMultiDayTimes
               step={30}
@@ -278,6 +365,7 @@ export function CalendarView({ events, onNavigateToSource }: CalendarViewProps) 
               defaultDate={new Date()}
               views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
               toolbar={false} // We're using our custom toolbar
+              dragFromOutsideItem={() => null}
               style={{
                 height: '100%',
                 fontFamily: 'inherit'

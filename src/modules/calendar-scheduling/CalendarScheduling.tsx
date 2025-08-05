@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Users } from 'lucide-react'
 import { useCalendarData } from './hooks/useCalendarData'
+import { useCalendarManagement } from './hooks/useCalendarManagement'
 import { CalendarView } from './components/CalendarView'
 import { CalendarFilters } from './components/CalendarFilters'
 import { useToast } from '@/hooks/use-toast'
@@ -24,6 +25,13 @@ function CalendarDashboard() {
     stats
   } = useCalendarData()
 
+  const {
+    loading: managementLoading,
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    rescheduleEvent
+  } = useCalendarManagement()
   const [showFilters, setShowFilters] = useState(false)
 
   // Calculate additional stats
@@ -63,6 +71,73 @@ function CalendarDashboard() {
     }
   }
 
+  const handleCreateEvent = async (eventData: Partial<CalendarEvent>) => {
+    try {
+      await createCalendarEvent(eventData)
+      toast({
+        title: 'Event Created',
+        description: `New ${eventData.sourceModule} event created successfully`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create event',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const handleUpdateEvent = async (eventId: string, eventData: Partial<CalendarEvent>) => {
+    try {
+      await updateCalendarEvent(eventId, eventData)
+      toast({
+        title: 'Event Updated',
+        description: 'Event has been updated successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update event',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await deleteCalendarEvent(eventId)
+      toast({
+        title: 'Event Deleted',
+        description: 'Event has been deleted successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete event',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const handleRescheduleEvent = async (eventId: string, newStart: Date, newEnd: Date) => {
+    try {
+      await rescheduleEvent(eventId, newStart, newEnd)
+      toast({
+        title: 'Event Rescheduled',
+        description: 'Event has been rescheduled successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reschedule event',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -165,6 +240,10 @@ function CalendarDashboard() {
       <CalendarView
         events={events}
         onNavigateToSource={handleNavigateToSource}
+        onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
+        onDeleteEvent={handleDeleteEvent}
+        onRescheduleEvent={handleRescheduleEvent}
       />
     </div>
   )

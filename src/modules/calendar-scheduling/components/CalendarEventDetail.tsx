@@ -25,10 +25,11 @@ import {
 interface CalendarEventDetailProps {
   event: CalendarEvent
   onClose: () => void
+  onEdit?: () => void
   onNavigateToSource: (sourceModule: string, sourceId: string) => void
 }
 
-export function CalendarEventDetail({ event, onClose, onNavigateToSource }: CalendarEventDetailProps) {
+export function CalendarEventDetail({ event, onClose, onEdit, onNavigateToSource }: CalendarEventDetailProps) {
   const getModuleIcon = (module: string) => {
     switch (module) {
       case 'service':
@@ -384,6 +385,12 @@ export function CalendarEventDetail({ event, onClose, onNavigateToSource }: Cale
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
+            {onEdit && (
+              <Button variant="outline" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Event
+              </Button>
+            )}
             <Button onClick={() => onNavigateToSource(event.sourceModule, event.sourceId)}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in {event.sourceModule.charAt(0).toUpperCase() + event.sourceModule.slice(1)}
