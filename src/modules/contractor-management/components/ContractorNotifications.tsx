@@ -221,7 +221,7 @@ export function ContractorNotifications() {
   }
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = defaultTemplates.find(t => t.id === templateId)
+    const template = templates.find(t => t.id === templateId)
     if (template) {
       setSelectedTemplate(templateId)
       setSubject(template.subject)
@@ -423,7 +423,7 @@ export function ContractorNotifications() {
                         <SelectValue placeholder="Choose a template..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {defaultTemplates.map(template => (
+                        {templates.map(template => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}
                           </SelectItem>
