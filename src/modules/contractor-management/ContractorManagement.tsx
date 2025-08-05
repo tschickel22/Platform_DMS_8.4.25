@@ -189,12 +189,12 @@ function ContractorDirectory() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card>
+        <Card className="bg-blue-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Contractors</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
-          <CardContent className="bg-blue-50 pt-0">
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold text-blue-700">{contractors.length}</div>
             <p className="text-xs text-muted-foreground">
               {activeContractors.length} active
@@ -202,12 +202,12 @@ function ContractorDirectory() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-green-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Available Today</CardTitle>
             <Calendar className="h-4 w-4 text-green-600" />
           </CardHeader>
-          <CardContent className="bg-green-50 pt-0">
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold text-green-700">
               {activeContractors.filter(c => 
                 getContractorAvailabilityStatus(c.id, availabilitySlots) === 'Available'
@@ -219,12 +219,12 @@ function ContractorDirectory() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-yellow-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
             <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
-          <CardContent className="bg-yellow-50 pt-0">
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold text-yellow-700">
               {activeContractors.length > 0 
                 ? (activeContractors.reduce((sum, c) => sum + c.ratings.averageRating, 0) / activeContractors.length).toFixed(1)
@@ -237,12 +237,12 @@ function ContractorDirectory() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-purple-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
             <Star className="h-4 w-4 text-purple-600" />
           </CardHeader>
-          <CardContent className="bg-purple-50 pt-0">
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold text-purple-700">
               {activeContractors.reduce((sum, c) => sum + c.ratings.reviewCount, 0)}
             </div>
