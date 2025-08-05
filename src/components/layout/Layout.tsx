@@ -21,6 +21,7 @@ import {
   Settings,
   Shield,
   User,
+  MapPin,
   LogOut,
   ChevronDown,
   ShieldCheck,

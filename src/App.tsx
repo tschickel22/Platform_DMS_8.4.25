@@ -30,6 +30,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
 import TaskCenter from '@/modules/task-center/TaskCenter'
@@ -56,6 +57,7 @@ function App() {
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/crm/*" element={<CRMProspecting />} />
                           <Route path="/inventory/*" element={<InventoryManagement />} />
+                          <Route path="/land/*" element={<LandManagement />} />
                           <Route path="/deals/*" element={<CRMSalesDeal />} />
                           <Route path="/finance/*" element={<FinanceModule />} />
                           <Route path="/quotes/*" element={<QuoteBuilder />} />
