@@ -17,7 +17,7 @@ import {
   Users,
   Clock,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
   Plus,
   Edit,
   Trash2,
