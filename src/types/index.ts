@@ -569,6 +569,41 @@ export enum ColumnType {
   BOOLEAN = 'boolean'
 }
 
+export enum ContractorTrade {
+  ELECTRICAL = 'electrical',
+  PLUMBING = 'plumbing',
+  SKIRTING = 'skirting',
+  HVAC = 'hvac',
+  FLOORING = 'flooring',
+  ROOFING = 'roofing',
+  GENERAL = 'general',
+  LANDSCAPING = 'landscaping'
+}
+
+export enum ContractorJobType {
+  INSTALLATION = 'installation',
+  REPAIR = 'repair',
+  MAINTENANCE = 'maintenance',
+  INSPECTION = 'inspection',
+  SETUP = 'setup',
+  REMOVAL = 'removal'
+}
+
+export enum ContractorJobStatus {
+  PENDING = 'pending',
+  ASSIGNED = 'assigned',
+  EN_ROUTE = 'en_route',
+  ON_SITE = 'on_site',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
+
+export enum AvailabilityStatus {
+  AVAILABLE = 'available',
+  BOOKED = 'booked',
+  UNAVAILABLE = 'unavailable'
+}
+
 export enum TaskModule {
   CRM = 'crm',
   SERVICE = 'service',
@@ -612,4 +647,61 @@ export interface Task {
   tags?: string[]
   customFields?: Record<string, any>
   isOverdue?: boolean
+}
+
+export interface Contractor {
+  id: string
+  name: string
+  trade: ContractorTrade
+  contactInfo: {
+    email: string
+    phone: string
+    address?: string
+  }
+  ratings: {
+    averageRating: number
+    reviewCount: number
+  }
+  assignedJobIds: string[]
+  isActive: boolean
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AvailabilitySlot {
+  id: string
+  contractorId: string
+  date: string // YYYY-MM-DD format
+  startTime: string // HH:MM format
+  endTime: string // HH:MM format
+  status: AvailabilityStatus
+  jobId?: string
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ContractorJob {
+  id: string
+  unitAddress: string
+  jobType: ContractorJobType
+  trade: ContractorTrade
+  scheduledDate: Date
+  estimatedDuration: number // in hours
+  status: ContractorJobStatus
+  assignedContractorId?: string
+  assignedContractorName?: string
+  description: string
+  priority: Priority
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
+  specialInstructions?: string
+  photos: string[]
+  notes: string
+  completedAt?: Date
+  customFields: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
 }
