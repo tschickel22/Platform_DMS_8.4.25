@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, Plus, X, Upload, Image } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Badge } from '@/components/ui/badge'
 import { 
   Save, 
   ArrowLeft, 
