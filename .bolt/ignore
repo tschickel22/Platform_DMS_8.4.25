@@ -1,6 +1,6 @@
 # Ignore all other application modules not directly related to the Calendar module
 apps/agreement-vault/
-apps/client-portal/
+#apps/client-portal/
 apps/commission-engine/
 apps/company-settings/
 apps/crm-prospecting/
