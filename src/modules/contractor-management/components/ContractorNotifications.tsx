@@ -435,7 +435,7 @@ export function ContractorNotifications() {
                       rows={8}
                     />
                     <div className="text-xs text-muted-foreground mt-1">
-                      Available variables: {{contractorName}}, {{jobDescription}}, {{jobAddress}}, {{scheduledDate}}, {{portalLink}}
+                      Available variables: {'{{contractorName}}'}, {'{{jobDescription}}'}, {'{{jobAddress}}'}, {'{{scheduledDate}}'}, {'{{portalLink}}'}
                     </div>
                   </div>
 
