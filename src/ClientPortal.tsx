@@ -42,8 +42,13 @@ function ClientProfile() {
       <Card>
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <CardDescription>
             Settings options will be available here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Profile settings will be implemented here.
           </p>
         </CardContent>
       </Card>
