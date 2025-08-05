@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, CheckCircle, AlertTriangle, Clock, Sync } from 'lucide-react'
+import { RefreshCw, CheckCircle, AlertTriangle, Clock, FolderSync as Sync } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface SyncStatus {
