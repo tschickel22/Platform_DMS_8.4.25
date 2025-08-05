@@ -19,7 +19,8 @@ import {
   DollarSign,
   AlertTriangle,
   CheckCircle,
-  Phone
+  Phone,
+  Edit
 } from 'lucide-react'
 
 interface CalendarEventDetailProps {
