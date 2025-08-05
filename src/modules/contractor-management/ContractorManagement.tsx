@@ -29,6 +29,7 @@ import { ContractorTrade, AvailabilityStatus } from '@/types'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NewContractorJobForm } from './components/NewContractorJobForm'
+import { NewContractorForm } from './components/NewContractorForm'
 
 // Helper function to get trade display name
 const getTradeDisplayName = (trade: ContractorTrade): string => {
@@ -92,6 +93,7 @@ function ContractorDirectory() {
   const [selectedTrade, setSelectedTrade] = useState<string>('all')
   const [selectedAvailability, setSelectedAvailability] = useState<string>('all')
   const [isNewJobFormOpen, setIsNewJobFormOpen] = useState(false)
+  const [isNewContractorFormOpen, setIsNewContractorFormOpen] = useState(false)
 
   // Filter contractors based on search and filters
   const filteredContractors = activeContractors.filter(contractor => {
@@ -130,6 +132,11 @@ function ContractorDirectory() {
       <NewContractorJobForm
         isOpen={isNewJobFormOpen}
         onClose={() => setIsNewJobFormOpen(false)}
+        onSuccess={() => { /* Optionally refresh data or show toast */ }}
+      />
+      <NewContractorForm
+        isOpen={isNewContractorFormOpen}
+        onClose={() => setIsNewContractorFormOpen(false)}
         onSuccess={() => { /* Optionally refresh data or show toast */ }}
       />
       {/* Header */}
@@ -295,7 +302,7 @@ function ContractorDirectory() {
             </Select>
             
             {/* Add Contractor Button */}
-            <Button className="w-full sm:w-auto" onClick={() => setIsNewJobFormOpen(true)}>
+            <Button className="w-full sm:w-auto" onClick={() => setIsNewContractorFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Contractor
             </Button>
