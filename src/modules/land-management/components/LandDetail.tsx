@@ -395,4 +395,5 @@ export function LandDetail() {
   )
 }
 
+export default LandDetail;
 export default LandDetail
