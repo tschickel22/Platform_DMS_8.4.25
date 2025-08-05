@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { 
   Bell, 
   Send, 
@@ -17,6 +18,10 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle
+  Plus,
+  Edit,
+  Trash2,
+  Copy
 } from 'lucide-react'
 import { useContractorManagement } from '../hooks/useContractorManagement'
 import { ContractorTrade } from '@/types'
@@ -44,14 +49,37 @@ interface NotificationTemplate {
   subject: string
   message: string
   type: 'job_assigned' | 'job_reminder' | 'job_completed' | 'general'
+  isCustom?: boolean
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-const defaultTemplates: NotificationTemplate[] = [
+// Available merge fields for templates
+const availableMergeFields = [
+  { key: 'contractorName', label: 'Contractor Name', description: 'Name of the contractor' },
+  { key: 'companyName', label: 'Company Name', description: 'Your company name' },
+  { key: 'jobDescription', label: 'Job Description', description: 'Description of the job' },
+  { key: 'jobAddress', label: 'Job Address', description: 'Location of the job' },
+  { key: 'scheduledDate', label: 'Scheduled Date', description: 'Date the job is scheduled' },
+  { key: 'scheduledTime', label: 'Scheduled Time', description: 'Time the job is scheduled' },
+  { key: 'priority', label: 'Priority', description: 'Job priority level' },
+  { key: 'customerName', label: 'Customer Name', description: 'Name of the customer' },
+  { key: 'customerPhone', label: 'Customer Phone', description: 'Customer phone number' },
+  { key: 'completedDate', label: 'Completed Date', description: 'Date the job was completed' },
+  { key: 'portalLink', label: 'Portal Link', description: 'Link to contractor portal' },
+  { key: 'estimatedDuration', label: 'Estimated Duration', description: 'Expected job duration' },
+  { key: 'specialInstructions', label: 'Special Instructions', description: 'Special job instructions' }
+]
+
+const getDefaultTemplates = (): NotificationTemplate[] => [
   {
     id: 'job_assigned',
     name: 'Job Assignment',
     subject: 'New Job Assigned - {{jobDescription}}',
     type: 'job_assigned',
+    isCustom: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
     message: `Hi {{contractorName}},
 
 A new job has been assigned to you:
@@ -73,6 +101,9 @@ Thank you,
     name: 'Job Reminder',
     subject: 'Reminder: Job Tomorrow - {{jobDescription}}',
     type: 'job_reminder',
+    isCustom: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
     message: `Hi {{contractorName}},
 
 This is a reminder about your job scheduled for tomorrow:
@@ -94,6 +125,9 @@ Thank you,
     name: 'Job Completion Confirmation',
     subject: 'Job Completed - Thank You!',
     type: 'job_completed',
+    isCustom: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
     message: `Hi {{contractorName}},
 
 Thank you for completing the job:
@@ -120,6 +154,17 @@ export function ContractorNotifications() {
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+  
+  // Template management state
+  const [templates, setTemplates] = useState<NotificationTemplate[]>(getDefaultTemplates())
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null)
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    subject: '',
+    message: '',
+    type: 'general' as NotificationTemplate['type']
+  })
 
   // Filter contractors
   const filteredContractors = useMemo(() => {
