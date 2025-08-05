@@ -103,7 +103,7 @@ export default function Layout({ children }: LayoutProps) {
         { name: 'Reports', path: '/reports', icon: BarChart2 },
         { name: 'Commissions', path: '/commissions', icon: Percent },
         { name: 'Tag Manager', path: '/tags', icon: Tag },
-        { name: 'Task Center', path: '/tasks', icon: ListTodo }
+        { name: 'Task Center', path: '/tasks', icon: ListTodo },
         { name: 'Calendar', path: '/calendar', icon: Calendar }
       ]
     },
