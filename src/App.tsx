@@ -33,6 +33,7 @@ import FinanceApplication from '@/modules/finance-application/FinanceApplication
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
 import TaskCenter from '@/modules/task-center/TaskCenter'
+import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
 
 function App() {
   return (
@@ -73,6 +74,7 @@ function App() {
                           <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
                           <Route path="/tags/*" element={<TaggingEngine />} />
                           <Route path="/tasks/*" element={<TaskCenter />} />
+                          <Route path="/calendar/*" element={<CalendarScheduling />} />
                         </Routes>
                       </Layout>
                     </ProtectedRoute>
