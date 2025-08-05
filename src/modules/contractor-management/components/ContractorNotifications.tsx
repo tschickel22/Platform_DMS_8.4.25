@@ -293,6 +293,60 @@ export function ContractorNotifications() {
     setMessage('')
     setSelectedTemplate('')
   }
+  // Template management handlers
+  const handleCreateTemplate = () => {
+    setEditingTemplate(null)
+    setTemplateForm({ name: '', subject: '', message: '', type: 'general' })
+    setIsTemplateModalOpen(true)
+  }
+
+  const handleEditTemplate = (template: NotificationTemplate) => {
+    setEditingTemplate(template)
+    setTemplateForm({
+      name: template.name,
+      subject: template.subject,
+      message: template.message,
+      type: template.type,
+    })
+    setIsTemplateModalOpen(true)
+  }
+
+  const handleDuplicateTemplate = (template: NotificationTemplate) => {
+    const copy: NotificationTemplate = {
+      ...template,
+      id: `${template.id}-copy-${Date.now()}`,
+      name: template.name + ' (Copy)',
+      isCustom: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    setTemplates([copy, ...templates])
+  }
+
+  const handleDeleteTemplate = (id: string) => {
+    setTemplates(templates.filter(t => t.id !== id))
+  }
+
+  const handleSaveTemplate = () => {
+    const updated: NotificationTemplate = {
+      id: editingTemplate?.id || `custom-${Date.now()}`,
+      ...templateForm,
+      isCustom: true,
+      updatedAt: new Date(),
+      createdAt: editingTemplate?.createdAt || new Date(),
+    }
+    if (editingTemplate) {
+      setTemplates(templates.map(t => t.id === updated.id ? updated : t))
+    } else {
+      setTemplates([updated, ...templates])
+    }
+    setIsTemplateModalOpen(false)
+  }
+
+  const insertMergeField = (key: string) => {
+    const placeholder = `{{${key}}}`
+    setTemplateForm(prev => ({ ...prev, message: prev.message + placeholder }))
+  }
 
   if (loading) {
     return (
