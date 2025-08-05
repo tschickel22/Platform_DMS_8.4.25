@@ -593,3 +593,5 @@ export function AISchedulingOptimizer({
     </div>
   )
 }
+
+export { AISchedulingOptimizer }
