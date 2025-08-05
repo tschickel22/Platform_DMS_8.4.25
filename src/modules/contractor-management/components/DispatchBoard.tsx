@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Link } from 'react-router-dom'
 import { 
   Calendar, 
   Clock, 
@@ -12,7 +13,8 @@ import {
   Plus,
   Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react'
 import { useContractorManagement } from '../hooks/useContractorManagement'
 import { ContractorTrade, ContractorJobStatus, Priority, AvailabilityStatus } from '@/types'
@@ -178,11 +180,21 @@ export function DispatchBoard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="ri-page-header">
-        <h1 className="ri-page-title">Dispatch Board</h1>
-        <p className="ri-page-description">
-          Assign jobs to contractors using drag and drop
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link to="/contractors">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Directory
+            </Button>
+          </Link>
+          <div className="ri-page-header">
+            <h1 className="ri-page-title">Dispatch Board</h1>
+            <p className="ri-page-description">
+              Assign jobs to contractors using drag and drop
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Controls */}
