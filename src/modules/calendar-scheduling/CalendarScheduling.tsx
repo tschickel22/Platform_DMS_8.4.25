@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Users } from 'lucide-react'
@@ -9,6 +10,7 @@ import { useCalendarManagement } from './hooks/useCalendarManagement'
 import { CalendarView } from './components/CalendarView'
 import { CalendarFilters } from './components/CalendarFilters'
 import { EventSyncStatus } from './components/EventSyncStatus'
+import { ExternalCalendarIntegration } from './components/ExternalCalendarIntegration'
 import { useToast } from '@/hooks/use-toast'
 
 function CalendarDashboard() {
@@ -34,6 +36,7 @@ function CalendarDashboard() {
     rescheduleEvent
   } = useCalendarManagement()
   const [showFilters, setShowFilters] = useState(false)
+  const [activeTab, setActiveTab] = useState('calendar')
   const [showSyncStatus, setShowSyncStatus] = useState(false)
 
   // Calculate additional stats
@@ -271,37 +274,52 @@ function CalendarDashboard() {
         </Card>
       </div>
 
-      {/* Filters (Collapsible) */}
-      {showFilters && (
-        <CalendarFilters
-          filters={filters}
-          onFiltersChange={setFilters}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          filterOptions={filterOptions}
-          getAssigneeName={getAssigneeName}
-          stats={stats}
-        />
-      )}
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        {/* Filters (Collapsible) */}
+        {showFilters && (
+          <CalendarFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterOptions={filterOptions}
+            getAssigneeName={getAssigneeName}
+            stats={stats}
+          />
+        )}
 
-      {/* Sync Status (Collapsible) */}
-      {showSyncStatus && (
-        <EventSyncStatus
-          syncStatuses={syncStatuses}
-          onRefreshSync={handleRefreshSync}
-          onRefreshAll={handleRefreshAllSync}
-        />
-      )}
+        {/* Sync Status (Collapsible) */}
+        {showSyncStatus && (
+          <EventSyncStatus
+            syncStatuses={syncStatuses}
+            onRefreshSync={handleRefreshSync}
+            onRefreshAll={handleRefreshAllSync}
+          />
+        )}
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="sync-status">Sync Status</TabsTrigger>
+        </TabsList>
 
-      {/* Calendar View */}
-      <CalendarView
-        events={events}
-        onNavigateToSource={handleNavigateToSource}
-        onCreateEvent={handleCreateEvent}
-        onUpdateEvent={handleUpdateEvent}
-        onDeleteEvent={handleDeleteEvent}
-        onRescheduleEvent={handleRescheduleEvent}
-      />
+        <TabsContent value="calendar">
+          <CalendarView
+            events={events}
+            onNavigateToSource={handleNavigateToSource}
+            onCreateEvent={handleCreateEvent}
+            onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
+            onRescheduleEvent={handleRescheduleEvent}
+          />
+        </TabsContent>
+        <TabsContent value="integrations">
+          <ExternalCalendarIntegration />
+        </TabsContent>
+        <TabsContent value="sync-status">
+          <EventSyncStatus syncStatuses={syncStatuses} onRefreshSync={handleRefreshSync} onRefreshAll={handleRefreshAllSync} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

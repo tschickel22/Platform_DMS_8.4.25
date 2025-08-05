@@ -47,3 +47,9 @@ export interface CalendarSettings {
   showWeekends: boolean
   timeZone: string
 }
+
+export interface ExternalCalendarConnection {
+  google: boolean;
+  outlook: boolean;
+  lastSync?: Date;
+}
