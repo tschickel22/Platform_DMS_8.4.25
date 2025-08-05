@@ -393,5 +393,5 @@ export function LandDetail() {
       </div>
     </div>
   )
-export default LandDetail;
+}
 export default LandDetail
