@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Users } from 'lucide-react'
+import { Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Users, Plus, Repeat } from 'lucide-react'
 import { useCalendarData } from './hooks/useCalendarData'
 import { useCalendarManagement } from './hooks/useCalendarManagement'
 import { CalendarView } from './components/CalendarView'
