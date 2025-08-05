@@ -42,45 +42,6 @@ function ClientProfile() {
       <Card>
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
-          <CardDescription>
-            Your account details and contact information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium">Full Name</label>
-              <p className="text-sm text-muted-foreground mt-1">{getDisplayName()}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Email Address</label>
-              <p className="text-sm text-muted-foreground mt-1">{getDisplayEmail()}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function ClientSettings() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account preferences
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Preferences</CardTitle>
-          <CardDescription>
-            Customize your portal experience
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
           <p className="text-sm text-muted-foreground">
             Settings options will be available here.
           </p>
