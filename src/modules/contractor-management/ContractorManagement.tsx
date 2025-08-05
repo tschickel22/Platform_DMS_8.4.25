@@ -98,7 +98,9 @@ function ContractorDirectory() {
   // Filter contractors based on search and filters
   const filteredContractors = activeContractors.filter(contractor => {
     const matchesSearch = contractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         contractor.contactInfo.email.toLowerCase().includes(searchTerm.toLowerCase())
+                         contractor.contactInfo.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contractor.contactInfo.phone.includes(searchTerm) ||
+                         (contractor.notes && contractor.notes.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesTrade = selectedTrade === 'all' || contractor.trade === selectedTrade
     
@@ -188,12 +190,12 @@ function ContractorDirectory() {
       {/* Stats Cards */}
       <div className="ri-stats-grid">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-blue-50">
             <CardTitle className="text-sm font-medium">Total Contractors</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{contractors.length}</div>
+            <div className="text-2xl font-bold text-blue-700">{contractors.length}</div>
             <p className="text-xs text-muted-foreground">
               {activeContractors.length} active
             </p>
@@ -201,12 +203,12 @@ function ContractorDirectory() {
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-green-50">
             <CardTitle className="text-sm font-medium">Available Today</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-green-700">
               {activeContractors.filter(c => 
                 getContractorAvailabilityStatus(c.id, availabilitySlots) === 'Available'
               ).length}
@@ -218,12 +220,12 @@ function ContractorDirectory() {
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-yellow-50">
             <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-yellow-700">
               {activeContractors.length > 0 
                 ? (activeContractors.reduce((sum, c) => sum + c.ratings.averageRating, 0) / activeContractors.length).toFixed(1)
                 : '0.0'
@@ -236,12 +238,12 @@ function ContractorDirectory() {
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-purple-50">
             <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <Star className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-purple-700">
               {activeContractors.reduce((sum, c) => sum + c.ratings.reviewCount, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -265,7 +267,7 @@ function ContractorDirectory() {
             <div className="ri-search-bar">
               <Search className="ri-search-icon" />
               <Input
-                placeholder="Search contractors by name or email..."
+                placeholder="Search contractors by name, email, phone, or notes..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="ri-search-input"
@@ -298,6 +300,7 @@ function ContractorDirectory() {
                 <SelectItem value="Partially Available">Partially Available</SelectItem>
                 <SelectItem value="Fully Booked">Fully Booked</SelectItem>
                 <SelectItem value="No Schedule">No Schedule</SelectItem>
+                <SelectItem value="Unavailable">Unavailable</SelectItem>
               </SelectContent>
             </Select>
             
@@ -390,17 +393,22 @@ function ContractorDirectory() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="font-medium">{contractor.assignedJobIds.length}</span>
+                          <div className="flex items-center">
+                            <span className="font-medium text-lg">{contractor.assignedJobIds.length}</span>
+                            {contractor.assignedJobIds.length > 0 && (
+                              <div className="ml-2 w-2 h-2 bg-orange-500 rounded-full"></div>
+                            )}
+                          </div>
                           <span className="text-muted-foreground text-sm ml-1">jobs</span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Link to={`/contractors/contractor/${contractor.id}`}>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:border-blue-300">
                                 View Details
                               </Button>
                             </Link>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="hover:bg-green-50 hover:border-green-300">
                               Schedule
                             </Button>
                           </div>
