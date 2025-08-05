@@ -13,7 +13,8 @@ import {
   Target,
   BarChart3,
   Calendar,
-  Zap
+  Zap,
+  Lightbulb
 } from 'lucide-react'
 import { CalendarEvent } from '../types'
 import { useToast } from '@/hooks/use-toast'
