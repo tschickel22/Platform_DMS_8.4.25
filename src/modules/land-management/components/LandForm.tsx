@@ -196,6 +196,14 @@ export function LandForm() {
         reader.onload = (e) => {
           if (e.target?.result) {
             setFormData(prev => ({
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setFormData(prev => ({
               ...prev,
               images: [...prev.images, e.target!.result as string]
             }))
