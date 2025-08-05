@@ -19,7 +19,8 @@ import {
   ClipboardCheck,
   FileCheck,
   Building,
-  Shield
+  Shield,
+  ListChecks
 } from 'lucide-react'
 import { isColorLight } from '@/lib/utils'
 import { cn } from '@/lib/utils'
