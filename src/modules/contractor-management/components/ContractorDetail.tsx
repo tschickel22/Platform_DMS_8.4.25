@@ -94,11 +94,6 @@ export function ContractorDetail() {
     return monday
   })
 
-  const contractor = useMemo(() => {
-    if (!id) return null
-    return getContractorById(id)
-  }, [id, getContractorById])
-
   const contractorJobs = useMemo(() => {
     if (!contractor) return []
     return getJobsByContractor(contractor.id)
@@ -113,7 +108,7 @@ export function ContractorDetail() {
 
   // Initialize edit form when contractor loads
   React.useEffect(() => {
-    if (contractor && !isEditing) {
+    if (contractor) {
       setEditForm({
         name: contractor.name,
         email: contractor.contactInfo.email,
@@ -123,7 +118,7 @@ export function ContractorDetail() {
         notes: contractor.notes || ''
       })
     }
-  }, [contractor, isEditing])
+  }, [contractor])
 
   if (loading) {
     return (
@@ -195,6 +190,12 @@ export function ContractorDetail() {
   const [newSlotStartTime, setNewSlotStartTime] = useState('09:00')
   const [newSlotEndTime, setNewSlotEndTime] = useState('17:00')
   const [newSlotStatus, setNewSlotStatus] = useState<AvailabilityStatus>(AvailabilityStatus.AVAILABLE)
+
+  // Always call hooks at the top level, before any early returns
+  const contractor = useMemo(() => {
+    if (!id) return null
+    return getContractorById(id)
+  }, [id, getContractorById])
 
   const handleAddAvailability = async () => {
     if (!newSlotDate || !newSlotStartTime || !newSlotEndTime) {
