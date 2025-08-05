@@ -3,6 +3,8 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { DispatchBoard } from './components/DispatchBoard'
 import { ContractorDetail } from './components/ContractorDetail'
 import { ContractorPortal } from './components/ContractorPortal'
+import { ContractorAnalytics } from './components/ContractorAnalytics'
+import { ContractorNotifications } from './components/ContractorNotifications'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +20,9 @@ import {
   Mail, 
   Star,
   Calendar,
-  MapPin
+  MapPin,
+  BarChart3,
+  Bell
 } from 'lucide-react'
 import { useContractorManagement } from './hooks/useContractorManagement'
 import { ContractorTrade, AvailabilityStatus } from '@/types'
@@ -153,10 +157,24 @@ function ContractorDirectory() {
             <Button variant={location.pathname.includes('/portal') ? 'default' : 'outline'}>
               Contractor Portal
             </Button>
+          </Link>
+          <Link to="/contractors/analytics">
+            <Button variant={location.pathname.includes('/analytics') ? 'default' : 'outline'}>
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </Button>
+          </Link>
+          <Link to="/contractors/notifications">
+            <Button variant={location.pathname.includes('/notifications') ? 'default' : 'outline'}>
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </Button>
+          </Link>
+          <div className="border-l pl-2 ml-2">
             <Button onClick={() => setIsNewJobFormOpen(true)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Job
             </Button>
-          </Link>
+          </div>
         </div>
       </div>
 
@@ -400,6 +418,8 @@ export default function ContractorManagement() {
       <Route path="/directory" element={<ContractorDirectory />} />
       <Route path="/dispatch" element={<DispatchBoard />} />
       <Route path="/portal" element={<ContractorPortal />} />
+      <Route path="/analytics" element={<ContractorAnalytics />} />
+      <Route path="/notifications" element={<ContractorNotifications />} />
       <Route path="/contractor/:id" element={<ContractorDetail />} />
     </Routes>
   )

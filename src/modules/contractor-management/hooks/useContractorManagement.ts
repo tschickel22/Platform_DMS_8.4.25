@@ -548,6 +548,106 @@ export function useContractorManagement() {
     setContractorJobs(prev => prev.filter(job => job.id !== id))
   }
 
+  // Advanced search and filtering
+  const searchContractors = (query: string, filters?: {
+    trade?: ContractorTrade
+    isActive?: boolean
+    minRating?: number
+    hasAvailability?: boolean
+  }) => {
+    let results = contractors
+
+    // Text search
+    if (query.trim()) {
+      const searchTerm = query.toLowerCase()
+      results = results.filter(contractor =>
+        contractor.name.toLowerCase().includes(searchTerm) ||
+        contractor.contactInfo.email.toLowerCase().includes(searchTerm) ||
+        contractor.contactInfo.phone.includes(searchTerm) ||
+        (contractor.notes && contractor.notes.toLowerCase().includes(searchTerm))
+      )
+    }
+
+    // Apply filters
+    if (filters) {
+      if (filters.trade) {
+        results = results.filter(c => c.trade === filters.trade)
+      }
+      if (filters.isActive !== undefined) {
+        results = results.filter(c => c.isActive === filters.isActive)
+      }
+      if (filters.minRating) {
+        results = results.filter(c => c.ratings.averageRating >= filters.minRating)
+      }
+      if (filters.hasAvailability) {
+        const today = new Date().toISOString().split('T')[0]
+        results = results.filter(contractor => {
+          const todaySlots = getContractorAvailability(contractor.id, today)
+          return todaySlots.some(slot => slot.status === AvailabilityStatus.AVAILABLE)
+        })
+      }
+    }
+
+    return results
+  }
+
+  // Export contractor data
+  const exportContractorData = (format: 'csv' | 'json' = 'csv') => {
+    const data = contractors.map(contractor => ({
+      id: contractor.id,
+      name: contractor.name,
+      trade: contractor.trade,
+      email: contractor.contactInfo.email,
+      phone: contractor.contactInfo.phone,
+      address: contractor.contactInfo.address || '',
+      rating: contractor.ratings.averageRating,
+      reviewCount: contractor.ratings.reviewCount,
+      activeJobs: contractor.assignedJobIds.length,
+      isActive: contractor.isActive,
+      notes: contractor.notes || '',
+      createdAt: contractor.createdAt.toISOString(),
+      updatedAt: contractor.updatedAt.toISOString()
+    }))
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `contractors-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      // CSV format
+      const headers = Object.keys(data[0] || {})
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `contractors-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  // Bulk operations
+  const bulkUpdateContractors = (contractorIds: string[], updates: Partial<Contractor>) => {
+    setContractors(prev => prev.map(contractor =>
+      contractorIds.includes(contractor.id)
+        ? { ...contractor, ...updates, updatedAt: new Date() }
+        : contractor
+    ))
+  }
+
+  const bulkDeleteContractors = (contractorIds: string[]) => {
+    contractorIds.forEach(id => deleteContractor(id))
+  }
+
   // Computed values
   const activeContractors = useMemo(() => 
     contractors.filter(contractor => contractor.isActive), 
@@ -633,6 +733,12 @@ export function useContractorManagement() {
     updateContractorJob,
     assignJobToContractor,
     unassignJobFromContractor,
-    deleteContractorJob
+    deleteContractorJob,
+
+    // Advanced features
+    searchContractors,
+    exportContractorData,
+    bulkUpdateContractors,
+    bulkDeleteContractors
   }
 }
