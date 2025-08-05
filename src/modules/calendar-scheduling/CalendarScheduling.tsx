@@ -17,6 +17,11 @@ import { SyncSettingsForm } from './components/SyncSettingsForm'
 import { ConflictResolutionModal } from './components/ConflictResolutionModal'
 import { useAdvancedSync } from './hooks/useAdvancedSync'
 import { useToast } from '@/hooks/use-toast'
+import { CalendarAnalytics } from './components/CalendarAnalytics'
+import { AISchedulingOptimizer } from './components/AISchedulingOptimizer'
+import { AdvancedReporting } from './components/AdvancedReporting'
+import { SmartSchedulingSuggestions } from './components/SmartSchedulingSuggestions'
+import { CapacityPlanning } from './components/CapacityPlanning'
 
 function CalendarDashboard() {
   const navigate = useNavigate()
@@ -47,6 +52,10 @@ function CalendarDashboard() {
   const [showResourceBooking, setShowResourceBooking] = useState(false)
   const [showConflictResolution, setShowConflictResolution] = useState(false)
   const [resourceBookingDate, setResourceBookingDate] = useState<Date | undefined>(undefined)
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    end: new Date()
+  })
 
   // Advanced sync functionality
   const {
@@ -422,8 +431,8 @@ function CalendarDashboard() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="sync-status">Sync Status</TabsTrigger>
-          <TabsTrigger value="sync-settings">Sync Settings</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="ai-optimizer">AI Optimizer</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar">
@@ -439,13 +448,86 @@ function CalendarDashboard() {
         <TabsContent value="integrations">
           <ExternalCalendarIntegration />
         </TabsContent>
-        <TabsContent value="sync-status">
-          <EventSyncStatus syncStatuses={syncStatuses} onRefreshSync={handleRefreshSync} onRefreshAll={handleRefreshAllSync} />
+        <TabsContent value="analytics">
+          <CalendarAnalytics 
+            events={allEvents}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
         </TabsContent>
-        <TabsContent value="sync-settings">
-          <SyncSettingsForm />
+        <TabsContent value="ai-optimizer">
+          <div className="space-y-8">
+            <AISchedulingOptimizer
+              events={allEvents}
+              onApplyOptimization={async (suggestion) => {
+                // Simulate applying optimization
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                console.log('Applied optimization:', suggestion)
+              }}
+              onOptimizeSchedule={async () => {
+                // Return mock suggestions
+                return []
+              }}
+            />
+            
+            <SmartSchedulingSuggestions
+              events={allEvents}
+              onApplySuggestion={async (suggestion) => {
+                // Simulate applying suggestion
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                console.log('Applied suggestion:', suggestion)
+              }}
+              onDismissSuggestion={(suggestionId) => {
+                console.log('Dismissed suggestion:', suggestionId)
+              }}
+            />
+            
+            <CapacityPlanning
+              events={allEvents}
+              teamMembers={[]}
+              onOptimizeCapacity={async () => {
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                console.log('Optimized capacity')
+              }}
+              onRebalanceWorkload={async (recommendations) => {
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                console.log('Rebalanced workload:', recommendations)
+              }}
+            />
+          </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Additional Tabs for Advanced Features */}
+      <div className="mt-8">
+        <div className="border-b">
+          <nav className="-mb-px flex space-x-8">
+            <button className="border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+              Advanced Reporting
+            </button>
+            <button className="border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+              Sync Settings
+            </button>
+            <button className="border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+              Sync Status
+            </button>
+          </nav>
+        </div>
+        
+        <div className="mt-6">
+          <AdvancedReporting
+            events={allEvents}
+            onGenerateReport={async (config) => {
+              await new Promise(resolve => setTimeout(resolve, 2000))
+              console.log('Generated report:', config)
+            }}
+            onScheduleReport={async (config) => {
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              console.log('Scheduled report:', config)
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }

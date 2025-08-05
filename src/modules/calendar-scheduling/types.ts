@@ -126,3 +126,75 @@ export interface CalendarResource {
   isAvailable: boolean
   bookings: ResourceBooking[]
 }
+
+export interface OptimizationSuggestion {
+  id: string
+  type: 'reschedule' | 'redistribute' | 'consolidate' | 'buffer_time' | 'resource_conflict'
+  title: string
+  description: string
+  confidence: number
+  impact: 'low' | 'medium' | 'high'
+  affectedEvents: string[]
+  estimatedTimeSaving: number
+  estimatedEfficiencyGain: number
+}
+
+export interface SchedulingSuggestion {
+  id: string
+  type: 'optimal_time' | 'resource_optimization' | 'travel_optimization' | 'workload_balance' | 'customer_preference'
+  title: string
+  description: string
+  confidence: number
+  priority: 'low' | 'medium' | 'high'
+  eventId?: string
+  suggestedTime?: Date
+  suggestedAssignee?: string
+  estimatedImprovement: string
+  reasoning: string[]
+  actionRequired: boolean
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  role: string
+  capacity: number
+  currentLoad: number
+  efficiency: number
+  specialties: string[]
+}
+
+export interface CalendarAnalyticsData {
+  totalEvents: number
+  completedEvents: number
+  overdueEvents: number
+  utilizationRate: number
+  moduleStats: Record<string, any>
+  assigneeStats: Record<string, any>
+  timeUtilization: {
+    totalScheduledHours: number
+    productiveHours: number
+    wastedHours: number
+    utilizationRate: number
+  }
+}
+
+export interface ReportConfig {
+  name: string
+  description: string
+  dateRange: {
+    start: Date
+    end: Date
+  }
+  modules: string[]
+  statuses: string[]
+  assignees: string[]
+  includeMetrics: boolean
+  includeCharts: boolean
+  format: 'pdf' | 'excel' | 'csv'
+  schedule?: {
+    enabled: boolean
+    frequency: 'daily' | 'weekly' | 'monthly'
+    recipients: string[]
+  }
+}
