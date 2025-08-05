@@ -508,7 +508,7 @@ export function useContractorManagement() {
     // Simulate notification
     console.log(`📱 SMS/Email sent to ${contractor.name} (${contractor.contactInfo.phone}):`)
     console.log(`New job assigned! Job ID: ${jobId}`)
-    console.log(`Portal link: ${window.location.origin}/portal/contractor?jobId=${jobId}`)
+    console.log(`Portal link: ${window.location.origin}/contractors/portal?contractorId=${contractorId}&jobId=${jobId}`)
   }
 
   const unassignJobFromContractor = (jobId: string) => {

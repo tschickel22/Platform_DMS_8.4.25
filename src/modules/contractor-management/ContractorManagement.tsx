@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { DispatchBoard } from './components/DispatchBoard'
 import { ContractorDetail } from './components/ContractorDetail'
+import { ContractorPortal } from './components/ContractorPortal'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -139,6 +140,11 @@ function ContractorDirectory() {
           <Link to="/contractors/dispatch">
             <Button variant={location.pathname.includes('/dispatch') ? 'default' : 'outline'}>
               Dispatch Board
+            </Button>
+          </Link>
+          <Link to="/contractors/portal">
+            <Button variant={location.pathname.includes('/portal') ? 'default' : 'outline'}>
+              Contractor Portal
             </Button>
           </Link>
         </div>
@@ -383,6 +389,7 @@ export default function ContractorManagement() {
       <Route path="/" element={<ContractorDirectory />} />
       <Route path="/directory" element={<ContractorDirectory />} />
       <Route path="/dispatch" element={<DispatchBoard />} />
+      <Route path="/portal" element={<ContractorPortal />} />
       <Route path="/contractor/:id" element={<ContractorDetail />} />
     </Routes>
   )
