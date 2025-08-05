@@ -164,8 +164,7 @@ export function LandForm() {
     
     if (trimmedFeature) {
       console.log('🔧 Adding feature to formData.features:', formData.features)
-    console.log('🎯 addFeature called:', { newFeature, currentFeatures: formData.features })
-    if (newFeature.trim()) {
+      console.log('🎯 addFeature called:', { newFeature, currentFeatures: formData.features })
       console.log('✅ Adding feature:', newFeature.trim())
       setFormData(prev => ({
         ...prev,
@@ -173,8 +172,6 @@ export function LandForm() {
       }))
       setNewFeature('')
       console.log('🔧 Feature added, newFeature cleared')
-    } else {
-      console.log('❌ Feature not added - empty or whitespace only')
       console.log('🔄 Feature added, clearing input')
     } else {
       console.log('❌ Feature not added - empty or whitespace only')
@@ -197,8 +194,7 @@ export function LandForm() {
     
     if (trimmedRestriction) {
       console.log('🔧 Adding restriction to formData.restrictions:', formData.restrictions)
-    console.log('🚫 addRestriction called:', { newRestriction, currentRestrictions: formData.restrictions })
-    if (newRestriction.trim()) {
+      console.log('🚫 addRestriction called:', { newRestriction, currentRestrictions: formData.restrictions })
       console.log('✅ Adding restriction:', newRestriction.trim())
       setFormData(prev => ({
         ...prev,
@@ -206,8 +202,6 @@ export function LandForm() {
       }))
       setNewRestriction('')
       console.log('🔧 Restriction added, newRestriction cleared')
-    } else {
-      console.log('❌ Restriction not added - empty or whitespace only')
       console.log('🔄 Restriction added, clearing input')
     } else {
       console.log('❌ Restriction not added - empty or whitespace only')
@@ -499,7 +493,6 @@ export function LandForm() {
               <Button type="button" onClick={handleAddFeature} size="sm">
                 <Plus className="h-4 w-4" />
                 Add
-                <Plus className="h-4 w-4" />
               </Button>
             </div>
             
@@ -541,7 +534,6 @@ export function LandForm() {
               <Button type="button" onClick={handleAddRestriction} size="sm">
                 <Plus className="h-4 w-4" />
                 Add
-                <Plus className="h-4 w-4" />
               </Button>
             </div>
             
