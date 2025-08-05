@@ -158,14 +158,23 @@ export function LandForm() {
   }
 
   const addFeature = () => {
+    console.log('🔧 addFeature called with newFeature:', newFeature)
+    const trimmedFeature = newFeature.trim()
+    console.log('🔧 trimmedFeature:', trimmedFeature)
+    
+    if (trimmedFeature) {
+      console.log('🔧 Adding feature to formData.features:', formData.features)
     console.log('🎯 addFeature called:', { newFeature, currentFeatures: formData.features })
     if (newFeature.trim()) {
       console.log('✅ Adding feature:', newFeature.trim())
       setFormData(prev => ({
         ...prev,
-        features: [...prev.features, newFeature.trim()]
+        features: [...prev.features, trimmedFeature]
       }))
       setNewFeature('')
+      console.log('🔧 Feature added, newFeature cleared')
+    } else {
+      console.log('❌ Feature not added - empty or whitespace only')
       console.log('🔄 Feature added, clearing input')
     } else {
       console.log('❌ Feature not added - empty or whitespace only')
@@ -182,14 +191,23 @@ export function LandForm() {
   }
 
   const addRestriction = () => {
+    console.log('🔧 addRestriction called with newRestriction:', newRestriction)
+    const trimmedRestriction = newRestriction.trim()
+    console.log('🔧 trimmedRestriction:', trimmedRestriction)
+    
+    if (trimmedRestriction) {
+      console.log('🔧 Adding restriction to formData.restrictions:', formData.restrictions)
     console.log('🚫 addRestriction called:', { newRestriction, currentRestrictions: formData.restrictions })
     if (newRestriction.trim()) {
       console.log('✅ Adding restriction:', newRestriction.trim())
       setFormData(prev => ({
         ...prev,
-        restrictions: [...prev.restrictions, newRestriction.trim()]
+        restrictions: [...prev.restrictions, trimmedRestriction]
       }))
       setNewRestriction('')
+      console.log('🔧 Restriction added, newRestriction cleared')
+    } else {
+      console.log('❌ Restriction not added - empty or whitespace only')
       console.log('🔄 Restriction added, clearing input')
     } else {
       console.log('❌ Restriction not added - empty or whitespace only')
@@ -203,6 +221,35 @@ export function LandForm() {
       restrictions: prev.restrictions.filter((_, i) => i !== index)
     }))
     console.log('✅ Restriction removed at index:', index)
+  }
+
+  // Enhanced handlers that get current input values
+  const handleAddFeature = () => {
+    console.log('🎯 handleAddFeature called')
+    addFeature()
+  }
+
+  const handleAddRestriction = () => {
+    console.log('🎯 handleAddRestriction called')
+    addRestriction()
+  }
+
+  const handleFeatureKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('⌨️ Feature key pressed:', e.key)
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      console.log('⌨️ Enter pressed for feature, current value:', newFeature)
+      addFeature()
+    }
+  }
+
+  const handleRestrictionKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('⌨️ Restriction key pressed:', e.key)
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      console.log('⌨️ Enter pressed for restriction, current value:', newRestriction)
+      addRestriction()
+    }
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -447,10 +494,11 @@ export function LandForm() {
                 placeholder="Add a feature (e.g., Wooded, Level, Corner Lot)"
                 value={newFeature}
                 onChange={(e) => setNewFeature(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+                onKeyPress={handleFeatureKeyPress}
               />
-              <Button type="button" onClick={addFeature} size="sm">
+              <Button type="button" onClick={handleAddFeature} size="sm">
                 <Plus className="h-4 w-4" />
+                Add
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -488,10 +536,11 @@ export function LandForm() {
                 placeholder="Add a restriction (e.g., No mobile homes, Minimum 2000 sq ft)"
                 value={newRestriction}
                 onChange={(e) => setNewRestriction(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRestriction())}
+                onKeyPress={handleRestrictionKeyPress}
               />
-              <Button type="button" onClick={addRestriction} size="sm">
+              <Button type="button" onClick={handleAddRestriction} size="sm">
                 <Plus className="h-4 w-4" />
+                Add
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
