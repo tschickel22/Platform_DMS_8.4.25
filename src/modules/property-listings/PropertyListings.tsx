@@ -249,9 +249,9 @@ function PropertyListingsDashboard() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          - {filteredListings.map((listing) => (
--   <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
--     <div className="aspect-video relative overflow-hidden">
+              {filteredListings.map((listing) => (
+                <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="aspect-video relative overflow-hidden">
                     {listing.images[0] ? (
                       <img
                         src={listing.images[0]}
@@ -288,37 +288,6 @@ function PropertyListingsDashboard() {
                     </div>
                   </div>
 
-+         </div>
-+       )}
-+
-+       {/* status badge */}
-+       <div className="absolute top-2 left-2">
-+         <Badge
-+           variant={
-+             listing.status === 'active' ? 'default' :
-+             listing.status === 'pending' ? 'outline' :
-+             listing.status === 'rented'  ? 'secondary' :
-+             'destructive'
-+           }
-+           className="capitalize"
-+         >
-+           {listing.status.replace('_', ' ')}
-+         </Badge>
-+       </div>
-+
-+       {/* rent badge */}
-+       <div className="absolute top-2 right-2">
-+         <Badge variant="secondary" className="bg-black/50 text-white border-0">
-+           ${listing.rent.toLocaleString()}/month
-+         </Badge>
-+       </div>
-+     </div>
-+
-+     <CardContent className="p-4">
-+       {/* your title, address, stats, and action buttons go here */}
-+     </CardContent>
-+   </Card>
-+ ))}
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <h3 className="font-semibold text-lg line-clamp-1">{listing.title}</h3>
@@ -477,7 +446,7 @@ function PropertyListingsList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(/listings/detail/${listing.id})}
+                      onClick={() => navigate(`/listings/detail/${listing.id}`)}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -486,7 +455,7 @@ function PropertyListingsList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(/listings/edit/${listing.id})}
+                      onClick={() => navigate(`/listings/edit/${listing.id}`)}
                       className="flex-1"
                     >
                       <Edit className="h-4 w-4 mr-2" />
