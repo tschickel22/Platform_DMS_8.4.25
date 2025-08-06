@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
   Plus, 
@@ -14,7 +16,9 @@ import {
   Share2,
   TrendingUp,
   Building,
-  Calendar
+  Calendar,
+  Search,
+  Filter
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import ListingOverview from './components/ListingOverview'
@@ -50,13 +54,40 @@ function PropertyListingsDashboard() {
   const { toast } = useToast()
   const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [priceRange, setPriceRange] = useState('all')
 
-  // Calculate stats
-  const totalListings = listings.length
-  const activeListings = listings.filter(l => l.status === 'active').length
-  const pendingListings = listings.filter(l => l.status === 'pending').length
-  const rentedListings = listings.filter(l => l.status === 'rented').length
-  const totalValue = listings.reduce((sum, listing) => sum + listing.rent, 0)
+  // Filter listings based on search and filters
+  const filteredListings = listings.filter(listing => {
+    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         listing.address.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === 'all' || listing.status === statusFilter
+    
+    const matchesType = typeFilter === 'all' || listing.propertyType === typeFilter
+    
+    const matchesPrice = priceRange === 'all' || (() => {
+      const rent = listing.rent
+      switch (priceRange) {
+        case 'under-2000': return rent < 2000
+        case '2000-3000': return rent >= 2000 && rent <= 3000
+        case '3000-4000': return rent >= 3000 && rent <= 4000
+        case 'over-4000': return rent > 4000
+        default: return true
+      }
+    })()
+    
+    return matchesSearch && matchesStatus && matchesType && matchesPrice
+  })
+
+  // Calculate stats from filtered listings
+  const totalListings = filteredListings.length
+  const activeListings = filteredListings.filter(l => l.status === 'active').length
+  const pendingListings = filteredListings.filter(l => l.status === 'pending').length
+  const rentedListings = filteredListings.filter(l => l.status === 'rented').length
+  const totalValue = filteredListings.reduce((sum, listing) => sum + listing.rent, 0)
   const avgRent = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
 
   const handleDeleteListing = (id: string) => {
@@ -101,7 +132,7 @@ function PropertyListingsDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
@@ -122,19 +153,7 @@ function PropertyListingsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{activeListings}</div>
             <p className="text-xs text-muted-foreground">
-              {pendingListings} pending approval
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rented Units</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rentedListings}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((rentedListings / totalListings) * 100)}% occupancy rate
+              Available for rent
             </p>
           </CardContent>
         </Card>
@@ -152,88 +171,168 @@ function PropertyListingsDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/listings/new')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Plus className="h-5 w-5 text-blue-600" />
-              Add New Listing
-            </CardTitle>
-            <CardDescription>Create a new property listing</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/listings/list')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Eye className="h-5 w-5 text-green-600" />
-              View All Listings
-            </CardTitle>
-            <CardDescription>Browse all property listings</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
-              Analytics
-            </CardTitle>
-            <CardDescription>View listing performance</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-
-      {/* Recent Listings */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Listings</CardTitle>
-          <CardDescription>Latest property listings added to the system</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters & Search
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {listings.slice(0, 5).map((listing) => (
-              <div key={listing.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Home className="h-6 w-6 text-gray-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{listing.title}</h3>
-                    <p className="text-sm text-muted-foreground">{listing.address}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className={getStatusColor(listing.status)}>
-                        {listing.status}
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search listings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rented">Rented</SelectItem>
+                <SelectItem value="for_sale">For Sale</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Property Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="apartment">Apartment</SelectItem>
+                <SelectItem value="house">House</SelectItem>
+                <SelectItem value="condo">Condo</SelectItem>
+                <SelectItem value="townhouse">Townhouse</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priceRange} onValueChange={setPriceRange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Price Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Prices</SelectItem>
+                <SelectItem value="under-2000">Under $2,000</SelectItem>
+                <SelectItem value="2000-3000">$2,000 - $3,000</SelectItem>
+                <SelectItem value="3000-4000">$3,000 - $4,000</SelectItem>
+                <SelectItem value="over-4000">Over $4,000</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* All Listings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Listings ({filteredListings.length})</CardTitle>
+          <CardDescription>
+            {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || priceRange !== 'all' 
+              ? 'Filtered property listings' 
+              : 'All property listings in the system'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredListings.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-lg font-medium">No listings found</p>
+              <p className="text-sm">Try adjusting your search or filters</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredListings.map((listing) => (
+                <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="aspect-video relative overflow-hidden">
+                    {listing.images && listing.images.length > 0 ? (
+                      <img 
+                        src={listing.images[0]} 
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Building className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2">
+                      <Badge 
+                        variant={
+                          listing.status === 'active' ? 'default' :
+                          listing.status === 'rented' ? 'secondary' :
+                          listing.status === 'pending' ? 'outline' :
+                          listing.status === 'for_sale' ? 'destructive' : 'default'
+                        }
+                        className="capitalize"
+                      >
+                        {listing.status.replace('_', ' ')}
                       </Badge>
-                      <span className="text-sm font-medium">${listing.rent}/month</span>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                        ${listing.rent.toLocaleString()}/month
+                      </Badge>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/listings/detail/${listing.id}`)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/listings/edit/${listing.id}`)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteListing(listing.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-lg line-clamp-1">{listing.title}</h3>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span className="line-clamp-1">{listing.address}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-3">
+                          <span>{listing.bedrooms} bed</span>
+                          <span>{listing.bathrooms} bath</span>
+                          <span>{listing.squareFootage} sq ft</span>
+                        </div>
+                        <Badge variant="outline" className="capitalize">
+                          {listing.propertyType}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t">
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/listings/detail/${listing.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/listings/edit/${listing.id}`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteListing(listing.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
       
