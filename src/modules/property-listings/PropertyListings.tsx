@@ -252,15 +252,16 @@ function PropertyListingsDashboard() {
               {filteredListings.map((listing) => (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-video relative overflow-hidden">
-                    {listing.images && listing.images.length > 0 ? (
-                      <img 
-                        src={listing.images[0]} 
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <Building className="h-12 w-12 text-muted-foreground" />
+                    <img
+                      src={listing.images[0]}
+                      alt={listing.title}
+                      className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={() => setSelectedListing(listing)}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.nextElementSibling.style.display = 'flex'
+                      }}
+                    />
                       </div>
                     )}
                     <div className="absolute top-2 left-2">
