@@ -153,6 +153,12 @@ export default function ListingOverview() {
               variant="outline"
               onClick={() => setShareModalOpen(true)}
               className="gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              Share All Listings
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -180,13 +186,6 @@ export default function ListingOverview() {
               </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Search & Filters
-          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
