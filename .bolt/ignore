@@ -30,3 +30,5 @@ src/
 !src/modules/property-listings/
 !src/components/
 !src/mocks/
+!src/modules/property-listings/
++!src/modules/property-listings/**
