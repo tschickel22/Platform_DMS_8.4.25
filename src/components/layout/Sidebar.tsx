@@ -48,7 +48,7 @@ const navigationItems = [
     items: [
       { title: 'Inventory', href: '/inventory', icon: Package },
       { title: 'Land Management', href: '/land', icon: MapPin },
-      { title: 'Property Listings', href: '/listings', icon: ListChecks },
+      { title: 'Property Listings', href: '/listings', icon: Building },
       { title: 'PDI Checklist', href: '/pdi', icon: ClipboardCheck },
       { title: 'Delivery Tracker', href: '/delivery', icon: Truck },
       { title: 'Warranty Mgmt', href: '/warranty', icon: ShieldCheck }
