@@ -32,9 +32,9 @@ import { mockListings } from '@/mocks/listingsMock'
 import { useTenant } from '@/contexts/TenantContext'
 import { Helmet } from 'react-helmet-async'
 
-export default function PublicListingView() {
-  const { listingId } = useParams()
-  const navigate = useNavigate()
+  const selectedListing = listingId
+    ? mockListings.sampleListings.find(listing => listing.id === listingId)
+    : null
   const { tenant } = useTenant()
   const [searchTerm, setSearchTerm] = useState('')
   const [priceFilter, setPriceFilter] = useState('all')
@@ -45,7 +45,7 @@ export default function PublicListingView() {
 
   // Filter listings for the grid view
   const filteredListings = useMemo(() => {
-    return mockListings.filter(listing => {
+    return mockListings.sampleListings.filter(listing => {
       const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           listing.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           listing.description.toLowerCase().includes(searchTerm.toLowerCase())
