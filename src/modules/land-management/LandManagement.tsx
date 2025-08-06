@@ -210,6 +210,10 @@ function LandOverview() {
     </div>
   )
 }
+import { Routes, Route } from 'react-router-dom'
+import LandList from './components/LandList'
+import LandForm from './components/LandForm'
+import LandDetail from './components/LandDetail'
 
 export default function LandManagement() {
   return (
