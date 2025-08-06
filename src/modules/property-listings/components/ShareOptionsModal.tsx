@@ -138,9 +138,9 @@ export function ShareOptionsModal({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shareData.title,
-          text: shareData.text,
-          url: shareData.url,
+          title: shareTitle,
+          text: shareDescription,
+          url: listingUrl,
         })
         toast({
           title: "Shared successfully",
@@ -156,7 +156,6 @@ export function ShareOptionsModal({
     } else {
       // Fallback to copy link if native share not supported
       handleCopyLink()
-    }
     }
   }
 
