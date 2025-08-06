@@ -1,5 +1,3 @@
-const { mockListings, getActiveListings } = require('../../src/mocks/listingsMock')
-
 exports.handler = async (event, context) => {
   try {
     // Get query parameters
