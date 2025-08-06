@@ -38,7 +38,53 @@ export default function LandManagement() {
           title: "Success", 
           description: "Land parcel added successfully",
         })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save land parcel",
+        variant: "destructive",
+      })
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Land Management</h1>
+          <p className="text-muted-foreground">
+            Manage your land parcels and properties
+          </p>
+        </div>
+        <Button onClick={handleAddNew}>
           <Plus className="mr-2 h-4 w-4" />
+          Add Land Parcel
+        </Button>
+      </div>
+
+      <LandList
+        lands={lands}
+        onEdit={handleEdit}
+        onDelete={deleteLand}
+      />
+
+      {(isAdding || editingLand) && (
+        <LandForm
+          initialData={editingLand}
+          onSave={handleSave}
+          onCancel={() => {
+            setIsAdding(false)
+            setEditingLand(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function LandRouter() {
+  return (
     <Routes>
       <Route path="/" element={<LandOverview />} />
       <Route path="/new" element={<LandFormPage />} />
