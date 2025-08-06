@@ -109,6 +109,7 @@ function PropertyListingsDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Property Listings Dashboard</h1>
@@ -347,7 +348,16 @@ function PropertyListingsDashboard() {
       <ShareAllListingsModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        listings={listings}
+        listings={filteredListings}
+        baseUrl="https://nimble-longma-257ddd.netlify.app"
+      />
+
+      {/* Individual Listing Share Modal */}
+      <ShareOptionsModal
+        isOpen={!!selectedListingForShare}
+        onClose={() => setSelectedListingForShare(null)}
+        listing={selectedListingForShare}
+        baseUrl="https://nimble-longma-257ddd.netlify.app"
       />
     </div>
   )
