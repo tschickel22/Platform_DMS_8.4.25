@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLandManagement } from '../hooks/useLandManagement'
 import { Land, LandStatus } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ArrowLeft, Save, X } from 'lucide-react'
+import { useLandManagement } from '../hooks/useLandManagement'
+import type { Land } from '../hooks/useLandManagement'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -297,9 +305,91 @@ export function LandForm() {
       console.error('❌ Form submission error:', error)
       toast({
         title: "Error",
-        description: "Failed to save land record",
-        variant: "destructive"
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { getLandById, addLand, updateLand } = useLandManagement()
+  
+  const isEditing = Boolean(id)
+  const existingLand = id ? getLandById(id) : null
+
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    size: '',
+    price: '',
+    status: 'available' as Land['status'],
+    type: 'Residential' as Land['type'],
+    description: '',
+    features: [] as string[],
+    zoning: ''
+  })
+  
+  const [newFeature, setNewFeature] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (isEditing && existingLand) {
+      setFormData({
+        name: existingLand.name,
+        location: existingLand.location,
+        size: existingLand.size.toString(),
+        price: existingLand.price.toString(),
+        status: existingLand.status,
+        type: existingLand.type,
+        description: existingLand.description,
+        features: existingLand.features,
+        zoning: existingLand.zoning
       })
+    }
+  }, [isEditing, existingLand])
+        description: "Failed to save land record",
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+        variant: "destructive"
+  const handleAddFeature = () => {
+    if (newFeature.trim() && !formData.features.includes(newFeature.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        features: [...prev.features, newFeature.trim()]
+      }))
+      setNewFeature('')
+    }
+  }
+      })
+  const handleRemoveFeature = (feature: string) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.filter(f => f !== feature)
+    }))
+  }
+    } finally {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+      setLoading(false)
+    try {
+      const landData = {
+        name: formData.name,
+        location: formData.location,
+        size: parseFloat(formData.size),
+        price: parseInt(formData.price),
+        status: formData.status,
+        type: formData.type,
+        description: formData.description,
+        features: formData.features,
+        zoning: formData.zoning
+      }
+    }
+      if (isEditing && id) {
+        updateLand(id, landData)
+      } else {
+        addLand(landData)
+      }
+  }
+      navigate('/land')
+    } catch (error) {
+      console.error('Error saving land:', error)
     } finally {
       setLoading(false)
     }
@@ -312,6 +402,14 @@ export function LandForm() {
         <Button variant="ghost" size="sm" onClick={() => navigate('/land')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Land List
+        </Button>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/land">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Land List
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">
@@ -614,19 +712,186 @@ export function LandForm() {
             )}
           </CardContent>
         </Card>
-
-        {/* Submit Button */}
+          <h1 className="text-2xl font-bold">
+            {isEditing ? 'Edit Land Parcel' : 'Add New Land Parcel'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEditing ? 'Update land parcel information' : 'Add a new land parcel to your inventory'}
+          </p>
         <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" onClick={() => navigate('/land')}>
-            Cancel
+      </div>
+          <Button type="submit" disabled={loading}>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>
+                Enter the basic details for this land parcel
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Parcel Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="e.g., Sunset Ridge Parcel A"
+                  required
+                />
+              </div>
+            {loading ? (
+              <div className="space-y-2">
+                <Label htmlFor="location">Location *</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="e.g., Highway 287, Sunset Ridge Development"
+                  required
+                />
+              </div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="size">Size (acres) *</Label>
+                  <Input
+                    id="size"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.size}
+                    onChange={(e) => handleInputChange('size', e.target.value)}
+                    placeholder="2.5"
+                    required
+                  />
+                </div>
+            ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price ($) *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange('price', e.target.value)}
+                    placeholder="125000"
+                    required
+                  />
+                </div>
+              </div>
+              <Save className="mr-2 h-4 w-4" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+            )}
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Residential">Residential</SelectItem>
+                      <SelectItem value="Commercial">Commercial</SelectItem>
+                      <SelectItem value="Industrial">Industrial</SelectItem>
+                      <SelectItem value="Agricultural">Agricultural</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            {isEditing ? 'Update Land' : 'Create Land'}
+              <div className="space-y-2">
+                <Label htmlFor="zoning">Zoning</Label>
+                <Input
+                  id="zoning"
+                  value={formData.zoning}
+                  onChange={(e) => handleInputChange('zoning', e.target.value)}
+                  placeholder="e.g., R-1 Residential"
+                />
+              </div>
+            </CardContent>
+          </Card>
+          </Button>
+          {/* Additional Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Details</CardTitle>
+              <CardDescription>
+                Provide more information about this land parcel
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Describe the land parcel, its features, and potential uses..."
+                  rows={4}
+                />
+              </div>
+        </div>
+              <div className="space-y-2">
+                <Label>Features & Amenities</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    placeholder="Add a feature..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
+                  />
+                  <Button type="button" onClick={handleAddFeature} variant="outline">
+                    Add
+                  </Button>
+                </div>
+                {formData.features.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.features.map((feature, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm"
+                      >
+                        {feature}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeature(feature)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </form>
+        {/* Form Actions */}
+        <div className="flex justify-end gap-4">
+          <Button type="button" variant="outline" asChild>
+            <Link to="/land">Cancel</Link>
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {isEditing ? 'Update Land' : 'Create Land'}
+            <Save className="mr-2 h-4 w-4" />
+            {loading ? 'Saving...' : isEditing ? 'Update Parcel' : 'Create Parcel'}
           </Button>
         </div>
       </form>

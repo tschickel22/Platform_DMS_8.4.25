@@ -210,12 +210,16 @@ function LandOverview() {
     </div>
   )
 }
+import { Routes, Route } from 'react-router-dom'
+import LandList from './components/LandList'
+import LandForm from './components/LandForm'
+import LandDetail from './components/LandDetail'
 
 export default function LandManagement() {
   return (
     <Routes>
-      <Route path="/" element={<LandOverview />} />
-      <Route path="*" element={<Navigate to="/land" replace />} />
+      <Route path="/" element={<LandList />} />
+      <Route path="/new" element={<LandForm />} />
+      <Route path="/edit/:id" element={<LandForm />} />
+      <Route path="/:id" element={<LandDetail />} />
     </Routes>
-  )
-}
