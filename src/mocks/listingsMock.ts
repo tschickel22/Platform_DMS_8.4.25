@@ -124,5 +124,47 @@ export const mockListings: PropertyListing[] = [
   }
 ]
 
-export const getActiveListings = () => mockListings.filter(listing => listing.status === 'active')
-export const getListingById = (id: string) => mockListings.find(listing => listing.id === id)
+export function getActiveListings() {
+  return mockListings.filter(listing => listing.status === 'active')
+}
+
+// CRUD Functions for managing listings
+export function getListingById(id: string) {
+  return mockListings.find(listing => listing.id === id)
+}
+
+export function addListing(newListing: Omit<typeof mockListings[0], 'id' | 'createdAt' | 'updatedAt'>) {
+  const id = (mockListings.length + 1).toString()
+  const now = new Date().toISOString()
+  
+  const listing = {
+    ...newListing,
+    id,
+    createdAt: now,
+    updatedAt: now
+  }
+  
+  mockListings.push(listing)
+  return listing
+}
+
+export function updateListing(id: string, updatedData: Partial<Omit<typeof mockListings[0], 'id' | 'createdAt'>>) {
+  const index = mockListings.findIndex(listing => listing.id === id)
+  if (index === -1) return null
+  
+  mockListings[index] = {
+    ...mockListings[index],
+    ...updatedData,
+    updatedAt: new Date().toISOString()
+  }
+  
+  return mockListings[index]
+}
+
+export function deleteListing(id: string) {
+  const index = mockListings.findIndex(listing => listing.id === id)
+  if (index === -1) return false
+  
+  mockListings.splice(index, 1)
+  return true
+}

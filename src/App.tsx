@@ -31,6 +31,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import PublicListingView from '@/modules/property-listings/components/PublicListingView'
 import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
@@ -86,6 +87,7 @@ function App() {
                           <Route path="/calendar/*" element={<CalendarScheduling />} />
                           <Route path="/contractors/*" element={<ContractorManagement />} />
                         </Routes>
+                        <Route path="/listings/*" element={<PropertyListings />} />
                       </Layout>
                     </ProtectedRoute>
                   } />
