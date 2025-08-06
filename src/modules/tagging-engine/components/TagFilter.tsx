@@ -235,12 +235,3 @@ export function TagFilter({
     </div>
   )
 }
-
-export default function TagFilter() {
-  return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Tag Filter</h2>
-      <p className="text-muted-foreground">Tag filtering functionality coming soon...</p>
-    </div>
-  )
-}
