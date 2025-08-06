@@ -25,6 +25,7 @@ import ListingOverview from './components/ListingOverview'
 import ListingForm from './components/ListingForm'
 import ListingDetail from './components/ListingDetail'
 import { ShareAllListingsModal } from './components/ShareAllListingsModal'
+import { ShareOptionsModal } from './components/ShareOptionsModal'
 import { mockListings } from '@/mocks/listingsMock'
 
 interface Listing {
@@ -54,6 +55,7 @@ function PropertyListingsDashboard() {
   const { toast } = useToast()
   const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [shareModalListing, setShareModalListing] = useState<Listing | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -90,29 +92,8 @@ function PropertyListingsDashboard() {
   const totalValue = filteredListings.reduce((sum, listing) => sum + listing.rent, 0)
   const avgRent = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
 
-  const handleDeleteListing = (id: string) => {
-    setListings(prev => prev.filter(l => l.id !== id))
-    toast({
-      title: "Success",
-      description: "Listing deleted successfully",
-    })
-  }
-
   const handleShareListing = (listing: Listing) => {
-    const listingUrl = `${window.location.origin}/listings/detail/${listing.id}`
-    
-    if (navigator.share) {
-      // Use native sharing if available
-      navigator.share({
-        title: listing.title,
-        text: `Check out this property: ${listing.title} - $${listing.rent.toLocaleString()}/month`,
-        url: listingUrl,
-      }).catch((error) => {
-        console.log('Error sharing:', error)
-        fallbackShare(listingUrl, listing)
-      })
-    } else {
-      fallbackShare(listingUrl, listing)
+    setShareModalListing(listing)
     }
   }
 
@@ -367,7 +348,11 @@ function PropertyListingsDashboard() {
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
-                    </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleShareListing(listing)}
+                      >
                   </CardContent>
                 </Card>
               ))}
@@ -381,6 +366,14 @@ function PropertyListingsDashboard() {
         onClose={() => setShowShareModal(false)}
         listings={listings}
       />
+      
+      {shareModalListing && (
+        <ShareOptionsModal
+          isOpen={!!shareModalListing}
+          onClose={() => setShareModalListing(null)}
+          listing={shareModalListing}
+        />
+      )}
     </div>
   )
 }
