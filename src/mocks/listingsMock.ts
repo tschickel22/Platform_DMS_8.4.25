@@ -144,6 +144,19 @@ export function addListing(newListing: PropertyListing) {
   })
 }
 
+export function updateListing(id: string, updates: Partial<PropertyListing>) {
+  const index = mockListings.findIndex(listing => listing.id === id)
+  if (index !== -1) {
+    mockListings[index] = {
+      ...mockListings[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }
+    return mockListings[index]
+  }
+  return null
+}
+
 export const getActiveListings = () =>
   mockListings.filter(listing => listing.status === 'active')
 
