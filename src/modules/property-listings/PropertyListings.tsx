@@ -31,7 +31,6 @@ const mockListings = [
     status: 'Available',
   }
 ]
-import { Routes, Route } from 'react-router-dom'
 import ListingOverview from './components/ListingOverview'
 import ListingForm from './components/ListingForm'
 import ListingDetail from './components/ListingDetail'
