@@ -223,3 +223,5 @@ export default function LandManagement() {
       <Route path="/edit/:id" element={<LandForm />} />
       <Route path="/:id" element={<LandDetail />} />
     </Routes>
+  )
+}
