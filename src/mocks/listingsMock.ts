@@ -125,3 +125,8 @@ export const mockListings = {
     }
   ]
 }
+
+// Helper function to get active listings
+export function getActiveListings() {
+  return mockListings.sampleListings.filter(listing => listing.status === 'active')
+}
