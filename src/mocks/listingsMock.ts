@@ -130,3 +130,7 @@ export const mockListings = {
 export function getActiveListings() {
   return mockListings.sampleListings.filter(listing => listing.status === 'active')
 }
+
+export const getListingById = (id: string) => {
+  return mockListings.sampleListings.find(listing => listing.id === id)
+}
