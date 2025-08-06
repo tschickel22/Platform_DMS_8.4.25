@@ -568,8 +568,19 @@ export default function ListingForm() {
                       <li>• The first image is automatically set as the cover image</li>
                       <li>• Use the star button to set a different cover image</li>
                       <li>• Use the arrows or drag handle to reorder images</li>
-                      <li>• Click the eye icon to preview images in a new tab</li>
-                    </ul>
+                  <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {formData.images.length > 0 ? (
+                      <img 
+                        src={formData.images[0]} 
+                        alt="Cover preview"
+                        className="h-full w-full object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        }}
+                      />
+                    ) : null}
+                    <Home className={`h-6 w-6 text-gray-400 ${formData.images.length > 0 ? 'hidden' : ''}`} />
                   </div>
                 )}
               </div>
