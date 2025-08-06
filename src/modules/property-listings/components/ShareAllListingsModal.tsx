@@ -1,99 +1,93 @@
+// src/modules/property-listings/components/ShareAllListingsModal.tsx
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Copy, 
-  Mail, 
-  MessageSquare, 
-  Facebook, 
-  Twitter, 
+import {
+  Copy,
+  Mail,
+  MessageSquare,
+  Facebook,
+  Twitter,
   Linkedin,
   Check,
   ExternalLink,
   Home,
-  MapPin
 } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 
 interface ShareAllListingsModalProps {
   isOpen: boolean
   onClose: () => void
-  listings: any[]
+  listings: Array<{ status: string; rent: number; title: string; images?: string[] }>
 }
 
-export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllListingsModalProps) {
+export function ShareAllListingsModal({
+  isOpen,
+  onClose,
+  listings,
+}: ShareAllListingsModalProps) {
   const { tenant } = useTenant()
   const [copied, setCopied] = useState(false)
-  
-  // Generate the public listings URL
+
+  // Build URLs
   const baseUrl = window.location.origin
   const listingsUrl = `${baseUrl}/public/listings`
-  
-  // Generate social media preview data
-  const activeListings = listings.filter(listing => listing.status === 'active')
-  const totalValue = activeListings.reduce((sum, listing) => sum + listing.rent, 0)
-  const avgRent = activeListings.length > 0 ? Math.round(totalValue / activeListings.length) : 0
-  
+
+  // Compute preview stats
+  const activeListings = listings.filter((l) => l.status === 'active')
+  const totalValue = activeListings.reduce((sum, l) => sum + l.rent, 0)
+  const avgRent =
+    activeListings.length > 0
+      ? Math.round(totalValue / activeListings.length)
+      : 0
+
+  // Preview data
   const previewData = {
-    title: `${tenant?.name || 'Property'} Listings - ${activeListings.length} Available Properties`,
-    description: `Browse ${activeListings.length} rental properties with an average rent of $${avgRent.toLocaleString()}/month. Find your perfect home today!`,
-    image: activeListings[0]?.images?.[0] || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
+    title: `${tenant?.name || 'Properties'} – ${activeListings.length} Available`,
+    description: `Browse ${activeListings.length} listings, average rent $${avgRent}/mo.`,
+    image:
+      activeListings[0]?.images?.[0] ||
+      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
   }
-  
+
+  // Handlers
   const handleCopyLink = async () => {
-    try {
-      url: shareUrl,
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      image: activeListings[0]?.images[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop',
-      // Enhanced metadata for better social previews
-      metadata: {
-        'og:type': 'website',
-        'og:site_name': 'Renter Insight',
-        'og:locale': 'en_US',
-        'twitter:card': 'summary_large_image',
-        'twitter:site': '@RenterInsight',
-        'article:author': 'Renter Insight',
-        'article:section': 'Real Estate'
-      }
-    }
+    await navigator.clipboard.writeText(listingsUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-  
+
   const handleEmailShare = () => {
     const subject = encodeURIComponent(previewData.title)
     const body = encodeURIComponent(
-      `Check out these amazing rental properties!\n\n${previewData.description}\n\nView all listings: ${listingsUrl}`
+      `${previewData.description}\n\nView all: ${listingsUrl}`
     )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
   }
-  
+
   const handleSMSShare = () => {
-    const message = encodeURIComponent(
-      `${previewData.title}\n\n${previewData.description}\n\nView listings: ${listingsUrl}`
-    )
-    window.open(`sms:?body=${message}`)
+    const body = encodeURIComponent(`${previewData.title}\n${listingsUrl}`)
+    window.open(`sms:?&body=${body}`, '_blank')
   }
-  
-  const handleSocialShare = (platform: string) => {
-    const encodedUrl = encodeURIComponent(listingsUrl)
-    const encodedUrl = encodeURIComponent(content.url)
-    const encodedTitle = encodeURIComponent(content.title)
-    const encodedDescription = encodeURIComponent(content.description)
-    const encodedHashtags = encodeURIComponent(content.hashtags.join(','))
-    const encodedTitle = encodeURIComponent(previewData.title)
-    const encodedDescription = encodeURIComponent(previewData.description)
-    
-    const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}%20-%20${encodedDescription}`,
-      twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}%20-%20${encodedDescription}&hashtags=${encodedHashtags}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&title=${encodedTitle}&summary=${encodedDescription}`
+
+  const handleSocialShare = (platform: 'facebook' | 'twitter' | 'linkedin') => {
+    const url = encodeURIComponent(listingsUrl)
+    const text = encodeURIComponent(`${previewData.title}: ${previewData.description}`)
+    const hashtags = encodeURIComponent('RealEstate,Rental')
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      twitter: `https://twitter.com/intent/tweet?url=${url}&text=${text}&hashtags=${hashtags}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
     }
-    
-    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
+    window.open(shareUrls[platform], '_blank', 'width=600,height=400')
   }
 
   return (
@@ -105,153 +99,140 @@ export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllLis
             Share All Listings
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
-          {/* Social Media Preview */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Social Media Preview</h3>
+          {/* Social Preview */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Social Preview
+            </h3>
             <Card className="border-2">
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <img 
-                      src={previewData.image} 
-                      alt="Preview" 
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm line-clamp-2 mb-1">
-                      {previewData.title}
-                    </h4>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                      {previewData.description}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Home className="h-3 w-3" />
-                      <span>{activeListings.length} properties</span>
-                      <span>•</span>
-                      <span>Avg. ${avgRent.toLocaleString()}/mo</span>
-                    </div>
+              <CardContent className="p-4 flex gap-4">
+                <img
+                  src={previewData.image}
+                  alt="Preview"
+                  className="w-20 h-20 object-cover rounded-lg"
+                />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm line-clamp-2 mb-1">
+                    {previewData.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {previewData.description}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                    <Home className="h-3 w-3" />
+                    <span>{activeListings.length} properties</span>
+                    <span>• Avg. ${avgRent}/mo</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Copy Link */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Share Link</h3>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Shareable Link
+            </h3>
             <div className="flex gap-2">
-              <Input 
-                value={listingsUrl} 
-                readOnly 
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleCopyLink}
-                variant="outline"
-                className="flex-shrink-0"
-              >
+              <Input value={listingsUrl} readOnly className="flex-1" />
+              <Button onClick={handleCopyLink} variant="outline">
                 {copied ? (
                   <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Copied!
+                    <Check className="h-4 w-4 mr-1" />
+                    Copied
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4 mr-2" />
+                    <Copy className="h-4 w-4 mr-1" />
                     Copy
                   </>
                 )}
               </Button>
             </div>
           </div>
-          
-          {/* Quick Share Options */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Quick Share</h3>
+
+          {/* Quick Share */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Quick Share
+            </h3>
             <div className="grid grid-cols-2 gap-3">
-              <Button 
-                onClick={handleEmailShare}
-                variant="outline" 
-                className="justify-start"
-              >
-                <Mail className="h-4 w-4 mr-2" />
+              <Button onClick={handleEmailShare} variant="outline">
+                <Mail className="h-4 w-4 mr-1" />
                 Email
               </Button>
-              <Button 
-                onClick={handleSMSShare}
-                variant="outline" 
-                className="justify-start"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
+              <Button onClick={handleSMSShare} variant="outline">
+                <MessageSquare className="h-4 w-4 mr-1" />
                 SMS
               </Button>
             </div>
           </div>
-          
-          {/* Social Media */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Social Media</h3>
+
+          {/* Social Buttons */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Social Platforms
+            </h3>
             <div className="grid grid-cols-3 gap-3">
-              <Button 
+              <Button
                 onClick={() => handleSocialShare('facebook')}
-                variant="outline" 
-                className="justify-start"
+                variant="outline"
               >
-                <Facebook className="h-4 w-4 mr-2" />
+                <Facebook className="h-4 w-4 mr-1" />
                 Facebook
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleSocialShare('twitter')}
-                variant="outline" 
-                className="justify-start"
+                variant="outline"
               >
-                <Twitter className="h-4 w-4 mr-2" />
+                <Twitter className="h-4 w-4 mr-1" />
                 Twitter
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleSocialShare('linkedin')}
-                variant="outline" 
-                className="justify-start"
+                variant="outline"
               >
-                <Linkedin className="h-4 w-4 mr-2" />
+                <Linkedin className="h-4 w-4 mr-1" />
                 LinkedIn
               </Button>
             </div>
           </div>
-          
-          {/* Listing Summary */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">What's Being Shared</h3>
-            <div className="bg-muted/50 rounded-lg p-4">
+
+          {/* Summary */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              What’s Shared
+            </h3>
+            <Card className="bg-muted/50 p-4 rounded-lg">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Total Listings:</span>
-                  <span className="ml-2 font-medium">{listings.length}</span>
+                  <span className="text-muted-foreground">Total Listings:</span>{' '}
+                  <span className="font-medium">{listings.length}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Active:</span>
-                  <span className="ml-2 font-medium">{activeListings.length}</span>
+                  <span className="text-muted-foreground">Active:</span>{' '}
+                  <span className="font-medium">{activeListings.length}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Average Rent:</span>
-                  <span className="ml-2 font-medium">${avgRent.toLocaleString()}/mo</span>
+                  <span className="text-muted-foreground">Avg. Rent:</span>{' '}
+                  <span className="font-medium">${avgRent}/mo</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Total Value:</span>
-                  <span className="ml-2 font-medium">${totalValue.toLocaleString()}/mo</span>
+                  <span className="text-muted-foreground">Total Value:</span>{' '}
+                  <span className="font-medium">${totalValue}</span>
                 </div>
               </div>
-              
               {activeListings.length > 0 && (
                 <div className="mt-3 pt-3 border-t">
-                  <div className="text-xs text-muted-foreground mb-2">Featured Properties:</div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Featured:
+                  </div>
                   <div className="flex flex-wrap gap-1">
-                    {activeListings.slice(0, 3).map((listing, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {listing.title}
+                    {activeListings.slice(0, 3).map((l, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {l.title}
                       </Badge>
                     ))}
                     {activeListings.length > 3 && (
@@ -262,10 +243,12 @@ export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllLis
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
+
+export default ShareAllListingsModal
