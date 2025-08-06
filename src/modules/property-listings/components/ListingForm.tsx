@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Plus, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Plus, X, MapPin, DollarSign, Home, Bed, Bath, Square, Star, GripVertical, Eye } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { mockListings } from '@/mocks/listingsMock'
 
@@ -196,6 +197,20 @@ export default function ListingForm() {
       ...prev,
       images: prev.images.filter(img => img !== image)
     }))
+  }
+
+  const handleSetCoverImage = (index: number) => {
+    const newImages = [...formData.images]
+    const [coverImage] = newImages.splice(index, 1)
+    newImages.unshift(coverImage)
+    setFormData({ ...formData, images: newImages })
+  }
+
+  const handleMoveImage = (fromIndex: number, toIndex: number) => {
+    const newImages = [...formData.images]
+    const [movedImage] = newImages.splice(fromIndex, 1)
+    newImages.splice(toIndex, 0, movedImage)
+    setFormData({ ...formData, images: newImages })
   }
 
   return (
@@ -413,21 +428,152 @@ export default function ListingForm() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="space-y-2">
-              {formData.images.map((image, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                  <span className="text-sm flex-1 truncate">{image}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeImage(image)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            
+            {/* Image Previews with Management */}
+            {formData.images.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Property Images</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {formData.images.length} image{formData.images.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
+                
+                <div className="grid gap-4">
+                  {formData.images.map((image, index) => (
+                    <div 
+                      key={index} 
+                      className={`relative group border rounded-lg overflow-hidden ${
+                        index === 0 ? 'ring-2 ring-yellow-400 bg-yellow-50' : 'bg-card'
+                      }`}
+                    >
+                      {/* Cover Image Badge */}
+                      {index === 0 && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                            <Star className="h-3 w-3 mr-1 fill-current" />
+                            Cover Image
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-3 p-3">
+                        {/* Drag Handle */}
+                        <div className="flex-shrink-0 cursor-move text-muted-foreground hover:text-foreground">
+                          <GripVertical className="h-4 w-4" />
+                        </div>
+                        
+                        {/* Image Preview */}
+                        <div className="flex-shrink-0">
+                          <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted">
+                            <img
+                              src={image}
+                              alt={`Property image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '<div class="w-full h-full bg-muted flex items-center justify-center"><span class="text-xs text-muted-foreground">No preview</span></div>';
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Image URL */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            Image {index + 1}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {image}
+                          </p>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Preview Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(image, '_blank')}
+                            title="Preview image"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Set as Cover Button */}
+                          {index !== 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSetCoverImage(index)}
+                              title="Set as cover image"
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Move Up Button */}
+                          {index > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleMoveImage(index, index - 1)}
+                              title="Move up"
+                            >
+                              ↑
+                            </Button>
+                          )}
+                          
+                          {/* Move Down Button */}
+                          {index < formData.images.length - 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleMoveImage(index, index + 1)}
+                              title="Move down"
+                            >
+                              ↓
+                            </Button>
+                          )}
+                          
+                          {/* Remove Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeImage(image)}
+                            className="text-destructive hover:text-destructive"
+                            title="Remove image"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {formData.images.length > 0 && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+                    <p className="font-medium mb-1">Image Management Tips:</p>
+                    <ul className="space-y-1">
+                      <li>• The first image is automatically set as the cover image</li>
+                      <li>• Use the star button to set a different cover image</li>
+                      <li>• Use the arrows or drag handle to reorder images</li>
+                      <li>• Click the eye icon to preview images in a new tab</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
