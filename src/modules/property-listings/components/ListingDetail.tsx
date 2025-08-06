@@ -294,22 +294,5 @@ export default function ListingDetail() {
                   <div className="text-sm font-medium">Listed</div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(listing.createdAt).toLocaleDateString()}
+import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Calendar, Phone, Mail, Car, Wifi, Dumbbell, Waves, Share2 } from 'lucide-react'
                   </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Last Updated</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(listing.updatedAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}

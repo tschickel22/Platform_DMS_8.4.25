@@ -9,13 +9,6 @@ import {
   MapPin, 
   Bed, 
   Bath, 
-  Square, 
-  DollarSign,
-  Filter,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react'
 import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Home, Users, Building, MapPin, Bed, Bath, Square, Share2 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import ShareListingModal from './ShareListingModal'
