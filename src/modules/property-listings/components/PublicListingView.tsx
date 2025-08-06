@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import { useTenant } from '@/contexts/TenantContext'
+import { Helmet } from 'react-helmet'
 
 export default function PublicListingView() {
   const { tenant } = useTenant()
@@ -36,6 +37,7 @@ export default function PublicListingView() {
   const [listings, setListings] = useState(mockListings.sampleListings)
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [favorites, setFavorites] = useState<string[]>([])
   
   // add closeModal helper
   const closeModal = () => {
@@ -50,7 +52,6 @@ export default function PublicListingView() {
   const [searchTerm, setSearchTerm] = useState('')
   const [priceRange, setPriceRange] = useState('all')
   const [propertyType, setPropertyType] = useState('all')
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Handle direct listing URL access
   useEffect(() => {
@@ -147,6 +148,9 @@ export default function PublicListingView() {
   // Compute average rent for meta tags
   const averageRent =
     filteredListings.length > 0
+      ? filteredListings.reduce((sum, l) => sum + l.rent, 0) / filteredListings.length
+      : 0;
+
   // If we're viewing a single listing, show different layout
   if (listingId && selectedListing) {
     return (
@@ -252,7 +256,7 @@ export default function PublicListingView() {
                   <p className="text-muted-foreground mb-4">{selectedListing.petPolicy}</p>
                 </div>
               </div>
-      ? filteredListings.reduce((sum, l) => sum + l.rent, 0) / filteredListings.length
+
               {/* Image thumbnails */}
               {selectedListing.images.length > 1 && (
                 <div className="mt-6">
@@ -276,7 +280,7 @@ export default function PublicListingView() {
                   </div>
                 </div>
               )}
-      : 0;
+
               {/* Contact Information */}
               <div className="mt-6 pt-6 border-t">
                 <div className="flex gap-4">
@@ -290,7 +294,7 @@ export default function PublicListingView() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => openListingDetails(listing)}
+                    onClick={() => {
                       navigator.clipboard.writeText(window.location.href)
                       // You could add a toast notification here
                     }}
@@ -584,7 +588,7 @@ export default function PublicListingView() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredListings.map((listing) => (
-                  onClick={() => openListingDetails(listing)}
+              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="relative">
                   <img
                     src={listing.images[0]}
