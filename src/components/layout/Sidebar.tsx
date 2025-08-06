@@ -142,7 +142,7 @@ export default function Sidebar() {
         {tenant?.branding?.logo ? (
           <img 
             src={tenant.branding.logo} 
-            alt="Company Logo"
+            to="/listings" 
             className="max-h-10 object-contain h-8 w-auto"
           />
         ) : (

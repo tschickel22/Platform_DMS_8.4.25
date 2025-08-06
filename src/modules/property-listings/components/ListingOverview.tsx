@@ -157,7 +157,7 @@ export default function ListingOverview() {
               <Share2 className="h-4 w-4" />
               Share All Listings
             </Button>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Link to="/listings/new">
               <Plus className="h-4 w-4 mr-2" />
               Add New Listing
             </Button>
