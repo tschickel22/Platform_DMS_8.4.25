@@ -20,7 +20,9 @@ import {
   FileCheck,
   Building,
   Shield,
-  ListChecks
+  ListChecks,
+  MapPin,
+  ShieldCheck
 } from 'lucide-react'
 import { isColorLight } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -45,8 +47,11 @@ const navigationItems = [
     hasSubmenu: true,
     items: [
       { title: 'Inventory', href: '/inventory', icon: Package },
+      { title: 'Land Management', href: '/land', icon: MapPin },
+      { title: 'Property Listings', href: '/listings', icon: ListChecks },
       { title: 'PDI Checklist', href: '/pdi', icon: ClipboardCheck },
-      { title: 'Delivery Tracker', href: '/delivery', icon: Truck }
+      { title: 'Delivery Tracker', href: '/delivery', icon: Truck },
+      { title: 'Warranty Mgmt', href: '/warranty', icon: ShieldCheck }
     ]
   },
   {
