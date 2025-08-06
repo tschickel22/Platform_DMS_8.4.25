@@ -1,19 +1,26 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Calendar, Phone, Mail, Car, Wifi, Dumbbell, Waves, Share2 } from 'lucide-react'
+  ArrowLeft, 
   Edit, 
+  Trash2, 
   MapPin, 
-  DollarSign, 
-  Home, 
+  Bed, 
   Bath, 
   Square, 
+  Calendar, 
   Phone, 
-  Mail,
-  Calendar
+  Mail, 
+  Car, 
+  Wifi, 
+  Dumbbell, 
+  Waves, 
+  Share2,
+  DollarSign, 
+  Home
 } from 'lucide-react'
 import { getListingById } from '@/mocks/listingsMock'
 import ShareListingModal from './ShareListingModal'
@@ -99,7 +106,7 @@ export default function ListingDetail() {
             </div>
           </div>
         </div>
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
 
       {/* Share Modal */}
       <ShareListingModal
@@ -294,5 +301,13 @@ export default function ListingDetail() {
                   <div className="text-sm font-medium">Listed</div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(listing.createdAt).toLocaleDateString()}
-import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Calendar, Phone, Mail, Car, Wifi, Dumbbell, Waves, Share2 } from 'lucide-react'
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
