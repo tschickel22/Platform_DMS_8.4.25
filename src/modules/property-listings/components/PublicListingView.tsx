@@ -92,6 +92,12 @@ export default function PublicListingView() {
     }
   }
 
+  // Compute average rent for meta tags
+  const averageRent =
+    filteredListings.length > 0
+      ? filteredListings.reduce((sum, l) => sum + l.rent, 0) / filteredListings.length
+      : 0;
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
