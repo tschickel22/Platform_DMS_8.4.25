@@ -282,7 +282,6 @@ function PropertyListingsDashboard() {
                         ${listing.rent.toLocaleString()}/month
                       </Badge>
                     </div>
-                  </div>
                 </Card>
                   <CardContent className="p-4">
                     <div className="space-y-2">
