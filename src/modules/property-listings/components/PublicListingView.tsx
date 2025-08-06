@@ -77,8 +77,13 @@ export default function PublicListings() {
     return Home
   }
 
+  const generateShareableUrl = (listing: any) => {
+    const baseUrl = window.location.origin
+    return `${baseUrl}/public/listings/${listing.id}`
+  }
+
   const handleShare = async (listing: any) => {
-    const shareUrl = `${window.location.origin}/public/listings/${listing.id}`
+    const shareUrl = generateShareableUrl(listing)
     
     if (navigator.share) {
       try {
