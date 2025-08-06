@@ -28,7 +28,6 @@ export function TagSelector({
   maxTags
 }: TagSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
 
   const filteredTags = availableTags.filter(tag =>
     tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -57,7 +56,6 @@ export function TagSelector({
     }
     
     handleAddTag(newTag)
-    setIsCreating(false)
   }
 
   const canCreateTag = searchTerm.trim() && 
@@ -151,3 +149,6 @@ export function TagSelector({
     </Card>
   )
 }
+
+// Export the Tag interface for use in other components
+export type { Tag }
