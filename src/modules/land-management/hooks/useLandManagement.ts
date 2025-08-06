@@ -1,210 +1,325 @@
-import { useState, useEffect } from 'react'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect, useCallback } from 'react'
+import { Land, LandStatus } from '@/types'
 
-export interface Land {
-  id: string
-  name: string
-  location: string
-  size: number
-  price: number
-  type: string
-  status: 'available' | 'pending' | 'sold' | 'reserved'
-  description?: string
-  amenities?: string[]
-  zoning?: string
-  utilities?: string
-  access?: string
-  soilType?: string
-  waterRights?: string
-  restrictions?: string
-  createdAt: string
-  updatedAt: string
-}
-
-const mockLands: Land[] = [
+// Mock data for development
+const mockLandData: Land[] = [
   {
     id: '1',
-    name: 'Sunset Ridge Parcel A',
-    location: 'Highway 287, Sunset Ridge Development',
+    address: {
+      street: '123 Oak Ridge Drive',
+      city: 'Austin',
+      state: 'TX',
+      zipCode: '78701',
+      country: 'USA',
+      coordinates: { lat: 30.2672, lng: -97.7431 }
+    },
+    zoning: 'Residential',
+    status: LandStatus.AVAILABLE,
     size: 2.5,
+    sizeUnit: 'acres',
     price: 125000,
-    status: 'available',
-    type: 'Residential',
-    description: 'Beautiful 2.5-acre residential lot with stunning mountain views. Perfect for building your dream home with plenty of space for gardens and outdoor activities.',
-    amenities: ['Mountain Views', 'Mature Trees', 'Private Road', 'Underground Utilities'],
-    zoning: 'R-1',
-    utilities: 'Electric, Water, Sewer Available',
-    access: 'Paved Road',
-    soilType: 'Sandy Loam',
-    waterRights: 'Municipal Water Available',
-    restrictions: 'Single family residential only, minimum 2000 sq ft home',
+    cost: 95000,
+    description: 'Beautiful wooded lot with mature oak trees',
+    notes: 'Perfect for custom home construction',
+    images: [
+      'https://images.pexels.com/photos/1029604/pexels-photo-1029604.jpeg',
+      'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg'
+    ],
+    utilities: {
+      water: true,
+      sewer: true,
+      electric: true,
+      gas: false,
+      internet: true
+    },
+    features: ['Wooded', 'Level', 'Corner Lot'],
+    restrictions: ['No mobile homes', 'Minimum 2000 sq ft home'],
+    taxInfo: {
+      annualTaxes: 2400,
+      assessedValue: 110000,
+      lastAssessment: '2024-01-01'
+    },
     createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z'
+    updatedAt: '2024-01-15T10:00:00Z',
+    createdBy: 'admin',
+    updatedBy: 'admin'
   },
   {
     id: '2',
-    name: 'Oak Creek Commercial',
-    location: '1234 Main Street, Oak Creek Business District',
+    address: {
+      street: '456 Pine Valley Road',
+      city: 'Cedar Park',
+      state: 'TX',
+      zipCode: '78613',
+      country: 'USA',
+      coordinates: { lat: 30.5052, lng: -97.8203 }
+    },
+    zoning: 'Commercial',
+    status: LandStatus.UNDER_CONTRACT,
     size: 1.2,
-    price: 280000,
-    status: 'pending',
-    type: 'Commercial',
-    description: 'Prime commercial lot in the heart of Oak Creek business district. High traffic area with excellent visibility and access to major highways.',
-    amenities: ['High Traffic', 'Corner Lot', 'Highway Access', 'City Water/Sewer'],
-    zoning: 'C-2',
-    utilities: 'All utilities available at street',
-    access: 'Two street access points',
-    soilType: 'Clay',
-    waterRights: 'City water and sewer',
-    restrictions: 'Commercial use only, height restrictions apply',
+    sizeUnit: 'acres',
+    price: 350000,
+    cost: 280000,
+    description: 'Prime commercial lot on busy street',
+    notes: 'High traffic area, great for retail',
+    images: [
+      'https://images.pexels.com/photos/2102587/pexels-photo-2102587.jpeg'
+    ],
+    utilities: {
+      water: true,
+      sewer: true,
+      electric: true,
+      gas: true,
+      internet: true
+    },
+    features: ['High Traffic', 'Corner Lot', 'Signage Rights'],
+    restrictions: ['Commercial use only'],
+    taxInfo: {
+      annualTaxes: 8500,
+      assessedValue: 320000,
+      lastAssessment: '2024-01-01'
+    },
     createdAt: '2024-01-10T14:30:00Z',
-    updatedAt: '2024-01-20T09:15:00Z'
+    updatedAt: '2024-01-20T09:15:00Z',
+    createdBy: 'admin',
+    updatedBy: 'john.doe'
   },
   {
     id: '3',
-    name: 'Prairie Wind Farm',
-    location: 'County Road 45, Prairie Wind Valley',
-    size: 40.0,
-    price: 320000,
-    status: 'available',
-    type: 'Agricultural',
-    description: 'Expansive 40-acre agricultural land perfect for farming or ranching. Includes existing barn and well. Fertile soil with irrigation rights.',
-    amenities: ['Existing Barn', 'Water Well', 'Irrigation Rights', 'Fenced Perimeter'],
-    zoning: 'A-1',
-    utilities: 'Electric available, well water',
-    access: 'Gravel road access',
-    soilType: 'Rich Black Soil',
-    waterRights: 'Irrigation rights included',
-    restrictions: 'Agricultural use, no residential development',
-    createdAt: '2024-01-05T08:00:00Z',
-    updatedAt: '2024-01-05T08:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Riverside Recreation',
-    location: 'Riverside Drive, Willow Creek Area',
-    size: 5.8,
-    price: 95000,
-    status: 'reserved',
-    type: 'Recreational',
-    description: 'Scenic recreational property along Willow Creek. Perfect for camping, fishing, and outdoor recreation. Includes creek frontage and mature forest.',
-    amenities: ['Creek Frontage', 'Mature Forest', 'Wildlife', 'Fishing Rights'],
-    zoning: 'REC-1',
-    utilities: 'None available',
-    access: 'Dirt road access',
-    soilType: 'Rocky with creek bottom',
-    waterRights: 'Creek access rights',
-    restrictions: 'Recreational use only, no permanent structures',
-    createdAt: '2024-01-12T16:45:00Z',
-    updatedAt: '2024-01-18T11:30:00Z'
+    address: {
+      street: '789 Hill Country Lane',
+      city: 'Dripping Springs',
+      state: 'TX',
+      zipCode: '78620',
+      country: 'USA',
+      coordinates: { lat: 30.1896, lng: -98.0877 }
+    },
+    zoning: 'Agricultural',
+    status: LandStatus.AVAILABLE,
+    size: 10,
+    sizeUnit: 'acres',
+    price: 450000,
+    cost: 380000,
+    description: 'Rolling hills with creek frontage',
+    notes: 'Perfect for ranch or agricultural use',
+    images: [
+      'https://images.pexels.com/photos/1108701/pexels-photo-1108701.jpeg',
+      'https://images.pexels.com/photos/1172675/pexels-photo-1172675.jpeg'
+    ],
+    utilities: {
+      water: false,
+      sewer: false,
+      electric: true,
+      gas: false,
+      internet: false
+    },
+    features: ['Creek Frontage', 'Rolling Hills', 'Mature Trees'],
+    restrictions: ['Agricultural use', 'No subdivision'],
+    taxInfo: {
+      annualTaxes: 3200,
+      assessedValue: 400000,
+      lastAssessment: '2024-01-01'
+    },
+    createdAt: '2024-01-05T16:45:00Z',
+    updatedAt: '2024-01-05T16:45:00Z',
+    createdBy: 'admin',
+    updatedBy: 'admin'
   }
 ]
 
-export function useLandManagement() {
-  const [lands, setLands] = useState<Land[]>(mockLands)
-  const { toast } = useToast()
+const STORAGE_KEY = 'renter-insight-land-data'
 
-  const addLand = async (landData: Omit<Land, 'id' | 'createdAt' | 'updatedAt'>) => {
+export function useLandManagement() {
+  const [lands, setLands] = useState<Land[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        setLands(JSON.parse(stored))
+      } else {
+        // Initialize with mock data
+        setLands(mockLandData)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mockLandData))
+      }
+    } catch (err) {
+      console.error('Error loading land data:', err)
+      setError('Failed to load land data')
+      setLands(mockLandData)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Save data to localStorage whenever lands change
+  const saveToStorage = useCallback((newLands: Land[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLands))
+    } catch (err) {
+      console.error('Error saving land data:', err)
+      setError('Failed to save land data')
+    }
+  }, [])
+
+  // Get all land records
+  const getLandRecords = useCallback(() => {
+    return lands
+  }, [lands])
+
+  // Get land by ID
+  const getLandById = useCallback((id: string) => {
+    return lands.find(land => land.id === id)
+  }, [lands])
+
+  // Create new land record
+  const createLand = useCallback((landData: Omit<Land, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => {
     try {
       const newLand: Land = {
         ...landData,
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        createdBy: 'current-user', // In real app, get from auth context
+        updatedBy: 'current-user'
       }
-      
-      setLands(prev => [newLand, ...prev])
-      
-      toast({
-        title: "Success",
-        description: `${landData.name} has been added successfully.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add land parcel.",
-        variant: "destructive",
-      })
-      throw error
-    }
-  }
 
-  const updateLand = async (id: string, landData: Omit<Land, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const newLands = [...lands, newLand]
+      setLands(newLands)
+      saveToStorage(newLands)
+      setError(null)
+      return newLand
+    } catch (err) {
+      console.error('Error creating land:', err)
+      setError('Failed to create land record')
+      throw err
+    }
+  }, [lands, saveToStorage])
+
+  // Update existing land record
+  const updateLand = useCallback((id: string, updates: Partial<Omit<Land, 'id' | 'createdAt' | 'createdBy'>>) => {
     try {
-      setLands(prev => prev.map(land => 
+      const newLands = lands.map(land => 
         land.id === id 
-          ? { ...land, ...landData, updatedAt: new Date().toISOString() }
+          ? { 
+              ...land, 
+              ...updates, 
+              updatedAt: new Date().toISOString(),
+              updatedBy: 'current-user' // In real app, get from auth context
+            }
           : land
-      ))
-      
-      toast({
-        title: "Success",
-        description: `${landData.name} has been updated successfully.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update land parcel.",
-        variant: "destructive",
-      })
-      throw error
-    }
-  }
+      )
 
-  const deleteLand = async (id: string) => {
+      setLands(newLands)
+      saveToStorage(newLands)
+      setError(null)
+      return newLands.find(land => land.id === id)
+    } catch (err) {
+      console.error('Error updating land:', err)
+      setError('Failed to update land record')
+      throw err
+    }
+  }, [lands, saveToStorage])
+
+  // Delete land record
+  const deleteLand = useCallback((id: string) => {
     try {
-      const land = lands.find(l => l.id === id)
-      setLands(prev => prev.filter(land => land.id !== id))
-      
-      toast({
-        title: "Success",
-        description: `${land?.name || 'Land parcel'} has been deleted successfully.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete land parcel.",
-        variant: "destructive",
-      })
-      throw error
+      const newLands = lands.filter(land => land.id !== id)
+      setLands(newLands)
+      saveToStorage(newLands)
+      setError(null)
+      return true
+    } catch (err) {
+      console.error('Error deleting land:', err)
+      setError('Failed to delete land record')
+      throw err
     }
-  }
+  }, [lands, saveToStorage])
 
-  const getLandById = (id: string): Land | undefined => {
-    return lands.find(land => land.id === id)
-  }
+  // Search and filter lands
+  const searchLands = useCallback((query: string, filters?: {
+    status?: LandStatus
+    zoning?: string
+    minPrice?: number
+    maxPrice?: number
+    minSize?: number
+    maxSize?: number
+  }) => {
+    let filtered = lands
 
-  const getLandsByStatus = (status: Land['status']): Land[] => {
-    return lands.filter(land => land.status === status)
-  }
+    // Text search
+    if (query) {
+      const searchLower = query.toLowerCase()
+      filtered = filtered.filter(land => 
+        land.address.street.toLowerCase().includes(searchLower) ||
+        land.address.city.toLowerCase().includes(searchLower) ||
+        land.description?.toLowerCase().includes(searchLower) ||
+        land.zoning.toLowerCase().includes(searchLower)
+      )
+    }
 
-  const getLandsByType = (type: string): Land[] => {
-    return lands.filter(land => land.type === type)
-  }
+    // Apply filters
+    if (filters) {
+      if (filters.status) {
+        filtered = filtered.filter(land => land.status === filters.status)
+      }
+      if (filters.zoning) {
+        filtered = filtered.filter(land => land.zoning === filters.zoning)
+      }
+      if (filters.minPrice !== undefined) {
+        filtered = filtered.filter(land => land.price >= filters.minPrice!)
+      }
+      if (filters.maxPrice !== undefined) {
+        filtered = filtered.filter(land => land.price <= filters.maxPrice!)
+      }
+      if (filters.minSize !== undefined) {
+        filtered = filtered.filter(land => land.size >= filters.minSize!)
+      }
+      if (filters.maxSize !== undefined) {
+        filtered = filtered.filter(land => land.size <= filters.maxSize!)
+      }
+    }
 
-  const getTotalValue = (): number => {
-    return lands.reduce((total, land) => total + land.price, 0)
-  }
+    return filtered
+  }, [lands])
 
-  const getAveragePrice = (): number => {
-    if (lands.length === 0) return 0
-    return getTotalValue() / lands.length
-  }
+  // Get available lands for quotes
+  const getAvailableLands = useCallback(() => {
+    return lands.filter(land => land.status === LandStatus.AVAILABLE)
+  }, [lands])
 
-  const getTotalAcreage = (): number => {
-    return lands.reduce((total, land) => total + land.size, 0)
-  }
+  // Calculate price per unit
+  const getPricePerUnit = useCallback((land: Land) => {
+    return land.price / land.size
+  }, [])
+
+  // Get unique zoning types
+  const getZoningTypes = useCallback(() => {
+    const zones = new Set(lands.map(land => land.zoning))
+    return Array.from(zones).sort()
+  }, [lands])
 
   return {
+    // Data
     lands,
-    addLand,
+    loading,
+    error,
+
+    // CRUD operations
+    getLandRecords,
+    getLandById,
+    createLand,
     updateLand,
     deleteLand,
-    getLandById,
-    getLandsByStatus,
-    getLandsByType,
-    getTotalValue,
-    getAveragePrice,
-    getTotalAcreage
+
+    // Search and filter
+    searchLands,
+    getAvailableLands,
+
+    // Utilities
+    getPricePerUnit,
+    getZoningTypes
   }
 }
