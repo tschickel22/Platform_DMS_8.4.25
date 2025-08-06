@@ -21,7 +21,18 @@ interface ShareListingModalProps {
   isOpen: boolean
   onClose: () => void
   listingUrl: string
-  title?: string
+  listing: {
+    id: string
+    title: string
+    rent: number
+    address: string
+    bedrooms: number
+    bathrooms: number
+    squareFootage: number
+    description: string
+    images: string[]
+    amenities: string[]
+  }
 }
 
 export default function ShareListingModal({ 
@@ -31,6 +42,11 @@ export default function ShareListingModal({
   title = "Share Listing" 
 }: ShareListingModalProps) {
   const [copied, setCopied] = useState(false)
+  
+  // Guard clause to prevent errors if listing is undefined
+  if (!listing) {
+    return null
+  }
   const { toast } = useToast()
   const [customMessage, setCustomMessage] = useState('')
 

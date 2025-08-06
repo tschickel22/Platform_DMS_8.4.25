@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,8 +30,21 @@ function ImageGallery({ images, title }: { images: string[], title: string }) {
   }
 
   const prevImage = () => {
-    setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
+    return (
+      <>
+        <Helmet>
+          <title>Listing Not Found</title>
+          <meta name="description" content="The requested property listing could not be found." />
+        </Helmet>
+        <div className="p-8 text-center">Listing not found</div>
+      </>
+    )
   }
+
+  const mainImage = listing.images && listing.images.length > 0 ? listing.images[0] : null
+  const propertyDetails = `${listing.bedrooms} bed, ${listing.bathrooms} bath, ${listing.squareFootage} sq ft`
+  const features = listing.amenities?.slice(0, 5).join(', ') || 'Great amenities'
+  const description = listing.description?.substring(0, 160) || `Beautiful ${listing.propertyType} in ${listing.address}`
 
   return (
     <div className="relative">
@@ -250,6 +264,7 @@ function SingleListingView({ listing }: { listing: PropertyListing }) {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -345,7 +360,32 @@ function AllListingsView() {
               </Select>
             </div>
           </CardContent>
-        </Card>
+    <>
+      {/* SEO Meta Tags for Social Sharing */}
+      <Helmet>
+        <title>{listing.title} - ${listing.rent.toLocaleString()}/month | Property Listing</title>
+        <meta name="description" content={`${propertyDetails} • ${description}`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={`${listing.title} - $${listing.rent.toLocaleString()}/month`} />
+        <meta property="og:description" content={`${propertyDetails} • ${description} • Features: ${features}`} />
+        {mainImage && <meta property="og:image" content={mainImage} />}
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:site_name" content="Property Listings" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${listing.title} - $${listing.rent.toLocaleString()}/month`} />
+        <meta name="twitter:description" content={`${propertyDetails} • ${description}`} />
+        {mainImage && <meta name="twitter:image" content={mainImage} />}
+        
+        {/* Additional SEO */}
+        <meta name="keywords" content={`${listing.propertyType}, rental, ${listing.bedrooms} bedroom, ${listing.bathrooms} bathroom, ${listing.amenities?.join(', ')}`} />
+        <link rel="canonical" href={window.location.href} />
+      </Helmet>
+
+      <div className="min-h-screen bg-gray-50 py-8">
 
         {/* Results Summary */}
         <div className="mb-6">
