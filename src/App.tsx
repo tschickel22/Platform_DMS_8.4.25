@@ -32,6 +32,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import PublicListingView from '@/modules/property-listings/components/PublicListingView'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
@@ -80,6 +81,8 @@ function App() {
                         <Route path="/admin/settings/*" element={<PlatformSettings />} />
                         <Route path="/reports/*" element={<ReportingSuite />} />
                         <Route path="/client-applications/*" element={<FinanceApplication />} />
+                        <Route path="/public/listings" element={<PropertyListings />} />
+                        <Route path="/public/listings/:listingId" element={<PropertyListings />} />
                         <Route path="/listings/*" element={<PropertyListings />} />
                         <Route path="/properties/*" element={<PropertyListings />} />
                         <Route path="/warranty-mgmt" element={<WarrantyManagement />} />

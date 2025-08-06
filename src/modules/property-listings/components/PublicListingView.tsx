@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -31,19 +31,47 @@ import { useTenant } from '@/contexts/TenantContext'
 
 export default function PublicListingView() {
   const { tenant } = useTenant()
+  const navigate = useNavigate()
+  const { listingId } = useParams()
   const [listings, setListings] = useState(mockListings.sampleListings)
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   
   // add closeModal helper
-  const closeModal = () => setSelectedListing(null)
+  const closeModal = () => {
+    setSelectedListing(null)
+    // If we're on a single listing page, navigate back to all listings
+    if (listingId) {
+      navigate('/public/listings')
+    }
+  }
   
   const [filteredListings, setFilteredListings] = useState(listings)
   const [searchTerm, setSearchTerm] = useState('')
   const [priceRange, setPriceRange] = useState('all')
   const [propertyType, setPropertyType] = useState('all')
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
+  // Handle direct listing URL access
+  useEffect(() => {
+    if (listingId) {
+      const listing = listings.find(l => l.id === listingId)
+      if (listing) {
+        setSelectedListing(listing)
+      } else {
+        // If listing not found, redirect to all listings
+        navigate('/public/listings')
+      }
+    }
+  }, [listingId, listings, navigate])
+
+  // Function to open listing details and update URL
+  const openListingDetails = (listing: any) => {
+    setSelectedListing(listing)
+    setCurrentImageIndex(0)
+    // Update URL without full navigation to maintain state
+    window.history.pushState(null, '', `/public/listings/${listing.id}`)
+  }
   // Filter listings based on search and filters
   useEffect(() => {
     let filtered = listings.filter(listing => listing.status === 'active')
@@ -119,8 +147,165 @@ export default function PublicListingView() {
   // Compute average rent for meta tags
   const averageRent =
     filteredListings.length > 0
+  // If we're viewing a single listing, show different layout
+  if (listingId && selectedListing) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Back to listings button */}
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/public/listings')}
+              className="flex items-center gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to All Listings
+            </Button>
+          </div>
+
+          {/* Single listing content */}
+          <Card className="overflow-hidden">
+            <div className="relative">
+              <img
+                src={selectedListing.images[currentImageIndex]}
+                alt={selectedListing.title}
+                className="w-full h-96 object-cover"
+              />
+              
+              {/* Image navigation */}
+              {selectedListing.images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentImageIndex(prev => 
+                      prev === 0 ? selectedListing.images.length - 1 : prev - 1
+                    )}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentImageIndex(prev => 
+                      prev === selectedListing.images.length - 1 ? 0 : prev + 1
+                    )}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                    {currentImageIndex + 1} / {selectedListing.images.length}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Property Details */}
+                <div>
+                  <h1 className="text-2xl font-bold mb-2">{selectedListing.title}</h1>
+                  <p className="text-muted-foreground mb-4 flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {selectedListing.address}
+                  </p>
+                  
+                  <div className="flex items-center gap-4 mb-4 text-sm text-muted-foreground">
+                    <span className="flex items-center">
+                      <Bed className="h-4 w-4 mr-1" />
+                      {selectedListing.bedrooms}
+                    </span>
+                    <span className="flex items-center">
+                      <Bath className="h-4 w-4 mr-1" />
+                      {selectedListing.bathrooms}
+                    </span>
+                    <span className="flex items-center">
+                      <Square className="h-4 w-4 mr-1" />
+                      {selectedListing.squareFootage} sq ft
+                    </span>
+                  </div>
+
+                  <div className="text-3xl font-bold text-primary mb-4">
+                    ${selectedListing.rent.toLocaleString()}
+                    <span className="text-base font-normal text-muted-foreground">/month</span>
+                  </div>
+
+                  <Badge variant="secondary" className="mb-4">
+                    {selectedListing.status}
+                  </Badge>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-muted-foreground mb-4">{selectedListing.description}</p>
+                  
+                  <h3 className="text-lg font-semibold mb-2">Amenities</h3>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedListing.amenities.map((amenity: string, index: number) => (
+                      <Badge key={index} variant="outline">
+                        {amenity}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <h3 className="text-lg font-semibold mb-2">Pet Policy</h3>
+                  <p className="text-muted-foreground mb-4">{selectedListing.petPolicy}</p>
+                </div>
+              </div>
       ? filteredListings.reduce((sum, l) => sum + l.rent, 0) / filteredListings.length
+              {/* Image thumbnails */}
+              {selectedListing.images.length > 1 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-2">Photos</h3>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {selectedListing.images.map((image: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                          currentImageIndex === index ? 'border-primary' : 'border-transparent'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`${selectedListing.title} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
       : 0;
+              {/* Contact Information */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex gap-4">
+                  <Button className="flex-1">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call
+                  </Button>
+                  <Button variant="outline" className="flex-1">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => openListingDetails(listing)}
+                      navigator.clipboard.writeText(window.location.href)
+                      // You could add a toast notification here
+                    }}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -399,7 +584,7 @@ export default function PublicListingView() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredListings.map((listing) => (
-              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  onClick={() => openListingDetails(listing)}
                 <div className="relative">
                   <img
                     src={listing.images[0]}
