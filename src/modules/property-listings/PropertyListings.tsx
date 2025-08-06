@@ -98,6 +98,36 @@ function PropertyListingsDashboard() {
     })
   }
 
+  const handleShareListing = (listing: Listing) => {
+    const listingUrl = `${window.location.origin}/listings/detail/${listing.id}`
+    
+    if (navigator.share) {
+      // Use native sharing if available
+      navigator.share({
+        title: listing.title,
+        text: `Check out this property: ${listing.title} - $${listing.rent.toLocaleString()}/month`,
+        url: listingUrl,
+      }).catch((error) => {
+        console.log('Error sharing:', error)
+        fallbackShare(listingUrl, listing)
+      })
+    } else {
+      fallbackShare(listingUrl, listing)
+    }
+  }
+
+  const fallbackShare = (url: string, listing: Listing) => {
+    // Copy to clipboard as fallback
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: "Link Copied!",
+        description: `Listing link for "${listing.title}" copied to clipboard`,
+      })
+    }).catch(() => {
+      // Final fallback - show the URL in a prompt
+      prompt('Copy this link to share the listing:', url)
+    })
+  }
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800'
@@ -330,7 +360,11 @@ function PropertyListingsDashboard() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleShareListing(listing)}
+                      >
                         <Share2 className="h-4 w-4" />
                       </Button>
                     </div>
