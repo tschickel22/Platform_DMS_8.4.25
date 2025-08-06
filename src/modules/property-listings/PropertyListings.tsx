@@ -331,6 +331,7 @@ function PropertyListingsDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+                </Card>
               ))}
             </div>
           )}
