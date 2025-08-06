@@ -58,7 +58,9 @@ export function ShareOptionsModal({
   if (!listing) return null
 
   // Generate the public listing URL
-  const listingUrl = `${baseUrl}/public/listings?highlight=${listing.id}`
+  // Generate the public listing URL
+  // —–> use the path-with-id pattern, not a query param
+  const listingUrl = `${baseUrl}/public/listings/${listing.id}`
   
   // Create sharing content
   const shareTitle = `${listing.title} - $${listing.rent.toLocaleString()}/month`
