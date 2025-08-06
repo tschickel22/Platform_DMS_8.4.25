@@ -283,6 +283,7 @@ function PropertyListingsDashboard() {
                       </Badge>
                     </div>
                   </div>
+                </Card>
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <h3 className="font-semibold text-lg line-clamp-1">{listing.title}</h3>
