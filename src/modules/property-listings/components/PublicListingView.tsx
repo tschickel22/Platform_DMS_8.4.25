@@ -33,6 +33,10 @@ export default function PublicListingView() {
   const { tenant } = useTenant()
   const [listings, setListings] = useState(mockListings.sampleListings)
   const [selectedListing, setSelectedListing] = useState<any>(null)
+  
+  // add closeModal helper
+  const closeModal = () => setSelectedListing(null)
+  
   const [filteredListings, setFilteredListings] = useState(listings)
   const [searchTerm, setSearchTerm] = useState('')
   const [priceRange, setPriceRange] = useState('all')
