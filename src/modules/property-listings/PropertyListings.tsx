@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast'
 import ListingOverview from './components/ListingOverview'
 import ListingForm from './components/ListingForm'
 import ListingDetail from './components/ListingDetail'
+import { ShareAllListingsModal } from './components/ShareAllListingsModal'
 import { mockListings } from '@/mocks/listingsMock'
 
 interface Listing {
@@ -48,6 +49,7 @@ function PropertyListingsDashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Calculate stats
   const totalListings = listings.length
@@ -83,10 +85,19 @@ function PropertyListingsDashboard() {
           <h1 className="text-2xl font-bold">Property Listings</h1>
           <p className="text-muted-foreground">Manage your rental property listings</p>
         </div>
-        <Button onClick={() => navigate('/listings/new')} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add New Listing
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowShareModal(true)}
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share All Listings
+          </Button>
+          <Button onClick={() => navigate('/listings/new')} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Listing
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -225,6 +236,12 @@ function PropertyListingsDashboard() {
           </div>
         </CardContent>
       </Card>
+      
+      <ShareAllListingsModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        listings={listings}
+      />
     </div>
   )
 }

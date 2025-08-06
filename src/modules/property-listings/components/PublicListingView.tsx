@@ -1,271 +1,40 @@
-import React, { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
+  Home, 
   MapPin, 
+  DollarSign, 
   Bed, 
   Bath, 
   Square, 
   Phone, 
-  Mail, 
-  ChevronLeft, 
-  ChevronRight,
+  Mail,
+  Search,
+  Filter,
   Heart,
   Share2,
-  Filter
+  ExternalLink
 } from 'lucide-react'
-import { mockListings, getActiveListings, getListingById, PropertyListing } from '@/mocks/listingsMock'
+import { mockListings } from '@/mocks/listingsMock'
+import { useTenant } from '@/contexts/TenantContext'
 
-// Image Gallery Component
-function ImageGallery({ images, title }: { images: string[], title: string }) {
-  const [currentImage, setCurrentImage] = useState(0)
-
-  const nextImage = () => {
-    setCurrentImage((prev) => (prev + 1) % images.length)
-  }
-
-  const prevImage = () => {
-    setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
-  }
-
-  return (
-    <div className="relative">
-      <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-        <img
-          src={images[currentImage]}
-          alt={`${title} - Image ${currentImage + 1}`}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      
-      {images.length > 1 && (
-        <>
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-            onClick={prevImage}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-            onClick={nextImage}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                className={`w-2 h-2 rounded-full ${
-                  index === currentImage ? 'bg-white' : 'bg-white/50'
-                }`}
-                onClick={() => setCurrentImage(index)}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// Single Listing Detail View
-function SingleListingView({ listing }: { listing: PropertyListing }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <Link 
-            to="/public-listings/all" 
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to all listings
-          </Link>
-          
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{listing.title}</h1>
-              <p className="text-lg text-gray-600 flex items-center mt-2">
-                <MapPin className="h-5 w-5 mr-2" />
-                {listing.address}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-green-600">
-                ${listing.rent.toLocaleString()}/month
-              </div>
-              <div className="flex space-x-2 mt-2">
-                <Button variant="outline" size="sm">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Image Gallery */}
-            <ImageGallery images={listing.images} title={listing.title} />
-
-            {/* Property Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Property Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="flex items-center space-x-2">
-                    <Bed className="h-5 w-5 text-gray-500" />
-                    <span>{listing.bedrooms} Bedrooms</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Bath className="h-5 w-5 text-gray-500" />
-                    <span>{listing.bathrooms} Bathrooms</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Square className="h-5 w-5 text-gray-500" />
-                    <span>{listing.squareFootage.toLocaleString()} sq ft</span>
-                  </div>
-                  <div>
-                    <Badge variant="secondary" className="capitalize">
-                      {listing.propertyType}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className="prose max-w-none">
-                  <h3 className="text-lg font-semibold mb-2">Description</h3>
-                  <p className="text-gray-700">{listing.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Amenities */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Amenities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {listing.amenities.map((amenity, index) => (
-                    <Badge key={index} variant="outline">
-                      {amenity}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pet Policy */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pet Policy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700">{listing.petPolicy}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Contact Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-gray-500" />
-                  <a 
-                    href={`tel:${listing.contactInfo.phone}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {listing.contactInfo.phone}
-                  </a>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-gray-500" />
-                  <a 
-                    href={`mailto:${listing.contactInfo.email}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {listing.contactInfo.email}
-                  </a>
-                </div>
-                <Button className="w-full mt-4">
-                  Schedule a Tour
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Send Message
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Property Type:</span>
-                  <span className="font-medium capitalize">{listing.propertyType}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
-                    {listing.status}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Listed:</span>
-                  <span className="font-medium">
-                    {new Date(listing.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// All Listings View
-function AllListingsView() {
-  const [listings] = useState(getActiveListings())
+export default function PublicListingView() {
+  const { tenant } = useTenant()
+  const [listings, setListings] = useState(mockListings.sampleListings)
   const [filteredListings, setFilteredListings] = useState(listings)
   const [searchTerm, setSearchTerm] = useState('')
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('newest')
+  const [priceRange, setPriceRange] = useState('all')
+  const [propertyType, setPropertyType] = useState('all')
+  const [favorites, setFavorites] = useState<string[]>([])
 
-  // Apply filters and sorting
-  React.useEffect(() => {
-    let filtered = listings
+  // Filter listings based on search and filters
+  useEffect(() => {
+    let filtered = listings.filter(listing => listing.status === 'active')
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(listing =>
         listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -274,54 +43,110 @@ function AllListingsView() {
       )
     }
 
-    // Property type filter
-    if (propertyTypeFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.propertyType === propertyTypeFilter)
+    if (priceRange !== 'all') {
+      const [min, max] = priceRange.split('-').map(Number)
+      filtered = filtered.filter(listing => {
+        if (max) {
+          return listing.rent >= min && listing.rent <= max
+        } else {
+          return listing.rent >= min
+        }
+      })
     }
 
-    // Sorting
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.rent - b.rent)
-        break
-      case 'price-high':
-        filtered.sort((a, b) => b.rent - a.rent)
-        break
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        break
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        break
+    if (propertyType !== 'all') {
+      filtered = filtered.filter(listing => listing.propertyType === propertyType)
     }
 
     setFilteredListings(filtered)
-  }, [listings, searchTerm, propertyTypeFilter, sortBy])
+  }, [listings, searchTerm, priceRange, propertyType])
+
+  const toggleFavorite = (listingId: string) => {
+    setFavorites(prev => 
+      prev.includes(listingId) 
+        ? prev.filter(id => id !== listingId)
+        : [...prev, listingId]
+    )
+  }
+
+  const handleShare = (listing: any) => {
+    const url = `${window.location.origin}/public/listings/${listing.id}`
+    if (navigator.share) {
+      navigator.share({
+        title: listing.title,
+        text: `Check out this rental property: ${listing.title}`,
+        url: url
+      })
+    } else {
+      navigator.clipboard.writeText(url)
+      // You could show a toast notification here
+    }
+  }
+
+  const handleContact = (listing: any, method: 'phone' | 'email') => {
+    if (method === 'phone') {
+      window.open(`tel:${listing.contactInfo.phone}`)
+    } else {
+      window.open(`mailto:${listing.contactInfo.email}?subject=Inquiry about ${listing.title}`)
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Available Properties</h1>
-          <p className="text-lg text-gray-600">Find your perfect home from our selection of quality properties</p>
+      <div className="bg-card border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">
+                  {tenant?.name?.charAt(0) || 'P'}
+                </span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">{tenant?.name || 'Property'} Listings</h1>
+                <p className="text-muted-foreground">Find your perfect rental home</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">
+                {filteredListings.length} properties available
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Filters */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Search and Filters */}
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search properties..."
+                  placeholder="Search by location, property type, or keywords..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
                 />
               </div>
-              <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
-                <SelectTrigger className="w-full md:w-48">
+            </div>
+            <div className="flex gap-2">
+              <Select value={priceRange} onValueChange={setPriceRange}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Price Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Prices</SelectItem>
+                  <SelectItem value="0-2000">Under $2,000</SelectItem>
+                  <SelectItem value="2000-3000">$2,000 - $3,000</SelectItem>
+                  <SelectItem value="3000-4000">$3,000 - $4,000</SelectItem>
+                  <SelectItem value="4000">$4,000+</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={propertyType} onValueChange={setPropertyType}>
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="Property Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -332,143 +157,143 @@ function AllListingsView() {
                   <SelectItem value="townhouse">Townhouse</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Summary */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            Showing {filteredListings.length} of {listings.length} properties
-          </p>
+          </div>
         </div>
 
         {/* Listings Grid */}
-        {filteredListings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredListings.length === 0 ? (
+          <div className="text-center py-12">
+            <Home className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No properties found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search criteria or check back later for new listings.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredListings.map((listing) => (
               <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video bg-gray-200 overflow-hidden">
+                <div className="relative">
                   <img
                     src={listing.images[0]}
                     alt={listing.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    className="w-full h-48 object-cover"
                   />
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-semibold text-gray-900 line-clamp-1">
-                      {listing.title}
-                    </h3>
-                    <Badge variant="secondary" className="capitalize ml-2">
-                      {listing.propertyType}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 w-8 p-0"
+                      onClick={() => toggleFavorite(listing.id)}
+                    >
+                      <Heart 
+                        className={`h-4 w-4 ${
+                          favorites.includes(listing.id) 
+                            ? 'fill-red-500 text-red-500' 
+                            : 'text-muted-foreground'
+                        }`} 
+                      />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleShare(listing)}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="absolute top-2 left-2">
+                    <Badge 
+                      variant={listing.status === 'active' ? 'default' : 'secondary'}
+                      className="capitalize"
+                    >
+                      {listing.status}
                     </Badge>
                   </div>
-                  
-                  <p className="text-gray-600 flex items-center mb-3">
+                </div>
+                
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg line-clamp-1">{listing.title}</CardTitle>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">
+                        ${listing.rent.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">/month</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {listing.address}
-                  </p>
-                  
-                  <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
-                    <span className="flex items-center">
-                      <Bed className="h-4 w-4 mr-1" />
-                      {listing.bedrooms} bed
-                    </span>
-                    <span className="flex items-center">
-                      <Bath className="h-4 w-4 mr-1" />
-                      {listing.bathrooms} bath
-                    </span>
-                    <span className="flex items-center">
-                      <Square className="h-4 w-4 mr-1" />
-                      {listing.squareFootage.toLocaleString()} sq ft
-                    </span>
+                    <span className="line-clamp-1">{listing.address}</span>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center">
+                        <Bed className="h-4 w-4 mr-1" />
+                        {listing.bedrooms}
+                      </div>
+                      <div className="flex items-center">
+                        <Bath className="h-4 w-4 mr-1" />
+                        {listing.bathrooms}
+                      </div>
+                      <div className="flex items-center">
+                        <Square className="h-4 w-4 mr-1" />
+                        {listing.squareFootage} sq ft
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="flex justify-between items-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      ${listing.rent.toLocaleString()}/mo
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                    {listing.description}
+                  </p>
+                  
+                  {listing.amenities.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-1">
+                        {listing.amenities.slice(0, 3).map((amenity, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {amenity}
+                          </Badge>
+                        ))}
+                        {listing.amenities.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{listing.amenities.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <Link to={`/public-listings/${listing.id}`}>
-                      <Button>View Details</Button>
-                    </Link>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleContact(listing, 'phone')}
+                    >
+                      <Phone className="h-4 w-4 mr-1" />
+                      Call
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleContact(listing, 'email')}
+                    >
+                      <Mail className="h-4 w-4 mr-1" />
+                      Email
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Filter className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
-              <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </div>
   )
-}
-
-// Main Public Listing View Component
-export default function PublicListingView() {
-  const { id } = useParams<{ id: string }>()
-
-  // If we have an ID, show single listing view
-  if (id) {
-    const listing = getListingById(id)
-    
-    if (!listing) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Card className="max-w-md w-full mx-4">
-            <CardContent className="text-center py-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Listing Not Found</h2>
-              <p className="text-gray-600 mb-6">
-                The property you're looking for doesn't exist or is no longer available.
-              </p>
-              <Link to="/public-listings/all">
-                <Button>View All Listings</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      )
-    }
-
-    if (listing.status !== 'active') {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Card className="max-w-md w-full mx-4">
-            <CardContent className="text-center py-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Property Unavailable</h2>
-              <p className="text-gray-600 mb-6">
-                This property is currently not available for viewing.
-              </p>
-              <Link to="/public-listings/all">
-                <Button>View Available Listings</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      )
-    }
-
-    return <SingleListingView listing={listing} />
-  }
-
-  // Otherwise, show all listings view
-  return <AllListingsView />
 }
