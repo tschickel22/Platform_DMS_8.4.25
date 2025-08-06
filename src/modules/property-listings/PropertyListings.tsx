@@ -1,23 +1,10 @@
 import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Building, ListChecks, Plus, Search, MapPin, Home, DollarSign, Eye, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { 
-  ListChecks,
-  Plus,
-  Search,
-  Filter,
-  MapPin,
-  Home,
-  DollarSign,
-  Calendar,
-  Eye,
-  Edit,
-  Trash2
-} from 'lucide-react'
 
 // Mock data for property listings
 const mockListings = [
@@ -65,7 +52,7 @@ function PropertyListingsDashboard() {
 
   const filteredListings = mockListings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.location.toLowerCase().includes(searchTerm.toLowerCase())
+      listing.location.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterStatus === 'all' || listing.status.toLowerCase() === filterStatus.toLowerCase()
     return matchesSearch && matchesFilter
   })
@@ -122,9 +109,7 @@ function PropertyListingsDashboard() {
             <div className="text-2xl font-bold">
               {mockListings.filter(l => l.status === 'Available').length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Ready for occupancy
-            </p>
+            <p className="text-xs text-muted-foreground">Ready for occupancy</p>
           </CardContent>
         </Card>
         <Card>
@@ -136,9 +121,7 @@ function PropertyListingsDashboard() {
             <div className="text-2xl font-bold">
               {mockListings.filter(l => l.status === 'Occupied').length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Currently rented
-            </p>
+            <p className="text-xs text-muted-foreground">Currently rented</p>
           </CardContent>
         </Card>
         <Card>
@@ -150,20 +133,16 @@ function PropertyListingsDashboard() {
             <div className="text-2xl font-bold">
               ${Math.round(mockListings.reduce((sum, l) => sum + l.price, 0) / mockListings.length)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Per month
-            </p>
+            <p className="text-xs text-muted-foreground">Per month</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Search */}
+      {/* Filters/Search */}
       <Card>
         <CardHeader>
           <CardTitle>Property Listings</CardTitle>
-          <CardDescription>
-            Browse and manage all property listings
-          </CardDescription>
+          <CardDescription>Browse and manage all property listings</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
@@ -219,8 +198,6 @@ function PropertyListingsDashboard() {
                       ${listing.price}/{listing.priceType}
                     </span>
                   </div>
-                  
-                  {/* Features */}
                   <div className="space-y-2">
                     <span className="text-sm text-muted-foreground">Features:</span>
                     <div className="flex flex-wrap gap-1">
@@ -236,22 +213,14 @@ function PropertyListingsDashboard() {
                       )}
                     </div>
                   </div>
-
-                  {/* Actions */}
                   <div className="flex justify-between items-center pt-2 border-t">
                     <span className="text-xs text-muted-foreground">
                       Added {new Date(listing.dateAdded).toLocaleDateString()}
                     </span>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      <Button size="sm" variant="ghost"><Eye className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost"><Edit className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost"><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>
                 </CardContent>
@@ -279,19 +248,10 @@ export default function PropertyListings() {
         <Building className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Property Listings</h1>
       </div>
-      <Route path="/" element={<PropertyListingsDashboard />} />
-        <Route path="*" element={
-          <Card>
-            <CardHeader>
-              <CardTitle>Property Listings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Property listings module is loading...</p>
-            </CardContent>
-          </Card>
-        } />
-      <Route path="*" element={<PropertyListingsDashboard />} />
-    </div>
+      <Routes>
+        <Route path="/" element={<PropertyListingsDashboard />} />
+        <Route path="*" element={<PropertyListingsDashboard />} />
+      </Routes>
     </div>
   )
 }
