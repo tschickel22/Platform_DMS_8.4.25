@@ -191,3 +191,4 @@ export default function TaggingEngine() {
 
 // Export components for use in other modules
 export { default as TagSelector } from './components/TagSelector'
+export { default as TagFilter } from './components/TagFilter'
