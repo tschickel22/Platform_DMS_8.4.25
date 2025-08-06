@@ -1,11 +1,12 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit, Trash2, MapPin, Ruler, DollarSign } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-export function LandList({ lands, onEdit, onDelete }) {
+export function LandList({ lands, onDelete }) {
   const { toast } = useToast()
 
   const handleDelete = async (land) => {
@@ -76,13 +77,11 @@ export function LandList({ lands, onEdit, onDelete }) {
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(land)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Edit className="h-4 w-4" />
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/land/edit/${land.id}`}>
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Link>
                 </Button>
                 <Button
                   variant="ghost"
