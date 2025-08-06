@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { Building } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -76,6 +77,7 @@ export default function Layout({ children }: LayoutProps) {
       children: [
         { name: 'Inventory', path: '/inventory', icon: Package },
         { name: 'Land Management', path: '/land', icon: MapPin },
+        { name: 'Property Listings', path: '/listings', icon: Building },
         { name: 'PDI Checklist', path: '/pdi', icon: CheckSquare },
         { name: 'Delivery', path: '/delivery', icon: Truck },
         { name: 'Warranty Mgmt', path: '/inventory/warranty', icon: ShieldCheck }
