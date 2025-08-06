@@ -19,7 +19,7 @@ import {
   Eye,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
   Search,
   Filter,
   Heart,
@@ -37,6 +37,8 @@ export default function PublicListingView() {
   const [priceRange, setPriceRange] = useState('all')
   const [propertyType, setPropertyType] = useState('all')
   const [favorites, setFavorites] = useState<string[]>([])
+  const [selectedListing, setSelectedListing] = useState(null)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Filter listings based on search and filters
   useEffect(() => {
