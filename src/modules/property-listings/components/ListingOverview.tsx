@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
-import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Home, Users, Building, MapPin, Bed, Bath, Square, Share2 } from 'lucide-react'
   Plus, 
   MapPin, 
   Bed, 
@@ -17,6 +16,7 @@ import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Home, Users, Building, M
   ArrowUp,
   ArrowDown
 } from 'lucide-react'
+import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Home, Users, Building, MapPin, Bed, Bath, Square, Share2 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import ShareListingModal from './ShareListingModal'
 
@@ -135,6 +135,10 @@ export default function ListingOverview() {
     }
   }
 
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -155,9 +159,10 @@ export default function ListingOverview() {
             </Button>
           </div>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button
               className="hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          <Plus className="h-4 w-4 mr-2" />
           Add New Listing
         </Button>
       </div>
@@ -345,11 +350,13 @@ export default function ListingOverview() {
               >
                 Clear Filters
               </Button>
+            )}
             <p className="text-xs text-muted-foreground">
               Click to view all properties
             </p>
           </CardContent>
         </Card>
+      )}
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-2 ${
             statusFilter === 'available' 
@@ -358,6 +365,7 @@ export default function ListingOverview() {
           }`}
           onClick={() => handleStatusFilter('available')}
         >
+        </Card>
 
       {/* Share Modal */}
       <ShareListingModal
