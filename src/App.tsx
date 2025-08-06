@@ -24,6 +24,7 @@ import ServiceOps from '@/modules/service-ops/ServiceOps'
 import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
@@ -61,6 +62,7 @@ function App() {
                           <Route path="/deals/*" element={<CRMSalesDeal />} />
                           <Route path="/finance/*" element={<FinanceModule />} />
                           <Route path="/quotes/*" element={<QuoteBuilder />} />
+                          <Route path="/listings/*" element={<PropertyListings />} />
                           <Route path="/agreements/*" element={<AgreementVault />} />
                           <Route path="/service/*" element={<ServiceOps />} />
                           <Route path="/pdi/*" element={<PDIChecklist />} />
