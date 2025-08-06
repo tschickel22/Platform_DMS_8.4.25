@@ -114,7 +114,6 @@ function PropertyListingsDashboard() {
                       </Badge>
                     </div>
                   </div>
-
                   {/* DETAILS */}
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-lg line-clamp-1">
