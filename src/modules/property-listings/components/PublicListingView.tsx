@@ -176,17 +176,6 @@ export default function PublicListingView() {
         </div>
       </div>
 
-      {/* Listing Details Modal */}
-      <Dialog open={!!selectedListing} onOpenChange={closeModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedListing && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">
-                  {selectedListing.title}
-                </DialogTitle>
-              </DialogHeader>
-              
               <div className="space-y-6">
                 {/* Image Gallery */}
                 <div className="relative">
@@ -328,6 +317,17 @@ export default function PublicListingView() {
                 </div>
               </div>
             </>
+            
+            {/* View Details Button for each listing */}
+            <div className="px-6 pb-6">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedListing(listing)}
+                className="w-full"
+              >
+                View Details
+              </Button>
+            </div>
           )}
         </DialogContent>
       </Dialog>
