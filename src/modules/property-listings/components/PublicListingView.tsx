@@ -33,6 +33,7 @@ export default function PublicListingView() {
   const { tenant } = useTenant()
   const [listings, setListings] = useState(mockListings.sampleListings)
   const [selectedListing, setSelectedListing] = useState<any>(null)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   
   // add closeModal helper
   const closeModal = () => setSelectedListing(null)
@@ -101,6 +102,18 @@ export default function PublicListingView() {
     } else {
       window.open(`mailto:${listing.contactInfo.email}?subject=Inquiry about ${listing.title}`)
     }
+  }
+
+  const prevImage = () => {
+    setCurrentImageIndex(prev => 
+      prev === 0 ? selectedListing.images.length - 1 : prev - 1
+    )
+  }
+
+  const nextImage = () => {
+    setCurrentImageIndex(prev => 
+      prev === selectedListing.images.length - 1 ? 0 : prev + 1
+    )
   }
 
   // Compute average rent for meta tags
@@ -176,17 +189,26 @@ export default function PublicListingView() {
         </div>
       </div>
 
+      {/* Modal for listing details */}
+      <Dialog open={!!selectedListing} onOpenChange={closeModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedListing && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{selectedListing.title}</DialogTitle>
+              </DialogHeader>
+              
               <div className="space-y-6">
                 {/* Image Gallery */}
                 <div className="relative">
                   <div className="relative overflow-hidden rounded-lg">
                     <div 
                       className="cursor-pointer"
-                      onClick={() => setSelectedListing(listing)}
+                      onClick={() => setSelectedListing(selectedListing)}
                     >
                       <img
-                        src={listing.images[0]}
-                        alt={listing.title}
+                        src={selectedListing.images[currentImageIndex]}
+                        alt={selectedListing.title}
                         className="w-full h-48 object-cover hover:opacity-90 transition-opacity"
                       />
                     </div>
@@ -305,11 +327,11 @@ export default function PublicListingView() {
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Button className="flex-1">
+                    <Button className="flex-1" onClick={() => handleContact(selectedListing, 'phone')}>
                       <Phone className="w-4 h-4 mr-2" />
                       Call {selectedListing.contactInfo.phone}
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" onClick={() => handleContact(selectedListing, 'email')}>
                       <Mail className="w-4 h-4 mr-2" />
                       Email {selectedListing.contactInfo.email}
                     </Button>
@@ -317,17 +339,6 @@ export default function PublicListingView() {
                 </div>
               </div>
             </>
-            
-            {/* View Details Button for each listing */}
-            <div className="px-6 pb-6">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedListing(listing)}
-                className="w-full"
-              >
-                View Details
-              </Button>
-            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -337,17 +348,6 @@ export default function PublicListingView() {
         <div className="mb-6 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-                    {/* View Details Button */}
-                    <div className="mb-4">
-                      <Button
-                        onClick={() => setSelectedListing(listing)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        View Details
-                      </Button>
-                    </div>
-
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -495,7 +495,7 @@ export default function PublicListingView() {
                     </div>
                   )}
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-4">
                     <Button 
                       size="sm" 
                       className="flex-1"
@@ -512,6 +512,17 @@ export default function PublicListingView() {
                     >
                       <Mail className="h-4 w-4 mr-1" />
                       Email
+                    </Button>
+                  </div>
+
+                  {/* View Details Button */}
+                  <div className="mb-4">
+                    <Button
+                      onClick={() => setSelectedListing(listing)}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      View Details
                     </Button>
                   </div>
                 </CardContent>
