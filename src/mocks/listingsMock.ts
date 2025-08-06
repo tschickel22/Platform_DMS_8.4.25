@@ -21,6 +21,15 @@ export interface PropertyListing {
   updatedAt: string
 }
 
+export function deleteListing(id: string) {
+  const index = mockListings.findIndex(listing => listing.id === id)
+  if (index !== -1) {
+    const deletedListing = mockListings[index]
+    mockListings.splice(index, 1)
+    return deletedListing
+  }
+  return null
+}
 export const mockListings: PropertyListing[] = [
   {
     id: '1',

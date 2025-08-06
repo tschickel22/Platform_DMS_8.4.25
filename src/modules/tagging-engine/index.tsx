@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Plus, Tag, Hash, Target } from 'lucide-react'
 
+import TagSelector from './components/TagSelector'
 export default function TaggingEngine() {
   return (
     <div className="space-y-6">
@@ -70,6 +71,9 @@ export default function TaggingEngine() {
     </div>
   )
 }
+
+// Export components for use in other modules
+export { TagSelector }
 
 // Export components for use in other modules
 export { TagSelector } from './components/TagSelector'
