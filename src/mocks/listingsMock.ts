@@ -1,4 +1,5 @@
 // Mock data for property listings
+
 export interface PropertyListing {
   id: string
   title: string
@@ -21,24 +22,6 @@ export interface PropertyListing {
   updatedAt: string
 }
 
-export function deleteListing(id: string) {
-  const index = mockListings.findIndex(listing => listing.id === id)
-  if (index !== -1) {
-    const deletedListing = mockListings[index]
-    mockListings.splice(index, 1)
-    return deletedListing
-
-export function addListing(newListing: PropertyListing) {
-  mockListings.push({
-    ...newListing,
-    id: (mockListings.length + 1).toString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  })
-}
-  }
-  return null
-}
 export const mockListings: PropertyListing[] = [
   {
     id: '1',
@@ -142,5 +125,27 @@ export const mockListings: PropertyListing[] = [
   }
 ]
 
-export const getActiveListings = () => mockListings.filter(listing => listing.status === 'active')
-export const getListingById = (id: string) => mockListings.find(listing => listing.id === id)
+export function deleteListing(id: string) {
+  const index = mockListings.findIndex(listing => listing.id === id)
+  if (index !== -1) {
+    const deletedListing = mockListings[index]
+    mockListings.splice(index, 1)
+    return deletedListing
+  }
+  return null
+}
+
+export function addListing(newListing: PropertyListing) {
+  mockListings.push({
+    ...newListing,
+    id: (mockListings.length + 1).toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export const getActiveListings = () =>
+  mockListings.filter(listing => listing.status === 'active')
+
+export const getListingById = (id: string) =>
+  mockListings.find(listing => listing.id === id)
