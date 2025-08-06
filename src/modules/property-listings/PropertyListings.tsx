@@ -292,5 +292,6 @@ export default function PropertyListings() {
         } />
       <Route path="*" element={<PropertyListingsDashboard />} />
     </div>
+    </div>
   )
 }
