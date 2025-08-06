@@ -19,7 +19,7 @@ import {
   Eye,
   X,
   ChevronLeft,
-  ChevronRight,
+  ChevronRight
   Search,
   Filter,
   Heart,
@@ -37,8 +37,6 @@ export default function PublicListingView() {
   const [priceRange, setPriceRange] = useState('all')
   const [propertyType, setPropertyType] = useState('all')
   const [favorites, setFavorites] = useState<string[]>([])
-  const [selectedListing, setSelectedListing] = useState(null)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Filter listings based on search and filters
   useEffect(() => {
@@ -172,6 +170,157 @@ export default function PublicListingView() {
           </div>
         </div>
       </div>
+
+      {/* Listing Details Modal */}
+      <Dialog open={!!selectedListing} onOpenChange={closeModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedListing && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">
+                  {selectedListing.title}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Image Gallery */}
+                <div className="relative">
+                  <div className="relative overflow-hidden rounded-lg">
+                    <img
+                      src={selectedListing.images[currentImageIndex]}
+                      alt={`${selectedListing.title} - Image ${currentImageIndex + 1}`}
+                      className="w-full h-96 object-cover"
+                    />
+                    
+                    {/* Image Navigation */}
+                    {selectedListing.images.length > 1 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                          onClick={prevImage}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                          onClick={nextImage}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Image Counter */}
+                        <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                          {currentImageIndex + 1} / {selectedListing.images.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Image Thumbnails */}
+                  {selectedListing.images.length > 1 && (
+                    <div className="flex gap-2 mt-4 overflow-x-auto">
+                      {selectedListing.images.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`Thumbnail ${index + 1}`}
+                          className={`w-20 h-20 object-cover rounded cursor-pointer transition-opacity ${
+                            index === currentImageIndex ? 'opacity-100 ring-2 ring-blue-500' : 'opacity-60 hover:opacity-80'
+                          }`}
+                          onClick={() => setCurrentImageIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Property Details */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Property Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {selectedListing.address}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <Bed className="w-4 h-4 mr-1" />
+                          {selectedListing.bedrooms} bed
+                        </div>
+                        <div className="flex items-center">
+                          <Bath className="w-4 h-4 mr-1" />
+                          {selectedListing.bathrooms} bath
+                        </div>
+                        <div className="flex items-center">
+                          <Square className="w-4 h-4 mr-1" />
+                          {selectedListing.squareFootage} sq ft
+                        </div>
+                      </div>
+                      <div className="text-3xl font-bold text-blue-600">
+                        ${selectedListing.rent.toLocaleString()}
+                        <span className="text-lg text-gray-500 font-normal">/month</span>
+                      </div>
+                      <div>
+                        <Badge 
+                          variant={selectedListing.status === 'active' ? 'default' : 'secondary'}
+                          className={selectedListing.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                        >
+                          {selectedListing.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Description</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      {selectedListing.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Amenities */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Amenities</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedListing.amenities.map((amenity, index) => (
+                      <Badge key={index} variant="outline">
+                        {amenity}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pet Policy */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Pet Policy</h3>
+                  <p className="text-gray-600">{selectedListing.petPolicy}</p>
+                </div>
+
+                {/* Contact Information */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button className="flex-1">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call {selectedListing.contactInfo.phone}
+                    </Button>
+                    <Button variant="outline" className="flex-1">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email {selectedListing.contactInfo.email}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search and Filters */}
