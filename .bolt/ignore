@@ -27,3 +27,8 @@ src/
 !src/hooks/use-toast.ts
 !src/hooks/useManagedMenu.ts
 !src/modules/land-management/
+!src/modules/property-listings/
+!src/components/
+!src/mocks/
+!src/modules/property-listings/PropertyListings.tsx
+!src/modules/tagging-engine/

@@ -1,227 +1,156 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Plus, X, Search, Tag as TagIcon } from 'lucide-react'
-import { Tag, TagType } from '../types'
-import { useTagging } from '../hooks/useTagging'
-import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { X, Plus } from 'lucide-react'
+
+interface Tag {
+  id: string
+  name: string
+  color: string
+  category?: string
+}
 
 interface TagSelectorProps {
-  entityId: string
-  entityType: TagType
   selectedTags?: Tag[]
-  onTagsChange: (tags: Tag[]) => void
+  availableTags?: Tag[]
+  onTagsChange?: (tags: Tag[]) => void
   placeholder?: string
   maxTags?: number
-  allowCreate?: boolean
-  className?: string
 }
 
 export function TagSelector({
-  entityId,
-  entityType,
   selectedTags = [],
+  availableTags = [],
   onTagsChange,
-  placeholder = "Add tags...",
-  maxTags,
-  allowCreate = true,
-  className
+  placeholder = "Search or create tags...",
+  maxTags
 }: TagSelectorProps) {
-  const {
-    tags,
-    searchTags,
-    createTag,
-    assignTag,
-    removeTag,
-    getEntityTags
-  } = useTagging()
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentTags, setCurrentTags] = useState<Tag[]>(selectedTags)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    // Load current tags for the entity
-    const entityTags = getEntityTags(entityId, entityType)
-    setCurrentTags(entityTags)
-  }, [entityId, entityType])
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setSearchQuery('')
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const availableTags = searchTags(searchQuery, entityType).filter(tag => 
-    !currentTags.some(selectedTag => selectedTag.id === tag.id)
+  const filteredTags = availableTags.filter(tag =>
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    !selectedTags.some(selected => selected.id === tag.id)
   )
 
-  const handleTagSelect = async (tag: Tag) => {
-    if (maxTags && currentTags.length >= maxTags) {
-      return
-    }
+  const handleAddTag = (tag: Tag) => {
+    if (maxTags && selectedTags.length >= maxTags) return
+    const newTags = [...selectedTags, tag]
+    onTagsChange?.(newTags)
+    setSearchTerm('')
+  }
 
-    const updatedTags = [...currentTags, tag]
-    setCurrentTags(updatedTags)
-    onTagsChange(updatedTags)
+  const handleRemoveTag = (tagId: string) => {
+    const newTags = selectedTags.filter(tag => tag.id !== tagId)
+    onTagsChange?.(newTags)
+  }
+
+  const handleCreateTag = () => {
+    if (!searchTerm.trim()) return
     
-    // Assign tag to entity
-    await assignTag(tag.id, entityId, entityType)
-    
-    setSearchQuery('')
-    setIsOpen(false)
-  }
-
-  const handleTagRemove = async (tagToRemove: Tag) => {
-    const updatedTags = currentTags.filter(tag => tag.id !== tagToRemove.id)
-    setCurrentTags(updatedTags)
-    onTagsChange(updatedTags)
-    
-    // Remove tag from entity
-    await removeTag(tagToRemove.id, entityId, entityType)
-  }
-
-  const handleCreateTag = async () => {
-    if (!searchQuery.trim()) return
-
-    try {
-      const newTag = await createTag({
-        name: searchQuery.trim(),
-        type: [entityType],
-        color: '#3b82f6'
-      })
-
-      await handleTagSelect(newTag)
-    } catch (error) {
-      console.error('Failed to create tag:', error)
+    const newTag: Tag = {
+      id: `tag-${Date.now()}`,
+      name: searchTerm.trim(),
+      color: '#3b82f6'
     }
+    
+    handleAddTag(newTag)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      e.preventDefault()
-      if (availableTags.length > 0) {
-        handleTagSelect(availableTags[0])
-      } else if (allowCreate) {
-        handleCreateTag()
-      }
-    } else if (e.key === 'Escape') {
-      setIsOpen(false)
-      setSearchQuery('')
-    }
-  }
+  const canCreateTag = searchTerm.trim() && 
+    !availableTags.some(tag => tag.name.toLowerCase() === searchTerm.toLowerCase()) &&
+    (!maxTags || selectedTags.length < maxTags)
 
   return (
-    <div className={cn("relative", className)} ref={dropdownRef}>
-      {/* Selected Tags */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        {currentTags.map((tag) => (
-          <Badge
-            key={tag.id}
-            style={{ backgroundColor: tag.color, color: 'white' }}
-            className="flex items-center space-x-1 pr-1"
-          >
-            <span>{tag.name}</span>
-            <button
-              type="button"
-              onClick={() => handleTagRemove(tag)}
-              className="ml-1 hover:bg-white/20 rounded-full p-0.5"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Tags</CardTitle>
+        <CardDescription>
+          Select or create tags to organize your content
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Selected Tags */}
+        {selectedTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {selectedTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="secondary"
+                className="flex items-center gap-1"
+                style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+              >
+                {tag.name}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0 hover:bg-transparent"
+                  onClick={() => handleRemoveTag(tag.id)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+        )}
 
-      {/* Input */}
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value)
-            setIsOpen(true)
-          }}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={currentTags.length === 0 ? placeholder : "Add more tags..."}
-          className="pr-10"
-        />
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          {isOpen ? (
-            <X className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <TagIcon className="h-4 w-4 text-muted-foreground" />
+        {/* Search Input */}
+        <div className="space-y-2">
+          <Input
+            placeholder={placeholder}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={maxTags ? selectedTags.length >= maxTags : false}
+          />
+          
+          {/* Create New Tag Button */}
+          {canCreateTag && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreateTag}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create "{searchTerm}"
+            </Button>
           )}
         </div>
-      </div>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg">
-          <CardContent className="p-2 max-h-60 overflow-y-auto">
-            {availableTags.length > 0 ? (
-              <div className="space-y-1">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => handleTagSelect(tag)}
-                    className="w-full flex items-center space-x-2 p-2 hover:bg-accent rounded-md text-left"
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: tag.color }}
-                    />
-                    <span className="font-medium">{tag.name}</span>
-                    {tag.description && (
-                      <span className="text-sm text-muted-foreground truncate">
-                        - {tag.description}
-                      </span>
-                    )}
-                    <div className="ml-auto">
-                      <Badge variant="outline" className="text-xs">
-                        {tag.category.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : searchQuery.trim() ? (
-              <div className="p-2">
-                {allowCreate ? (
-                  <button
-                    type="button"
-                    onClick={handleCreateTag}
-                    className="w-full flex items-center space-x-2 p-2 hover:bg-accent rounded-md text-left"
-                  >
-                    <Plus className="h-4 w-4 text-blue-500" />
-                    <span>Create tag "{searchQuery}"</span>
-                  </button>
-                ) : (
-                  <div className="text-sm text-muted-foreground p-2">
-                    No tags found matching "{searchQuery}"
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground p-2">
-                Start typing to search tags
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* Available Tags */}
+        {filteredTags.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Available tags:</p>
+            <div className="flex flex-wrap gap-2">
+              {filteredTags.slice(0, 10).map((tag) => (
+                <Button
+                  key={tag.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddTag(tag)}
+                  className="h-8"
+                  disabled={maxTags ? selectedTags.length >= maxTags : false}
+                >
+                  {tag.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Max Tags Warning */}
+        {maxTags && selectedTags.length >= maxTags && (
+          <p className="text-sm text-muted-foreground">
+            Maximum of {maxTags} tags allowed
+          </p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
+
+export default TagSelector
+
+// Export the Tag interface for use in other components
+export type { Tag }

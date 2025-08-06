@@ -235,3 +235,5 @@ export function TagFilter({
     </div>
   )
 }
+// At the bottom of TagFilter.tsx
+export default TagFilter

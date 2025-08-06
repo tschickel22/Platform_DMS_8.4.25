@@ -1,7 +1,4 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Bell, Search, User, LogOut } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -39,15 +36,11 @@ export default function Header() {
               <div className="hidden md:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
-            </div>
-            
-            <Button variant="ghost" size="sm" onClick={logout}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      <div className="flex items-center gap-4">
+        {/* Header actions can go here if needed */}
       </div>
     </header>
+  )
+}
   )
 }

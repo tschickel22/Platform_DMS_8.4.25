@@ -19,7 +19,10 @@ import {
   ClipboardCheck,
   FileCheck,
   Building,
-  Shield
+  Shield,
+  ListChecks,
+  MapPin,
+  ShieldCheck
 } from 'lucide-react'
 import { isColorLight } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -44,8 +47,11 @@ const navigationItems = [
     hasSubmenu: true,
     items: [
       { title: 'Inventory', href: '/inventory', icon: Package },
+      { title: 'Land Management', href: '/land', icon: MapPin },
+      { title: 'Property Listings', href: '/listings', icon: Building },
       { title: 'PDI Checklist', href: '/pdi', icon: ClipboardCheck },
-      { title: 'Delivery Tracker', href: '/delivery', icon: Truck }
+      { title: 'Delivery Tracker', href: '/delivery', icon: Truck },
+      { title: 'Warranty Mgmt', href: '/warranty', icon: ShieldCheck }
     ]
   },
   {
@@ -136,7 +142,7 @@ export default function Sidebar() {
         {tenant?.branding?.logo ? (
           <img 
             src={tenant.branding.logo} 
-            alt="Company Logo"
+            to="/listings" 
             className="max-h-10 object-contain h-8 w-auto"
           />
         ) : (
