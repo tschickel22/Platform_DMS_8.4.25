@@ -153,28 +153,37 @@ export default function ListingOverview() {
               variant="outline"
               onClick={() => setShareModalOpen(true)}
               className="gap-2"
-            >
-              <Share2 className="h-4 w-4" />
-              Share All Listings
-            </Button>
-            <Link to="/listings/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Listing
-            </Button>
-          </div>
-        </div>
-        <Button
-              className="hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Listing
-        </Button>
       </div>
 
       {/* Search and Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search & Filters
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShareModalOpen(true)}
+                className="gap-2"
+              >
+                <Share2 className="h-4 w-4" />
+                Share All Listings
+              </Button>
+              <Button asChild>
+                <Link to="/listings/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Listing
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
             Search & Filters
           </CardTitle>
