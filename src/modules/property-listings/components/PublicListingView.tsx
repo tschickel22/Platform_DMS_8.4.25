@@ -19,7 +19,7 @@ import {
   Eye,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
   Search,
   Filter,
   Heart,
