@@ -88,6 +88,8 @@ function App() {
                       </Layout>
                     </ProtectedRoute>
                   } />
+                  {/* Public listing routes - accessible without authentication */}
+                  <Route path="/public-listings/*" element={<PublicListingView />} />
                 </Routes>
                 <Toaster />
               </div>
