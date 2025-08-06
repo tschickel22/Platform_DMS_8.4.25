@@ -28,7 +28,7 @@ import {
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import { useTenant } from '@/contexts/TenantContext'
-import { Helmet } from 'react-helmet'
+import { Helmet } from 'react-helmet-async'
 
 export default function PublicListingView() {
   const { tenant } = useTenant()
