@@ -105,6 +105,17 @@ function PropertyListingsDashboard() {
 
   const handleShareListing = (listing: Listing) => {
     setSelectedListingForShare(listing)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Property Listings Dashboard</h1>
+          <p className="text-muted-foreground">Manage and track all your property listings</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
             variant="outline" 
             onClick={() => setShowShareModal(true)}
           >
@@ -336,16 +347,9 @@ function PropertyListingsDashboard() {
       <ShareAllListingsModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        listings={filteredListings}
-        baseUrl="https://nimble-longma-257ddd.netlify.app"
+        listings={listings}
       />
-
-      {/* Individual Listing Share Modal */}
-      <ShareOptionsModal
-        isOpen={!!selectedListingForShare}
-        onClose={() => setSelectedListingForShare(null)}
-        listing={selectedListingForShare}
-        baseUrl="https://nimble-longma-257ddd.netlify.app"
+    </div>
   )
 }
 
