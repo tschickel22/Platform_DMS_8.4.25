@@ -1,157 +1,169 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, MapPin, Ruler, DollarSign } from 'lucide-react'
+import { MapPin, Edit, Trash2, Eye, Plus, ArrowLeft } from 'lucide-react'
+import { useLandManagement } from '../hooks/useLandManagement'
 import { useToast } from '@/hooks/use-toast'
 
-export function LandList({ lands, onDelete }) {
+export default function LandList() {
+  const { lands, deleteLand } = useLandManagement()
   const { toast } = useToast()
 
-  const handleDelete = async (land) => {
-    if (window.confirm(`Are you sure you want to delete "${land.name}"?`)) {
+  const handleDelete = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
-        await onDelete(land.id)
+        await deleteLand(id)
+        toast({
+          title: "Success",
+          description: `${name} has been deleted successfully.`,
+        })
       } catch (error) {
-        console.error('Error deleting land:', error)
+        toast({
+          title: "Error",
+          description: "Failed to delete land parcel.",
+          variant: "destructive",
+        })
       }
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'available':
-        return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'sold':
-        return 'bg-red-100 text-red-800'
-      case 'reserved':
-        return 'bg-blue-100 text-blue-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'Residential':
-        return 'bg-blue-100 text-blue-800'
-      case 'Commercial':
-        return 'bg-purple-100 text-purple-800'
-      case 'Agricultural':
-        return 'bg-green-100 text-green-800'
-      case 'Industrial':
-        return 'bg-orange-100 text-orange-800'
-      case 'Mixed Use':
-        return 'bg-indigo-100 text-indigo-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (!lands || lands.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">No land parcels found</h3>
-        <p className="text-sm text-muted-foreground">
-          Get started by adding your first land parcel to the inventory.
-        </p>
-      </div>
-    )
-  }
-
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {lands.map((land) => (
-        <Card key={land.id} className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-lg">{land.name}</CardTitle>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3 mr-1" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/land">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Land Parcels</h1>
+            <p className="text-muted-foreground">
+              Manage your land inventory
+            </p>
+          </div>
+        </div>
+        <Button asChild>
+          <Link to="/land/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Land Parcel
+          </Link>
+        </Button>
+      </div>
+
+      {/* Land Grid */}
+      {lands.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {lands.map((land) => (
+            <Card key={land.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">{land.name}</CardTitle>
+                  </div>
+                  <Badge variant={
+                    land.status === 'available' ? 'default' :
+                    land.status === 'pending' ? 'secondary' :
+                    land.status === 'sold' ? 'destructive' : 'outline'
+                  }>
+                    {land.status}
+                  </Badge>
+                </div>
+                <CardDescription className="line-clamp-2">
                   {land.location}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/land/edit/${land.id}`}>
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(land)}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Badge className={getStatusColor(land.status)}>
-                {land.status}
-              </Badge>
-              <Badge className={getTypeColor(land.type)}>
-                {land.type}
-              </Badge>
-            </div>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Size</p>
+                      <p className="font-medium">{land.size} acres</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Price</p>
+                      <p className="font-medium">${land.price.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Type</p>
+                      <p className="font-medium">{land.type}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Per Acre</p>
+                      <p className="font-medium">${Math.round(land.price / land.size).toLocaleString()}</p>
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center">
-                <Ruler className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{land.size} acres</span>
-              </div>
-              <div className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>${land.price?.toLocaleString()}</span>
-              </div>
-            </div>
-
-            {land.zoning && (
-              <div className="text-sm">
-                <span className="font-medium">Zoning:</span> {land.zoning}
-              </div>
-            )}
-
-            {land.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {land.description}
-              </p>
-            )}
-
-            {land.amenities && land.amenities.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Amenities:</div>
-                <div className="flex flex-wrap gap-1">
-                  {land.amenities.slice(0, 3).map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {amenity}
-                    </Badge>
-                  ))}
-                  {land.amenities.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{land.amenities.length - 3} more
-                    </Badge>
+                  {land.amenities && land.amenities.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Amenities</p>
+                      <div className="flex flex-wrap gap-1">
+                        {land.amenities.slice(0, 3).map((amenity, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {amenity}
+                          </Badge>
+                        ))}
+                        {land.amenities.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{land.amenities.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </div>
-              </div>
-            )}
 
-            <div className="text-xs text-muted-foreground pt-2 border-t">
-              Updated: {new Date(land.updatedAt).toLocaleDateString()}
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/land/detail/${land.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
+                      </Link>
+                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/land/edit/${land.id}`}>
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDelete(land.id, land.name)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">No land parcels yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Get started by adding your first land parcel to the inventory
+              </p>
+              <Button asChild>
+                <Link to="/land/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Land Parcel
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   )
 }
