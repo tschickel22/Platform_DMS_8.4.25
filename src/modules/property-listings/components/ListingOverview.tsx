@@ -55,10 +55,7 @@ export default function ListingOverview() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [selectedListingForShare, setSelectedListingForShare] = useState<any>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [selectedListing, setSelectedListing] = useState<any>(null)
-  const [showShareModal, setShowShareModal] = useState(false)
 
   // Get unique statuses for filter dropdown
   const uniqueStatuses = useMemo(() => {
@@ -117,15 +114,6 @@ export default function ListingOverview() {
     }
   }
 
-  const handleShareListing = (listing: any) => {
-    if (!listing) {
-      console.error('No listing provided for sharing')
-      return
-    }
-    setSelectedListing(listing)
-    setShowShareModal(true)
-  }
-
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
       return <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
@@ -153,13 +141,7 @@ export default function ListingOverview() {
   }
 
   const handleStatusFilter = (status: string) => {
-    setSelectedListingForShare(listing)
     setStatusFilter(status)
-  }
-
-  const handleCloseShareModal = () => {
-    setShareModalOpen(false)
-    setSelectedListingForShare(null)
   }
 
   return (
@@ -401,8 +383,7 @@ export default function ListingOverview() {
       {/* Share Modal */}
       <ShareListingModal
         isOpen={shareModalOpen}
-        onClose={handleCloseShareModal}
-        listing={selectedListingForShare}
+        onClose={() => setShareModalOpen(false)}
         listingUrl="/public-listings/all"
         title="Share All Listings"
       />

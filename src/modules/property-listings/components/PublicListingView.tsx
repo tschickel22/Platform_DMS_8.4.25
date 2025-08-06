@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -81,207 +80,176 @@ function ImageGallery({ images, title }: { images: string[], title: string }) {
 
 // Single Listing Detail View
 function SingleListingView({ listing }: { listing: PropertyListing }) {
-  const mainImage = listing.images && listing.images.length > 0 ? listing.images[0] : null
-  const propertyDetails = `${listing.bedrooms} bed, ${listing.bathrooms} bath, ${listing.squareFootage} sq ft`
-  const features = listing.amenities?.slice(0, 5).join(', ') || 'Great amenities'
-  const description = listing.description?.substring(0, 160) || `Beautiful ${listing.propertyType} in ${listing.address}`
-
   return (
-    <>
-      {/* SEO Meta Tags for Social Sharing */}
-      <Helmet>
-        <title>{listing.title} - ${listing.rent.toLocaleString()}/month | Property Listing</title>
-        <meta name="description" content={`${propertyDetails} • ${description}`} />
-        
-        {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content={`${listing.title} - $${listing.rent.toLocaleString()}/month`} />
-        <meta property="og:description" content={`${propertyDetails} • ${description} • Features: ${features}`} />
-        {mainImage && <meta property="og:image" content={mainImage} />}
-        <meta property="og:url" content={window.location.href} />
-        <meta property="og:site_name" content="Property Listings" />
-        
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${listing.title} - $${listing.rent.toLocaleString()}/month`} />
-        <meta name="twitter:description" content={`${propertyDetails} • ${description}`} />
-        {mainImage && <meta name="twitter:image" content={mainImage} />}
-        
-        {/* Additional SEO */}
-        <meta name="keywords" content={`${listing.propertyType}, rental, ${listing.bedrooms} bedroom, ${listing.bathrooms} bathroom, ${listing.amenities?.join(', ')}`} />
-        <link rel="canonical" href={window.location.href} />
-      </Helmet>
-
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b">
-          <div className="max-w-6xl mx-auto px-4 py-4">
-            <Link 
-              to="/public-listings/all" 
-              className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back to all listings
-            </Link>
-            
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{listing.title}</h1>
-                <p className="text-lg text-gray-600 flex items-center mt-2">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  {listing.address}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-green-600">
-                  ${listing.rent.toLocaleString()}/month
-                </div>
-                <div className="flex space-x-2 mt-2">
-                  <Button variant="outline" size="sm">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <Link 
+            to="/public-listings/all" 
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to all listings
+          </Link>
+          
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{listing.title}</h1>
+              <p className="text-lg text-gray-600 flex items-center mt-2">
+                <MapPin className="h-5 w-5 mr-2" />
+                {listing.address}
+              </p>
             </div>
-          </div>
-        </div>
-
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Image Gallery */}
-              <ImageGallery images={listing.images} title={listing.title} />
-
-              {/* Property Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Property Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="flex items-center space-x-2">
-                      <Bed className="h-5 w-5 text-gray-500" />
-                      <span>{listing.bedrooms} Bedrooms</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Bath className="h-5 w-5 text-gray-500" />
-                      <span>{listing.bathrooms} Bathrooms</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Square className="h-5 w-5 text-gray-500" />
-                      <span>{listing.squareFootage.toLocaleString()} sq ft</span>
-                    </div>
-                    <div>
-                      <Badge variant="secondary" className="capitalize">
-                        {listing.propertyType}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="prose max-w-none">
-                    <h3 className="text-lg font-semibold mb-2">Description</h3>
-                    <p className="text-gray-700">{listing.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Amenities */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Amenities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.amenities.map((amenity, index) => (
-                      <Badge key={index} variant="outline">
-                        {amenity}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Pet Policy */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pet Policy</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700">{listing.petPolicy}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Contact Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-500" />
-                    <a 
-                      href={`tel:${listing.contactInfo.phone}`}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      {listing.contactInfo.phone}
-                    </a>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-500" />
-                    <a 
-                      href={`mailto:${listing.contactInfo.email}`}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      {listing.contactInfo.email}
-                    </a>
-                  </div>
-                  <Button className="w-full mt-4">
-                    Schedule a Tour
-                  </Button>
-                  <Button variant="outline" className="w-full">
-                    Send Message
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Quick Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Property Type:</span>
-                    <span className="font-medium capitalize">{listing.propertyType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status:</span>
-                    <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
-                      {listing.status}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Listed:</span>
-                    <span className="font-medium">
-                      {new Date(listing.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-green-600">
+                ${listing.rent.toLocaleString()}/month
+              </div>
+              <div className="flex space-x-2 mt-2">
+                <Button variant="outline" size="sm">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </>
+
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Image Gallery */}
+            <ImageGallery images={listing.images} title={listing.title} />
+
+            {/* Property Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <Bed className="h-5 w-5 text-gray-500" />
+                    <span>{listing.bedrooms} Bedrooms</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Bath className="h-5 w-5 text-gray-500" />
+                    <span>{listing.bathrooms} Bathrooms</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Square className="h-5 w-5 text-gray-500" />
+                    <span>{listing.squareFootage.toLocaleString()} sq ft</span>
+                  </div>
+                  <div>
+                    <Badge variant="secondary" className="capitalize">
+                      {listing.propertyType}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="prose max-w-none">
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-gray-700">{listing.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Amenities */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Amenities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {listing.amenities.map((amenity, index) => (
+                    <Badge key={index} variant="outline">
+                      {amenity}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pet Policy */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pet Policy</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700">{listing.petPolicy}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Contact Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-5 w-5 text-gray-500" />
+                  <a 
+                    href={`tel:${listing.contactInfo.phone}`}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    {listing.contactInfo.phone}
+                  </a>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-5 w-5 text-gray-500" />
+                  <a 
+                    href={`mailto:${listing.contactInfo.email}`}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    {listing.contactInfo.email}
+                  </a>
+                </div>
+                <Button className="w-full mt-4">
+                  Schedule a Tour
+                </Button>
+                <Button variant="outline" className="w-full">
+                  Send Message
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Property Type:</span>
+                  <span className="font-medium capitalize">{listing.propertyType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+                    {listing.status}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Listed:</span>
+                  <span className="font-medium">
+                    {new Date(listing.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -464,25 +432,19 @@ export default function PublicListingView() {
     
     if (!listing) {
       return (
-        <>
-          <Helmet>
-            <title>Listing Not Found</title>
-            <meta name="description" content="The requested property listing could not be found." />
-          </Helmet>
-          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <Card className="max-w-md w-full mx-4">
-              <CardContent className="text-center py-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Listing Not Found</h2>
-                <p className="text-gray-600 mb-6">
-                  The property you're looking for doesn't exist or is no longer available.
-                </p>
-                <Link to="/public-listings/all">
-                  <Button>View All Listings</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-        </>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Card className="max-w-md w-full mx-4">
+            <CardContent className="text-center py-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Listing Not Found</h2>
+              <p className="text-gray-600 mb-6">
+                The property you're looking for doesn't exist or is no longer available.
+              </p>
+              <Link to="/public-listings/all">
+                <Button>View All Listings</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       )
     }
 
