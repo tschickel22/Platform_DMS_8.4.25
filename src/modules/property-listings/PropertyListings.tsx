@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Building } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -292,6 +291,6 @@ export default function PropertyListings() {
           </Card>
         } />
       <Route path="*" element={<PropertyListingsDashboard />} />
-    </Routes>
+    </div>
   )
 }
