@@ -32,16 +32,18 @@ import { mockListings } from '@/mocks/listingsMock'
 import { useTenant } from '@/contexts/TenantContext'
 import { Helmet } from 'react-helmet-async'
 
-  const selectedListing = listingId
-    ? mockListings.sampleListings.find(listing => listing.id === listingId)
-    : null
+export default function PublicListings() {
+  const { listingId } = useParams()
+  const navigate = useNavigate()
   const { tenant } = useTenant()
   const [searchTerm, setSearchTerm] = useState('')
   const [priceFilter, setPriceFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
   // Get the specific listing if listingId is provided
-  const selectedListing = listingId ? mockListings.find(listing => listing.id === listingId) : null
+  const selectedListing = listingId
+    ? mockListings.sampleListings.find(listing => listing.id === listingId)
+    : null
 
   // Filter listings for the grid view
   const filteredListings = useMemo(() => {
