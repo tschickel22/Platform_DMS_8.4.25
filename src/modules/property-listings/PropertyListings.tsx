@@ -55,6 +55,7 @@ function PropertyListingsDashboard() {
   const { toast } = useToast()
   const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [selectedListingForShare, setSelectedListingForShare] = useState<Listing | null>(null)
   const [shareModalListing, setShareModalListing] = useState<Listing | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -103,41 +104,7 @@ function PropertyListingsDashboard() {
   }
 
   const handleShareListing = (listing: Listing) => {
-    setShareModalListing(listing)
-  }
-
-  const fallbackShare = (url: string, listing: Listing) => {
-    // Copy to clipboard as fallback
-    navigator.clipboard.writeText(url).then(() => {
-      toast({
-        title: "Link Copied!",
-        description: `Listing link for "${listing.title}" copied to clipboard`,
-      })
-    }).catch(() => {
-      // Final fallback - show the URL in a prompt
-      prompt('Copy this link to share the listing:', url)
-    })
-  }
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'rented': return 'bg-blue-100 text-blue-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Property Listings</h1>
-          <p className="text-muted-foreground">Manage your rental property listings</p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
+    setSelectedListingForShare(listing)
             variant="outline" 
             onClick={() => setShowShareModal(true)}
           >
@@ -369,9 +336,16 @@ function PropertyListingsDashboard() {
       <ShareAllListingsModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        listings={listings}
+        listings={filteredListings}
+        baseUrl="https://nimble-longma-257ddd.netlify.app"
       />
-    </div>
+
+      {/* Individual Listing Share Modal */}
+      <ShareOptionsModal
+        isOpen={!!selectedListingForShare}
+        onClose={() => setSelectedListingForShare(null)}
+        listing={selectedListingForShare}
+        baseUrl="https://nimble-longma-257ddd.netlify.app"
   )
 }
 
