@@ -150,5 +150,7 @@ export function TagSelector({
   )
 }
 
+export default TagSelector
+
 // Export the Tag interface for use in other components
 export type { Tag }
