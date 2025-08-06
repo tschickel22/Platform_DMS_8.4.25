@@ -138,18 +138,25 @@ export function ShareOptionsModal({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shareTitle,
-          text: shareDescription,
-          url: listingUrl,
+          title: shareData.title,
+          text: shareData.text,
+          url: shareData.url,
         })
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Native share failed:', err)
-          handleCopyLink() // Fallback to copy
+        toast({
+          title: "Shared successfully",
+          description: "The listing has been shared using your device's sharing options.",
+        })
+      } catch (error) {
+        // Only fallback to copy if user didn't cancel
+        if (error.name !== 'AbortError') {
+          console.error('Native share failed:', error)
+          handleCopyLink()
         }
       }
     } else {
-      handleCopyLink() // Fallback to copy
+      // Fallback to copy link if native share not supported
+      handleCopyLink()
+    }
     }
   }
 
