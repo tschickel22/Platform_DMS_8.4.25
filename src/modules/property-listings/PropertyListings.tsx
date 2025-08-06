@@ -56,7 +56,7 @@ function PropertyListingsDashboard() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-    const shareUrl = `${window.location.origin}/listings/public/${listing.id}`
+  const [typeFilter, setTypeFilter] = useState('all')
   const [priceRange, setPriceRange] = useState('all')
 
   // Filter listings based on search and filters
