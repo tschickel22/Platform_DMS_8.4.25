@@ -78,7 +78,8 @@ export default function PublicListings() {
   }
 
   const generateShareableUrl = (listing: any) => {
-    return `/public/listings/${listing.id}`
+    // always include the full origin so share dialogs get a valid URL
+    return `${window.location.origin}/public/listings/${listing.id}`
   }
 
   const handleShare = async (listing: any) => {
