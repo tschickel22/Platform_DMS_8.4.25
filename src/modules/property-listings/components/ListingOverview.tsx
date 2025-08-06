@@ -145,6 +145,7 @@ export default function ListingOverview() {
         </div>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
+              className="hover:bg-primary hover:text-primary-foreground transition-colors"
           Add New Listing
         </Button>
       </div>
@@ -309,7 +310,10 @@ export default function ListingOverview() {
 
       {/* Empty State */}
       {filteredAndSortedListings.length === 0 && (
-        <Card>
+        <Card 
+          className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-2 hover:border-primary/20"
+          onClick={() => handleStatusFilter('all')}
+        >
           <CardContent className="text-center py-12">
             <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-semibold mb-2">No listings found</h3>
@@ -329,10 +333,19 @@ export default function ListingOverview() {
               >
                 Clear Filters
               </Button>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Click to view all properties
+            </p>
           </CardContent>
         </Card>
-      )}
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-2 ${
+            statusFilter === 'available' 
+              ? 'border-green-200 bg-green-50/50' 
+              : 'hover:border-green-200'
+          }`}
+          onClick={() => handleStatusFilter('available')}
+        >
     </div>
   )
 }
