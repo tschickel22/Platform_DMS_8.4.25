@@ -1,261 +1,199 @@
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { 
-  Copy, 
-  Mail, 
-  MessageSquare, 
-  Facebook, 
-  Twitter, 
-  Linkedin,
-  Check,
-  ExternalLink,
-  Image
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Share2, Facebook, Twitter, Mail, MessageSquare, Copy, Check } from 'lucide-react'
+
+interface Listing {
+  id: string
+  title: string
+  description: string
+  address: string
+  rent: number
+  bedrooms: number
+  bathrooms: number
+  squareFootage: number
+  propertyType: string
+  status: string
+  amenities: string[]
+  petPolicy: string
+  images: string[]
+  contactInfo: {
+    phone: string
+    email: string
+  }
+  createdAt: string
+  updatedAt: string
+}
 
 interface ShareListingModalProps {
   isOpen: boolean
   onClose: () => void
-  listingUrl: string
-  listing: {
-    id: string
-    title: string
-    rent: number
-    address: string
-    bedrooms: number
-    bathrooms: number
-    squareFootage: number
-    description: string
-    images: string[]
-    amenities: string[]
-  }
+  listing: Listing | null
 }
 
-export default function ShareListingModal({ 
-  isOpen, 
-  onClose, 
-  listingUrl, 
-  title = "Share Listing" 
-}: ShareListingModalProps) {
-  const [copied, setCopied] = useState(false)
-  
-  // Guard clause to prevent errors if listing is undefined
+export default function ShareListingModal({ isOpen, onClose, listing }: ShareListingModalProps) {
+  const [copiedUrl, setCopiedUrl] = useState(false)
+
   if (!listing) {
     return null
   }
-  const { toast } = useToast()
-  const [customMessage, setCustomMessage] = useState('')
 
-  // Generate rich sharing content
-  const shareUrl = `${window.location.origin}/public-listings/${listing.id}`
-  const mainImage = listing.images && listing.images.length > 0 ? listing.images[0] : null
-  const features = listing.amenities?.slice(0, 3).join(', ') || 'Great amenities'
-  const propertyDetails = `${listing.bedrooms} bed, ${listing.bathrooms} bath, ${listing.squareFootage} sq ft`
+  const listingUrl = `${window.location.origin}/listings/${listing.id}`
   
-  const defaultMessage = `🏠 ${listing.title}
-💰 $${listing.rent.toLocaleString()}/month
-📍 ${listing.address}
-🛏️ ${propertyDetails}
-✨ Features: ${features}
-
-View details: ${shareUrl}`
-
-  // Generate meta tags for social preview
-  const generateMetaTags = () => {
-    return {
-      title: `${listing.title} - $${listing.rent.toLocaleString()}/month`,
-      description: `${propertyDetails} • ${listing.description?.substring(0, 150)}...`,
-      image: mainImage,
-      url: shareUrl
-    }
+  const shareContent = {
+    title: listing.title,
+    description: listing.description,
+    image: listing.images[0] || '',
+    url: listingUrl
   }
-  
-  const handleCopyToClipboard = async () => {
+
+  const handleCopyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(fullUrl)
-      setCopied(true)
-      toast({
-        title: "Copied!",
-        description: "Link copied to clipboard",
-      })
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(listingUrl)
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to copy link",
-        variant: "destructive",
-      })
+      console.error('Failed to copy URL:', err)
     }
   }
 
-  const handleEmailShare = () => {
-    const subject = `🏠 Property Listing: ${listing.title}`
-    const body = `Hi there!
+  const shareOnPlatform = (platform: string) => {
+    let shareUrl = ''
+    const encodedUrl = encodeURIComponent(listingUrl)
+    const encodedTitle = encodeURIComponent(listing.title)
+    const encodedDescription = encodeURIComponent(
+      `${listing.title} - $${listing.rent}/month • ${listing.bedrooms}BR/${listing.bathrooms}BA • ${listing.squareFootage} sq ft`
+    )
 
-I wanted to share this amazing property with you:
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
+        break
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedDescription}`
+        break
+      case 'email':
+        const emailSubject = encodeURIComponent(`Check out this property: ${listing.title}`)
+        const emailBody = encodeURIComponent(
+          `I found this great property that might interest you:\n\n${listing.title}\n$${listing.rent}/month\n${listing.address}\n\n${listing.description}\n\nView details: ${listingUrl}`
+        )
+        shareUrl = `mailto:?subject=${emailSubject}&body=${emailBody}`
+        break
+      case 'sms':
+        const smsText = encodeURIComponent(
+          `Check out this property: ${listing.title} - $${listing.rent}/month at ${listing.address}. ${listingUrl}`
+        )
+        shareUrl = `sms:?body=${smsText}`
+        break
+    }
 
-${defaultMessage}
-
-Let me know what you think!
-
-Best regards`
-    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    window.location.href = url
-  }
-
-  const handleSMSShare = () => {
-    const smsMessage = `🏠 ${listing.title} - $${listing.rent.toLocaleString()}/month at ${listing.address}. ${propertyDetails}. View: ${shareUrl}`
-    const message = customMessage || smsMessage
-    const url = `sms:?body=${encodeURIComponent(message)}`
-    window.location.href = url
-  }
-
-  const handleFacebookShare = () => {
-    const metaTags = generateMetaTags()
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(customMessage || defaultMessage)}`
-    window.open(url, '_blank', 'width=600,height=400')
-  }
-
-  const handleTwitterShare = () => {
-    const twitterMessage = customMessage || `🏠 ${listing.title} - $${listing.rent.toLocaleString()}/month\n📍 ${listing.address}\n${propertyDetails}\n${shareUrl}`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterMessage)}`
-    window.open(url, '_blank', 'width=600,height=400')
-  }
-
-  const handleLinkedInShare = () => {
-    const metaTags = generateMetaTags()
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(metaTags.title)}&summary=${encodeURIComponent(metaTags.description)}`
-    window.open(url, '_blank', 'width=600,height=400')
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400')
+    }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ExternalLink className="h-5 w-5" />
+            <Share2 className="h-5 w-5" />
             Share Listing
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-6">
+
+        <div className="space-y-4">
           {/* Listing Preview */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <div className="flex gap-4">
-              {mainImage && (
-                <div className="flex-shrink-0">
-                  <img 
-                    src={mainImage} 
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                {listing.images[0] && (
+                  <img
+                    src={listing.images[0]}
                     alt={listing.title}
-                    className="w-20 h-20 object-cover rounded-lg"
+                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                   />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">{listing.title}</h3>
+                  <p className="text-lg font-bold text-primary">${listing.rent}/month</p>
+                  <p className="text-xs text-muted-foreground truncate">{listing.address}</p>
+                  <div className="flex gap-1 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {listing.bedrooms}BR/{listing.bathrooms}BA
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {listing.squareFootage} sq ft
+                    </Badge>
+                  </div>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-lg truncate">{listing.title}</h3>
-                <p className="text-2xl font-bold text-blue-600">${listing.rent.toLocaleString()}/month</p>
-                <p className="text-sm text-gray-600 truncate">{listing.address}</p>
-                <p className="text-sm text-gray-500">{propertyDetails}</p>
-                {features && (
-                  <p className="text-xs text-gray-500 mt-1">✨ {features}</p>
-                )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Share URL */}
-          <div className="space-y-2">
-            <Label htmlFor="share-url">Share URL</Label>
-            <div className="flex gap-2">
-              <Input
-                id="share-url"
-                value={shareUrl}
-                readOnly
-                className="flex-1"
-              />
-              <Button
-                onClick={() => copyToClipboard(shareUrl)}
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Custom Message */}
-          <div className="space-y-2">
-            <Label htmlFor="custom-message">Custom Message (Optional)</Label>
-            <textarea
-              id="custom-message"
-              className="w-full p-3 border rounded-md resize-none"
-              rows={4}
-              placeholder={defaultMessage}
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
+          {/* Copy URL */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={listingUrl}
+              readOnly
+              className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted"
             />
-            <p className="text-xs text-gray-500">
-              Preview shows how your listing will appear when shared
-            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyUrl}
+              className="flex items-center gap-1"
+            >
+              {copiedUrl ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </>
+              )}
+            </Button>
           </div>
 
-          {/* Social Media Buttons */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Share Buttons */}
+          <div className="grid grid-cols-2 gap-2">
             <Button
-              onClick={shareViaEmail}
               variant="outline"
-              className="justify-start gap-2"
+              onClick={() => shareOnPlatform('facebook')}
+              className="flex items-center gap-2"
+            >
+              <Facebook className="h-4 w-4" />
+              Facebook
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => shareOnPlatform('twitter')}
+              className="flex items-center gap-2"
+            >
+              <Twitter className="h-4 w-4" />
+              Twitter
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => shareOnPlatform('email')}
+              className="flex items-center gap-2"
             >
               <Mail className="h-4 w-4" />
               Email
             </Button>
             <Button
-              onClick={shareViaSMS}
               variant="outline"
-              className="justify-start gap-2"
+              onClick={() => shareOnPlatform('sms')}
+              className="flex items-center gap-2"
             >
               <MessageSquare className="h-4 w-4" />
               SMS
-            </Button>
-            <Button
-              onClick={shareOnFacebook}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <Facebook className="h-4 w-4 text-blue-600" />
-              Facebook
-            </Button>
-            <Button
-              onClick={shareOnTwitter}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <Twitter className="h-4 w-4 text-sky-500" />
-              Twitter
-            </Button>
-            <Button
-              onClick={shareOnLinkedIn}
-              variant="outline"
-              className="justify-start gap-2 col-span-2"
-            >
-              <Linkedin className="h-4 w-4 text-blue-700" />
-              LinkedIn
-            </Button>
-          </div>
-
-          {/* Close Button */}
-          <div className="flex justify-end pt-4">
-            <Button onClick={onClose} variant="outline">
-              Close
             </Button>
           </div>
         </div>
@@ -263,5 +201,3 @@ Best regards`
     </Dialog>
   )
 }
-
-export default ShareListingModal
