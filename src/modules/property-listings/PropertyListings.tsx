@@ -92,9 +92,18 @@ function PropertyListingsDashboard() {
   const totalValue = filteredListings.reduce((sum, listing) => sum + listing.rent, 0)
   const avgRent = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
 
+  const handleDeleteListing = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this listing?')) {
+      setListings(prev => prev.filter(l => l.id !== id))
+      toast({
+        title: "Success",
+        description: "Listing deleted successfully",
+      })
+    }
+  }
+
   const handleShareListing = (listing: Listing) => {
     setShareModalListing(listing)
-    }
   }
 
   const fallbackShare = (url: string, listing: Listing) => {
@@ -348,11 +357,7 @@ function PropertyListingsDashboard() {
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleShareListing(listing)}
-                      >
+                    </div>
                   </CardContent>
                 </Card>
               ))}
