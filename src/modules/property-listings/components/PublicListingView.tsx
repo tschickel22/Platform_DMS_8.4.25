@@ -191,11 +191,16 @@ export default function PublicListingView() {
                 {/* Image Gallery */}
                 <div className="relative">
                   <div className="relative overflow-hidden rounded-lg">
-                    <img
-                      src={selectedListing.images[currentImageIndex]}
-                      alt={`${selectedListing.title} - Image ${currentImageIndex + 1}`}
-                      className="w-full h-96 object-cover"
-                    />
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => setSelectedListing(listing)}
+                    >
+                      <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className="w-full h-48 object-cover hover:opacity-90 transition-opacity"
+                      />
+                    </div>
                     
                     {/* Image Navigation */}
                     {selectedListing.images.length > 1 && (
@@ -332,6 +337,17 @@ export default function PublicListingView() {
         <div className="mb-6 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
+                    {/* View Details Button */}
+                    <div className="mb-4">
+                      <Button
+                        onClick={() => setSelectedListing(listing)}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        View Details
+                      </Button>
+                    </div>
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
