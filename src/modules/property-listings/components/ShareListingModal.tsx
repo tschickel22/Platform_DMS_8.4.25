@@ -1,79 +1,73 @@
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { 
-  Copy, 
-  Mail, 
-  MessageSquare, 
-  Facebook, 
-  Twitter, 
-  Linkedin,
-  Check,
-  ExternalLink,
-  Image
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
+import { Share2, Facebook, Twitter, Linkedin, Mail, MessageSquare, Copy, Check, X } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
+
+interface Listing {
+  id: string
+  title: string
+  rent: number
+  address: string
+  bedrooms: number
+  bathrooms: number
+  squareFootage: number
+  images: string[]
+  amenities: string[]
+  description: string
+}
 
 interface ShareListingModalProps {
   isOpen: boolean
   onClose: () => void
-  listingUrl: string
-  listing: {
-    id: string
-    title: string
-    rent: number
-    address: string
-    bedrooms: number
-    bathrooms: number
-    squareFootage: number
-    description: string
-    images: string[]
-    amenities: string[]
-  }
+  listing: Listing | null
 }
 
-export default function ShareListingModal({ 
-  isOpen, 
-  onClose, 
-  listingUrl, 
-  title = "Share Listing" 
-}: ShareListingModalProps) {
-  const [copied, setCopied] = useState(false)
-  
-  // Guard clause to prevent errors if listing is undefined
+export function ShareListingModal({ isOpen, onClose, listing }: ShareListingModalProps) {
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedMessage, setCopiedMessage] = useState('')
+
+  // Guard clause to prevent errors if listing is null/undefined
   if (!listing) {
     return null
   }
-  const { toast } = useToast()
-  const [customMessage, setCustomMessage] = useState('')
 
-  // Generate rich sharing content
-  const shareUrl = `${window.location.origin}/public-listings/${listing.id}`
-  const mainImage = listing.images && listing.images.length > 0 ? listing.images[0] : null
-  const features = listing.amenities?.slice(0, 3).join(', ') || 'Great amenities'
-  const propertyDetails = `${listing.bedrooms} bed, ${listing.bathrooms} bath, ${listing.squareFootage} sq ft`
+  // Generate public listing URL
+  const publicUrl = `${window.location.origin}/public/listing/${listing.id}`
   
-  const defaultMessage = `🏠 ${listing.title}
-💰 $${listing.rent.toLocaleString()}/month
-📍 ${listing.address}
-🛏️ ${propertyDetails}
-✨ Features: ${features}
+  // Generate rich social media content
+  const generateSocialContent = (platform: string) => {
+    const baseContent = {
+      title: listing.title,
+      price: `$${listing.rent.toLocaleString()}/month`,
+      details: `${listing.bedrooms}BR/${listing.bathrooms}BA • ${listing.squareFootage} sq ft`,
+      location: listing.address,
+      features: listing.amenities.slice(0, 3).join(', '),
+      url: publicUrl
+    }
 
-View details: ${shareUrl}`
-
-  // Generate meta tags for social preview
-  const generateMetaTags = () => {
-    return {
-      title: `${listing.title} - $${listing.rent.toLocaleString()}/month`,
-      description: `${propertyDetails} • ${listing.description?.substring(0, 150)}...`,
-      image: mainImage,
-      url: shareUrl
+    switch (platform) {
+      case 'twitter':
+        return `🏠 ${baseContent.title}\n💰 ${baseContent.price}\n📍 ${baseContent.location}\n✨ ${baseContent.details}\n🎯 Features: ${baseContent.features}\n\n${baseContent.url}\n\n#RentalProperty #ForRent #RealEstate`
+      
+      case 'facebook':
+        return `🏠 Beautiful Property Available for Rent!\n\n${baseContent.title}\n💰 ${baseContent.price}\n📍 ${baseContent.location}\n\n🏡 Property Details:\n• ${baseContent.details}\n• Features: ${baseContent.features}\n\nInterested? View full details and schedule a tour:\n${baseContent.url}`
+      
+      case 'linkedin':
+        return `Professional Rental Opportunity Available\n\nProperty: ${baseContent.title}\nRent: ${baseContent.price}\nLocation: ${baseContent.location}\nSpecifications: ${baseContent.details}\nKey Amenities: ${baseContent.features}\n\nView complete listing: ${baseContent.url}`
+      
+      case 'email':
+        return `Hi there!\n\nI wanted to share this great rental property I found:\n\n${baseContent.title}\n${baseContent.price} • ${baseContent.details}\n${baseContent.location}\n\nFeatures include: ${baseContent.features}\n\nCheck it out here: ${baseContent.url}\n\nLet me know what you think!`
+      
+      case 'sms':
+        return `Check out this rental: ${baseContent.title} - ${baseContent.price}, ${baseContent.details} at ${baseContent.location}. ${baseContent.url}`
+      
+      default:
+        return `${baseContent.title} - ${baseContent.price}\n${baseContent.location}\n${baseContent.url}`
     }
   }
-  
+
   const handleCopyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(fullUrl)

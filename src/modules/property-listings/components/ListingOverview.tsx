@@ -55,6 +55,7 @@ export default function ListingOverview() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [selectedListingForShare, setSelectedListingForShare] = useState<any>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -152,7 +153,13 @@ export default function ListingOverview() {
   }
 
   const handleStatusFilter = (status: string) => {
+    setSelectedListingForShare(listing)
     setStatusFilter(status)
+  }
+
+  const handleCloseShareModal = () => {
+    setShareModalOpen(false)
+    setSelectedListingForShare(null)
   }
 
   return (
@@ -394,7 +401,8 @@ export default function ListingOverview() {
       {/* Share Modal */}
       <ShareListingModal
         isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
+        onClose={handleCloseShareModal}
+        listing={selectedListingForShare}
         listingUrl="/public-listings/all"
         title="Share All Listings"
       />
