@@ -78,16 +78,13 @@ function App() {
                         <Route path="/reports/*" element={<ReportingSuite />} />
                         <Route path="/client-applications/*" element={<FinanceApplication />} />
                         <Route path="/properties/*" element={<PropertyListings />} />
-                      </Routes>
-                          <Route path="/reports/*" element={<ReportingSuite />} />
-                          <Route path="/client-applications/*" element={<FinanceApplication />} />
-                          <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
-                          <Route path="/tags/*" element={<TaggingEngine />} />
-                          <Route path="/tasks/*" element={<TaskCenter />} />
-                          <Route path="/calendar/*" element={<CalendarScheduling />} />
-                          <Route path="/contractors/*" element={<ContractorManagement />} />
-                        </Routes>
+                        <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
+                        <Route path="/tags/*" element={<TaggingEngine />} />
+                        <Route path="/tasks/*" element={<TaskCenter />} />
+                        <Route path="/calendar/*" element={<CalendarScheduling />} />
+                        <Route path="/contractors/*" element={<ContractorManagement />} />
                         <Route path="/listings/*" element={<PropertyListings />} />
+                      </Routes>
                       </Layout>
                     </ProtectedRoute>
                   } />
