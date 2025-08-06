@@ -49,6 +49,8 @@ function App() {
               <div className="min-h-screen bg-background">
                 <Routes>
                   <Route path="/login" element={<Login />} />
+                  {/* Public Routes */}
+                  <Route path="/public/listings" element={<PublicListingView />} />
                   {/* Public Routes - Not protected */}
                   <Route path="/public-listings/all" element={<PublicListingView />} />
                   <Route path="/public-listings/:id" element={<PublicListingView />} />
