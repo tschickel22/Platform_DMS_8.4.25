@@ -29,6 +29,8 @@ const mockListings = [
     price: 1200,
     priceType: 'monthly',
     status: 'Available',
+  }
+]
 import { Routes, Route } from 'react-router-dom'
 import ListingOverview from './components/ListingOverview'
 import ListingForm from './components/ListingForm'
@@ -67,6 +69,8 @@ import SyndicationGenerator from './components/SyndicationGenerator'
           <p className="text-muted-foreground">
             Manage your RV sites and mobile home lots
 export default function PropertyListings() {
+    }
+  )
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
@@ -83,3 +87,4 @@ export default function PropertyListings() {
     </Routes>
   )
 }
+  )
