@@ -12,8 +12,7 @@ import {
   Twitter, 
   Linkedin,
   Check,
-  ExternalLink,
-  Image
+  ExternalLink
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -32,31 +31,9 @@ export default function ShareListingModal({
 }: ShareListingModalProps) {
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
-  const [customMessage, setCustomMessage] = useState('')
 
-  // Generate rich sharing content
-  const shareUrl = `${window.location.origin}/public-listings/${listing.id}`
-  const mainImage = listing.images && listing.images.length > 0 ? listing.images[0] : null
-  const features = listing.amenities?.slice(0, 3).join(', ') || 'Great amenities'
-  const propertyDetails = `${listing.bedrooms} bed, ${listing.bathrooms} bath, ${listing.squareFootage} sq ft`
-  
-  const defaultMessage = `🏠 ${listing.title}
-💰 $${listing.rent.toLocaleString()}/month
-📍 ${listing.address}
-🛏️ ${propertyDetails}
-✨ Features: ${features}
-
-View details: ${shareUrl}`
-
-  // Generate meta tags for social preview
-  const generateMetaTags = () => {
-    return {
-      title: `${listing.title} - $${listing.rent.toLocaleString()}/month`,
-      description: `${propertyDetails} • ${listing.description?.substring(0, 150)}...`,
-      image: mainImage,
-      url: shareUrl
-    }
-  }
+  // Create full URL (in a real app, this would use the actual domain)
+  const fullUrl = `${window.location.origin}${listingUrl}`
   
   const handleCopyToClipboard = async () => {
     try {
@@ -77,43 +54,30 @@ View details: ${shareUrl}`
   }
 
   const handleEmailShare = () => {
-    const subject = `🏠 Property Listing: ${listing.title}`
-    const body = `Hi there!
-
-I wanted to share this amazing property with you:
-
-${defaultMessage}
-
-Let me know what you think!
-
-Best regards`
-    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    window.location.href = url
+    const subject = encodeURIComponent("Check out this property listing")
+    const body = encodeURIComponent(`I thought you might be interested in this property listing:\n\n${fullUrl}`)
+    window.open(`mailto:?subject=${subject}&body=${body}`)
   }
 
   const handleSMSShare = () => {
-    const smsMessage = `🏠 ${listing.title} - $${listing.rent.toLocaleString()}/month at ${listing.address}. ${propertyDetails}. View: ${shareUrl}`
-    const message = customMessage || smsMessage
-    const url = `sms:?body=${encodeURIComponent(message)}`
-    window.location.href = url
+    const message = encodeURIComponent(`Check out this property listing: ${fullUrl}`)
+    window.open(`sms:?body=${message}`)
   }
 
   const handleFacebookShare = () => {
-    const metaTags = generateMetaTags()
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(customMessage || defaultMessage)}`
-    window.open(url, '_blank', 'width=600,height=400')
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`
+    window.open(shareUrl, '_blank', 'width=600,height=400')
   }
 
   const handleTwitterShare = () => {
-    const twitterMessage = customMessage || `🏠 ${listing.title} - $${listing.rent.toLocaleString()}/month\n📍 ${listing.address}\n${propertyDetails}\n${shareUrl}`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterMessage)}`
-    window.open(url, '_blank', 'width=600,height=400')
+    const text = encodeURIComponent("Check out this property listing!")
+    const shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(fullUrl)}`
+    window.open(shareUrl, '_blank', 'width=600,height=400')
   }
 
   const handleLinkedInShare = () => {
-    const metaTags = generateMetaTags()
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(metaTags.title)}&summary=${encodeURIComponent(metaTags.description)}`
-    window.open(url, '_blank', 'width=600,height=400')
+    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(fullUrl)}`
+    window.open(shareUrl, '_blank', 'width=600,height=400')
   }
 
   return (
@@ -122,47 +86,23 @@ Best regards`
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ExternalLink className="h-5 w-5" />
-            Share Listing
+            {title}
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Listing Preview */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <div className="flex gap-4">
-              {mainImage && (
-                <div className="flex-shrink-0">
-                  <img 
-                    src={mainImage} 
-                    alt={listing.title}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-lg truncate">{listing.title}</h3>
-                <p className="text-2xl font-bold text-blue-600">${listing.rent.toLocaleString()}/month</p>
-                <p className="text-sm text-gray-600 truncate">{listing.address}</p>
-                <p className="text-sm text-gray-500">{propertyDetails}</p>
-                {features && (
-                  <p className="text-xs text-gray-500 mt-1">✨ {features}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Share URL */}
+          {/* URL Display and Copy */}
           <div className="space-y-2">
-            <Label htmlFor="share-url">Share URL</Label>
+            <Label htmlFor="share-url">Share Link</Label>
             <div className="flex gap-2">
               <Input
                 id="share-url"
-                value={shareUrl}
+                value={fullUrl}
                 readOnly
                 className="flex-1"
               />
               <Button
-                onClick={() => copyToClipboard(shareUrl)}
+                onClick={handleCopyToClipboard}
                 variant="outline"
                 size="sm"
                 className="shrink-0"
@@ -176,64 +116,65 @@ Best regards`
             </div>
           </div>
 
-          {/* Custom Message */}
-          <div className="space-y-2">
-            <Label htmlFor="custom-message">Custom Message (Optional)</Label>
-            <textarea
-              id="custom-message"
-              className="w-full p-3 border rounded-md resize-none"
-              rows={4}
-              placeholder={defaultMessage}
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-            />
-            <p className="text-xs text-gray-500">
-              Preview shows how your listing will appear when shared
-            </p>
+          <Separator />
+
+          {/* Direct Sharing Options */}
+          <div className="space-y-3">
+            <Label>Share via</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={handleEmailShare}
+                variant="outline"
+                className="justify-start gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Email
+              </Button>
+              <Button
+                onClick={handleSMSShare}
+                variant="outline"
+                className="justify-start gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                SMS
+              </Button>
+            </div>
           </div>
 
-          {/* Social Media Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={shareViaEmail}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <Mail className="h-4 w-4" />
-              Email
-            </Button>
-            <Button
-              onClick={shareViaSMS}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              SMS
-            </Button>
-            <Button
-              onClick={shareOnFacebook}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <Facebook className="h-4 w-4 text-blue-600" />
-              Facebook
-            </Button>
-            <Button
-              onClick={shareOnTwitter}
-              variant="outline"
-              className="justify-start gap-2"
-            >
-              <Twitter className="h-4 w-4 text-sky-500" />
-              Twitter
-            </Button>
-            <Button
-              onClick={shareOnLinkedIn}
-              variant="outline"
-              className="justify-start gap-2 col-span-2"
-            >
-              <Linkedin className="h-4 w-4 text-blue-700" />
-              LinkedIn
-            </Button>
+          <Separator />
+
+          {/* Social Media Sharing */}
+          <div className="space-y-3">
+            <Label>Social Media</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                onClick={handleFacebookShare}
+                variant="outline"
+                size="sm"
+                className="justify-center gap-2"
+              >
+                <Facebook className="h-4 w-4 text-blue-600" />
+                Facebook
+              </Button>
+              <Button
+                onClick={handleTwitterShare}
+                variant="outline"
+                size="sm"
+                className="justify-center gap-2"
+              >
+                <Twitter className="h-4 w-4 text-sky-500" />
+                Twitter
+              </Button>
+              <Button
+                onClick={handleLinkedInShare}
+                variant="outline"
+                size="sm"
+                className="justify-center gap-2"
+              >
+                <Linkedin className="h-4 w-4 text-blue-700" />
+                LinkedIn
+              </Button>
+            </div>
           </div>
 
           {/* Close Button */}
