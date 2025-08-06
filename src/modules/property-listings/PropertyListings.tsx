@@ -371,14 +371,6 @@ function PropertyListingsDashboard() {
         onClose={() => setShowShareModal(false)}
         listings={listings}
       />
-      
-      {shareModalListing && (
-        <ShareOptionsModal
-          isOpen={!!shareModalListing}
-          onClose={() => setShareModalListing(null)}
-          listing={shareModalListing}
-        />
-      )}
     </div>
   )
 }
