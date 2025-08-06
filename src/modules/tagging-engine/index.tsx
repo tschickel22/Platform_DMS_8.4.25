@@ -70,3 +70,6 @@ export default function TaggingEngine() {
     </div>
   )
 }
+
+// Export components for use in other modules
+export { TagSelector } from './components/TagSelector'
