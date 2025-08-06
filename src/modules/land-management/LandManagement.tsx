@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
@@ -37,26 +38,24 @@ export default function LandManagement() {
           title: "Success", 
           description: "Land parcel added successfully",
         })
-      }
-      setIsAdding(false)
-      setEditingLand(null)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save land parcel",
-        variant: "destructive",
-      })
-    }
-  }
+          <Plus className="mr-2 h-4 w-4" />
+    <Routes>
+      <Route path="/" element={<LandOverview />} />
+      <Route path="/new" element={<LandFormPage />} />
+      <Route path="/edit/:id" element={<LandFormPage />} />
+      <Route path="/detail/:id" element={<LandDetail />} />
+      <Route path="*" element={<Navigate to="/land/" replace />} />
+    </Routes>
+  )
+}
 
-  const handleCancel = () => {
-    setIsAdding(false)
-    setEditingLand(null)
-  }
+function LandOverview() {
+  const { lands, deleteLand } = useLandManagement()
+  const { toast } = useToast()
 
-  const handleDelete = async (landId) => {
+  const handleDelete = async (id: string) => {
     try {
-      await deleteLand(landId)
+      await deleteLand(id)
       toast({
         title: "Success",
         description: "Land parcel deleted successfully",
@@ -70,65 +69,73 @@ export default function LandManagement() {
     }
   }
 
-  // Show form when adding or editing
-  if (isAdding || editingLand) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {editingLand ? 'Edit Land Parcel' : 'Add New Land Parcel'}
-            </h1>
-            <p className="text-muted-foreground">
-              {editingLand ? 'Update land parcel information' : 'Add a new land parcel to your inventory'}
-            </p>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="pt-6">
-            <LandForm
-              initialData={editingLand}
-              onSave={handleSave}
-              onCancel={handleCancel}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Show list view
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Land Management</h1>
           <p className="text-muted-foreground">
-            Manage your land inventory and parcels
+            Manage your land parcels and properties
           </p>
         </div>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Land Parcel
+        <Button asChild>
+          <Link to="/land/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Land Parcel
+          </Link>
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Land Parcels</CardTitle>
-          <CardDescription>
-            View and manage all your land parcels
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LandList
-            lands={lands}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        </CardContent>
-      </Card>
+      <LandList
+        lands={lands}
+        onDelete={handleDelete}
+      />
     </div>
+  )
+}
+
+function LandFormPage() {
+  const { addLand, updateLand, getLandById } = useLandManagement()
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const { id } = useParams()
+  
+  const editingLand = id ? getLandById(id) : null
+
+  const handleSave = async (landData: any) => {
+    try {
+      if (editingLand) {
+        await updateLand(editingLand.id, landData)
+        toast({
+          title: "Success",
+          description: "Land parcel updated successfully",
+        })
+      } else {
+        await addLand(landData)
+        toast({
+          title: "Success", 
+          description: "Land parcel added successfully",
+        })
+      }
+      navigate('/land')
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save land parcel",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancel = () => {
+    navigate('/land')
+  }
+
+  return (
+    <LandForm
+      initialData={editingLand}
+      onSave={handleSave}
+      onCancel={handleCancel}
+    />
   )
 }
