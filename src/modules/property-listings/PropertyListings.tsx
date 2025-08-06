@@ -252,37 +252,42 @@ function PropertyListingsDashboard() {
           - {filteredListings.map((listing) => (
 -   <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
 -     <div className="aspect-video relative overflow-hidden">
--       <img
--         src={listing.images[0]}
--         alt={listing.title}
--         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
--         onClick={() => setSelectedListing(listing)}
--         onError={(e) => {
--           e.currentTarget.style.display = 'none'
--           e.currentTarget.nextElementSibling.style.display = 'flex'
--         }}
--       />
--       {/* badges */}
--     </div>
--     {/* Stray </div> or </CardContent> might have been here */}
--     <CardContent className="p-4">
--       {/* … */}
--     </CardContent>
--   </Card>
-- ))}
-+ {filteredListings.map((listing) => (
-+   <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-+     <div className="aspect-video relative overflow-hidden">
-+       {listing.images[0] ? (
-+         <img
-+           src={listing.images[0]}
-+           alt={listing.title}
-+           className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-+           onClick={() => navigate(`/listings/detail/${listing.id}`)}
-+         />
-+       ) : (
-+         <div className="w-full h-full flex items-center justify-center bg-gray-100">
-+           <Home className="h-12 w-12 text-gray-400" />
+                    {listing.images[0] ? (
+                      <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
+                        onClick={() => navigate(`/listings/detail/${listing.id}`)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <Home className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+
+                    {/* status badge */}
+                    <div className="absolute top-2 left-2">
+                      <Badge
+                        variant={
+                          listing.status === 'active' ? 'default' :
+                          listing.status === 'pending' ? 'outline' :
+                          listing.status === 'rented'  ? 'secondary' :
+                          'destructive'
+                        }
+                        className="capitalize"
+                      >
+                        {listing.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+
+                    {/* rent badge */}
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                        ${listing.rent.toLocaleString()}/month
+                      </Badge>
+                    </div>
+                  </div>
+
 +         </div>
 +       )}
 +
@@ -337,14 +342,14 @@ function PropertyListingsDashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(/listings/detail/${listing.id})}
+                          onClick={() => navigate(`/listings/detail/${listing.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(/listings/edit/${listing.id})}
+                          onClick={() => navigate(`/listings/edit/${listing.id}`)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -361,7 +366,6 @@ function PropertyListingsDashboard() {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
                 </Card>
               ))}
             </div>
