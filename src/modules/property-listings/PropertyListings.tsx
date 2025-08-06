@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Building } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -273,8 +275,22 @@ function PropertyListingsDashboard() {
 
 export default function PropertyListings() {
   return (
-    <Routes>
+    <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <Building className="h-6 w-6" />
+        <h1 className="text-2xl font-bold">Property Listings</h1>
+      </div>
       <Route path="/" element={<PropertyListingsDashboard />} />
+        <Route path="*" element={
+          <Card>
+            <CardHeader>
+              <CardTitle>Property Listings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Property listings module is loading...</p>
+            </CardContent>
+          </Card>
+        } />
       <Route path="*" element={<PropertyListingsDashboard />} />
     </Routes>
   )
