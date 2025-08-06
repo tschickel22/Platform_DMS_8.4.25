@@ -56,6 +56,8 @@ export default function ListingOverview() {
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [selectedListing, setSelectedListing] = useState<any>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Get unique statuses for filter dropdown
   const uniqueStatuses = useMemo(() => {
@@ -112,6 +114,15 @@ export default function ListingOverview() {
       setSortField(field)
       setSortDirection('asc')
     }
+  }
+
+  const handleShareListing = (listing: any) => {
+    if (!listing) {
+      console.error('No listing provided for sharing')
+      return
+    }
+    setSelectedListing(listing)
+    setShowShareModal(true)
   }
 
   const getSortIcon = (field: SortField) => {
