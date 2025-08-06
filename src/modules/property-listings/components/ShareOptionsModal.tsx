@@ -58,8 +58,7 @@ export function ShareOptionsModal({
   if (!listing) return null
 
   // Generate the public listing URL
-  // Generate the public listing URL
-  // —–> use the path-with-id pattern, not a query param
+  // use the same "slash-id" route as everywhere else
   const listingUrl = `${baseUrl}/public/listings/${listing.id}`
   
   // Create sharing content
