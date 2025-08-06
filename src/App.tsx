@@ -31,6 +31,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import PublicListingView from '@/modules/property-listings/components/PublicListingView'
 import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
@@ -58,26 +59,27 @@ function App() {
                   <Route path="/*" element={
                     <ProtectedRoute>
                       <Layout>
-                        <Routes>
-                          <Route path="/" element={<Dashboard />} />
-                          <Route path="/crm/*" element={<CRMProspecting />} />
-                          <Route path="/inventory/*" element={<InventoryManagement />} />
-                          <Route path="/land/*" element={<LandManagement />} />
-                          <Route path="/deals/*" element={<CRMSalesDeal />} />
-                          <Route path="/finance/*" element={<FinanceModule />} />
-                          <Route path="/quotes/*" element={<QuoteBuilder />} />
-                          <Route path="/listings/*" element={<PropertyListings />} />
-                          <Route path="/agreements/*" element={<AgreementVault />} />
-                          <Route path="/service/*" element={<ServiceOps />} />
-                          <Route path="/pdi/*" element={<PDIChecklist />} />
-                          <Route path="/delivery/*" element={<DeliveryTracker />} />
-                          <Route path="/inventory/warranty/*" element={<WarrantyMgmt />} />
-                          <Route path="/commissions/*" element={<CommissionEngine />} />
-                          <Route path="/portal/*" element={<ClientPortalAdmin />} />
-                          <Route path="/invoices/*" element={<InvoicePayments />} />
-                          <Route path="/settings/*" element={<CompanySettings />} />
-                          <Route path="/admin/*" element={<PlatformAdmin />} />
-                          <Route path="/admin/settings/*" element={<PlatformSettings />} />
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/crm/*" element={<CRMProspecting />} />
+                        <Route path="/inventory/*" element={<InventoryManagement />} />
+                        <Route path="/deals/*" element={<CRMSalesDeal />} />
+                        <Route path="/finance/*" element={<FinanceModule />} />
+                        <Route path="/quotes/*" element={<QuoteBuilder />} />
+                        <Route path="/agreements/*" element={<AgreementVault />} />
+                        <Route path="/service/*" element={<ServiceOps />} />
+                        <Route path="/pdi/*" element={<PDIChecklist />} />
+                        <Route path="/delivery/*" element={<DeliveryTracker />} />
+                        <Route path="/commissions/*" element={<CommissionEngine />} />
+                        <Route path="/portal/*" element={<ClientPortalAdmin />} />
+                        <Route path="/invoices/*" element={<InvoicePayments />} />
+                        <Route path="/settings/*" element={<CompanySettings />} />
+                        <Route path="/admin/*" element={<PlatformAdmin />} />
+                        <Route path="/admin/settings/*" element={<PlatformSettings />} />
+                        <Route path="/reports/*" element={<ReportingSuite />} />
+                        <Route path="/client-applications/*" element={<FinanceApplication />} />
+                        <Route path="/properties/*" element={<PropertyListings />} />
+                      </Routes>
                           <Route path="/reports/*" element={<ReportingSuite />} />
                           <Route path="/client-applications/*" element={<FinanceApplication />} />
                           <Route path="/warranty-mgmt" element={<WarrantyManagement />} />

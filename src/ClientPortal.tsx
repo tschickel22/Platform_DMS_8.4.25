@@ -364,10 +364,10 @@ function ClientPortalContent({ children }: ClientPortalContentProps) {
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
-      </div>
-    </div>
-  )
-}
+            <Route path="/loans" element={<ClientLoansView />} />
+            <Route path="/agreements" element={<ClientAgreements />} />
+            <Route path="/finance-applications" element={<PortalApplicationView />} />
+            <Route path="/settings" element={<ClientSettingsPage />} />
 
 export default function ClientPortal({ children }: { children: React.ReactNode }) {
   return <ClientPortalContent>{children}</ClientPortalContent>
