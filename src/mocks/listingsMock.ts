@@ -27,6 +27,15 @@ export function deleteListing(id: string) {
     const deletedListing = mockListings[index]
     mockListings.splice(index, 1)
     return deletedListing
+
+export function addListing(newListing: PropertyListing) {
+  mockListings.push({
+    ...newListing,
+    id: (mockListings.length + 1).toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+}
   }
   return null
 }
