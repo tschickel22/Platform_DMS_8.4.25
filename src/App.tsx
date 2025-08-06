@@ -26,7 +26,6 @@ import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
-import LandManagement from '@/modules/land-management/LandManagement'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
@@ -63,7 +62,6 @@ function App() {
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/crm/*" element={<CRMProspecting />} />
                         <Route path="/inventory/*" element={<InventoryManagement />} />
-                        <Route path="/land/*" element={<LandManagement />} />
                         <Route path="/deals/*" element={<CRMSalesDeal />} />
                         <Route path="/finance/*" element={<FinanceModule />} />
                         <Route path="/quotes/*" element={<QuoteBuilder />} />

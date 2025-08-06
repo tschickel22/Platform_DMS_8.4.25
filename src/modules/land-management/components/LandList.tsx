@@ -156,6 +156,63 @@ export function LandList() {
         </Card>
       </div>
     )
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { MapPin, Calendar, DollarSign, Edit, Trash2, Eye } from 'lucide-react'
+  }
+interface Land {
+  id: string
+  name: string
+  location: string
+  size: number
+  price: number
+  status: string
+  type: string
+  description: string
+  createdAt: string
+  features: string[]
+  zoning?: string
+  utilities?: string[]
+}
+
+interface LandListProps {
+  lands: Land[]
+  onSelectLand: (land: Land) => void
+  onEditLand: (land: Land) => void
+  onDeleteLand: (landId: string) => void
+}
+
+export function LandList({ lands, onSelectLand, onEditLand, onDeleteLand }: LandListProps) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-100 text-green-800'
+      case 'sold':
+        return 'bg-gray-100 text-gray-800'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'reserved':
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  if (lands.length === 0) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <h3 className="text-lg font-medium mb-2">No land parcels found</h3>
+            <p className="text-muted-foreground mb-4">
+              Get started by adding your first land parcel to the inventory.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -168,12 +225,12 @@ export function LandList() {
             Manage lots, locations, and land inventory
           </p>
         </div>
-        <Button asChild>
-          <Link to="/land/new">
+        <Link to="/land/new">
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Land
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       {/* Search and Filters */}
@@ -368,8 +425,101 @@ export function LandList() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {lands.map((land) => (
+        <Card key={land.id} className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-lg">{land.name}</CardTitle>
+                <CardDescription className="flex items-center gap-1 mt-1">
+                  <MapPin className="h-3 w-3" />
+                  {land.location}
+                </CardDescription>
+              </div>
+              <Badge className={getStatusColor(land.status)}>
+                {land.status}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {land.description}
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Size</p>
+                <p className="font-medium">{land.size.toLocaleString()} acres</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Price</p>
+                <p className="font-medium">${land.price.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Type</p>
+                <p className="font-medium">{land.type}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Price/Acre</p>
+                <p className="font-medium">${Math.round(land.price / land.size).toLocaleString()}</p>
+              </div>
+            </div>
+
+            {land.features && land.features.length > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Features</p>
+                <div className="flex flex-wrap gap-1">
+                  {land.features.slice(0, 3).map((feature, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {feature}
+                    </Badge>
+                  ))}
+                  {land.features.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{land.features.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                Added {new Date(land.createdAt).toLocaleDateString()}
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSelectLand(land)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditLand(land)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteLand(land.id)}
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
+export default LandList;

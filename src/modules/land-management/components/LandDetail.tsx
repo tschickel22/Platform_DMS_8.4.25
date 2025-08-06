@@ -1,23 +1,17 @@
 import React from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useLandManagement } from '../hooks/useLandManagement'
 import { LandStatus } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { 
-  ArrowLeft,
   ArrowLeft, 
   Edit, 
   MapPin, 
   DollarSign, 
   Ruler, 
   Calendar,
-  Edit,
-  Trash2,
-  Tag
   FileText,
   Zap,
   AlertCircle,
@@ -25,7 +19,6 @@ import {
   User,
   TrendingUp
 } from 'lucide-react'
-import { useLandManagement } from '../hooks/useLandManagement'
 
 export function LandDetail() {
   const { id } = useParams()
@@ -80,206 +73,9 @@ export function LandDetail() {
 
   const pricePerUnit = getPricePerUnit(land)
   const profitMargin = land.cost > 0 ? ((land.price - land.cost) / land.price * 100) : 0
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const { getLandById, deleteLand } = useLandManagement()
-  
-  const land = id ? getLandById(id) : null
-
-  if (!land) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/land">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Land List
-            </Link>
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Land parcel not found</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'sold': return 'bg-gray-100 text-gray-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'reserved': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this land parcel?')) {
-      deleteLand(land.id)
-      navigate('/land')
-    }
-  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/land">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Land List
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{land.name}</h1>
-            <p className="text-muted-foreground flex items-center">
-              <MapPin className="mr-1 h-4 w-4" />
-              {land.location}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to={`/land/edit/${land.id}`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Link>
-          </Button>
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Main Details */}
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle>Property Details</CardTitle>
-                <Badge className={getStatusColor(land.status)}>
-                  {land.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">{land.description}</p>
-              
-              <Separator />
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center">
-                  <Ruler className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Size:</span>
-                  <span className="ml-2">{land.size} acres</span>
-                </div>
-                <div className="flex items-center">
-                  <DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Price:</span>
-                  <span className="ml-2">${land.price.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center">
-                  <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Type:</span>
-                  <span className="ml-2">{land.type}</span>
-                </div>
-                <div className="flex items-center">
-                  <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Zoning:</span>
-                  <span className="ml-2">{land.zoning}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Features */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Features & Amenities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {land.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary">
-                    {feature}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  ${land.price.toLocaleString()}
-                </div>
-                <p className="text-sm text-muted-foreground">Total Price</p>
-              </div>
-              
-              <Separator />
-              
-              <div className="text-center">
-                <div className="text-xl font-semibold">
-                  {land.size} acres
-                </div>
-                <p className="text-sm text-muted-foreground">Land Size</p>
-              </div>
-              
-              <Separator />
-              
-              <div className="text-center">
-                <div className="text-lg font-medium">
-                  ${Math.round(land.price / land.size).toLocaleString()}
-                </div>
-                <p className="text-sm text-muted-foreground">Per Acre</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center">
-                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Created</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(land.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Last Updated</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(land.updatedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
