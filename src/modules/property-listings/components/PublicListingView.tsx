@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -93,6 +94,47 @@ export default function PublicListingView() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${filteredListings.length} Premium Properties Available - Renter Insight`}</title>
+        <meta name="description" content={`Discover ${filteredListings.length} premium rental properties with an average rent of $${Math.round(averageRent).toLocaleString()}. From modern apartments to luxury condos - find your perfect home today!`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:title" content={`${filteredListings.length} Premium Properties Available - Renter Insight`} />
+        <meta property="og:description" content={`Discover ${filteredListings.length} premium rental properties with an average rent of $${Math.round(averageRent).toLocaleString()}. From modern apartments to luxury condos - find your perfect home today!`} />
+        <meta property="og:image" content={filteredListings[0]?.images[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop'} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Renter Insight" />
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={window.location.href} />
+        <meta property="twitter:title" content={`${filteredListings.length} Premium Properties Available - Renter Insight`} />
+        <meta property="twitter:description" content={`Discover ${filteredListings.length} premium rental properties with an average rent of $${Math.round(averageRent).toLocaleString()}. From modern apartments to luxury condos - find your perfect home today!`} />
+        <meta property="twitter:image" content={filteredListings[0]?.images[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop'} />
+        
+        {/* Additional structured data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "RealEstateAgent",
+            "name": "Renter Insight",
+            "url": window.location.origin,
+            "description": "Premium property rental listings and management",
+            "offers": filteredListings.map(listing => ({
+              "@type": "Offer",
+              "name": listing.title,
+              "description": listing.description,
+              "price": listing.rent,
+              "priceCurrency": "USD",
+              "availability": "InStock"
+            }))
+          })}
+        </script>
+      </Helmet>
+      
       {/* Header */}
       <div className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 py-6">

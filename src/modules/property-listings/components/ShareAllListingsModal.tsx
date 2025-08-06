@@ -43,13 +43,25 @@ export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllLis
     image: activeListings[0]?.images?.[0] || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
   }
   
+    const baseUrl = window.location.origin
+    const shareUrl = `${baseUrl}/public/listings`
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(listingsUrl)
+      url: shareUrl,
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy link:', err)
+      image: activeListings[0]?.images[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop',
+      // Enhanced metadata for better social previews
+      metadata: {
+        'og:type': 'website',
+        'og:site_name': 'Renter Insight',
+        'og:locale': 'en_US',
+        'twitter:card': 'summary_large_image',
+        'twitter:site': '@RenterInsight',
+        'article:author': 'Renter Insight',
+        'article:section': 'Real Estate'
+      }
     }
   }
   
@@ -70,13 +82,17 @@ export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllLis
   
   const handleSocialShare = (platform: string) => {
     const encodedUrl = encodeURIComponent(listingsUrl)
+    const encodedUrl = encodeURIComponent(content.url)
+    const encodedTitle = encodeURIComponent(content.title)
+    const encodedDescription = encodeURIComponent(content.description)
+    const encodedHashtags = encodeURIComponent(content.hashtags.join(','))
     const encodedTitle = encodeURIComponent(previewData.title)
     const encodedDescription = encodeURIComponent(previewData.description)
     
     const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}%20-%20${encodedDescription}`,
+      twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}%20-%20${encodedDescription}&hashtags=${encodedHashtags}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&title=${encodedTitle}&summary=${encodedDescription}`
     }
     
     window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
