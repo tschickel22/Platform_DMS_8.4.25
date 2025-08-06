@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Search, 
+import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Home, Users, Building, MapPin, Bed, Bath, Square, Share2 } from 'lucide-react'
   Plus, 
   MapPin, 
   Bed, 
@@ -18,6 +18,7 @@ import {
   ArrowDown
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
+import ShareListingModal from './ShareListingModal'
 
 interface Listing {
   id: string
@@ -48,6 +49,7 @@ export default function ListingOverview() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   // Get unique statuses for filter dropdown
@@ -138,10 +140,20 @@ export default function ListingOverview() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Property Listings</h1>
-          <p className="text-muted-foreground">
-            Manage your rental property listings and availability
-          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setShareModalOpen(true)}
+              className="gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              Share All Listings
+            </Button>
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Listing
+            </Button>
+          </div>
         </div>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
@@ -346,6 +358,14 @@ export default function ListingOverview() {
           }`}
           onClick={() => handleStatusFilter('available')}
         >
+
+      {/* Share Modal */}
+      <ShareListingModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        listingUrl="/public-listings/all"
+        title="Share All Listings"
+      />
     </div>
   )
 }

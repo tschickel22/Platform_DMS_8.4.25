@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  ArrowLeft, 
+import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Calendar, Phone, Mail, Car, Wifi, Dumbbell, Waves, Share2 } from 'lucide-react'
   Edit, 
   MapPin, 
   DollarSign, 
@@ -16,10 +16,12 @@ import {
   Calendar
 } from 'lucide-react'
 import { getListingById } from '@/mocks/listingsMock'
+import ShareListingModal from './ShareListingModal'
 
 export default function ListingDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   if (!id) {
     navigate('/listings')
@@ -97,7 +99,23 @@ export default function ListingDetail() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+          <div className="flex gap-2 flex-wrap">
+
+      {/* Share Modal */}
+      <ShareListingModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        listingUrl={`/public-listings/${id}`}
+        title={`Share "${listing.title}"`}
+      />
+            <Button
+              variant="outline"
+              onClick={() => setShareModalOpen(true)}
+              className="gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
           <Badge variant={getStatusBadgeVariant(listing.status)}>
             {getStatusLabel(listing.status)}
           </Badge>

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Plus, X } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, Upload, Share2 } from 'lucide-react'
 import { getListingById, addListing, updateListing } from '@/mocks/listingsMock'
 import { useToast } from '@/hooks/use-toast'
 
@@ -32,12 +32,14 @@ const commonAmenities = [
   'Fireplace', 'Dishwasher', 'Air Conditioning', 'Heating', 'WiFi',
   'Pet Friendly', 'Furnished', 'Utilities Included', 'Security System'
 ]
+import ShareListingModal from './ShareListingModal'
 
 export default function ListingForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
   const isEditing = Boolean(id)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -218,6 +220,16 @@ export default function ListingForm() {
           </p>
         </div>
       </div>
+
+      {/* Share Modal - Only show when editing existing listing */}
+      {isEditing && (
+        <ShareListingModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          listingUrl={`/public-listings/${id}`}
+          title={`Share "${formData.title || 'Listing'}"`}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
@@ -426,7 +438,17 @@ export default function ListingForm() {
                 )}
               </div>
             ))}
-            <Button type="button" variant="outline" onClick={addImageField}>
+          <div className="flex gap-2 flex-wrap">
+            {isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => setShareModalOpen(true)}
+                className="gap-2"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+            )}
               <Plus className="h-4 w-4 mr-2" />
               Add Image
             </Button>
