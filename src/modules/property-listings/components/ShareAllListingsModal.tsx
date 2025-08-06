@@ -43,8 +43,6 @@ export function ShareAllListingsModal({ isOpen, onClose, listings }: ShareAllLis
     image: activeListings[0]?.images?.[0] || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
   }
   
-    const baseUrl = window.location.origin
-    const shareUrl = `${baseUrl}/public/listings`
   const handleCopyLink = async () => {
     try {
       url: shareUrl,
