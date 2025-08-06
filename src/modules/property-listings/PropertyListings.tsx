@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Building, ListChecks, Plus, Search, MapPin, Home, DollarSign, Eye, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import SyndicationGenerator from './components/SyndicationGenerator'
 
 // Mock data for property listings
 const mockListings = [
@@ -250,7 +251,10 @@ export default function PropertyListings() {
       </div>
       <Routes>
         <Route path="/" element={<PropertyListingsDashboard />} />
-        <Route path="*" element={<PropertyListingsDashboard />} />
+        <Route path="new" element={<div>New Listing Form - Coming Soon</div>} />
+        <Route path="syndication" element={<SyndicationGenerator />} />
+        <Route path=":id" element={<div>Listing Detail - Coming Soon</div>} />
+        <Route path="*" element={<Navigate to="/listings/" replace />} />
       </Routes>
     </div>
   )

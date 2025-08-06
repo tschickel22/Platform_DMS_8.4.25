@@ -31,6 +31,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import PublicListingView from '@/modules/property-listings/components/PublicListingView'
 import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
@@ -48,6 +49,9 @@ function App() {
               <div className="min-h-screen bg-background">
                 <Routes>
                   <Route path="/login" element={<Login />} />
+                  {/* Public Routes - Not protected */}
+                  <Route path="/public-listings/all" element={<PublicListingView />} />
+                  <Route path="/public-listings/:id" element={<PublicListingView />} />
                   {/* Client Portal Routes - these will render ClientPortal directly */}
                   <Route path="/portalclient/*" element={<ClientPortalLayout />} />
                   {/* Main Application Routes - these will render the Layout */}
