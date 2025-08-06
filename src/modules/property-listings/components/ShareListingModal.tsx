@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -133,6 +134,19 @@ Best regards`
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ExternalLink className="h-5 w-5" />
+            Share Listing
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Listing Preview */}
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="flex gap-4">
+              {mainImage && (
                 <div className="flex-shrink-0">
                   <img 
                     src={mainImage} 
