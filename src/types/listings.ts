@@ -48,29 +48,73 @@ export interface ManufacturedHomeListing extends BaseListing {
   // Location Details
   locationType: 'manufactured_home_community' | 'private_land' | 'mobile_home_park'
   communityName?: string
+  propertyId?: string
   lotNumber?: string
+  width1?: number
+  length1?: number
+  width2?: number
+  length2?: number
+  width3?: number
+  length3?: number
   
   // Home Specifications
+  roofMaterial?: string
   homeType: 'single_wide' | 'double_wide' | 'triple_wide' | 'modular'
+  ceilingMaterial?: string
+  wallMaterial?: string
   make: string
   model: string
   year: number
   bedrooms: number
   bathrooms: number
   squareFootage: number
+  thermopaneWindows?: boolean
   
   // Construction Details
   roofType: 'metal' | 'shingle' | 'rubber' | 'tile'
+  laundryRoom?: boolean
   sidingType: 'vinyl' | 'wood' | 'metal' | 'fiber_cement' | 'brick'
   
   // Features & Amenities
+  garage?: boolean
+  carport?: boolean
+  centralAir?: boolean
+  fireplace?: boolean
+  storageShed?: boolean
+  gutters?: boolean
+  shutters?: boolean
+  deck?: boolean
+  patio?: boolean
+  cathedralCeilings?: boolean
+  ceilingFans?: boolean
+  skylights?: boolean
+  walkinClosets?: boolean
+  pantry?: boolean
+  sunRoom?: boolean
+  basement?: boolean
+  gardenTub?: boolean
+  garbageDisposal?: boolean
+  refrigeratorIncluded?: boolean
+  microwaveIncluded?: boolean
+  ovenIncluded?: boolean
+  dishwasherIncluded?: boolean
+  washerIncluded?: boolean
+  dryerIncluded?: boolean
   garage: boolean
   carport: boolean
   shed: boolean
+  mhVillageAccountKey?: string
   deck: boolean
   porch: boolean
+  companyName?: string
   centralAir: boolean
   heating: 'electric' | 'gas' | 'propane' | 'oil' | 'heat_pump'
+  fax?: string
+  website?: string
+  additionalEmail1?: string
+  additionalEmail2?: string
+  additionalEmail3?: string
+  alternatePhone?: string
   appliances: string[]
   
   // Identification
@@ -165,11 +209,23 @@ export interface Listing {
   id: string
   sellerId?: string
   companyId?: string
+  sellerId?: string
+  companyId?: string
   listingType: 'rent' | 'sale'
   title: string
   description: string
   termsOfSale?: string
+  termsOfSale?: string
   address: string
+  address2?: string
+  city?: string
+  state?: string
+  zipCode?: string
+  county?: string
+  township?: string
+  schoolDistrict?: string
+  latitude?: number
+  longitude?: number
   address2?: string
   city: string
   state: string
@@ -186,10 +242,13 @@ export interface Listing {
   monthlyTax?: number
   monthlyUtilities?: number
   hoaFees?: number
+  monthlyTax?: number
+  monthlyUtilities?: number
   bedrooms: number
   bathrooms: number
   squareFootage: number
   yearBuilt?: number
+  preferredTerm?: string
   propertyType: string
   preferredTerm?: string
   status: string
@@ -199,6 +258,12 @@ export interface Listing {
   technologyFeatures?: string[]
   communityAmenities?: string[]
   petPolicy: string
+  isRepossessed?: boolean
+  packageType?: string
+  pendingSale?: boolean
+  soldPrice?: number
+  searchResultsText?: string
+  agentPhotoUrl?: string
   mhDetails?: MHDetails
   images: string[]
   videos?: string[]
@@ -213,6 +278,8 @@ export interface Listing {
     email: string
     fax?: string
     website?: string
+  modelYear?: number
+  color?: string
     additionalEmail1?: string
     additionalEmail2?: string
     additionalEmail3?: string

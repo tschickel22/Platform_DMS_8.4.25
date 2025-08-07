@@ -1,584 +1,962 @@
-import React, { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  Share2, 
   MapPin, 
+  DollarSign, 
   Home, 
+  Bed, 
   Bath, 
-  Bed,
-  Square,
+  Square, 
+  Calendar,
   Phone,
   Mail,
-  Calendar,
-  DollarSign,
-  PawPrint,
-  Play,
-  Image as ImageIcon,
-  Car,
-  Snowflake,
-  Wrench,
-  Building,
+  Globe,
   User,
+  Building,
+  Car,
+  Flame,
+  Droplets,
+  Zap,
+  Wifi,
+  Camera,
+  Play,
   FileText,
+  Eye,
   CheckCircle,
   XCircle
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import { allPropertyListings } from '@/mocks/listingsMock'
-import { PropertyListing, ManufacturedHomeListing, RentalListing } from '@/types/listings'
+import { Listing } from '@/types/listings'
 
-// Helper functions
-const isManufacturedHome = (listing: PropertyListing): listing is ManufacturedHomeListing => {
-  return listing.listingType === 'for_sale'
+interface ListingDetailProps {
+  listing: Listing
+  onEdit?: () => void
+  onClose?: () => void
 }
 
-const isRentalListing = (listing: PropertyListing): listing is RentalListing => {
-  return listing.listingType === 'for_rent'
-}
-
-const formatPrice = (listing: PropertyListing): string => {
-  if (isManufacturedHome(listing)) {
-    return `$${listing.askingPrice.toLocaleString()}`
-  } else {
-    return `$${listing.rent.toLocaleString()}/month`
-  }
-}
-
-const VideoPlayer = ({ url, title }: { url: string; title: string }) => {
-  const getEmbedUrl = (url: string) => {
-    if (url.includes('youtube.com/watch?v=')) {
-      const videoId = url.split('v=')[1]?.split('&')[0]
-      return `https://www.youtube.com/embed/${videoId}`
-    } else if (url.includes('youtu.be/')) {
-      const videoId = url.split('youtu.be/')[1]?.split('?')[0]
-      return `https://www.youtube.com/embed/${videoId}`
-    } else if (url.includes('vimeo.com/')) {
-      const videoId = url.split('vimeo.com/')[1]?.split('?')[0]
-      return `https://player.vimeo.com/video/${videoId}`
-    }
-    return url
+export default function ListingDetail({ listing, onEdit, onClose }: ListingDetailProps) {
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price)
   }
 
-  return (
-    <div className="aspect-video">
-      <iframe
-        src={getEmbedUrl(url)}
-        title={title}
-        className="w-full h-full rounded-lg"
-        allowFullScreen
-        frameBorder="0"
-      />
-    </div>
-  )
-}
-
-export default function ListingDetail() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  
-  const listing = allPropertyListings.find(l => l.id === id)
-
-  if (!listing) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/listings')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Listings
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-2">Listing not found</h3>
-              <p className="text-muted-foreground">The listing you're looking for doesn't exist.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const isMH = isManufacturedHome(listing)
-  const isRental = isRentalListing(listing)
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
-      toast({
-        title: "Success",
-        description: "Listing deleted successfully",
-      })
-      navigate('/listings')
-    }
-  }
-
-  const handleShare = () => {
-    const url = `${window.location.origin}/listings/public/${listing.id}`
-    navigator.clipboard.writeText(url)
-    toast({
-      title: "Link copied",
-      description: "Public listing link copied to clipboard",
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'rented': return 'bg-blue-100 text-blue-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+  const BooleanIndicator = ({ value, label }: { value?: boolean; label: string }) => (
+    <div className="flex items-center gap-2">
+      {value ? (
+        <CheckCircle className="h-4 w-4 text-green-500" />
+      ) : (
+        <XCircle className="h-4 w-4 text-gray-400" />
+      )}
+      <span className={value ? 'text-foreground' : 'text-muted-foreground'}>{label}</span>
+    </div>
+  )
+
+  const isManufacturedHome = listing.propertyType === 'manufactured_home'
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/listings')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Listings
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{listing.title}</h1>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>{listing.address}</span>
+    <div className="max-w-6xl mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl mb-2">{listing.title}</CardTitle>
+              <CardDescription className="flex items-center gap-2 text-lg">
+                <MapPin className="h-4 w-4" />
+                {listing.address}
+                {listing.address2 && `, ${listing.address2}`}
+                {listing.city && listing.state && `, ${listing.city}, ${listing.state}`}
+                {listing.zipCode && ` ${listing.zipCode}`}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button onClick={onEdit}>Edit Listing</Button>
+              )}
+              {onClose && (
+                <Button variant="outline" onClick={onClose}>Close</Button>
+              )}
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-2xl font-bold">{formatPrice(listing)}</div>
-          <Button onClick={() => navigate(`/listings/edit/${listing.id}`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="features">Features</TabsTrigger>
+              <TabsTrigger value="mh-details" disabled={!isManufacturedHome}>MH Details</TabsTrigger>
+              <TabsTrigger value="media">Media</TabsTrigger>
+              <TabsTrigger value="contact">Contact</TabsTrigger>
+            </TabsList>
 
-      {/* Media Gallery */}
-      <Tabs defaultValue="images" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="images" className="flex items-center gap-2">
-            <ImageIcon className="h-4 w-4" />
-            Images
-          </TabsTrigger>
-          <TabsTrigger value="videos" className="flex items-center gap-2">
-            <Play className="h-4 w-4" />
-            Videos ({listing.videos?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="floorplans" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Floor Plans ({listing.floorPlans?.length || 0})
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="images">
-          <Card>
-            <CardContent className="p-0">
-              <div className="aspect-video relative overflow-hidden rounded-lg">
-                {listing.images && listing.images.length > 0 ? (
-                  <>
-                    <img
-                      src={listing.images[currentImageIndex]}
-                      alt={`${listing.title} - Image ${currentImageIndex + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    {listing.images.length > 1 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                        {listing.images.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setCurrentImageIndex(index)}
-                            className={`w-3 h-3 rounded-full ${
-                              index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <Home className="h-24 w-24 text-gray-400" />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="videos">
-          <div className="space-y-4">
-            {listing.videos && listing.videos.length > 0 ? (
-              listing.videos.map((video, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Video {index + 1}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <VideoPlayer url={video} title={`${listing.title} - Video ${index + 1}`} />
+            <TabsContent value="overview" className="space-y-6">
+              {/* Price and Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                      <span className="font-medium">
+                        {listing.listingType === 'rent' ? 'Monthly Rent' : 'Purchase Price'}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {listing.listingType === 'rent' 
+                        ? formatPrice(listing.rent || 0)
+                        : formatPrice(listing.purchasePrice || 0)
+                      }
+                    </div>
                   </CardContent>
                 </Card>
-              ))
-            ) : (
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bed className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium">Bedrooms</span>
+                    </div>
+                    <div className="text-2xl font-bold">{listing.bedrooms}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bath className="h-5 w-5 text-purple-600" />
+                      <span className="font-medium">Bathrooms</span>
+                    </div>
+                    <div className="text-2xl font-bold">{listing.bathrooms}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Square className="h-5 w-5 text-orange-600" />
+                      <span className="font-medium">Square Feet</span>
+                    </div>
+                    <div className="text-2xl font-bold">{listing.squareFootage.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Additional Pricing */}
+              {(listing.lotRent || listing.hoaFees || listing.monthlyTax || listing.monthlyUtilities) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Additional Monthly Costs</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {listing.lotRent && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Lot Rent</span>
+                          <div className="font-semibold">{formatPrice(listing.lotRent)}</div>
+                        </div>
+                      )}
+                      {listing.hoaFees && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">HOA Fees</span>
+                          <div className="font-semibold">{formatPrice(listing.hoaFees)}</div>
+                        </div>
+                      )}
+                      {listing.monthlyTax && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Monthly Tax</span>
+                          <div className="font-semibold">{formatPrice(listing.monthlyTax)}</div>
+                        </div>
+                      )}
+                      {listing.monthlyUtilities && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Est. Utilities</span>
+                          <div className="font-semibold">{formatPrice(listing.monthlyUtilities)}</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Description */}
               <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Play className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No videos available</p>
+                <CardHeader>
+                  <CardTitle className="text-lg">Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed">{listing.description}</p>
+                  {listing.termsOfSale && (
+                    <div className="mt-4">
+                      <h4 className="font-semibold mb-2">Terms of Sale</h4>
+                      <p className="text-muted-foreground">{listing.termsOfSale}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Status and Flags */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Listing Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+                      {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                    </Badge>
+                    {listing.isRepossessed && (
+                      <Badge variant="destructive">Repossessed</Badge>
+                    )}
+                    {listing.pendingSale && (
+                      <Badge variant="outline">Pending Sale</Badge>
+                    )}
+                    {listing.packageType && (
+                      <Badge variant="outline">{listing.packageType} Package</Badge>
+                    )}
+                  </div>
+                  {listing.searchResultsText && (
+                    <div className="mt-3">
+                      <span className="text-sm text-muted-foreground">Search Results Text:</span>
+                      <p className="text-sm">{listing.searchResultsText}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="details" className="space-y-6">
+              {/* Property Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Home className="h-5 w-5" />
+                    Property Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-muted-foreground">Property Type</span>
+                      <div className="font-semibold capitalize">{listing.propertyType.replace('_', ' ')}</div>
+                    </div>
+                    {listing.yearBuilt && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">Year Built</span>
+                        <div className="font-semibold">{listing.yearBuilt}</div>
+                      </div>
+                    )}
+                    {listing.preferredTerm && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">Preferred Term</span>
+                        <div className="font-semibold">{listing.preferredTerm}</div>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-sm text-muted-foreground">Pet Policy</span>
+                      <div className="font-semibold">{listing.petPolicy}</div>
+                    </div>
+                    {listing.soldPrice && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">Sold Price</span>
+                        <div className="font-semibold">{formatPrice(listing.soldPrice)}</div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="floorplans">
-          <div className="grid gap-4 md:grid-cols-2">
-            {listing.floorPlans && listing.floorPlans.length > 0 ? (
-              listing.floorPlans.map((floorPlan, index) => (
-                <Card key={index}>
+
+              {/* Location Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Location Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {listing.county && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">County</span>
+                        <div className="font-semibold">{listing.county}</div>
+                      </div>
+                    )}
+                    {listing.township && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">Township</span>
+                        <div className="font-semibold">{listing.township}</div>
+                      </div>
+                    )}
+                    {listing.schoolDistrict && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">School District</span>
+                        <div className="font-semibold">{listing.schoolDistrict}</div>
+                      </div>
+                    )}
+                    {listing.latitude && listing.longitude && (
+                      <>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Latitude</span>
+                          <div className="font-semibold">{listing.latitude}</div>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Longitude</span>
+                          <div className="font-semibold">{listing.longitude}</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Listing Dates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Listing Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-muted-foreground">Created</span>
+                      <div className="font-semibold">{formatDate(listing.createdAt)}</div>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">Last Updated</span>
+                      <div className="font-semibold">{formatDate(listing.updatedAt)}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="features" className="space-y-6">
+              {/* Amenities */}
+              {listing.amenities && listing.amenities.length > 0 && (
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Floor Plan {index + 1}</CardTitle>
+                    <CardTitle>Amenities</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="aspect-square">
+                    <div className="flex flex-wrap gap-2">
+                      {listing.amenities.map((amenity, index) => (
+                        <Badge key={index} variant="secondary">{amenity}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Outdoor Features */}
+              {listing.outdoorFeatures && listing.outdoorFeatures.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Outdoor Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.outdoorFeatures.map((feature, index) => (
+                        <Badge key={index} variant="outline">{feature}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Storage Options */}
+              {listing.storageOptions && listing.storageOptions.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Storage Options</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.storageOptions.map((option, index) => (
+                        <Badge key={index} variant="outline">{option}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Technology Features */}
+              {listing.technologyFeatures && listing.technologyFeatures.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Technology Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.technologyFeatures.map((feature, index) => (
+                        <Badge key={index} variant="outline">{feature}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Community Amenities */}
+              {listing.communityAmenities && listing.communityAmenities.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Community Amenities</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.communityAmenities.map((amenity, index) => (
+                        <Badge key={index} variant="outline">{amenity}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="mh-details" className="space-y-6">
+              {isManufacturedHome && listing.mhDetails && (
+                <>
+                  {/* Basic MH Info */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Home className="h-5 w-5" />
+                        Manufactured Home Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {listing.mhDetails.manufacturer && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Manufacturer</span>
+                            <div className="font-semibold">{listing.mhDetails.manufacturer}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.model && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Model</span>
+                            <div className="font-semibold">{listing.mhDetails.model}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.modelYear && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Model Year</span>
+                            <div className="font-semibold">{listing.mhDetails.modelYear}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.serialNumber && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Serial Number</span>
+                            <div className="font-semibold">{listing.mhDetails.serialNumber}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.color && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Color</span>
+                            <div className="font-semibold">{listing.mhDetails.color}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.communityName && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Community</span>
+                            <div className="font-semibold">{listing.mhDetails.communityName}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.propertyId && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Property ID</span>
+                            <div className="font-semibold">{listing.mhDetails.propertyId}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.lotSize && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Lot Size</span>
+                            <div className="font-semibold">{listing.mhDetails.lotSize}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Dimensions */}
+                  {(listing.mhDetails.width1 || listing.mhDetails.length1) && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Dimensions</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                          {listing.mhDetails.width1 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Width 1</span>
+                              <div className="font-semibold">{listing.mhDetails.width1}'</div>
+                            </div>
+                          )}
+                          {listing.mhDetails.length1 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Length 1</span>
+                              <div className="font-semibold">{listing.mhDetails.length1}'</div>
+                            </div>
+                          )}
+                          {listing.mhDetails.width2 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Width 2</span>
+                              <div className="font-semibold">{listing.mhDetails.width2}'</div>
+                            </div>
+                          )}
+                          {listing.mhDetails.length2 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Length 2</span>
+                              <div className="font-semibold">{listing.mhDetails.length2}'</div>
+                            </div>
+                          )}
+                          {listing.mhDetails.width3 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Width 3</span>
+                              <div className="font-semibold">{listing.mhDetails.width3}'</div>
+                            </div>
+                          )}
+                          {listing.mhDetails.length3 && (
+                            <div>
+                              <span className="text-sm text-muted-foreground">Length 3</span>
+                              <div className="font-semibold">{listing.mhDetails.length3}'</div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Construction Materials */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Construction & Materials
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {listing.mhDetails.foundation && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Foundation</span>
+                            <div className="font-semibold">{listing.mhDetails.foundation}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.roofType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Roof Type</span>
+                            <div className="font-semibold">{listing.mhDetails.roofType}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.roofMaterial && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Roof Material</span>
+                            <div className="font-semibold">{listing.mhDetails.roofMaterial}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.exteriorMaterial && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Exterior Material</span>
+                            <div className="font-semibold">{listing.mhDetails.exteriorMaterial}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.ceilingMaterial && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Ceiling Material</span>
+                            <div className="font-semibold">{listing.mhDetails.ceilingMaterial}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.wallMaterial && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Wall Material</span>
+                            <div className="font-semibold">{listing.mhDetails.wallMaterial}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.flooringType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Flooring</span>
+                            <div className="font-semibold">{listing.mhDetails.flooringType}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.windowType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Windows</span>
+                            <div className="font-semibold">{listing.mhDetails.windowType}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.insulationType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Insulation</span>
+                            <div className="font-semibold">{listing.mhDetails.insulationType}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Systems */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Zap className="h-5 w-5" />
+                        Systems
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {listing.mhDetails.hvacType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">HVAC</span>
+                            <div className="font-semibold">{listing.mhDetails.hvacType}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.waterHeaterType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Water Heater</span>
+                            <div className="font-semibold">{listing.mhDetails.waterHeaterType}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.electricalSystem && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Electrical</span>
+                            <div className="font-semibold">{listing.mhDetails.electricalSystem}</div>
+                          </div>
+                        )}
+                        {listing.mhDetails.plumbingType && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Plumbing</span>
+                            <div className="font-semibold">{listing.mhDetails.plumbingType}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Kitchen Appliances */}
+                  {listing.mhDetails.kitchenAppliances && listing.mhDetails.kitchenAppliances.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Kitchen Appliances</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {listing.mhDetails.kitchenAppliances.map((appliance, index) => (
+                            <Badge key={index} variant="secondary">{appliance}</Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Features & Amenities */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Home Features</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <BooleanIndicator value={listing.mhDetails.garage} label="Garage" />
+                        <BooleanIndicator value={listing.mhDetails.carport} label="Carport" />
+                        <BooleanIndicator value={listing.mhDetails.centralAir} label="Central Air" />
+                        <BooleanIndicator value={listing.mhDetails.thermopaneWindows} label="Thermopane Windows" />
+                        <BooleanIndicator value={listing.mhDetails.fireplace} label="Fireplace" />
+                        <BooleanIndicator value={listing.mhDetails.storageShed} label="Storage Shed" />
+                        <BooleanIndicator value={listing.mhDetails.gutters} label="Gutters" />
+                        <BooleanIndicator value={listing.mhDetails.shutters} label="Shutters" />
+                        <BooleanIndicator value={listing.mhDetails.deck} label="Deck" />
+                        <BooleanIndicator value={listing.mhDetails.patio} label="Patio" />
+                        <BooleanIndicator value={listing.mhDetails.cathedralCeilings} label="Cathedral Ceilings" />
+                        <BooleanIndicator value={listing.mhDetails.ceilingFans} label="Ceiling Fans" />
+                        <BooleanIndicator value={listing.mhDetails.skylights} label="Skylights" />
+                        <BooleanIndicator value={listing.mhDetails.walkinClosets} label="Walk-in Closets" />
+                        <BooleanIndicator value={listing.mhDetails.laundryRoom} label="Laundry Room" />
+                        <BooleanIndicator value={listing.mhDetails.pantry} label="Pantry" />
+                        <BooleanIndicator value={listing.mhDetails.sunRoom} label="Sun Room" />
+                        <BooleanIndicator value={listing.mhDetails.basement} label="Basement" />
+                        <BooleanIndicator value={listing.mhDetails.gardenTub} label="Garden Tub" />
+                        <BooleanIndicator value={listing.mhDetails.garbageDisposal} label="Garbage Disposal" />
+                        <BooleanIndicator value={listing.mhDetails.laundryHookups} label="Laundry Hookups" />
+                        <BooleanIndicator value={listing.mhDetails.internetReady} label="Internet Ready" />
+                        <BooleanIndicator value={listing.mhDetails.cableReady} label="Cable Ready" />
+                        <BooleanIndicator value={listing.mhDetails.phoneReady} label="Phone Ready" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Included Appliances */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Included Appliances</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <BooleanIndicator value={listing.mhDetails.refrigeratorIncluded} label="Refrigerator" />
+                        <BooleanIndicator value={listing.mhDetails.microwaveIncluded} label="Microwave" />
+                        <BooleanIndicator value={listing.mhDetails.ovenIncluded} label="Oven" />
+                        <BooleanIndicator value={listing.mhDetails.dishwasherIncluded} label="Dishwasher" />
+                        <BooleanIndicator value={listing.mhDetails.washerIncluded} label="Washer" />
+                        <BooleanIndicator value={listing.mhDetails.dryerIncluded} label="Dryer" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="media" className="space-y-6">
+              {/* Images */}
+              {listing.images && listing.images.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Camera className="h-5 w-5" />
+                      Images ({listing.images.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {listing.images.map((image, index) => (
+                        <div key={index} className="aspect-square bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src={image}
+                            alt={`Property image ${index + 1}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => window.open(image, '_blank')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Videos */}
+              {listing.videos && listing.videos.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Play className="h-5 w-5" />
+                      Videos ({listing.videos.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {listing.videos.map((video, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                          <Play className="h-4 w-4" />
+                          <a
+                            href={video}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex-1"
+                          >
+                            Video {index + 1}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Floor Plans */}
+              {listing.floorPlans && listing.floorPlans.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Floor Plans ({listing.floorPlans.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {listing.floorPlans.map((plan, index) => (
+                        <div key={index} className="aspect-square bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src={plan}
+                            alt={`Floor plan ${index + 1}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => window.open(plan, '_blank')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Virtual Tours */}
+              {listing.virtualTours && listing.virtualTours.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      Virtual Tours ({listing.virtualTours.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {listing.virtualTours.map((tour, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                          <Eye className="h-4 w-4" />
+                          <a
+                            href={tour}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex-1"
+                          >
+                            Virtual Tour {index + 1}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Agent Photo */}
+              {listing.agentPhotoUrl && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Agent/Company Photo</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="w-32 h-32 bg-muted rounded-lg overflow-hidden">
                       <img
-                        src={floorPlan}
-                        alt={`Floor Plan ${index + 1}`}
-                        className="w-full h-full object-contain rounded-lg border"
+                        src={listing.agentPhotoUrl}
+                        alt="Agent or company photo"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            ) : (
-              <Card className="md:col-span-2">
-                <CardContent className="pt-6">
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No floor plans available</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="contact" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      {listing.contactInfo.mhVillageAccountKey && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">MHVillage Account</span>
+                          <div className="font-semibold">{listing.contactInfo.mhVillageAccountKey}</div>
+                        </div>
+                      )}
+                      
+                      {(listing.contactInfo.firstName || listing.contactInfo.lastName) && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Contact Name</span>
+                          <div className="font-semibold">
+                            {[listing.contactInfo.firstName, listing.contactInfo.lastName].filter(Boolean).join(' ')}
+                          </div>
+                        </div>
+                      )}
+
+                      {listing.contactInfo.companyName && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Company</span>
+                          <div className="font-semibold">{listing.contactInfo.companyName}</div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        <div>
+                          <span className="text-sm text-muted-foreground">Phone</span>
+                          <div className="font-semibold">{listing.contactInfo.phone}</div>
+                        </div>
+                      </div>
+
+                      {listing.contactInfo.alternatePhone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          <div>
+                            <span className="text-sm text-muted-foreground">Alternate Phone</span>
+                            <div className="font-semibold">{listing.contactInfo.alternatePhone}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        <div>
+                          <span className="text-sm text-muted-foreground">Email</span>
+                          <div className="font-semibold">{listing.contactInfo.email}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {listing.contactInfo.fax && (
+                        <div>
+                          <span className="text-sm text-muted-foreground">Fax</span>
+                          <div className="font-semibold">{listing.contactInfo.fax}</div>
+                        </div>
+                      )}
+
+                      {listing.contactInfo.website && (
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          <div>
+                            <span className="text-sm text-muted-foreground">Website</span>
+                            <div className="font-semibold">
+                              <a
+                                href={listing.contactInfo.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {listing.contactInfo.website}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Additional Emails */}
+                      {[
+                        listing.contactInfo.additionalEmail1,
+                        listing.contactInfo.additionalEmail2,
+                        listing.contactInfo.additionalEmail3
+                      ].filter(Boolean).map((email, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          <div>
+                            <span className="text-sm text-muted-foreground">Additional Email {index + 1}</span>
+                            <div className="font-semibold">{email}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Property Details */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Property Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Bed className="h-4 w-4 text-muted-foreground" />
-                <span>{listing.bedrooms} Bedrooms</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Bath className="h-4 w-4 text-muted-foreground" />
-                <span>{listing.bathrooms} Bathrooms</span>
-              </div>
-              {listing.squareFootage && (
-                <div className="flex items-center gap-2">
-                  <Square className="h-4 w-4 text-muted-foreground" />
-                  <span>{listing.squareFootage} sq ft</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Home className="h-4 w-4 text-muted-foreground" />
-                <span className="capitalize">{listing.propertyType}</span>
-              </div>
-            </div>
-            
-            {/* Manufactured Home Specific Details */}
-            {isMH && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="font-semibold">Home Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Make:</span>
-                      <span className="ml-2 font-medium">{listing.make}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Model:</span>
-                      <span className="ml-2 font-medium">{listing.model}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Year:</span>
-                      <span className="ml-2 font-medium">{listing.year}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Home Type:</span>
-                      <span className="ml-2 font-medium capitalize">{listing.homeType.replace('_', ' ')}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Roof Type:</span>
-                      <span className="ml-2 font-medium capitalize">{listing.roofType.replace('_', ' ')}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Siding:</span>
-                      <span className="ml-2 font-medium capitalize">{listing.sidingType.replace('_', ' ')}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Serial #:</span>
-                      <span className="ml-2 font-medium">{listing.serialNumber}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Title #:</span>
-                      <span className="ml-2 font-medium">{listing.titleNumber}</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-            
-            <div>
-              <Badge
-                variant={
-                  listing.status === 'active' ? 'default' :
-                  listing.status === 'pending' ? 'outline' :
-                  listing.status === 'rented' || listing.status === 'sold' ? 'secondary' :
-                  'destructive'
-                }
-                className="capitalize"
-              >
-                {listing.status.replace('_', ' ')}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contact & Location Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {isMH ? 'Seller Information' : 'Contact Information'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isMH ? (
-              <div className="space-y-3">
-                <div>
-                  <span className="text-muted-foreground">Seller:</span>
-                  <span className="ml-2 font-medium">{listing.sellerName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{listing.sellerPhone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{listing.sellerEmail}</span>
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Address:</span>
-                  <div className="ml-2">{listing.sellerAddress}</div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{listing.contactInfo.phone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{listing.contactInfo.email}</span>
-                </div>
-              </>
-            )}
-            
-            {/* Location Information for MH */}
-            {isMH && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="font-semibold">Location Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Location Type:</span>
-                      <span className="ml-2 font-medium capitalize">{listing.locationType.replace('_', ' ')}</span>
-                    </div>
-                    {listing.communityName && (
-                      <div>
-                        <span className="text-muted-foreground">Community:</span>
-                        <span className="ml-2 font-medium">{listing.communityName}</span>
-                      </div>
-                    )}
-                    {listing.lotRent && (
-                      <div>
-                        <span className="text-muted-foreground">Lot Rent:</span>
-                        <span className="ml-2 font-medium">${listing.lotRent}/month</span>
-                      </div>
-                    )}
-                    {listing.taxes && (
-                      <div>
-                        <span className="text-muted-foreground">Taxes:</span>
-                        <span className="ml-2 font-medium">${listing.taxes}/year</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-            
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Listed {new Date(listing.createdAt).toLocaleDateString()}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Features and Amenities */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {isMH ? 'Features & Amenities' : 'Amenities'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isMH ? (
-            <div className="space-y-6">
-              {/* Key Features */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2">
-                  <Car className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Garage: {listing.garage ? (
-                      <CheckCircle className="h-4 w-4 inline text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 inline text-red-600" />
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Snowflake className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Central Air: {listing.centralAir ? (
-                      <CheckCircle className="h-4 w-4 inline text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 inline text-red-600" />
-                    )}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Appliances */}
-              {listing.appliances && listing.appliances.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Wrench className="h-4 w-4" />
-                    Included Appliances
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.appliances.map((appliance, index) => (
-                      <Badge key={index} variant="outline">
-                        {appliance}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Features */}
-              {listing.features && listing.features.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Home Features
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.features.map((feature, index) => (
-                      <Badge key={index} variant="secondary">
-                        {feature}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Virtual Tour */}
-              {listing.virtualTour && (
-                <div>
-                  <h4 className="font-semibold mb-3">Virtual Tour</h4>
-                  <VideoPlayer url={listing.virtualTour} title={`${listing.title} - Virtual Tour`} />
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {listing.amenities.map((amenity, index) => (
-                  <Badge key={index} variant="secondary">
-                    {amenity}
-                  </Badge>
-                ))}
-              </div>
-              {isRental && listing.petPolicy && (
-                <div className="pt-4 border-t">
-                  <h4 className="font-semibold mb-2">Pet Policy</h4>
-                  <p className="text-sm text-muted-foreground">{listing.petPolicy}</p>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Description */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="whitespace-pre-wrap">{listing.description}</p>
-          
-          {/* Additional MH Information */}
-          {isMH && (
-            <div className="mt-6 pt-6 border-t space-y-4">
-              {listing.condition && (
-                <div>
-                  <h4 className="font-semibold mb-2">Condition</h4>
-                  <p className="text-sm text-muted-foreground capitalize">{listing.condition}</p>
-                </div>
-              )}
-              
-              {listing.financing && (
-                <div>
-                  <h4 className="font-semibold mb-2">Financing Options</h4>
-                  <p className="text-sm text-muted-foreground">{listing.financing}</p>
-                </div>
-              )}
-              
-              {listing.utilities && (
-                <div>
-                  <h4 className="font-semibold mb-2">Utilities</h4>
-                  <p className="text-sm text-muted-foreground">{listing.utilities}</p>
-                </div>
-              )}
-            </div>
-          )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

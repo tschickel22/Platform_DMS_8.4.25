@@ -92,23 +92,61 @@ function generateZillowXML(listings, partnerId, customParams) {
         ${listing.mhDetails.manufacturer ? `<manufacturer>${escapeXml(listing.mhDetails.manufacturer)}</manufacturer>` : ''}
         ${listing.mhDetails.model ? `<model>${escapeXml(listing.mhDetails.model)}</model>` : ''}
         ${listing.mhDetails.serialNumber ? `<serialNumber>${escapeXml(listing.mhDetails.serialNumber)}</serialNumber>` : ''}
+        ${listing.mhDetails.modelYear ? `<modelYear>${listing.mhDetails.modelYear}</modelYear>` : ''}
+        ${listing.mhDetails.color ? `<color>${escapeXml(listing.mhDetails.color)}</color>` : ''}
         ${listing.mhDetails.communityName ? `<communityName>${escapeXml(listing.mhDetails.communityName)}</communityName>` : ''}
+        ${listing.mhDetails.propertyId ? `<propertyId>${escapeXml(listing.mhDetails.propertyId)}</propertyId>` : ''}
         ${listing.mhDetails.lotSize ? `<lotSize>${escapeXml(listing.mhDetails.lotSize)}</lotSize>` : ''}
+        ${listing.mhDetails.width1 ? `<width1>${listing.mhDetails.width1}</width1>` : ''}
+        ${listing.mhDetails.length1 ? `<length1>${listing.mhDetails.length1}</length1>` : ''}
+        ${listing.mhDetails.width2 ? `<width2>${listing.mhDetails.width2}</width2>` : ''}
+        ${listing.mhDetails.length2 ? `<length2>${listing.mhDetails.length2}</length2>` : ''}
+        ${listing.mhDetails.width3 ? `<width3>${listing.mhDetails.width3}</width3>` : ''}
+        ${listing.mhDetails.length3 ? `<length3>${listing.mhDetails.length3}</length3>` : ''}
         ${listing.mhDetails.foundation ? `<foundation>${escapeXml(listing.mhDetails.foundation)}</foundation>` : ''}
         ${listing.mhDetails.roofType ? `<roofType>${escapeXml(listing.mhDetails.roofType)}</roofType>` : ''}
+        ${listing.mhDetails.roofMaterial ? `<roofMaterial>${escapeXml(listing.mhDetails.roofMaterial)}</roofMaterial>` : ''}
         ${listing.mhDetails.exteriorMaterial ? `<exteriorMaterial>${escapeXml(listing.mhDetails.exteriorMaterial)}</exteriorMaterial>` : ''}
+        ${listing.mhDetails.ceilingMaterial ? `<ceilingMaterial>${escapeXml(listing.mhDetails.ceilingMaterial)}</ceilingMaterial>` : ''}
+        ${listing.mhDetails.wallMaterial ? `<wallMaterial>${escapeXml(listing.mhDetails.wallMaterial)}</wallMaterial>` : ''}
         ${listing.mhDetails.hvacType ? `<hvacType>${escapeXml(listing.mhDetails.hvacType)}</hvacType>` : ''}
         ${listing.mhDetails.waterHeaterType ? `<waterHeaterType>${escapeXml(listing.mhDetails.waterHeaterType)}</waterHeaterType>` : ''}
         ${listing.mhDetails.electricalSystem ? `<electricalSystem>${escapeXml(listing.mhDetails.electricalSystem)}</electricalSystem>` : ''}
         ${listing.mhDetails.plumbingType ? `<plumbingType>${escapeXml(listing.mhDetails.plumbingType)}</plumbingType>` : ''}
         ${listing.mhDetails.insulationType ? `<insulationType>${escapeXml(listing.mhDetails.insulationType)}</insulationType>` : ''}
         ${listing.mhDetails.windowType ? `<windowType>${escapeXml(listing.mhDetails.windowType)}</windowType>` : ''}
+        ${listing.mhDetails.thermopaneWindows ? `<thermopaneWindows>${listing.mhDetails.thermopaneWindows}</thermopaneWindows>` : ''}
         ${listing.mhDetails.flooringType ? `<flooringType>${escapeXml(listing.mhDetails.flooringType)}</flooringType>` : ''}
         ${listing.mhDetails.kitchenAppliances ? `<kitchenAppliances>${escapeXml(listing.mhDetails.kitchenAppliances.join(', '))}</kitchenAppliances>` : ''}
         ${listing.mhDetails.laundryHookups ? `<laundryHookups>${listing.mhDetails.laundryHookups}</laundryHookups>` : ''}
+        ${listing.mhDetails.laundryRoom ? `<laundryRoom>${listing.mhDetails.laundryRoom}</laundryRoom>` : ''}
         ${listing.mhDetails.internetReady ? `<internetReady>${listing.mhDetails.internetReady}</internetReady>` : ''}
         ${listing.mhDetails.cableReady ? `<cableReady>${listing.mhDetails.cableReady}</cableReady>` : ''}
         ${listing.mhDetails.phoneReady ? `<phoneReady>${listing.mhDetails.phoneReady}</phoneReady>` : ''}
+        ${listing.mhDetails.garage ? `<garage>${listing.mhDetails.garage}</garage>` : ''}
+        ${listing.mhDetails.carport ? `<carport>${listing.mhDetails.carport}</carport>` : ''}
+        ${listing.mhDetails.centralAir ? `<centralAir>${listing.mhDetails.centralAir}</centralAir>` : ''}
+        ${listing.mhDetails.fireplace ? `<fireplace>${listing.mhDetails.fireplace}</fireplace>` : ''}
+        ${listing.mhDetails.storageShed ? `<storageShed>${listing.mhDetails.storageShed}</storageShed>` : ''}
+        ${listing.mhDetails.gutters ? `<gutters>${listing.mhDetails.gutters}</gutters>` : ''}
+        ${listing.mhDetails.shutters ? `<shutters>${listing.mhDetails.shutters}</shutters>` : ''}
+        ${listing.mhDetails.deck ? `<deck>${listing.mhDetails.deck}</deck>` : ''}
+        ${listing.mhDetails.patio ? `<patio>${listing.mhDetails.patio}</patio>` : ''}
+        ${listing.mhDetails.cathedralCeilings ? `<cathedralCeilings>${listing.mhDetails.cathedralCeilings}</cathedralCeilings>` : ''}
+        ${listing.mhDetails.ceilingFans ? `<ceilingFans>${listing.mhDetails.ceilingFans}</ceilingFans>` : ''}
+        ${listing.mhDetails.skylights ? `<skylights>${listing.mhDetails.skylights}</skylights>` : ''}
+        ${listing.mhDetails.walkinClosets ? `<walkinClosets>${listing.mhDetails.walkinClosets}</walkinClosets>` : ''}
+        ${listing.mhDetails.pantry ? `<pantry>${listing.mhDetails.pantry}</pantry>` : ''}
+        ${listing.mhDetails.sunRoom ? `<sunRoom>${listing.mhDetails.sunRoom}</sunRoom>` : ''}
+        ${listing.mhDetails.basement ? `<basement>${listing.mhDetails.basement}</basement>` : ''}
+        ${listing.mhDetails.gardenTub ? `<gardenTub>${listing.mhDetails.gardenTub}</gardenTub>` : ''}
+        ${listing.mhDetails.garbageDisposal ? `<garbageDisposal>${listing.mhDetails.garbageDisposal}</garbageDisposal>` : ''}
+        ${listing.mhDetails.refrigeratorIncluded ? `<refrigeratorIncluded>${listing.mhDetails.refrigeratorIncluded}</refrigeratorIncluded>` : ''}
+        ${listing.mhDetails.microwaveIncluded ? `<microwaveIncluded>${listing.mhDetails.microwaveIncluded}</microwaveIncluded>` : ''}
+        ${listing.mhDetails.ovenIncluded ? `<ovenIncluded>${listing.mhDetails.ovenIncluded}</ovenIncluded>` : ''}
+        ${listing.mhDetails.dishwasherIncluded ? `<dishwasherIncluded>${listing.mhDetails.dishwasherIncluded}</dishwasherIncluded>` : ''}
+        ${listing.mhDetails.washerIncluded ? `<washerIncluded>${listing.mhDetails.washerIncluded}</washerIncluded>` : ''}
+        ${listing.mhDetails.dryerIncluded ? `<dryerIncluded>${listing.mhDetails.dryerIncluded}</dryerIncluded>` : ''}
       </mhDetails>`
     }
     
@@ -429,18 +467,33 @@ const mockListings = [
   },
   {
     id: '4',
+    sellerId: 'SELLER_001',
+    companyId: 'COMP_001',
     listingType: 'sale',
     title: '2018 Clayton Manufactured Home - Sunny Acres Community',
     description: 'Beautiful 3-bedroom, 2-bathroom manufactured home in excellent condition. Features modern kitchen with stainless steel appliances, spacious living areas, and master suite with walk-in closet.',
+    termsOfSale: 'Cash or financing available. Owner will consider reasonable offers.',
     address: '123 Mobile Home Dr, Sunny Acres Community, City 12348',
+    address2: 'Lot #45',
+    city: 'Sunny City',
+    state: 'FL',
+    zipCode: '12348',
+    county: 'Orange County',
+    township: 'Sunny Township',
+    schoolDistrict: 'Sunny School District',
+    latitude: 28.5383,
+    longitude: -81.3792,
     rent: null,
     purchasePrice: 89500,
     lotRent: 450,
     hoaFees: 75,
+    monthlyTax: 125,
+    monthlyUtilities: 180,
     bedrooms: 3,
     bathrooms: 2,
     squareFootage: 1400,
     yearBuilt: 2018,
+    preferredTerm: 'Manufactured Home',
     propertyType: 'manufactured_home',
     status: 'active',
     amenities: ['Central Air', 'Dishwasher', 'Garbage Disposal', 'Microwave', 'Refrigerator'],
@@ -449,27 +502,71 @@ const mockListings = [
     technologyFeatures: ['Cable Ready', 'Internet Ready', 'Phone Ready'],
     communityAmenities: ['Clubhouse', 'Pool', 'Playground', 'Laundry Facility'],
     petPolicy: 'Pets allowed with restrictions',
+    isRepossessed: false,
+    packageType: 'Premium',
+    pendingSale: false,
+    soldPrice: null,
+    searchResultsText: 'Beautiful 2018 Clayton home in family community with pool and clubhouse',
+    agentPhotoUrl: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg',
     mhDetails: {
       manufacturer: 'Clayton Homes',
       model: 'The Breeze II',
       serialNumber: 'CLT123456789',
+      modelYear: 2018,
+      color: 'Beige with Brown Trim',
       communityName: 'Sunny Acres Mobile Home Community',
+      propertyId: 'SA-045',
       lotSize: '60x120',
+      width1: 28,
+      length1: 50,
+      width2: null,
+      length2: null,
+      width3: null,
+      length3: null,
       foundation: 'Permanent Foundation',
       roofType: 'Architectural Shingles',
+      roofMaterial: 'Asphalt Shingles',
       exteriorMaterial: 'Vinyl Siding',
+      ceilingMaterial: 'Drywall',
+      wallMaterial: 'Drywall',
       hvacType: 'Central Air & Heat',
       waterHeaterType: 'Electric Tank',
       electricalSystem: '200 Amp Service',
       plumbingType: 'PEX',
       insulationType: 'Fiberglass Batt',
       windowType: 'Double Pane Vinyl',
+      thermopaneWindows: true,
       flooringType: 'Laminate & Carpet',
       kitchenAppliances: ['Refrigerator', 'Range', 'Dishwasher', 'Microwave'],
       laundryHookups: true,
+      laundryRoom: true,
       internetReady: true,
       cableReady: true,
-      phoneReady: true
+      phoneReady: true,
+      garage: false,
+      carport: true,
+      centralAir: true,
+      fireplace: true,
+      storageShed: true,
+      gutters: true,
+      shutters: true,
+      deck: true,
+      patio: false,
+      cathedralCeilings: true,
+      ceilingFans: true,
+      skylights: false,
+      walkinClosets: true,
+      pantry: true,
+      sunRoom: false,
+      basement: false,
+      gardenTub: true,
+      garbageDisposal: true,
+      refrigeratorIncluded: true,
+      microwaveIncluded: true,
+      ovenIncluded: true,
+      dishwasherIncluded: true,
+      washerIncluded: false,
+      dryerIncluded: false
     },
     images: [
       'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
@@ -480,8 +577,18 @@ const mockListings = [
     floorPlans: ['https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg'],
     virtualTours: ['https://virtualtour.example.com/tour1'],
     contactInfo: {
+      mhVillageAccountKey: 'MHV_12345',
+      firstName: 'John',
+      lastName: 'Smith',
+      companyName: 'Sunny Acres Sales',
       phone: '(555) 234-5678',
-      email: 'sales@sunnyacres.com'
+      email: 'sales@sunnyacres.com',
+      fax: '(555) 234-5679',
+      website: 'https://www.sunnyacres.com',
+      additionalEmail1: 'manager@sunnyacres.com',
+      additionalEmail2: 'info@sunnyacres.com',
+      additionalEmail3: null,
+      alternatePhone: '(555) 234-5680'
     },
     createdAt: '2024-01-25T11:00:00Z',
     updatedAt: '2024-01-25T11:00:00Z'
