@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } from 'lucide-react'
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
-import { inventoryMock } from '@/mocks/inventoryMock'
+import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
 
 interface ListingFormProps {
