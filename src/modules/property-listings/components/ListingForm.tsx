@@ -33,7 +33,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   // Get relevant inventory based on property type
   // Initialize formData state first
   const [formData, setFormData] = useState({
-      return (vehicles || []).filter(vehicle => 
     propertyType: 'manufactured_home',
     inventoryId: '',
     title: '',
@@ -143,6 +142,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       firstName: '',
       lastName: '',
       companyName: ''
+    },
     make: '',
     model: '',
     vin: '',
@@ -155,9 +155,9 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
   const getInventoryOptions = () => {
     if (formData.propertyType === 'manufactured_home') {
-      return (availableInventory || []).filter(item => 
-        item.type === 'manufactured_home' && 
-        item.status === 'available'
+      return (vehicles || []).filter(vehicle => 
+        vehicle.type === 'manufactured_home' && 
+        vehicle.status === 'available'
       )
     } else if (formData.propertyType === 'land') {
       return (availableLand || []).filter(item => 
