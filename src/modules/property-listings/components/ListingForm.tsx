@@ -19,6 +19,9 @@ import { mockListings } from '@/mocks/listingsMock'
 
 // Mock available inventory data
 const availableInventory = mockInventory.sampleVehicles || []
+
+interface ListingFormProps {
+  listing?: Partial<Listing>
   onSubmit: (listing: Partial<Listing>) => void
   onCancel: () => void
 }
@@ -167,7 +170,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       )
     } else if (formData.propertyType === 'land') {
       return (availableLand || []).filter(item => 
-        land.status === 'available'
+        item.status === 'available'
       )
     }
     return []
@@ -181,6 +184,10 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const [newVideo, setNewVideo] = useState('')
   const [newFloorPlan, setNewFloorPlan] = useState('')
   const [newVirtualTour, setNewVirtualTour] = useState('')
+  const [newTechFeature, setNewTechFeature] = useState('')
+  const [newCommunityAmenity, setNewCommunityAmenity] = useState('')
+  const [newImage, setNewImage] = useState('')
+  const [newKitchenAppliance, setNewKitchenAppliance] = useState('')
   const [associatedLandId, setAssociatedLandId] = useState<string>(listing?.associatedLandId || '')
   const [associatedInventoryId, setAssociatedInventoryId] = useState<string>(listing?.associatedInventoryId || '')
 
