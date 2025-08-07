@@ -30,6 +30,34 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const { availableLand } = useLandManagement()
 
   // Get relevant inventory based on property type
+  // Initialize formData state first
+  const [formData, setFormData] = useState({
+    listingType: 'rent',
+    propertyType: 'manufactured_home',
+    inventoryId: '',
+    title: '',
+    description: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    rent: '',
+    purchasePrice: '',
+    lotRent: '',
+    hoaFees: '',
+    bedrooms: '',
+    bathrooms: '',
+    squareFootage: '',
+    yearBuilt: '',
+    amenities: [],
+    petPolicy: '',
+    images: [],
+    contactInfo: {
+      phone: '',
+      email: ''
+    }
+  })
+
   const getInventoryOptions = () => {
     if (formData.propertyType === 'manufactured_home') {
       return availableInventory.filter(item => 
@@ -46,33 +74,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
   const inventoryOptions = getInventoryOptions()
 
-  const [formData, setFormData] = useState<Partial<Listing>>({
-    listingType: 'rent',
-    title: '',
-    description: '',
-    termsOfSale: '',
-    address: '',
-    address2: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    county: '',
-    township: '',
-    schoolDistrict: '',
-    latitude: undefined,
-    longitude: undefined,
-    rent: undefined,
-    purchasePrice: undefined,
-    lotRent: undefined,
-    hoaFees: undefined,
-    monthlyTax: undefined,
-    monthlyUtilities: undefined,
-    bedrooms: 1,
-    bathrooms: 1,
-    squareFootage: 0,
-    yearBuilt: undefined,
-    preferredTerm: '',
-    propertyType: 'apartment',
     selectedInventoryId: '',
     status: 'active',
     amenities: [],
