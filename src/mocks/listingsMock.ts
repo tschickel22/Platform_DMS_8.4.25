@@ -122,6 +122,7 @@ export const sampleRentalListings: RentalListing[] = [
       dishwasherIncluded: true,
       washerIncluded: false,
       dryerIncluded: false
+    },
     images: [
       'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
       'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
