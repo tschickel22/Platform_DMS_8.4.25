@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } from 'lucide-react'
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
+import { inventoryMock } from '@/mocks/inventoryMock'
+import { mockListings } from '@/mocks/listingsMock'
 
 interface ListingFormProps {
   listing?: Listing
@@ -152,6 +154,8 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const [newVideo, setNewVideo] = useState('')
   const [newFloorPlan, setNewFloorPlan] = useState('')
   const [newVirtualTour, setNewVirtualTour] = useState('')
+  const [associatedLandId, setAssociatedLandId] = useState<string>(listing?.associatedLandId || '')
+  const [associatedInventoryId, setAssociatedInventoryId] = useState<string>(listing?.associatedInventoryId || '')
 
   const handleInputChange = (field: keyof Listing, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -199,7 +203,12 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    const submissionData = {
+      ...formData,
+      associatedLandId: associatedLandId || null,
+      associatedInventoryId: associatedInventoryId || null,
+    }
+    onSubmit(submissionData)
   }
 
   const handleCancel = () => {
@@ -207,6 +216,16 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   }
 
   const isManufacturedHome = formData.propertyType === 'manufactured_home'
+
+  // Get available land listings
+  const availableLandListings = mockListings.filter(
+    listing => listing.propertyType === 'land' && listing.status === 'active'
+  )
+
+  // Get available inventory items
+  const availableInventoryItems = inventoryMock.sampleInventory.filter(
+    item => item.status === 'available'
+  )
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -259,6 +278,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                         <SelectItem value="condo">Condo</SelectItem>
                         <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
                         <SelectItem value="townhouse">Townhouse</SelectItem>
+                        <SelectItem value="land">Land</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -428,6 +448,75 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                     onCheckedChange={(checked) => handleInputChange('pendingSale', checked)}
                   />
                   <Label htmlFor="pendingSale">Pending sale in progress</Label>
+                </div>
+
+                {/* Associations Section */}
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="text-md font-semibold">Property Associations</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Associated Land */}
+                    <div className="space-y-2">
+                      <Label htmlFor="associatedLand">Associated Land</Label>
+                      <Select value={associatedLandId} onValueChange={setAssociatedLandId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select land parcel (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No land association</SelectItem>
+                          {availableLandListings.map((land) => (
+                            <SelectItem key={land.id} value={land.id}>
+                              {land.title} - {land.address}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {associatedLandId && (
+                        <div className="text-sm text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            Land: {availableLandListings.find(l => l.id === associatedLandId)?.title}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Associated Inventory */}
+                    <div className="space-y-2">
+                      <Label htmlFor="associatedInventory">Associated Inventory</Label>
+                      <Select value={associatedInventoryId} onValueChange={setAssociatedInventoryId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select inventory item (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No inventory association</SelectItem>
+                          {availableInventoryItems.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.year} {item.make} {item.model} ({item.stockNumber})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {associatedInventoryId && (
+                        <div className="text-sm text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            Inventory: {availableInventoryItems.find(i => i.id === associatedInventoryId)?.stockNumber}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Association Info */}
+                  {(associatedLandId || associatedInventoryId) && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-700">
+                        <strong>Association Summary:</strong>
+                        {associatedLandId && ` This property is associated with land parcel "${availableLandListings.find(l => l.id === associatedLandId)?.title}".`}
+                        {associatedInventoryId && ` This property is linked to inventory item "${availableInventoryItems.find(i => i.id === associatedInventoryId)?.stockNumber}".`}
+                        {associatedLandId && associatedInventoryId && ' Both associations will be maintained when the listing is saved.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
