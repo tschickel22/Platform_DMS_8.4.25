@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ interface ListingFormProps {
 }
 
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<Partial<Listing>>({
     listingType: 'rent',
     title: '',
@@ -198,6 +200,10 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
+  }
+
+  const handleCancel = () => {
+    navigate('/inventory')
   }
 
   const isManufacturedHome = formData.propertyType === 'manufactured_home'
@@ -1438,7 +1444,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
             </Tabs>
 
             <div className="flex justify-end gap-4 pt-6">
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button type="button" variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
               <Button type="submit">
