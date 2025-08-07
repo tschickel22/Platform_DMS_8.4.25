@@ -55,33 +55,13 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     contactInfo: {
       phone: '',
       email: ''
-    }
-  })
-
-  const getInventoryOptions = () => {
-    if (formData.propertyType === 'manufactured_home') {
-      return availableInventory.filter(item => 
-        item.type === 'manufactured_home' && 
-        item.status === 'available'
-      )
-    } else if (formData.propertyType === 'land') {
-      return availableLand.filter(land => 
-        land.status === 'available'
-      )
-    }
-    return []
-  }
-
-  const inventoryOptions = getInventoryOptions()
-
+    },
     selectedInventoryId: '',
     status: 'active',
-    amenities: [],
     outdoorFeatures: [],
     storageOptions: [],
     technologyFeatures: [],
     communityAmenities: [],
-    petPolicy: '',
     isRepossessed: false,
     packageType: '',
     pendingSale: false,
@@ -148,7 +128,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       washerIncluded: false,
       dryerIncluded: false
     },
-    images: [],
     videos: [],
     floorPlans: [],
     virtualTours: [],
@@ -175,8 +154,24 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     condition: '',
     location: '',
     cost: '',
-    features: [] as string[],
+    features: [] as string[]
   })
+
+  const getInventoryOptions = () => {
+    if (formData.propertyType === 'manufactured_home') {
+      return availableInventory.filter(item => 
+        item.type === 'manufactured_home' && 
+        item.status === 'available'
+      )
+    } else if (formData.propertyType === 'land') {
+      return availableLand.filter(land => 
+        land.status === 'available'
+      )
+    }
+    return []
+  }
+
+  const inventoryOptions = getInventoryOptions()
 
   const [newAmenity, setNewAmenity] = useState('')
   const [newOutdoorFeature, setNewOutdoorFeature] = useState('')
@@ -259,13 +254,13 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
         cost: selectedItem.cost?.toString() || prev.cost,
         features: selectedItem.features || prev.features,
         // Generate description if not already set
-        description: prev.description || generateInventoryDescription(selectedItem),
+        description: prev.description || generateInventoryDescription(selectedItem)
       }))
     } else {
       // Clear inventory-related fields if no item selected
       setFormData(prev => ({
         ...prev,
-        selectedInventoryId: inventoryId,
+        selectedInventoryId: inventoryId
       }))
     }
   }
@@ -292,7 +287,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     const submissionData = {
       ...formData,
       associatedLandId: associatedLandId || null,
-      associatedInventoryId: associatedInventoryId || null,
+      associatedInventoryId: associatedInventoryId || null
     }
     onSubmit(submissionData)
   }
