@@ -260,7 +260,7 @@ export default function PropertyListingsSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       <div>
         <h3 className="text-lg font-medium">Property Listings Settings</h3>
         <p className="text-sm text-muted-foreground">
@@ -271,7 +271,7 @@ export default function PropertyListingsSettings() {
       {/* Syndication Partners Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Syndication Partners</CardTitle>
               <CardDescription>
@@ -288,7 +288,7 @@ export default function PropertyListingsSettings() {
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>
-                    {editingPartner ? 'Edit Syndication Partner' : 'Add New Syndication Partner'}
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   </DialogTitle>
                   <DialogDescription>
                     Configure a new syndication partner to export your listings
@@ -348,7 +348,7 @@ export default function PropertyListingsSettings() {
                           >
                             {copiedUrl === partner.id ? (
                               <CheckCircle className="h-3 w-3 text-green-600" />
-                            ) : (
+                    <div className="flex flex-wrap items-center gap-2">
                               <Copy className="h-3 w-3" />
                             )}
                           </Button>
@@ -378,20 +378,21 @@ export default function PropertyListingsSettings() {
                           <Button variant="ghost" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </AlertDialogTrigger>
+                      <code className="bg-muted px-2 py-1 rounded text-xs break-all">
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
                             <AlertDialogDescription>
                               Are you sure you want to delete "{partner.name}"? This action cannot be undone.
                             </AlertDialogDescription>
+                        className="shrink-0"
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDeletePartner(partner.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
+                  <div className="flex items-center gap-2 shrink-0">
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
@@ -399,7 +400,7 @@ export default function PropertyListingsSettings() {
                       </AlertDialog>
                     </div>
                   </div>
-                </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
               ))}
             </div>
           )}
@@ -428,7 +429,7 @@ export default function PropertyListingsSettings() {
           <Separator />
           
           <div className="space-y-2">
-            <Label htmlFor="sync-interval">Sync Interval (hours)</Label>
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
             <Input
               id="sync-interval"
               type="number"
