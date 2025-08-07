@@ -297,7 +297,10 @@ export default function PropertyListingsSettings() {
                 <SyndicationPartnerForm
                   partner={editingPartner}
                   onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-                  onCancel={closeForm}
+                  onCancel={() => {
+                    closeForm()
+                    setEditingPartner(null)
+                  }}
                 />
               </DialogContent>
             </Dialog>
