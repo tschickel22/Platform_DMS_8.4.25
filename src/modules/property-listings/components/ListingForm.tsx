@@ -1717,7 +1717,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                       onChange={(e) => handleContactInfoChange('website', e.target.value)}
                       placeholder="Enter website URL"
                     />
-                </div>
+  
               </TabsContent>
             </Tabs>
 
