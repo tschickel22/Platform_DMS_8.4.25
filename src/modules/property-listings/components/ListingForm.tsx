@@ -32,7 +32,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const { lands: availableLand } = useLandManagement()
 
   const navigate = useNavigate()
-  const { availableLand } = useLandManagement()
 
   // Get relevant inventory based on property type
   // Initialize formData state first
