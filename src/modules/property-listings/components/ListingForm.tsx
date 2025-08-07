@@ -14,6 +14,7 @@ import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } fro
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
+import { useLandManagement } from '@/modules/land-management/hooks/useLandManagement'
 
 // Mock available inventory data
 const availableInventory = mockInventory.sampleVehicles || []
@@ -26,6 +27,7 @@ interface ListingFormProps {
 
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
   const navigate = useNavigate()
+  const { availableLand } = useLandManagement()
   const [formData, setFormData] = useState<Partial<Listing>>({
     listingType: 'rent',
     title: '',
