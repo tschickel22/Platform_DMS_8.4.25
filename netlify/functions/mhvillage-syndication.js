@@ -66,14 +66,27 @@ function generateMHVillageXML(listings, partnerId, customParams) {
     xml += `
     <home>
       <id>${escapeXml(listing.id)}</id>
+      <sellerId>${escapeXml(listing.sellerId || listing.id)}</sellerId>
+      ${listing.companyId ? `<companyId>${escapeXml(listing.companyId)}</companyId>` : ''}
       <listingType>${escapeXml(listing.listingType || 'sale')}</listingType>
       <title>${escapeXml(listing.title)}</title>
       <description>${escapeXml(listing.description)}</description>
+      ${listing.termsOfSale ? `<termsOfSale>${escapeXml(listing.termsOfSale)}</termsOfSale>` : ''}
       
       <!-- Location Information -->
       <location>
         <address>${escapeXml(listing.address)}</address>
+        ${listing.address2 ? `<address2>${escapeXml(listing.address2)}</address2>` : ''}
+        <city>${escapeXml(listing.city || '')}</city>
+        <state>${escapeXml(listing.state || '')}</state>
+        <zipCode>${escapeXml(listing.zipCode || '')}</zipCode>
+        ${listing.county ? `<county>${escapeXml(listing.county)}</county>` : ''}
+        ${listing.township ? `<township>${escapeXml(listing.township)}</township>` : ''}
+        ${listing.schoolDistrict ? `<schoolDistrict>${escapeXml(listing.schoolDistrict)}</schoolDistrict>` : ''}
+        ${listing.latitude ? `<latitude>${listing.latitude}</latitude>` : ''}
+        ${listing.longitude ? `<longitude>${listing.longitude}</longitude>` : ''}
         <communityName>${escapeXml(mh.communityName || '')}</communityName>
+        ${mh.propertyId ? `<propertyId>${escapeXml(mh.propertyId)}</propertyId>` : ''}
       </location>
       
       <!-- Pricing Information -->
@@ -84,6 +97,9 @@ function generateMHVillageXML(listings, partnerId, customParams) {
         }
         ${listing.lotRent ? `<lotRent>${listing.lotRent}</lotRent>` : ''}
         ${listing.hoaFees ? `<hoaFees>${listing.hoaFees}</hoaFees>` : ''}
+        ${listing.monthlyTax ? `<monthlyTax>${listing.monthlyTax}</monthlyTax>` : ''}
+        ${listing.monthlyUtilities ? `<monthlyUtilities>${listing.monthlyUtilities}</monthlyUtilities>` : ''}
+        ${listing.soldPrice ? `<soldPrice>${listing.soldPrice}</soldPrice>` : ''}
       </pricing>
       
       <!-- Basic Home Information -->
@@ -91,11 +107,20 @@ function generateMHVillageXML(listings, partnerId, customParams) {
         <manufacturer>${escapeXml(mh.manufacturer || '')}</manufacturer>
         <model>${escapeXml(mh.model || '')}</model>
         <serialNumber>${escapeXml(mh.serialNumber || '')}</serialNumber>
+        ${mh.modelYear ? `<modelYear>${mh.modelYear}</modelYear>` : ''}
+        ${mh.color ? `<color>${escapeXml(mh.color)}</color>` : ''}
         <yearBuilt>${listing.yearBuilt || ''}</yearBuilt>
         <bedrooms>${listing.bedrooms}</bedrooms>
         <bathrooms>${listing.bathrooms}</bathrooms>
         <squareFootage>${listing.squareFootage}</squareFootage>
         <lotSize>${escapeXml(mh.lotSize || '')}</lotSize>
+        ${listing.preferredTerm ? `<preferredTerm>${escapeXml(listing.preferredTerm)}</preferredTerm>` : ''}
+        <width1>${mh.width1 || 0}</width1>
+        <length1>${mh.length1 || 0}</length1>
+        ${mh.width2 ? `<width2>${mh.width2}</width2>` : ''}
+        ${mh.length2 ? `<length2>${mh.length2}</length2>` : ''}
+        ${mh.width3 ? `<width3>${mh.width3}</width3>` : ''}
+        ${mh.length3 ? `<length3>${mh.length3}</length3>` : ''}
       </homeDetails>
       
       <!-- Construction Details -->
@@ -103,9 +128,13 @@ function generateMHVillageXML(listings, partnerId, customParams) {
         <foundation>${escapeXml(mh.foundation || '')}</foundation>
         <roofType>${escapeXml(mh.roofType || '')}</roofType>
         <exteriorMaterial>${escapeXml(mh.exteriorMaterial || '')}</exteriorMaterial>
+        ${mh.roofMaterial ? `<roofMaterial>${escapeXml(mh.roofMaterial)}</roofMaterial>` : ''}
+        ${mh.ceilingMaterial ? `<ceilingMaterial>${escapeXml(mh.ceilingMaterial)}</ceilingMaterial>` : ''}
+        ${mh.wallMaterial ? `<wallMaterial>${escapeXml(mh.wallMaterial)}</wallMaterial>` : ''}
         <insulationType>${escapeXml(mh.insulationType || '')}</insulationType>
         <windowType>${escapeXml(mh.windowType || '')}</windowType>
         <flooringType>${escapeXml(mh.flooringType || '')}</flooringType>
+        ${mh.thermopaneWindows ? `<thermopaneWindows>${mh.thermopaneWindows}</thermopaneWindows>` : ''}
       </construction>
       
       <!-- Systems -->
@@ -119,10 +148,43 @@ function generateMHVillageXML(listings, partnerId, customParams) {
       <!-- Utilities & Technology -->
       <utilities>
         <laundryHookups>${mh.laundryHookups || false}</laundryHookups>
+        ${mh.laundryRoom ? `<laundryRoom>${mh.laundryRoom}</laundryRoom>` : ''}
         <internetReady>${mh.internetReady || false}</internetReady>
         <cableReady>${mh.cableReady || false}</cableReady>
         <phoneReady>${mh.phoneReady || false}</phoneReady>
       </utilities>
+      
+      <!-- Home Features -->
+      <homeFeatures>
+        ${mh.garage ? `<garage>${mh.garage}</garage>` : ''}
+        ${mh.carport ? `<carport>${mh.carport}</carport>` : ''}
+        ${mh.centralAir ? `<centralAir>${mh.centralAir}</centralAir>` : ''}
+        ${mh.fireplace ? `<fireplace>${mh.fireplace}</fireplace>` : ''}
+        ${mh.storageShed ? `<storageShed>${mh.storageShed}</storageShed>` : ''}
+        ${mh.gutters ? `<gutters>${mh.gutters}</gutters>` : ''}
+        ${mh.shutters ? `<shutters>${mh.shutters}</shutters>` : ''}
+        ${mh.deck ? `<deck>${mh.deck}</deck>` : ''}
+        ${mh.patio ? `<patio>${mh.patio}</patio>` : ''}
+        ${mh.cathedralCeilings ? `<cathedralCeilings>${mh.cathedralCeilings}</cathedralCeilings>` : ''}
+        ${mh.ceilingFans ? `<ceilingFans>${mh.ceilingFans}</ceilingFans>` : ''}
+        ${mh.skylights ? `<skylights>${mh.skylights}</skylights>` : ''}
+        ${mh.walkinClosets ? `<walkinClosets>${mh.walkinClosets}</walkinClosets>` : ''}
+        ${mh.pantry ? `<pantry>${mh.pantry}</pantry>` : ''}
+        ${mh.sunRoom ? `<sunRoom>${mh.sunRoom}</sunRoom>` : ''}
+        ${mh.basement ? `<basement>${mh.basement}</basement>` : ''}
+        ${mh.gardenTub ? `<gardenTub>${mh.gardenTub}</gardenTub>` : ''}
+        ${mh.garbageDisposal ? `<garbageDisposal>${mh.garbageDisposal}</garbageDisposal>` : ''}
+      </homeFeatures>
+      
+      <!-- Included Appliances -->
+      <includedAppliances>
+        ${mh.refrigeratorIncluded ? `<refrigeratorIncluded>${mh.refrigeratorIncluded}</refrigeratorIncluded>` : ''}
+        ${mh.microwaveIncluded ? `<microwaveIncluded>${mh.microwaveIncluded}</microwaveIncluded>` : ''}
+        ${mh.ovenIncluded ? `<ovenIncluded>${mh.ovenIncluded}</ovenIncluded>` : ''}
+        ${mh.dishwasherIncluded ? `<dishwasherIncluded>${mh.dishwasherIncluded}</dishwasherIncluded>` : ''}
+        ${mh.washerIncluded ? `<washerIncluded>${mh.washerIncluded}</washerIncluded>` : ''}
+        ${mh.dryerIncluded ? `<dryerIncluded>${mh.dryerIncluded}</dryerIncluded>` : ''}
+      </includedAppliances>
       
       <!-- Appliances -->
       <appliances>`
@@ -234,12 +296,31 @@ function generateMHVillageXML(listings, partnerId, customParams) {
       
       <!-- Contact Information -->
       <contact>
+        ${listing.contactInfo.mhVillageAccountKey ? `<mhVillageAccountKey>${escapeXml(listing.contactInfo.mhVillageAccountKey)}</mhVillageAccountKey>` : ''}
+        <firstName>${escapeXml(listing.contactInfo.firstName || '')}</firstName>
+        <lastName>${escapeXml(listing.contactInfo.lastName || '')}</lastName>
+        ${listing.contactInfo.companyName ? `<companyName>${escapeXml(listing.contactInfo.companyName)}</companyName>` : ''}
         <phone>${escapeXml(listing.contactInfo.phone)}</phone>
         <email>${escapeXml(listing.contactInfo.email)}</email>
+        ${listing.contactInfo.fax ? `<fax>${escapeXml(listing.contactInfo.fax)}</fax>` : ''}
+        ${listing.contactInfo.website ? `<website>${escapeXml(listing.contactInfo.website)}</website>` : ''}
+        ${listing.contactInfo.additionalEmail1 ? `<additionalEmail1>${escapeXml(listing.contactInfo.additionalEmail1)}</additionalEmail1>` : ''}
+        ${listing.contactInfo.additionalEmail2 ? `<additionalEmail2>${escapeXml(listing.contactInfo.additionalEmail2)}</additionalEmail2>` : ''}
+        ${listing.contactInfo.additionalEmail3 ? `<additionalEmail3>${escapeXml(listing.contactInfo.additionalEmail3)}</additionalEmail3>` : ''}
+        ${listing.contactInfo.alternatePhone ? `<alternatePhone>${escapeXml(listing.contactInfo.alternatePhone)}</alternatePhone>` : ''}
       </contact>
       
       <!-- Pet Policy -->
       <petPolicy>${escapeXml(listing.petPolicy)}</petPolicy>
+      
+      <!-- Listing Details -->
+      <listingDetails>
+        ${listing.isRepossessed ? `<isRepossessed>${listing.isRepossessed}</isRepossessed>` : ''}
+        ${listing.packageType ? `<packageType>${escapeXml(listing.packageType)}</packageType>` : ''}
+        ${listing.pendingSale ? `<pendingSale>${listing.pendingSale}</pendingSale>` : ''}
+        ${listing.searchResultsText ? `<searchResultsText>${escapeXml(listing.searchResultsText)}</searchResultsText>` : ''}
+        ${listing.agentPhotoUrl ? `<agentPhotoUrl>${escapeXml(listing.agentPhotoUrl)}</agentPhotoUrl>` : ''}
+      </listingDetails>
       
       <!-- Dates -->
       <dates>

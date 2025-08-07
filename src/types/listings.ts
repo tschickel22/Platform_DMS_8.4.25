@@ -100,6 +100,133 @@ export function isManufacturedHomeListing(listing: PropertyListing): listing is 
   return listing.listingType === 'for_sale' && 'sellerID' in listing
 }
 
+export interface MHDetails {
+  manufacturer: string
+  model: string
+  modelYear?: number
+  color?: string
+  serialNumber: string
+  communityName: string
+  propertyId?: string
+  lotSize: string
+  width1: number
+  length1: number
+  width2?: number
+  length2?: number
+  width3?: number
+  length3?: number
+  foundation: string
+  roofType: string
+  roofMaterial?: string
+  exteriorMaterial: string
+  ceilingMaterial?: string
+  wallMaterial?: string
+  hvacType: string
+  waterHeaterType: string
+  electricalSystem: string
+  plumbingType: string
+  insulationType: string
+  windowType: string
+  thermopaneWindows?: boolean
+  flooringType: string
+  kitchenAppliances: string[]
+  laundryHookups: boolean
+  laundryRoom?: boolean
+  internetReady: boolean
+  cableReady: boolean
+  phoneReady: boolean
+  garage?: boolean
+  carport?: boolean
+  centralAir?: boolean
+  fireplace?: boolean
+  storageShed?: boolean
+  gutters?: boolean
+  shutters?: boolean
+  deck?: boolean
+  patio?: boolean
+  cathedralCeilings?: boolean
+  ceilingFans?: boolean
+  skylights?: boolean
+  walkinClosets?: boolean
+  pantry?: boolean
+  sunRoom?: boolean
+  basement?: boolean
+  gardenTub?: boolean
+  garbageDisposal?: boolean
+  refrigeratorIncluded?: boolean
+  microwaveIncluded?: boolean
+  ovenIncluded?: boolean
+  dishwasherIncluded?: boolean
+  washerIncluded?: boolean
+  dryerIncluded?: boolean
+}
+
+export interface Listing {
+  id: string
+  sellerId?: string
+  companyId?: string
+  listingType: 'rent' | 'sale'
+  title: string
+  description: string
+  termsOfSale?: string
+  address: string
+  address2?: string
+  city: string
+  state: string
+  zipCode: string
+  county?: string
+  township?: string
+  schoolDistrict?: string
+  latitude?: number
+  longitude?: number
+  rent?: number
+  purchasePrice?: number
+  soldPrice?: number
+  lotRent?: number
+  monthlyTax?: number
+  monthlyUtilities?: number
+  hoaFees?: number
+  bedrooms: number
+  bathrooms: number
+  squareFootage: number
+  yearBuilt?: number
+  propertyType: string
+  preferredTerm?: string
+  status: string
+  amenities: string[]
+  outdoorFeatures?: string[]
+  storageOptions?: string[]
+  technologyFeatures?: string[]
+  communityAmenities?: string[]
+  petPolicy: string
+  mhDetails?: MHDetails
+  images: string[]
+  videos?: string[]
+  floorPlans?: string[]
+  virtualTours?: string[]
+  contactInfo: {
+    mhVillageAccountKey?: string
+    firstName: string
+    lastName: string
+    companyName?: string
+    phone: string
+    email: string
+    fax?: string
+    website?: string
+    additionalEmail1?: string
+    additionalEmail2?: string
+    additionalEmail3?: string
+    alternatePhone?: string
+  }
+  isRepossessed?: boolean
+  packageType?: string
+  pendingSale?: boolean
+  searchResultsText?: string
+  agentPhotoUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Enums for better type safety
 export enum LocationType {
   MANUFACTURED_HOME_COMMUNITY = 'manufactured_home_community',

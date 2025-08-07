@@ -28,10 +28,23 @@ export const sampleRentalListings: RentalListing[] = [
       'https://images.pexels.com/photos/8293778/pexels-photo-8293778.jpeg'
     ],
     contactInfo: {
-      phone: '(555) 123-4567',
-      email: 'contact@propertymanagement.com',
-      name: 'Downtown Property Management'
+      mhVillageAccountKey: 'MHV789012',
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      companyName: 'Pine Valley Rentals',
+      phone: '(555) 345-6789',
+      email: 'rentals@pinevalley.com',
+      fax: '(555) 345-6790',
+      website: 'https://www.pinevalleyrentals.com',
+      additionalEmail1: 'office@pinevalley.com',
+      additionalEmail2: 'manager@pinevalley.com',
+      alternatePhone: '(555) 345-6791'
     },
+    isRepossessed: false,
+    packageType: 'Standard',
+    pendingSale: false,
+    searchResultsText: '2020 Champion 4BR/2BA - Family Friendly Community!',
+    agentPhotoUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z'
   },
