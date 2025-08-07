@@ -143,7 +143,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       alternatePhone: ''
     },
     ...listing
-    // MH specific fields
+    // MH specific fields,
     make: '',
     model: '',
     vin: '',
