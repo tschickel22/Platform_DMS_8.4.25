@@ -446,3 +446,5 @@ export default function PropertyListingsSettings() {
     </div>
   )
 }
+
+export { PropertyListingsSettings }
