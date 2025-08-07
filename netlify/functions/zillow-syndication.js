@@ -83,7 +83,7 @@ function generateZillowXML(listings, partnerId, customParams) {
       <propertyType>${escapeXml(listing.propertyType)}</propertyType>
       ${listing.yearBuilt ? `<yearBuilt>${listing.yearBuilt}</yearBuilt>` : ''}
       <status>${escapeXml(listing.status)}</status>
-      <petPolicy>${escapeXml(listing.petPolicy)}</petPolicy>
+      <petPolicy>${escapeXml(listing.petPolicy)}</petPolicy>`
     
     // Add MH-specific details if available
     if (listing.mhDetails) {
@@ -121,7 +121,7 @@ function generateZillowXML(listings, partnerId, customParams) {
     })
     
     xml += `
-      </amenities>
+      </amenities>`
     
     // Add outdoor features if available
     if (listing.outdoorFeatures && listing.outdoorFeatures.length > 0) {
@@ -180,7 +180,7 @@ function generateZillowXML(listings, partnerId, customParams) {
     })
     
     xml += `
-      </images>
+      </images>`
     
     // Add videos if available
     if (listing.videos && listing.videos.length > 0) {
