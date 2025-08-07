@@ -223,7 +223,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   )
 
   // Get available inventory items
-  const availableInventoryItems = mockInventory.sampleInventory.filter(
+  const availableInventoryItems = (mockInventory.sampleInventory ?? []).filter(
     item => item.status === 'available'
   )
 
