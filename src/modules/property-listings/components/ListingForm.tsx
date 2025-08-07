@@ -17,9 +17,6 @@ import { Listing, MHDetails, ContactInfo } from '@/types/listings'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
 
-// Mock available inventory data
-const availableInventory = mockInventory.sampleVehicles || []
-
 interface ListingFormProps {
   listing?: Partial<Listing>
   onSubmit: (listing: Partial<Listing>) => void
@@ -28,7 +25,7 @@ interface ListingFormProps {
 
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
   // Get inventory data from hooks
-  const { vehicles: availableInventory } = useInventoryManagement()
+  const { vehicles } = useInventoryManagement()
   const { lands: availableLand } = useLandManagement()
 
   const navigate = useNavigate()
@@ -36,7 +33,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   // Get relevant inventory based on property type
   // Initialize formData state first
   const [formData, setFormData] = useState({
-    listingType: 'rent',
+      return (vehicles || []).filter(vehicle => 
     propertyType: 'manufactured_home',
     inventoryId: '',
     title: '',
@@ -143,14 +140,9 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       phone: '',
       email: '',
       fax: '',
-      website: '',
-      additionalEmail1: '',
-      additionalEmail2: '',
-      additionalEmail3: '',
-      alternatePhone: ''
-    },
-    ...listing,
-    // MH specific fields,
+      firstName: '',
+      lastName: '',
+      companyName: ''
     make: '',
     model: '',
     vin: '',
