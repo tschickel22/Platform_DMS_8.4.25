@@ -309,75 +309,79 @@ export default function PropertyListingsSettings() {
               <div className="mb-4">
                 <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
               </div>
-              <p className="text-lg font-medium mb-2">No syndication partners configured</p>
+                      <div className="flex flex-col gap-4">
               <p className="text-sm mb-4">
-                Add your first syndication partner to start exporting listings
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {syndicationPartners.map((partner) => (
-                <div key={partner.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between">
+                        <div className="w-full">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold">{partner.name}</h3>
+                                <Badge variant={partner.isActive ? "default" : "secondary"}>
+                                  {partner.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                                <Badge variant="outline">{partner.exportFormat}</Badge>
+                              </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-medium">{partner.name}</h4>
-                        <Badge variant={partner.isActive ? 'default' : 'secondary'}>
-                          {partner.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                        <Badge variant="outline">{partner.exportFormat}</Badge>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div>
+                                  <span className="font-medium">Lead Email:</span> {partner.leadEmail}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Listing Types:</span>{" "}
+                                  {partner.listingTypes.join(", ")}
+                                </div>
+                              </div>
+                            </div>
                           <span className="font-medium">Lead Email:</span> {partner.leadEmail}
-                        </div>
-                        <div>
-                          <span className="font-medium">Listing Types:</span> {formatListingTypes(partner.listingTypes)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Export URL:</span>
-                          <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
-                            {partner.exportUrl}
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  checked={partner.isActive}
+                                  onCheckedChange={(checked) => togglePartnerStatus(partner.id, checked)}
+                                />
+                                <Label className="text-sm">Active</Label>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => editPartner(partner)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deletePartner(partner.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(partner.exportUrl!, partner.id)}
-                            className="h-6 w-6 p-0"
-                          >
-                            {copiedUrl === partner.id ? (
-                              <CheckCircle className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
                     </div>
-                    
                     <div className="flex items-center gap-2 ml-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={partner.isActive}
-                          onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
-                        />
-                        <Label className="text-sm">Active</Label>
-                      </div>
+                        {/* Export URL */}
+                        <div className="pt-4 border-t">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <Label className="text-sm font-medium">Export URL:</Label>
+                              <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
+                                {partner.exportUrl}
+                              </div>
                       
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openEditForm(partner)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(partner.exportUrl)}
+                              className="shrink-0"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy
+                            </Button>
+                          </div>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
