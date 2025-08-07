@@ -28,6 +28,7 @@ import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
@@ -77,6 +78,7 @@ function App() {
                         <Route path="/commissions/*" element={<CommissionEngine />} />
                         <Route path="/portal/*" element={<ClientPortalAdmin />} />
                         <Route path="/invoices/*" element={<InvoicePayments />} />
+                        <Route path="/listings/*" element={<PropertyListings />} />
                         <Route path="/settings/*" element={<CompanySettings />} />
                         <Route path="/admin/*" element={<PlatformAdmin />} />
                         <Route path="/admin/settings/*" element={<PlatformSettings />} />
