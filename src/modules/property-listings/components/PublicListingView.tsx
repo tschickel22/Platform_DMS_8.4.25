@@ -26,7 +26,12 @@ import {
   Zap,
   Shield,
   PawPrint,
-  Home
+  Home,
+  Play,
+  FileImage,
+  DollarSign,
+  Calendar,
+  Info
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import { useTenant } from '@/contexts/TenantContext'

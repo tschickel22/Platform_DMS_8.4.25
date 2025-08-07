@@ -26,37 +26,43 @@ import ListingForm from './components/ListingForm'
 import ListingDetail from './components/ListingDetail'
 import { ShareAllListingsModal } from './components/ShareAllListingsModal'
 import { ShareOptionsModal } from './components/ShareOptionsModal'
-import { mockListings } from '@/mocks/listingsMock'
+import { allPropertyListings } from '@/mocks/listingsMock'
+import { PropertyListing, RentalListing, ManufacturedHomeListing } from '@/types/listings'
 
-interface Listing {
-  id: string
-  title: string
-  description: string
-  address: string
-  rent: number
-  bedrooms: number
-  bathrooms: number
-  squareFootage: number
-  propertyType: string
-  status: 'active' | 'pending' | 'rented' | 'inactive'
-  amenities: string[]
-  petPolicy: string
-  images: string[]
-  contactInfo: {
-    phone: string
-    email: string
+// Helper function to get display price for any listing type
+const getListingPrice = (listing: PropertyListing): number => {
+  if (listing.listingType === 'for_rent') {
+    return (listing as RentalListing).rent
+  } else {
+    return (listing as ManufacturedHomeListing).askingPrice
   }
-  createdAt: string
-  updatedAt: string
+}
+
+// Helper function to get price display text
+const getPriceDisplay = (listing: PropertyListing): string => {
+  if (listing.listingType === 'for_rent') {
+    return `$${(listing as RentalListing).rent.toLocaleString()}/month`
+  } else {
+    return `$${(listing as ManufacturedHomeListing).askingPrice.toLocaleString()}`
+  }
+}
+
+// Helper function to get property type display
+const getPropertyTypeDisplay = (listing: PropertyListing): string => {
+  if (listing.listingType === 'for_rent') {
+    return (listing as RentalListing).propertyType
+  } else {
+    return (listing as ManufacturedHomeListing).homeType
+  }
 }
 
 function PropertyListingsDashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
+  const [listings, setListings] = useState<PropertyListing[]>(allPropertyListings)
   const [showShareModal, setShowShareModal] = useState(false)
-  const [selectedListingForShare, setSelectedListingForShare] = useState<Listing | null>(null)
-  const [shareModalListing, setShareModalListing] = useState<Listing | null>(null)
+  const [selectedListingForShare, setSelectedListingForShare] = useState<PropertyListing | null>(null)
+  const [shareModalListing, setShareModalListing] = useState<PropertyListing | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -69,15 +75,15 @@ function PropertyListingsDashboard() {
     
     const matchesStatus = statusFilter === 'all' || listing.status === statusFilter
     
-    const matchesType = typeFilter === 'all' || listing.propertyType === typeFilter
+    const matchesType = typeFilter === 'all' || getPropertyTypeDisplay(listing) === typeFilter
     
     const matchesPrice = priceRange === 'all' || (() => {
-      const rent = listing.rent
+      const price = getListingPrice(listing)
       switch (priceRange) {
-        case 'under-2000': return rent < 2000
-        case '2000-3000': return rent >= 2000 && rent <= 3000
-        case '3000-4000': return rent >= 3000 && rent <= 4000
-        case 'over-4000': return rent > 4000
+        case 'under-50000': return price < 50000
+        case '50000-100000': return price >= 50000 && price <= 100000
+        case '100000-200000': return price >= 100000 && price <= 200000
+        case 'over-200000': return price > 200000
         default: return true
       }
     })()
@@ -89,8 +95,8 @@ function PropertyListingsDashboard() {
   const totalListings = filteredListings.length
   const activeListings = filteredListings.filter(l => l.status === 'active').length
   const pendingListings = filteredListings.filter(l => l.status === 'pending').length
-  const rentedListings = filteredListings.filter(l => l.status === 'rented').length
-  const totalValue = filteredListings.reduce((sum, listing) => sum + listing.rent, 0)
+  const rentedListings = filteredListings.filter(l => l.status === 'rented' || l.status === 'sold').length
+  const totalValue = filteredListings.reduce((sum, listing) => sum + getListingPrice(listing), 0)
   const avgRent = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
 
   const handleDeleteListing = (id: string) => {
@@ -103,7 +109,7 @@ function PropertyListingsDashboard() {
     }
   }
 
-  const handleShareListing = (listing: Listing) => {
+  const handleShareListing = (listing: PropertyListing) => {
     setSelectedListingForShare(listing)
   }
 
@@ -123,7 +129,7 @@ function PropertyListingsDashboard() {
             <Share2 className="h-4 w-4 mr-2" />
             Share All Listings
           </Button>
-          <Button onClick={() => navigate('/listings/new')} className="flex items-center gap-2">
+          <Button onClick={() => navigate('new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add New Listing
           </Button>
@@ -152,13 +158,13 @@ function PropertyListingsDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{activeListings}</div>
             <p className="text-xs text-muted-foreground">
-              Available for rent
+              Available for rent/sale
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Rent</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Price</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -198,7 +204,7 @@ function PropertyListingsDashboard() {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="rented">Rented</SelectItem>
-                <SelectItem value="for_sale">For Sale</SelectItem>
+                <SelectItem value="sold">Sold</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -211,6 +217,9 @@ function PropertyListingsDashboard() {
                 <SelectItem value="house">House</SelectItem>
                 <SelectItem value="condo">Condo</SelectItem>
                 <SelectItem value="townhouse">Townhouse</SelectItem>
+                <SelectItem value="single-wide">Single-Wide</SelectItem>
+                <SelectItem value="double-wide">Double-Wide</SelectItem>
+                <SelectItem value="triple-wide">Triple-Wide</SelectItem>
               </SelectContent>
             </Select>
             <Select value={priceRange} onValueChange={setPriceRange}>
@@ -219,10 +228,10 @@ function PropertyListingsDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="under-2000">Under $2,000</SelectItem>
-                <SelectItem value="2000-3000">$2,000 - $3,000</SelectItem>
-                <SelectItem value="3000-4000">$3,000 - $4,000</SelectItem>
-                <SelectItem value="over-4000">Over $4,000</SelectItem>
+                <SelectItem value="under-50000">Under $50,000</SelectItem>
+                <SelectItem value="50000-100000">$50,000 - $100,000</SelectItem>
+                <SelectItem value="100000-200000">$100,000 - $200,000</SelectItem>
+                <SelectItem value="over-200000">Over $200,000</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -256,7 +265,7 @@ function PropertyListingsDashboard() {
                         src={listing.images[0]}
                         alt={listing.title}
                         className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-                        onClick={() => navigate(`/listings/detail/${listing.id}`)}
+                        onClick={() => navigate(`detail/${listing.id}`)}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -270,7 +279,7 @@ function PropertyListingsDashboard() {
                         variant={
                           listing.status === 'active' ? 'default' :
                           listing.status === 'pending' ? 'outline' :
-                          listing.status === 'rented'  ? 'secondary' :
+                          (listing.status === 'rented' || listing.status === 'sold') ? 'secondary' :
                           'destructive'
                         }
                         className="capitalize"
@@ -279,10 +288,10 @@ function PropertyListingsDashboard() {
                       </Badge>
                     </div>
 
-                    {/* rent badge */}
+                    {/* price badge */}
                     <div className="absolute top-2 right-2">
                       <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                        ${listing.rent.toLocaleString()}/month
+                        {getPriceDisplay(listing)}
                       </Badge>
                     </div>
                   </div>
@@ -298,10 +307,10 @@ function PropertyListingsDashboard() {
                         <div className="flex items-center space-x-3">
                           <span>{listing.bedrooms} bed</span>
                           <span>{listing.bathrooms} bath</span>
-                          <span>{listing.squareFootage} sq ft</span>
+                          <span>{listing.squareFootage || 'N/A'} sq ft</span>
                         </div>
                         <Badge variant="outline" className="capitalize">
-                          {listing.propertyType}
+                          {getPropertyTypeDisplay(listing)}
                         </Badge>
                       </div>
                     </div>
@@ -310,14 +319,14 @@ function PropertyListingsDashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/listings/detail/${listing.id}`)}
+                          onClick={() => navigate(`detail/${listing.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/listings/edit/${listing.id}`)}
+                          onClick={() => navigate(`edit/${listing.id}`)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -366,7 +375,7 @@ function PropertyListingsDashboard() {
 function PropertyListingsList() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [listings, setListings] = useState<Listing[]>(mockListings.sampleListings)
+  const [listings, setListings] = useState<PropertyListing[]>(allPropertyListings)
 
   const handleDeleteListing = (id: string) => {
     if (window.confirm('Are you sure you want to delete this listing?')) {
@@ -383,6 +392,7 @@ function PropertyListingsList() {
       case 'active': return 'bg-green-100 text-green-800'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
       case 'rented': return 'bg-blue-100 text-blue-800'
+      case 'sold': return 'bg-purple-100 text-purple-800'
       case 'inactive': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
@@ -395,7 +405,7 @@ function PropertyListingsList() {
           <h1 className="text-2xl font-bold">All Property Listings</h1>
           <p className="text-muted-foreground">Manage and view all your property listings</p>
         </div>
-        <Button onClick={() => navigate('/listings/new')} className="flex items-center gap-2">
+        <Button onClick={() => navigate('new')} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Add New Listing
         </Button>
@@ -408,7 +418,7 @@ function PropertyListingsList() {
               <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">No listings found</h3>
               <p className="text-muted-foreground mb-4">Get started by creating your first property listing</p>
-              <Button onClick={() => navigate('/listings/new')}>
+              <Button onClick={() => navigate('new')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add New Listing
               </Button>
@@ -447,18 +457,18 @@ function PropertyListingsList() {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold">${listing.rent}/month</span>
+                    <span className="text-2xl font-bold">{getPriceDisplay(listing)}</span>
                   </div>
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     <span>{listing.bedrooms} bed</span>
                     <span>{listing.bathrooms} bath</span>
-                    <span>{listing.squareFootage} sq ft</span>
+                    <span>{listing.squareFootage || 'N/A'} sq ft</span>
                   </div>
                   <div className="flex gap-2 pt-4">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/listings/detail/${listing.id}`)}
+                      onClick={() => navigate(`detail/${listing.id}`)}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -467,7 +477,7 @@ function PropertyListingsList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/listings/edit/${listing.id}`)}
+                      onClick={() => navigate(`edit/${listing.id}`)}
                       className="flex-1"
                     >
                       <Edit className="h-4 w-4 mr-2" />

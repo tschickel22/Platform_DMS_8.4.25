@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { WarrantyIntegrationSettings } from './components/WarrantyIntegrationSettings'
+import { PropertyListingsSettings } from './components/PropertyListingsSettings'
 import { useSettings } from './utils/useSettings'
 
 export default function PlatformAdminSettings() {
@@ -39,13 +40,14 @@ export default function PlatformAdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="sms">SMS</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="warranty">Warranty</TabsTrigger>
+          <TabsTrigger value="property-listings">Property Listings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -353,6 +355,13 @@ export default function PlatformAdminSettings() {
 
         <TabsContent value="warranty">
           <WarrantyIntegrationSettings
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+          />
+        </TabsContent>
+
+        <TabsContent value="property-listings">
+          <PropertyListingsSettings
             settings={settings}
             onSettingsChange={handleSettingsChange}
           />

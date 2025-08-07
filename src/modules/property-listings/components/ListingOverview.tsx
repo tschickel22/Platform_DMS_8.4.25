@@ -6,21 +6,17 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Plus, 
-  MapPin, 
-  Bed, 
-  Bath, 
-  Square, 
+  MapPin, Bed, Bath, Square, Eye, Edit, Trash2, 
+  Home, Play, FileImage, DollarSign, Calendar,
   Share2,
   Filter,
   Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Home,
   Users,
   Building,
-  DollarSign
+  Plus
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
 import ShareListingModal from './ShareListingModal'
@@ -45,6 +41,14 @@ interface Listing {
   }
   createdAt: string
   updatedAt: string
+  yearBuilt?: number
+  manufacturer?: string
+  model?: string
+  communityName?: string
+  videos?: string[]
+  floorPlans?: string[]
+  virtualTourUrl?: string
+  purchasePrice?: number
 }
 
 type SortField = 'rent' | 'bedrooms' | 'bathrooms' | 'squareFootage' | 'updatedAt' | 'title'
@@ -259,8 +263,7 @@ export default function ListingOverview() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredAndSortedListings.map((listing) => (
           <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            {/* Property Image */}
-            <div className="aspect-video relative overflow-hidden">
+            <div className="relative h-48">
               <img
                 src={listing.images[0]}
                 alt={listing.title}
@@ -276,9 +279,20 @@ export default function ListingOverview() {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg line-clamp-1">{listing.title}</CardTitle>
-                <div className="flex items-center text-lg font-bold text-primary">
-                  <DollarSign className="h-4 w-4" />
-                  {listing.rent.toLocaleString()}
+                <div className="text-right mb-4 space-y-1">
+                  <div className="space-y-1">
+                    <div className="text-2xl font-bold text-primary">
+                      ${listing.rent.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">per month</div>
+                  </div>
+                  
+                  {listing.propertyType === 'manufactured_home' && listing.purchasePrice && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Purchase: </span>
+                      <span className="font-semibold">${listing.purchasePrice.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <CardDescription className="flex items-center text-sm">
@@ -309,6 +323,54 @@ export default function ListingOverview() {
                   </div>
                 </div>
               </div>
+
+              {listing.yearBuilt && (
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{listing.yearBuilt}</span>
+                </div>
+              )}
+
+              {/* MH-Specific Info */}
+              {listing.propertyType === 'manufactured_home' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4 text-sm">
+                  {listing.manufacturer && (
+                    <div className="flex items-center space-x-2">
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      <span>{listing.manufacturer} {listing.model}</span>
+                    </div>
+                  )}
+                  {listing.communityName && (
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{listing.communityName}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Media Indicators */}
+              {(listing.videos?.length > 0 || listing.floorPlans?.length > 0 || listing.virtualTourUrl) && (
+                <div className="flex space-x-2 mb-4">
+                  {listing.videos?.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <Play className="h-3 w-3 mr-1" />
+                      {listing.videos.length} Video{listing.videos.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {listing.floorPlans?.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <FileImage className="h-3 w-3 mr-1" />
+                      {listing.floorPlans.length} Floor Plan{listing.floorPlans.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {listing.virtualTourUrl && (
+                    <Badge variant="outline" className="text-xs">
+                      Virtual Tour
+                    </Badge>
+                  )}
+                </div>
+              )}
 
               {/* Amenities */}
               <div className="flex flex-wrap gap-1 mb-4">
@@ -370,15 +432,16 @@ export default function ListingOverview() {
           </CardContent>
         </Card>
       )}
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-2 ${
-            statusFilter === 'available' 
-              ? 'border-green-200 bg-green-50/50' 
-              : 'hover:border-green-200'
-          }`}
-          onClick={() => handleStatusFilter('available')}
-        >
-        </Card>
+
+      <Card 
+        className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-2 ${
+          statusFilter === 'available' 
+            ? 'border-green-200 bg-green-50/50' 
+            : 'hover:border-green-200'
+        }`}
+        onClick={() => handleStatusFilter('available')}
+      >
+      </Card>
 
       {/* Share Modal */}
       <ShareListingModal
