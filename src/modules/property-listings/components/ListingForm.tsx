@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
-import { useLandManagement } from '@/modules/land-management/hooks/useLandManagement'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } from 'lucide-react'
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
@@ -18,50 +16,48 @@ import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
 
 interface ListingFormProps {
-  listing?: Partial<Listing>
+  listing?: Listing
   onSubmit: (listing: Partial<Listing>) => void
   onCancel: () => void
 }
 
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
-  // Get inventory data from hooks
-  const { vehicles } = useInventoryManagement()
-  const { lands: availableLand } = useLandManagement()
-
   const navigate = useNavigate()
-
-  // Get relevant inventory based on property type
-  // Initialize formData state first
-  const [formData, setFormData] = useState({
-    propertyType: 'manufactured_home',
-    inventoryId: '',
+  const [formData, setFormData] = useState<Partial<Listing>>({
+    listingType: 'rent',
     title: '',
     description: '',
+    termsOfSale: '',
     address: '',
+    address2: '',
     city: '',
     state: '',
     zipCode: '',
-    rent: '',
-    purchasePrice: '',
-    lotRent: '',
-    hoaFees: '',
-    bedrooms: '',
-    bathrooms: '',
-    squareFootage: '',
-    yearBuilt: '',
-    amenities: [],
-    petPolicy: '',
-    images: [],
-    contactInfo: {
-      phone: '',
-      email: ''
-    },
+    county: '',
+    township: '',
+    schoolDistrict: '',
+    latitude: undefined,
+    longitude: undefined,
+    rent: undefined,
+    purchasePrice: undefined,
+    lotRent: undefined,
+    hoaFees: undefined,
+    monthlyTax: undefined,
+    monthlyUtilities: undefined,
+    bedrooms: 1,
+    bathrooms: 1,
+    squareFootage: 0,
+    yearBuilt: undefined,
+    preferredTerm: '',
+    propertyType: 'apartment',
     selectedInventoryId: '',
     status: 'active',
+    amenities: [],
     outdoorFeatures: [],
     storageOptions: [],
     technologyFeatures: [],
     communityAmenities: [],
+    petPolicy: '',
     isRepossessed: false,
     packageType: '',
     pendingSale: false,
@@ -128,6 +124,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       washerIncluded: false,
       dryerIncluded: false
     },
+    images: [],
     videos: [],
     floorPlans: [],
     virtualTours: [],
@@ -139,10 +136,14 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       phone: '',
       email: '',
       fax: '',
-      firstName: '',
-      lastName: '',
-      companyName: ''
+      website: '',
+      additionalEmail1: '',
+      additionalEmail2: '',
+      additionalEmail3: '',
+      alternatePhone: ''
     },
+    ...listing
+    // MH specific fields
     make: '',
     model: '',
     vin: '',
@@ -150,35 +151,19 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     condition: '',
     location: '',
     cost: '',
-    features: [] as string[]
+    features: [] as string[],
   })
-
-  const getInventoryOptions = () => {
-    if (formData.propertyType === 'manufactured_home') {
-      return (vehicles || []).filter(vehicle => 
-        vehicle.type === 'manufactured_home' && 
-        vehicle.status === 'available'
-      )
-    } else if (formData.propertyType === 'land') {
-      return (availableLand || []).filter(item => 
-        item.status === 'available'
-      )
-    }
-    return []
-  }
-
-  const inventoryOptions = getInventoryOptions()
 
   const [newAmenity, setNewAmenity] = useState('')
   const [newOutdoorFeature, setNewOutdoorFeature] = useState('')
   const [newStorageOption, setNewStorageOption] = useState('')
+  const [newTechFeature, setNewTechFeature] = useState('')
+  const [newCommunityAmenity, setNewCommunityAmenity] = useState('')
+  const [newKitchenAppliance, setNewKitchenAppliance] = useState('')
+  const [newImage, setNewImage] = useState('')
   const [newVideo, setNewVideo] = useState('')
   const [newFloorPlan, setNewFloorPlan] = useState('')
   const [newVirtualTour, setNewVirtualTour] = useState('')
-  const [newTechFeature, setNewTechFeature] = useState('')
-  const [newCommunityAmenity, setNewCommunityAmenity] = useState('')
-  const [newImage, setNewImage] = useState('')
-  const [newKitchenAppliance, setNewKitchenAppliance] = useState('')
   const [associatedLandId, setAssociatedLandId] = useState<string>(listing?.associatedLandId || '')
   const [associatedInventoryId, setAssociatedInventoryId] = useState<string>(listing?.associatedInventoryId || '')
 
@@ -250,13 +235,13 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
         cost: selectedItem.cost?.toString() || prev.cost,
         features: selectedItem.features || prev.features,
         // Generate description if not already set
-        description: prev.description || generateInventoryDescription(selectedItem)
+        description: prev.description || generateInventoryDescription(selectedItem),
       }))
     } else {
       // Clear inventory-related fields if no item selected
       setFormData(prev => ({
         ...prev,
-        selectedInventoryId: inventoryId
+        selectedInventoryId: inventoryId,
       }))
     }
   }
@@ -283,7 +268,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     const submissionData = {
       ...formData,
       associatedLandId: associatedLandId || null,
-      associatedInventoryId: associatedInventoryId || null
+      associatedInventoryId: associatedInventoryId || null,
     }
     onSubmit(submissionData)
   }
@@ -339,28 +324,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                       <SelectContent>
                         <SelectItem value="rent">For Rent</SelectItem>
                         <SelectItem value="sale">For Sale</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="propertyType">Property Type</Label>
-                    <Select value={formData.propertyType} onValueChange={(value) => handleInputChange('propertyType', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="apartment">Apartment</SelectItem>
-                        <SelectItem value="house">House</SelectItem>
-                        <SelectItem value="condo">Condo</SelectItem>
-                        <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
-                        <SelectItem value="townhouse">Townhouse</SelectItem>
-                        <SelectItem value="land">Land</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
           {/* Conditional Inventory Selection for Manufactured Homes */}
           {formData.propertyType === 'manufactured_home' && (
             <div>
@@ -371,24 +334,11 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None - Enter details manually</SelectItem>
-                  {inventoryOptions.map((item) => {
-                    if (formData.propertyType === 'manufactured_home') {
-                      const mhItem = item as any // Type assertion for manufactured home
-                      return (
-                        <SelectItem key={mhItem.id} value={mhItem.id}>
-                          {mhItem.year} {mhItem.manufacturer} {mhItem.model} - ${mhItem.price?.toLocaleString()}
-                        </SelectItem>
-                      )
-                    } else if (formData.propertyType === 'land') {
-                      const landItem = item as any // Type assertion for land
-                      return (
-                        <SelectItem key={landItem.id} value={landItem.id}>
-                          {landItem.address} - {landItem.acres} acres - ${landItem.price?.toLocaleString()}
-                        </SelectItem>
-                      )
-                    }
-                    return null
-                  })}
+                  {availableInventory.map((item) => (
+                    <SelectItem key={item.stockNumber} value={item.stockNumber}>
+                      {item.stockNumber} - {item.year} {item.make} {item.model} ({item.condition})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {formData.selectedInventoryId && (
@@ -418,6 +368,28 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
               </Select>
             </div>
           )}
+
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="propertyType">Property Type</Label>
+                    <Select value={formData.propertyType} onValueChange={(value) => handleInputChange('propertyType', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="apartment">Apartment</SelectItem>
+                        <SelectItem value="house">House</SelectItem>
+                        <SelectItem value="condo">Condo</SelectItem>
+                        <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
+                        <SelectItem value="townhouse">Townhouse</SelectItem>
+                        <SelectItem value="land">Land</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
                 <div>
                   <Label htmlFor="title">Title</Label>
@@ -872,24 +844,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                     />
                   </div>
                 )}
-
-          {/* Show cost field for inventory items */}
-          {formData.selectedInventoryId && (
-            <div>
-              <Label htmlFor="cost">Cost (from inventory)</Label>
-              <Input
-                id="cost"
-                type="number"
-                value={formData.cost}
-                onChange={(e) => handleInputChange('cost', e.target.value)}
-                placeholder="Enter cost"
-                disabled
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                This is the cost from inventory and cannot be edited here.
-              </p>
-            </div>
-          )}
               </TabsContent>
 
               <TabsContent value="features" className="space-y-6">
@@ -1017,20 +971,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                     ))}
                   </div>
                 </div>
-
-          {/* Show inventory features if selected */}
-          {formData.selectedInventoryId && formData.features.length > 0 && (
-            <div>
-              <Label>Inventory Features</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary">
-                    {feature}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
 
                 {/* Media */}
                 <Separator />
@@ -1554,74 +1494,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                     ))}
                   </div>
                 </div>
-
-                {/* MH Details Section - only show for manufactured homes */}
-                {formData.propertyType === 'manufactured_home' && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Manufactured Home Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="make">Make</Label>
-                        <Input
-                          id="make"
-                          value={formData.make}
-                          onChange={(e) => handleInputChange('make', e.target.value)}
-                          placeholder="Enter manufacturer"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="model">Model</Label>
-                        <Input
-                          id="model"
-                          value={formData.model}
-                          onChange={(e) => handleInputChange('model', e.target.value)}
-                          placeholder="Enter model"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="stockNumber">Stock Number</Label>
-                        <Input
-                          id="stockNumber"
-                          value={formData.stockNumber}
-                          onChange={(e) => handleInputChange('stockNumber', e.target.value)}
-                          placeholder="Enter stock number"
-                          disabled={!!formData.selectedInventoryId}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="condition">Condition</Label>
-                        <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select condition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="used">Used</SelectItem>
-                            <SelectItem value="refurbished">Refurbished</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="location">Current Location</Label>
-                      <Select value={formData.location} onValueChange={(value) => handleInputChange('location', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="main-lot">Main Lot</SelectItem>
-                          <SelectItem value="overflow-lot">Overflow Lot</SelectItem>
-                          <SelectItem value="service-bay">Service Bay</SelectItem>
-                          <SelectItem value="offsite">Offsite</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
               </TabsContent>
 
               <TabsContent value="contact" className="space-y-4">
@@ -1708,6 +1580,20 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Show inventory features if selected */}
+          {formData.selectedInventoryId && formData.features.length > 0 && (
+            <div>
+              <Label>Inventory Features</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.features.map((feature, index) => (
+                  <Badge key={index} variant="secondary">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
                   <div>
                     <Label htmlFor="additionalEmail1">Additional Email 1</Label>
                     <Input
@@ -1727,6 +1613,68 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                       value={formData.contactInfo?.additionalEmail2 || ''}
                       onChange={(e) => handleContactInfoChange('additionalEmail2', e.target.value)}
                       placeholder="Additional email 2"
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="make">Make</Label>
+              <Input
+                id="make"
+                value={formData.make}
+                onChange={(e) => handleInputChange('make', e.target.value)}
+                placeholder="Enter manufacturer"
+              />
+            </div>
+            <div>
+              <Label htmlFor="model">Model</Label>
+              <Input
+                id="model"
+                value={formData.model}
+                onChange={(e) => handleInputChange('model', e.target.value)}
+                placeholder="Enter model"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="stockNumber">Stock Number</Label>
+              <Input
+                id="stockNumber"
+                value={formData.stockNumber}
+                onChange={(e) => handleInputChange('stockNumber', e.target.value)}
+                placeholder="Enter stock number"
+                disabled={!!formData.selectedInventoryId}
+              />
+            </div>
+            <div>
+              <Label htmlFor="condition">Condition</Label>
+              <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select condition" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="used">Used</SelectItem>
+                  <SelectItem value="refurbished">Refurbished</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="location">Current Location</Label>
+            <Select value={formData.location} onValueChange={(value) => handleInputChange('location', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="main-lot">Main Lot</SelectItem>
+                <SelectItem value="overflow-lot">Overflow Lot</SelectItem>
+                <SelectItem value="service-bay">Service Bay</SelectItem>
+                <SelectItem value="offsite">Offsite</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
                     />
                   </div>
 
@@ -1781,3 +1729,21 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     </div>
   )
 }
+
+          {/* Show cost field for inventory items */}
+          {formData.selectedInventoryId && (
+            <div>
+              <Label htmlFor="cost">Cost (from inventory)</Label>
+              <Input
+                id="cost"
+                type="number"
+                value={formData.cost}
+                onChange={(e) => handleInputChange('cost', e.target.value)}
+                placeholder="Enter cost"
+                disabled
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                This is the cost from inventory and cannot be edited here.
+              </p>
+            </div>
+          )}
