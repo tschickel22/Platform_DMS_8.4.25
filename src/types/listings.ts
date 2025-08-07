@@ -59,6 +59,8 @@ export interface RentalListing extends BaseListing {
   amenities: string[]
   petPolicy: string
   listingType: 'for_rent'
+  associatedInventoryId?: string | null
+  associatedLandId?: string | null
 }
 
 // Manufactured home listing (new structure)
@@ -242,6 +244,7 @@ export interface Listing {
   sellerId?: string
   companyId?: string
   listingType: 'rent' | 'sale'
+  propertyType: 'apartment' | 'house' | 'condo' | 'manufactured_home' | 'land'
   title: string
   description: string
   termsOfSale?: string
