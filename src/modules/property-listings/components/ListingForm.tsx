@@ -142,7 +142,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
       additionalEmail3: '',
       alternatePhone: ''
     },
-    ...listing
+    ...listing,
     // MH specific fields,
     make: '',
     model: '',
