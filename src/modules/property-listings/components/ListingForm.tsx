@@ -15,6 +15,9 @@ import { Listing, MHDetails, ContactInfo } from '@/types/listings'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
 
+// Mock available inventory data
+const availableInventory = mockInventory.sampleVehicles || []
+
 interface ListingFormProps {
   listing?: Listing
   onSubmit: (listing: Partial<Listing>) => void
