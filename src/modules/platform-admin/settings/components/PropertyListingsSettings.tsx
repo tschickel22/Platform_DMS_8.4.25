@@ -309,98 +309,109 @@ export default function PropertyListingsSettings() {
               <div className="mb-4">
                 <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
               </div>
-                      <div className="flex flex-col gap-4">
               <p className="text-sm mb-4">
-                        <div className="w-full">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <h3 className="text-lg font-semibold">{partner.name}</h3>
-                                <Badge variant={partner.isActive ? "default" : "secondary"}>
-                                  {partner.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                                <Badge variant="outline">{partner.exportFormat}</Badge>
+                No syndication partners configured yet
+              </p>
+              <p className="text-xs">
+                Add a syndication partner to start exporting your listings
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {syndicationPartners.map((partner) => (
+                <div key={partner.id} className="border rounded-lg p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="w-full">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <h3 className="text-lg font-semibold">{partner.name}</h3>
+                            <Badge variant={partner.isActive ? "default" : "secondary"}>
+                              {partner.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                            <Badge variant="outline">{partner.exportFormat}</Badge>
+                          </div>
+                          <div className="flex-1">
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <div>
+                                <span className="font-medium">Lead Email:</span> {partner.leadEmail}
                               </div>
-                    <div className="flex-1">
-                              <div className="space-y-2 text-sm text-muted-foreground">
-                                <div>
-                                  <span className="font-medium">Lead Email:</span> {partner.leadEmail}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Listing Types:</span>{" "}
-                                  {partner.listingTypes.join(", ")}
-                                </div>
+                              <div>
+                                <span className="font-medium">Listing Types:</span>{" "}
+                                {partner.listingTypes.join(", ")}
                               </div>
                             </div>
-                          <span className="font-medium">Lead Email:</span> {partner.leadEmail}
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="flex items-center space-x-2">
-                                <Switch
-                                  checked={partner.isActive}
-                                  onCheckedChange={(checked) => togglePartnerStatus(partner.id, checked)}
-                                />
-                                <Label className="text-sm">Active</Label>
-                              </div>
+                          </div>
+                        </div>
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={partner.isActive}
+                              onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
+                            />
+                            <Label className="text-sm">Active</Label>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditForm(partner)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => editPartner(partner)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deletePartner(partner.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{partner.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeletePartner(partner.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                      {/* Export URL */}
+                      <div className="pt-4 border-t">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <Label className="text-sm font-medium">Export URL:</Label>
+                            <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
+                              {partner.exportUrl}
                             </div>
-                          </code>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                        {/* Export URL */}
-                        <div className="pt-4 border-t">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <Label className="text-sm font-medium">Export URL:</Label>
-                              <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
-                                {partner.exportUrl}
-                              </div>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copyToClipboard(partner.exportUrl)}
-                              className="shrink-0"
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy
-                            </Button>
                           </div>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{partner.name}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeletePartner(partner.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(partner.exportUrl, partner.id)}
+                            className="shrink-0"
+                          >
+                            {copiedUrl === partner.id ? (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            ) : (
+                              <Copy className="h-4 w-4 mr-2" />
+                            )}
+                            {copiedUrl === partner.id ? 'Copied' : 'Copy'}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
