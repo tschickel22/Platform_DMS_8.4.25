@@ -1685,18 +1685,17 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
           </div>
 
                     />
-                  </div>
-                  <>
-                    <div>
-                      <Label htmlFor="additionalEmail3">Additional Email 3</Label>
-                      <Input
-                        id="additionalEmail3"
-                        value={formData.contactInfo.additionalEmail3 || ''}
-                        onChange={(e) => handleContactInfoChange('additionalEmail3', e.target.value)}
-                        placeholder="Additional email 3"
-                      />
-                    </div>
-                  </>
+                 <>
+  <div>
+    <Label htmlFor="additionalEmail3">Additional Email 3</Label>
+    <Input
+      id="additionalEmail3"
+      value={formData.contactInfo.additionalEmail3 || ''}
+      onChange={(e) => handleContactInfoChange('additionalEmail3', e.target.value)}
+      placeholder="Additional email 3"
+    />
+  </div>
+</>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
