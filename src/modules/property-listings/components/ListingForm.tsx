@@ -1686,7 +1686,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
                     />
                   </div>
-
                   <>
                     <div>
                       <Label htmlFor="additionalEmail3">Additional Email 3</Label>
