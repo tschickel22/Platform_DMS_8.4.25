@@ -16,7 +16,6 @@ import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } fro
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { mockListings } from '@/mocks/listingsMock'
-import { useLandManagement } from '@/modules/land-management/hooks/useLandManagement'
 
 // Mock available inventory data
 const availableInventory = mockInventory.sampleVehicles || []
