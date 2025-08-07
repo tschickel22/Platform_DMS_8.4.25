@@ -28,6 +28,24 @@ interface ListingFormProps {
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
   const navigate = useNavigate()
   const { availableLand } = useLandManagement()
+
+  // Get relevant inventory based on property type
+  const getInventoryOptions = () => {
+    if (formData.propertyType === 'manufactured_home') {
+      return availableInventory.filter(item => 
+        item.type === 'manufactured_home' && 
+        item.status === 'available'
+      )
+    } else if (formData.propertyType === 'land') {
+      return availableLand.filter(land => 
+        land.status === 'available'
+      )
+    }
+    return []
+  }
+
+  const inventoryOptions = getInventoryOptions()
+
   const [formData, setFormData] = useState<Partial<Listing>>({
     listingType: 'rent',
     title: '',
@@ -361,11 +379,24 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None - Enter details manually</SelectItem>
-                  {availableInventory.map((item) => (
-                    <SelectItem key={item.stockNumber} value={item.stockNumber}>
-                      {item.stockNumber} - {item.year} {item.make} {item.model} ({item.condition})
-                    </SelectItem>
-                  ))}
+                  {inventoryOptions.map((item) => {
+                    if (formData.propertyType === 'manufactured_home') {
+                      const mhItem = item as any // Type assertion for manufactured home
+                      return (
+                        <SelectItem key={mhItem.id} value={mhItem.id}>
+                          {mhItem.year} {mhItem.manufacturer} {mhItem.model} - ${mhItem.price?.toLocaleString()}
+                        </SelectItem>
+                      )
+                    } else if (formData.propertyType === 'land') {
+                      const landItem = item as any // Type assertion for land
+                      return (
+                        <SelectItem key={landItem.id} value={landItem.id}>
+                          {landItem.address} - {landItem.acres} acres - ${landItem.price?.toLocaleString()}
+                        </SelectItem>
+                      )
+                    }
+                    return null
+                  })}
                 </SelectContent>
               </Select>
               {formData.selectedInventoryId && (
