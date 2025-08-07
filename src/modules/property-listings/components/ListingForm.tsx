@@ -1613,6 +1613,15 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                       value={formData.contactInfo?.additionalEmail2 || ''}
                       onChange={(e) => handleContactInfoChange('additionalEmail2', e.target.value)}
                       placeholder="Additional email 2"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* MH Details Section - only show for manufactured homes */}
+              {formData.propertyType === 'manufactured_home' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Manufactured Home Details</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="make">Make</Label>
