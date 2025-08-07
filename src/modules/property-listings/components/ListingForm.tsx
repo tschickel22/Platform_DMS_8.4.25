@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
+import { useLandManagement } from '@/modules/land-management/hooks/useLandManagement'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, MapPin, Home, DollarSign, User, Settings, Camera } from 'lucide-react'
 import { Listing, MHDetails, ContactInfo } from '@/types/listings'
@@ -26,6 +28,10 @@ interface ListingFormProps {
 }
 
 export default function ListingForm({ listing, onSubmit, onCancel }: ListingFormProps) {
+  // Get inventory data from hooks
+  const { vehicles: availableInventory } = useInventoryManagement()
+  const { lands: availableLand } = useLandManagement()
+
   const navigate = useNavigate()
   const { availableLand } = useLandManagement()
 
@@ -176,10 +182,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const [newAmenity, setNewAmenity] = useState('')
   const [newOutdoorFeature, setNewOutdoorFeature] = useState('')
   const [newStorageOption, setNewStorageOption] = useState('')
-  const [newTechFeature, setNewTechFeature] = useState('')
-  const [newCommunityAmenity, setNewCommunityAmenity] = useState('')
-  const [newKitchenAppliance, setNewKitchenAppliance] = useState('')
-  const [newImage, setNewImage] = useState('')
   const [newVideo, setNewVideo] = useState('')
   const [newFloorPlan, setNewFloorPlan] = useState('')
   const [newVirtualTour, setNewVirtualTour] = useState('')
