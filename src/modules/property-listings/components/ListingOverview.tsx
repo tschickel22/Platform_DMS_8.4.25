@@ -6,7 +6,10 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Plus, 
+import { 
+  MapPin, Bed, Bath, Square, Eye, Edit, Trash2, 
+  Home, Play, FileImage, DollarSign, Calendar
+} from 'lucide-react'
   MapPin, 
   Bed, 
   Bath, 
@@ -243,8 +246,54 @@ export default function ListingOverview() {
                   <SelectItem value="title-desc">Title: Z to A</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            {listing.yearBuilt && (
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{listing.yearBuilt}</span>
+              </div>
+            )}
           </div>
+
+          {/* MH-Specific Info */}
+          {listing.propertyType === 'manufactured_home' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4 text-sm">
+              {listing.manufacturer && (
+                <div className="flex items-center space-x-2">
+                  <Home className="h-4 w-4 text-muted-foreground" />
+                  <span>{listing.manufacturer} {listing.model}</span>
+                </div>
+              )}
+              {listing.communityName && (
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>{listing.communityName}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Media Indicators */}
+          {(listing.videos?.length > 0 || listing.floorPlans?.length > 0 || listing.virtualTourUrl) && (
+            <div className="flex space-x-2 mb-4">
+              {listing.videos?.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  <Play className="h-3 w-3 mr-1" />
+                  {listing.videos.length} Video{listing.videos.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {listing.floorPlans?.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  <FileImage className="h-3 w-3 mr-1" />
+                  {listing.floorPlans.length} Floor Plan{listing.floorPlans.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {listing.virtualTourUrl && (
+                <Badge variant="outline" className="text-xs">
+                  Virtual Tour
+                </Badge>
+              )}
+            </div>
+          )}
 
           {/* Results Summary */}
           <div className="mt-4 text-sm text-muted-foreground">
@@ -257,11 +306,20 @@ export default function ListingOverview() {
 
       {/* Listings Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredAndSortedListings.map((listing) => (
-          <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            {/* Property Image */}
-            <div className="aspect-video relative overflow-hidden">
-              <img
+        <div className="text-right mb-4 space-y-1">
+          <div className="space-y-1">
+            <div className="text-2xl font-bold text-primary">
+              ${listing.rent.toLocaleString()}
+            </div>
+            <div className="text-sm text-muted-foreground">per month</div>
+          </div>
+          
+          {listing.propertyType === 'manufactured_home' && listing.purchasePrice && (
+            <div className="text-sm">
+              <span className="text-muted-foreground">Purchase: </span>
+              <span className="font-semibold">${listing.purchasePrice.toLocaleString()}</span>
+            </div>
+          )}
                 src={listing.images[0]}
                 alt={listing.title}
                 className="w-full h-full object-cover"
