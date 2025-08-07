@@ -159,12 +159,12 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
   const getInventoryOptions = () => {
     if (formData.propertyType === 'manufactured_home') {
-      return availableInventory.filter(item => 
+      return (availableInventory || []).filter(item => 
         item.type === 'manufactured_home' && 
         item.status === 'available'
       )
     } else if (formData.propertyType === 'land') {
-      return availableLand.filter(land => 
+      return (availableLand || []).filter(item => 
         land.status === 'available'
       )
     }
