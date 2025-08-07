@@ -1,3 +1,33 @@
+// Syndication Partner Configuration Types
+export interface SyndicationPartnerConfiguration {
+  id: string;
+  name: string;
+  listingTypes: ListingType[];
+  leadEmail: string;
+  exportFormat: 'XML' | 'JSON';
+  exportUrl?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ListingType = 
+  | 'for_rent' 
+  | 'for_sale' 
+  | 'manufactured_home' 
+  | 'apartment' 
+  | 'house' 
+  | 'condo' 
+  | 'storage' 
+  | 'rv';
+
+export interface SyndicationPartnerFormData {
+  name: string;
+  listingTypes: ListingType[];
+  leadEmail: string;
+  exportFormat: 'XML' | 'JSON';
+}
+
 // Base listing interface for common properties
 export interface BaseListing {
   id: string

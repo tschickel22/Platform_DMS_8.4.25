@@ -1,449 +1,448 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Settings, 
-  Globe, 
-  MapPin, 
-  DollarSign, 
-  Image, 
-  FileText,
-  Plus,
-  X
-} from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Plus, ExternalLink, Edit, Trash2, Copy, CheckCircle } from 'lucide-react'
+import { SyndicationPartnerConfiguration } from '@/types/listings'
+import { SyndicationPartnerForm } from '@/modules/property-listings/components/SyndicationPartnerForm'
+import { useToast } from '@/hooks/use-toast'
 
-export function PropertyListingsSettings() {
-  const [settings, setSettings] = useState({
-    // Syndication Settings
-    enableMHVillageSyndication: true,
-    enableZillowSyndication: true,
-    enableCustomSyndication: false,
-    syndicationFrequency: 'hourly',
-    
-    // Default Values
-    defaultPropertyType: 'manufactured_home',
-    defaultListingType: 'sale',
-    defaultCurrency: 'USD',
-    
-    // Address & Location
-    enableGeocoding: true,
-    geocodingProvider: 'google',
-    defaultCountry: 'US',
-    requireCompleteAddress: true,
-    
-    // Media Settings
-    maxImagesPerListing: 20,
-    maxVideoSize: 100, // MB
-    enableVirtualTours: true,
-    enableFloorPlans: true,
-    
-    // MH Specific Settings
-    requireMHDetails: true,
-    enableDimensionCalculator: true,
-    defaultFoundationType: 'permanent',
-    
-    // Contact Settings
-    requireContactInfo: true,
-    enableMultipleContacts: true,
-    
-    // Custom Fields
-    customFields: [
-      { name: 'HOA Fees', type: 'currency', required: false },
-      { name: 'Pet Policy', type: 'text', required: false }
-    ]
-  })
+export default function PropertyListingsSettings() {
+  const [syndicationPartners, setSyndicationPartners] = useState<SyndicationPartnerConfiguration[]>([])
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingPartner, setEditingPartner] = useState<SyndicationPartnerConfiguration | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  const [newCustomField, setNewCustomField] = useState({ name: '', type: 'text', required: false })
+  // Mock data for development - replace with Rails API calls
+  useEffect(() => {
+    // Simulate API call to Rails backend
+    const fetchSyndicationPartners = async () => {
+      setIsLoading(true)
+      try {
+        // TODO: Replace with actual Rails API call
+        // const response = await fetch('/api/syndication_partners')
+        // const partners = await response.json()
+        
+        // Mock data for now
+        const mockPartners: SyndicationPartnerConfiguration[] = [
+          {
+            id: '1',
+            name: 'Zillow',
+            listingTypes: ['for_rent', 'for_sale', 'apartment', 'house', 'condo'],
+            leadEmail: 'support+zillow@notifications.renterinsight.com',
+            exportFormat: 'XML',
+            exportUrl: 'https://your-app.netlify.app/.netlify/functions/syndication-feed?partnerId=1&format=XML&listingTypes=for_rent,for_sale,apartment,house,condo',
+            isActive: true,
+            createdAt: '2024-01-15T10:00:00Z',
+            updatedAt: '2024-01-15T10:00:00Z'
+          },
+          {
+            id: '2',
+            name: 'MH Village',
+            listingTypes: ['manufactured_home', 'for_sale'],
+            leadEmail: 'support+mhvillage@notifications.renterinsight.com',
+            exportFormat: 'JSON',
+            exportUrl: 'https://your-app.netlify.app/.netlify/functions/syndication-feed?partnerId=2&format=JSON&listingTypes=manufactured_home,for_sale',
+            isActive: true,
+            createdAt: '2024-01-20T14:30:00Z',
+            updatedAt: '2024-01-20T14:30:00Z'
+          }
+        ]
+        
+        setSyndicationPartners(mockPartners)
+      } catch (error) {
+        console.error('Failed to fetch syndication partners:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load syndication partners',
+          variant: 'destructive'
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
-  }
+    fetchSyndicationPartners()
+  }, [toast])
 
-  const addCustomField = () => {
-    if (newCustomField.name.trim()) {
-      setSettings(prev => ({
-        ...prev,
-        customFields: [...prev.customFields, { ...newCustomField }]
-      }))
-      setNewCustomField({ name: '', type: 'text', required: false })
+  const handleCreatePartner = async (partnerData: SyndicationPartnerConfiguration) => {
+    try {
+      // TODO: Replace with actual Rails API call
+      // const response = await fetch('/api/syndication_partners', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(partnerData)
+      // })
+      // const newPartner = await response.json()
+      
+      // Mock implementation
+      const newPartner: SyndicationPartnerConfiguration = {
+        ...partnerData,
+        id: Date.now().toString(),
+        exportUrl: generateExportUrl(partnerData),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setSyndicationPartners(prev => [...prev, newPartner])
+      setIsFormOpen(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner created successfully'
+      })
+    } catch (error) {
+      console.error('Failed to create syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to create syndication partner',
+        variant: 'destructive'
+      })
     }
   }
 
-  const removeCustomField = (index: number) => {
-    setSettings(prev => ({
-      ...prev,
-      customFields: prev.customFields.filter((_, i) => i !== index)
-    }))
+  const handleUpdatePartner = async (partnerData: SyndicationPartnerConfiguration) => {
+    try {
+      // TODO: Replace with actual Rails API call
+      // const response = await fetch(`/api/syndication_partners/${partnerData.id}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(partnerData)
+      // })
+      // const updatedPartner = await response.json()
+      
+      // Mock implementation
+      const updatedPartner: SyndicationPartnerConfiguration = {
+        ...partnerData,
+        exportUrl: generateExportUrl(partnerData),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setSyndicationPartners(prev => 
+        prev.map(p => p.id === partnerData.id ? updatedPartner : p)
+      )
+      setEditingPartner(null)
+      setIsFormOpen(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner updated successfully'
+      })
+    } catch (error) {
+      console.error('Failed to update syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update syndication partner',
+        variant: 'destructive'
+      })
+    }
   }
 
-  const handleSave = () => {
-    // In a real app, this would save to the backend
-    console.log('Saving property listings settings:', settings)
-    // Show success message
+  const handleDeletePartner = async (partnerId: string) => {
+    try {
+      // TODO: Replace with actual Rails API call
+      // await fetch(`/api/syndication_partners/${partnerId}`, {
+      //   method: 'DELETE'
+      // })
+      
+      setSyndicationPartners(prev => prev.filter(p => p.id !== partnerId))
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner deleted successfully'
+      })
+    } catch (error) {
+      console.error('Failed to delete syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete syndication partner',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleToggleActive = async (partnerId: string, isActive: boolean) => {
+    try {
+      // TODO: Replace with actual Rails API call
+      // await fetch(`/api/syndication_partners/${partnerId}`, {
+      //   method: 'PATCH',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ isActive })
+      // })
+      
+      setSyndicationPartners(prev =>
+        prev.map(p => p.id === partnerId ? { ...p, isActive } : p)
+      )
+      
+      toast({
+        title: 'Success',
+        description: `Syndication partner ${isActive ? 'activated' : 'deactivated'}`
+      })
+    } catch (error) {
+      console.error('Failed to toggle partner status:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update partner status',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const generateExportUrl = (partner: Partial<SyndicationPartnerConfiguration>): string => {
+    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
+    const params = new URLSearchParams({
+      partnerId: partner.id || 'new',
+      format: partner.exportFormat || 'XML',
+      listingTypes: partner.listingTypes?.join(',') || '',
+      leadEmail: partner.leadEmail || ''
+    })
+    return `${baseUrl}?${params.toString()}`
+  }
+
+  const copyToClipboard = async (url: string, partnerId: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedUrl(partnerId)
+      setTimeout(() => setCopiedUrl(null), 2000)
+      toast({
+        title: 'Copied',
+        description: 'Export URL copied to clipboard'
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy URL',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const openEditForm = (partner: SyndicationPartnerConfiguration) => {
+    setEditingPartner(partner)
+    setIsFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setIsFormOpen(false)
+    setEditingPartner(null)
+  }
+
+  const formatListingTypes = (types: string[]) => {
+    return types.map(type => type.replace('_', ' ')).join(', ')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">Property Listings Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure syndication partners and export settings
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12 text-muted-foreground">
+              Loading syndication partners...
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Property Listings Settings</h2>
-        <p className="text-muted-foreground">
-          Configure property listing defaults, syndication, and custom fields
+        <h3 className="text-lg font-medium">Property Listings Settings</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure syndication partners and export settings
         </p>
       </div>
 
-      {/* Syndication Settings */}
+      {/* Syndication Partners Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Syndication Settings
-          </CardTitle>
-          <CardDescription>
-            Configure automatic syndication to external platforms
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Syndication Partners</CardTitle>
+              <CardDescription>
+                Manage listing syndication to external platforms
+              </CardDescription>
+            </div>
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingPartner(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Partner
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingPartner ? 'Edit Syndication Partner' : 'Add New Syndication Partner'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configure a new syndication partner to export your listings
+                  </DialogDescription>
+                </DialogHeader>
+                <SyndicationPartnerForm
+                  partner={editingPartner}
+                  onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+                  onCancel={closeForm}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="mhvillage-sync">MHVillage Syndication</Label>
-                <p className="text-sm text-muted-foreground">Automatically sync to MHVillage</p>
+        <CardContent>
+          {syndicationPartners.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="mb-4">
+                <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
               </div>
-              <Switch
-                id="mhvillage-sync"
-                checked={settings.enableMHVillageSyndication}
-                onCheckedChange={(checked) => handleSettingChange('enableMHVillageSyndication', checked)}
-              />
+              <p className="text-lg font-medium mb-2">No syndication partners configured</p>
+              <p className="text-sm mb-4">
+                Add your first syndication partner to start exporting listings
+              </p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="zillow-sync">Zillow Syndication</Label>
-                <p className="text-sm text-muted-foreground">Automatically sync to Zillow</p>
-              </div>
-              <Switch
-                id="zillow-sync"
-                checked={settings.enableZillowSyndication}
-                onCheckedChange={(checked) => handleSettingChange('enableZillowSyndication', checked)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sync-frequency">Syndication Frequency</Label>
-            <Select
-              value={settings.syndicationFrequency}
-              onValueChange={(value) => handleSettingChange('syndicationFrequency', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="realtime">Real-time</SelectItem>
-                <SelectItem value="hourly">Hourly</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Default Values */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Default Values
-          </CardTitle>
-          <CardDescription>
-            Set default values for new property listings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="default-property-type">Default Property Type</Label>
-              <Select
-                value={settings.defaultPropertyType}
-                onValueChange={(value) => handleSettingChange('defaultPropertyType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
-                  <SelectItem value="apartment">Apartment</SelectItem>
-                  <SelectItem value="house">House</SelectItem>
-                  <SelectItem value="condo">Condo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="default-listing-type">Default Listing Type</Label>
-              <Select
-                value={settings.defaultListingType}
-                onValueChange={(value) => handleSettingChange('defaultListingType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sale">For Sale</SelectItem>
-                  <SelectItem value="rent">For Rent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="default-currency">Default Currency</Label>
-              <Select
-                value={settings.defaultCurrency}
-                onValueChange={(value) => handleSettingChange('defaultCurrency', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="CAD">CAD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Address & Location Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Address & Location Settings
-          </CardTitle>
-          <CardDescription>
-            Configure address validation and geocoding
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enable-geocoding">Enable Geocoding</Label>
-                <p className="text-sm text-muted-foreground">Automatically calculate lat/lng from address</p>
-              </div>
-              <Switch
-                id="enable-geocoding"
-                checked={settings.enableGeocoding}
-                onCheckedChange={(checked) => handleSettingChange('enableGeocoding', checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="require-address">Require Complete Address</Label>
-                <p className="text-sm text-muted-foreground">Require all address fields</p>
-              </div>
-              <Switch
-                id="require-address"
-                checked={settings.requireCompleteAddress}
-                onCheckedChange={(checked) => handleSettingChange('requireCompleteAddress', checked)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="geocoding-provider">Geocoding Provider</Label>
-              <Select
-                value={settings.geocodingProvider}
-                onValueChange={(value) => handleSettingChange('geocodingProvider', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="google">Google Maps</SelectItem>
-                  <SelectItem value="mapbox">Mapbox</SelectItem>
-                  <SelectItem value="opencage">OpenCage</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="default-country">Default Country</Label>
-              <Select
-                value={settings.defaultCountry}
-                onValueChange={(value) => handleSettingChange('defaultCountry', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="US">United States</SelectItem>
-                  <SelectItem value="CA">Canada</SelectItem>
-                  <SelectItem value="MX">Mexico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Media Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Image className="h-5 w-5" />
-            Media Settings
-          </CardTitle>
-          <CardDescription>
-            Configure media upload limits and features
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="max-images">Max Images Per Listing</Label>
-              <Input
-                id="max-images"
-                type="number"
-                value={settings.maxImagesPerListing}
-                onChange={(e) => handleSettingChange('maxImagesPerListing', parseInt(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-video-size">Max Video Size (MB)</Label>
-              <Input
-                id="max-video-size"
-                type="number"
-                value={settings.maxVideoSize}
-                onChange={(e) => handleSettingChange('maxVideoSize', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enable-virtual-tours">Enable Virtual Tours</Label>
-                <p className="text-sm text-muted-foreground">Allow virtual tour uploads</p>
-              </div>
-              <Switch
-                id="enable-virtual-tours"
-                checked={settings.enableVirtualTours}
-                onCheckedChange={(checked) => handleSettingChange('enableVirtualTours', checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enable-floor-plans">Enable Floor Plans</Label>
-                <p className="text-sm text-muted-foreground">Allow floor plan uploads</p>
-              </div>
-              <Switch
-                id="enable-floor-plans"
-                checked={settings.enableFloorPlans}
-                onCheckedChange={(checked) => handleSettingChange('enableFloorPlans', checked)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Custom Fields */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Custom Fields
-          </CardTitle>
-          <CardDescription>
-            Add custom fields to property listings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            {settings.customFields.map((field, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-medium">{field.name}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{field.type}</Badge>
-                      {field.required && <Badge variant="outline">Required</Badge>}
+          ) : (
+            <div className="space-y-4">
+              {syndicationPartners.map((partner) => (
+                <div key={partner.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-medium">{partner.name}</h4>
+                        <Badge variant={partner.isActive ? 'default' : 'secondary'}>
+                          {partner.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <Badge variant="outline">{partner.exportFormat}</Badge>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div>
+                          <span className="font-medium">Lead Email:</span> {partner.leadEmail}
+                        </div>
+                        <div>
+                          <span className="font-medium">Listing Types:</span> {formatListingTypes(partner.listingTypes)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Export URL:</span>
+                          <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
+                            {partner.exportUrl}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(partner.exportUrl!, partner.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            {copiedUrl === partner.id ? (
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={partner.isActive}
+                          onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
+                        />
+                        <Label className="text-sm">Active</Label>
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditForm(partner)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{partner.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeletePartner(partner.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeCustomField(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* General Settings Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>General Settings</CardTitle>
+          <CardDescription>
+            Configure general property listing settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Auto-sync listings</Label>
+              <div className="text-sm text-muted-foreground">
+                Automatically sync listings with syndication partners
               </div>
-            ))}
+            </div>
+            <Switch defaultChecked />
           </div>
-
+          
           <Separator />
-
-          <div className="space-y-3">
-            <h4 className="font-medium">Add Custom Field</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Input
-                placeholder="Field name"
-                value={newCustomField.name}
-                onChange={(e) => setNewCustomField(prev => ({ ...prev, name: e.target.value }))}
-              />
-              <Select
-                value={newCustomField.type}
-                onValueChange={(value) => setNewCustomField(prev => ({ ...prev, type: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="currency">Currency</SelectItem>
-                  <SelectItem value="boolean">Yes/No</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="field-required"
-                  checked={newCustomField.required}
-                  onCheckedChange={(checked) => setNewCustomField(prev => ({ ...prev, required: checked }))}
-                />
-                <Label htmlFor="field-required">Required</Label>
-              </div>
-              <Button onClick={addCustomField}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Field
-              </Button>
+          
+          <div className="space-y-2">
+            <Label htmlFor="sync-interval">Sync Interval (hours)</Label>
+            <Input
+              id="sync-interval"
+              type="number"
+              defaultValue="24"
+              className="w-32"
+              min="1"
+              max="168"
+            />
+            <div className="text-sm text-muted-foreground">
+              How often to sync listings with partners (1-168 hours)
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} size="lg">
-          Save Settings
-        </Button>
-      </div>
     </div>
   )
 }
