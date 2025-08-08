@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Users, Plus, Search, Phone, Mail, Calendar, TrendingUp, Target, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
 import { Lead, LeadStatus, Task } from '@/types'
@@ -689,11 +689,14 @@ function LeadsList() {
       />
 
       <Dialog open={showAIInsights} onOpenChange={setShowAIInsights}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>AI Insights</DialogTitle>
+            <DialogDescription>
+              AI-powered recommendations and insights for your leads
+            </DialogDescription>
           </DialogHeader>
-          <AIInsights />
+          <AIInsights leadData={selectedLead || null} />
         </DialogContent>
       </Dialog>
     </div>
