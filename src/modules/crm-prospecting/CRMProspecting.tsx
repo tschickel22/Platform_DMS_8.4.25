@@ -580,7 +580,8 @@ function LeadsList() {
                         className="shadow-sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleCreateTaskForLead(lead)
+                         setSelectedLead(lead)
+                         setShowAIInsights(true)
                         }}
                       >
                         <ListTodo className="h-3 w-3 mr-1" />
