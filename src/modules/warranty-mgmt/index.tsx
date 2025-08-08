@@ -54,33 +54,27 @@ export default function WarrantyManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <Dialog open={isNewClaimOpen} onOpenChange={setIsNewClaimOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Claim
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Warranty Claim</DialogTitle>
-              </DialogHeader>
-              <WarrantyClaimForm
-                onSubmit={(claimData) => {
-                  addClaim(claimData)
-                  setIsNewClaimOpen(false)
-                }}
-                onCancel={() => setIsNewClaimOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <h1 className="text-2xl font-bold">Warranty Management</h1>
+          <p className="text-muted-foreground">
+            Manage warranty claims and coverage
+          </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Claim
-        </Button>
+        <Dialog open={isNewClaimOpen} onOpenChange={setIsNewClaimOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Claim
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create New Warranty Claim</DialogTitle>
+            </DialogHeader>
+            <WarrantyClaimForm onSubmit={handleNewClaim} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -142,10 +136,12 @@ export default function WarrantyManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Warranty Claims</CardTitle>
-          <CardDescription>
-            View and manage all warranty claims
-          </CardDescription>
+          <div>
+            <CardTitle>Warranty Claims</CardTitle>
+            <CardDescription>
+              View and manage all warranty claims
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2 mb-4">
