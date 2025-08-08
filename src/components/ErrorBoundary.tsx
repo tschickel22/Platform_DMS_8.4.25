@@ -126,7 +126,11 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+// Default export
 export default ErrorBoundary
+
+// Named export for compatibility
+export { ErrorBoundary }
 
 // Convenience wrapper for functional components
 export const withErrorBoundary = <P extends object>(
