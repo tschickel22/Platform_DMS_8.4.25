@@ -25,7 +25,6 @@ import { NewLeadForm } from './components/NewLeadForm'
 import { QuotesList } from './components/QuotesList'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority, TaskStatus } from '@/types'
 
