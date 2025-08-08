@@ -47,8 +47,7 @@ export default function CRMProspecting() {
     loading, 
     error, 
     getLeadByStatus, 
-    createLead, 
-    updateLead, 
+    createLead,  
     deleteLead,
     getLeadById 
   } = useLeadManagement()
