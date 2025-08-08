@@ -79,9 +79,9 @@ export function PortalAdminUserForm({
   }
 
   return (
-    <div className="flex flex-col h-full max-h-[85vh]">
+    <div className="w-full max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex-shrink-0 text-center pb-4 border-b">
+      <div className="p-6 pb-4 border-b">
         <div className="flex items-center justify-center mb-2">
           <User className="h-6 w-6 text-primary mr-2" />
           <h2 className="text-xl font-semibold">Portal User Management</h2>
@@ -92,8 +92,8 @@ export function PortalAdminUserForm({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-1">
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+      <div className="max-h-[60vh] overflow-y-auto">
+        <div className="p-6 space-y-4">
         {/* Basic Information */}
         <div className="space-y-3">
           <h3 className="text-base font-medium">Basic Information</h3>
@@ -297,3 +297,4 @@ export function PortalAdminUserForm({
     </div>
   )
 }
+      <div className="border-t bg-background p-6">
