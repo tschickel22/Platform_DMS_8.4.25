@@ -20,7 +20,6 @@ export default function WarrantyManagement() {
   }
   const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
   const { claims, loading, createClaim, updateClaim } = useWarrantyManagement();
-  const [isNewClaimOpen, setIsNewClaimOpen] = useState(false)
 
   const filteredClaims = claims.filter(claim =>
     claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
