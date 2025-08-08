@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/hooks/use-toast'
 import { Users, Search, Plus, Edit, RotateCcw, Settings, Eye } from 'lucide-react'
 import { mockUsers } from '@/mocks/usersMock'
 import { ClientAgreements } from './components/ClientAgreements'
 import { PortalAdminUserForm } from './components/PortalAdminUserForm'
 
 function ClientPortalAdminPage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
@@ -34,13 +36,34 @@ function ClientPortalAdminPage() {
   }
 
   const handleEditUser = (userId: string) => {
-    console.log('Edit user:', userId)
-    // TODO: Implement edit user functionality
+    const u = users.find(u => u.id === userId)
+    if (!u) return
+
+    // map your mock user to the form's initialData shape
+    const nameParts = (u.name ?? '').split(' ')
+    const firstName = nameParts[0] ?? ''
+    const lastName = nameParts.slice(1).join(' ') ?? ''
+
+    setSelectedUser({
+      firstName,
+      lastName,
+      email: u.email ?? '',
+      phone: u.phone ?? '',
+      role: u.role ?? 'Client',
+      status: u.status ?? 'Active',
+      permissions: u.permissions ?? [], // adjust if your mock differs
+      portalAccess: true,
+      notes: '',
+    })
+    setIsAddUserOpen(true)
   }
 
-  const handleResetPassword = (userEmail: string) => {
-    console.log('Reset password for:', userEmail)
-    // TODO: Implement password reset functionality
+  const handleResetPassword = async (userEmail: string) => {
+    // TODO: call API
+    toast({
+      title: 'Reset link sent',
+      description: `Password reset email sent to ${userEmail}.`,
+    })
   }
 
   const handleProxyAsClient = (user: any) => {
@@ -60,7 +83,13 @@ function ClientPortalAdminPage() {
               Manage client portal access and settings
             </p>
           </div>
-          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+          <Dialog
+            open={isAddUserOpen}
+            onOpenChange={(open) => {
+              setIsAddUserOpen(open)
+              if (!open) setSelectedUser(null)
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -69,15 +98,26 @@ function ClientPortalAdminPage() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Add New Portal User</DialogTitle>
+                <DialogTitle>
+                  {selectedUser ? 'Edit Portal User' : 'Add New Portal User'}
+                </DialogTitle>
               </DialogHeader>
               <PortalAdminUserForm 
+                initialData={selectedUser ?? undefined}
+                submitLabel={selectedUser ? 'Save Changes' : 'Create User'}
                 onSubmit={(userData) => {
-                  console.log('New user data:', userData)
+                  // TODO: create/update API
+                  toast({
+                    title: selectedUser ? 'User updated' : 'User created',
+                    description: `${userData.firstName} ${userData.lastName}`,
+                  })
                   setIsAddUserOpen(false)
-                  // Here you would typically call an API to create the user
+                  setSelectedUser(null)
                 }}
-                onCancel={() => setIsAddUserOpen(false)}
+                onCancel={() => {
+                  setIsAddUserOpen(false)
+                  setSelectedUser(null)
+                }}
               />
             </DialogContent>
           </Dialog>
