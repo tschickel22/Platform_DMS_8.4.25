@@ -169,8 +169,18 @@ const mockLands = [
 
 export function useLandManagement() {
   const [lands, setLands] = useState<Land[]>([])
-  const [lands, setLands] = useState(mockLands)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Save data to localStorage
+  const saveToStorage = useCallback((newLands: Land[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLands))
+    } catch (err) {
+      console.error('Error saving land data:', err)
+      setError('Failed to save land data')
+    }
+  }, [])
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -183,18 +193,13 @@ export function useLandManagement() {
         setLands(mockLandData)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mockLandData))
       }
+    } catch (err) {
+      console.error('Error loading land data:', err)
+      setError('Failed to load land data')
+    }
     // In a real app, this would load from API
     // For now, we use mock data
     setLoading(false)
-  }, [])
-
-  // Save data to localStorage whenever lands change
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLands))
-    } catch (err) {
-      console.error('Error saving land data:', err)
-      setError('Failed to save land data')
-    }
   }, [])
 
   // Get all land records
@@ -342,22 +347,17 @@ export function useLandManagement() {
 
     // CRUD operations
     getLandRecords,
-    setLands(prev => prev.map(land => 
-      land.id === landId ? { ...land, ...landData } : land
-    ))
+    getLandById,
+    createLand,
     updateLand,
     deleteLand,
 
-    setLands(prev => prev.filter(land => land.id !== landId))
+    // Search and filter
+    searchLands,
     getAvailableLands,
 
     // Utilities
     getPricePerUnit,
-    const newLand = {
-      ...landData,
-      id: Date.now().toString(),
-      purchaseDate: new Date().toISOString().split('T')[0]
-    }
-    setLands(prev => [...prev, newLand])
+    getZoningTypes
   }
 }
