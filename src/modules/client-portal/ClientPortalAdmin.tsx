@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Users, Settings, Shield, Eye, Edit, Trash2 } from 'lucide-react'
+import { Plus, Users, Settings, Shield, Eye, Edit, Trash2, Search, RotateCcw } from 'lucide-react'
 import { mockUsers } from '@/mocks/usersMock'
 import { ClientAgreements } from './components/ClientAgreements'
 import { PortalAdminUserForm } from './components/PortalAdminUserForm'
@@ -46,7 +46,11 @@ function ClientPortalAdminPage() {
   }
 
   const handleProxyAsClient = (user: any) => {
-  const handleEditUser = (user: any) => {
+    console.log('Proxy as client:', user)
+    // TODO: Implement proxy functionality
+  }
+
+  const handleEditUser2 = (user: any) => {
     setEditingUser(user)
     setIsEditUserOpen(true)
   }
@@ -60,6 +64,76 @@ function ClientPortalAdminPage() {
   const openEditUser = (user: any) => {
     setEditingUser(user)
     setIsEditUserOpen(true)
+  }
+
+  const PortalAdminUserList = ({ onEditUser }: { onEditUser: (user: any) => void }) => {
+    return (
+      <div className="space-y-4">
+        {filteredUsers.map((user) => (
+          <div key={user.id} className="ri-table-row">
+            <div className="flex items-center space-x-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm font-medium text-primary">
+                  {getInitials(user.name)}
+                </span>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold">{user.name}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {user.email} • {user.phone} • Last login: {new Date(user.updatedAt).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Badge className={user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                  {user.status}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditUser(user.id)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleResetPassword(user.email)}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset Password
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleProxyAsClient(user)}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Proxy as Client
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            {users.length === 0 ? (
+              <>
+                <p>No portal users found</p>
+                <p className="text-sm">Users will appear here once they're added to the system</p>
+              </>
+            ) : (
+              <>
+                <p>No users found matching your search</p>
+                <p className="text-sm">Try adjusting your search criteria</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -186,70 +260,6 @@ function ClientPortalAdminPage() {
 
               {/* Users List */}
               <PortalAdminUserList onEditUser={openEditUser} />
-                {filteredUsers.map((user) => (
-                  <div key={user.id} className="ri-table-row">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {getInitials(user.name)}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{user.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email} • {user.phone} • Last login: {new Date(user.updatedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge className={user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {user.status}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(user.id)}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleResetPassword(user.email)}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Reset Password
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProxyAsClient(user)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Proxy as Client
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredUsers.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    {users.length === 0 ? (
-                      <>
-                        <p>No portal users found</p>
-                        <p className="text-sm">Users will appear here once they're added to the system</p>
-                      </>
-                    ) : (
-                      <>
-                        <p>No users found matching your search</p>
-                        <p className="text-sm">Try adjusting your search criteria</p>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
