@@ -36,7 +36,7 @@ export function useNurturing() {
     const savedEnrollments = loadFromLocalStorage('renter-insight-enrollments', [])
     const savedCommunicationLogs = loadFromLocalStorage('renter-insight-communication-logs', [])
     const savedAiInsights = loadFromLocalStorage('renter-insight-ai-insights', [])
-
+        body: template || '',
     // Only initialize with mock data if localStorage is empty
     if (savedEmailTemplates.length === 0) {
     // Mock email templates
