@@ -443,8 +443,24 @@ function LeadsList() {
           <TabsTrigger value="nurturing">Nurturing</TabsTrigger>
           <TabsTrigger value="forms">Intake Forms</TabsTrigger>
           <TabsTrigger value="sources">Sources</TabsTrigger>
-        </TabsList>
-
+          <CardTitle className="flex items-center justify-between">
+            <span>{getFilterLabel()} ({filteredLeads.length})</span>
+            {activeFilter !== 'all' && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setActiveFilter('all')}
+              >
+                Clear Filter
+              </Button>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {activeFilter === 'all' 
+              ? 'Manage and track your sales prospects'
+              : `Showing ${getFilterLabel().toLowerCase()}`
+            }
+          </CardDescription>
         <TabsContent value="leads" className="space-y-6">
           {/* Filters */}
           <div className="flex gap-4">
