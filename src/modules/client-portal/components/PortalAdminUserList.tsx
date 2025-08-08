@@ -44,9 +44,10 @@ const mockUsers = [
 
 interface PortalAdminUserListProps {
   onImpersonate: (userId: string, userName: string) => void
+  onEditUser?: (user: any) => void
 }
 
-export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps) {
+export function PortalAdminUserList({ onImpersonate, onEditUser }: PortalAdminUserListProps) {
   const { toast } = useToast()
   const [users, setUsers] = useState(mockUsers)
   const [searchTerm, setSearchTerm] = useState('')
@@ -161,7 +162,7 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
                     variant="outline" 
                     size="sm" 
                     className="shadow-sm"
-                    onClick={() => handleEditUser(user)}
+                    onClick={() => onEditUser?.(user)}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
