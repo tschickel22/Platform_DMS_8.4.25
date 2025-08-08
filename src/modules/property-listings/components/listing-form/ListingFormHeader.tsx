@@ -19,7 +19,7 @@ export default function ListingFormHeader({ isEditing, onCancel, onSave, onSubmi
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleSave = () => {
+    console.log('Creating listing with data:', formData)
     if (onSave && formData) {
       onSave(formData)
     }
