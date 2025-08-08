@@ -15,10 +15,11 @@ interface ListingFormHeaderProps {
   formData?: any
 }
 
-export default function ListingFormHeader({ isEditing, onCancel, onSave, onSubmit, formData }: ListingFormHeaderProps) {
+export default function ListingFormHeader({ listing, isEditing, onCancel, onSave, onSubmit, formData }: ListingFormHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  const handleSave = () => {
     console.log('Creating listing with data:', formData)
     if (onSave && formData) {
       onSave(formData)
