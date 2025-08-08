@@ -13,6 +13,8 @@ import {
   Lead
 } from '../types'
 
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined'
+
 export function useNurturing() {
   const [sequences, setSequences] = useState<NurtureSequence[]>([])
   const [enrollments, setEnrollments] = useState<NurtureEnrollment[]>([])
@@ -394,6 +396,8 @@ Best regards,
   }
 
   const generateAIInsights = async (leadId: string, leadData: Lead) => {
+    if (!leadId || !leadData) return
+    
     setLoading(true)
     try {
       // Simulate AI analysis
@@ -583,6 +587,20 @@ Best regards,
     setEnrollments(prev => prev.map(e => 
       e.id === enrollmentId ? { ...e, status: 'active' } : e
     ))
+  }
+
+  const saveToLocalStorage = (key: string, data: any) => {
+    if (isBrowser) {
+      localStorage.setItem(key, JSON.stringify(data))
+    }
+  }
+
+  const loadFromLocalStorage = (key: string) => {
+    if (isBrowser) {
+      const stored = localStorage.getItem(key)
+      return stored ? JSON.parse(stored) : null
+    }
+    return null
   }
 
   return {

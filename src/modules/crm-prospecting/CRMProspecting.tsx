@@ -689,15 +689,28 @@ function LeadsList() {
         leadId={selectedLeadId || undefined}
       />
 
-      <Dialog open={showAIInsights} onOpenChange={setShowAIInsights}>
-        <DialogContent className="max-w-2xl">
+      <Dialog
+        open={showAIInsights && !!selectedLead}
+        onOpenChange={(open) => {
+          setShowAIInsights(open)
+          if (!open) setSelectedLead(null)
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>AI Insights</DialogTitle>
-            <DialogDescription>
-              AI-powered recommendations and insights for your leads
-            </DialogDescription>
           </DialogHeader>
-          <AIInsights leadData={selectedLead || null} />
+          
+          {selectedLead ? (
+            <AIInsights
+              leadId={selectedLead.id}
+              leadData={selectedLead}
+            />
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              Select a lead to view insights.
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
