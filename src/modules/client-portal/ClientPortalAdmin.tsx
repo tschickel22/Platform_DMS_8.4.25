@@ -17,6 +17,12 @@ function ClientPortalAdminPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
 
   // Use shared mock users data
+
+  const handleAddUser = (userData: any) => {
+    console.log('Adding user:', userData)
+    // TODO: Implement actual user creation logic
+    setIsAddUserOpen(false)
+  }
   const users = mockUsers.sampleUsers
 
   // Filter users based on search query
