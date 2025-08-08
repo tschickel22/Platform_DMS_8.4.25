@@ -10,12 +10,8 @@ interface ListingFormHeaderProps {
   listing?: Listing
   isEditing?: boolean
   listingId?: string
-  listing?: Listing
-  isEditing?: boolean
-  listingId?: string
   onSubmit?: (data: any) => void
   onSave?: (data: any) => void
-  onCancel?: () => void
   formData?: any
 }
 
@@ -23,58 +19,40 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel()
-    } else {
-      navigate(-1)
-    }
-  }
-
   const handleSave = () => {
+    console.log('Creating listing with data:', formData)
     if (onSave && formData) {
       onSave(formData)
-      toast({
-        title: "Draft Saved",
-        description: "Your listing has been saved as a draft.",
-      })
-    } else {
-      toast({
-        title: "Nothing to Save",
-        description: "No draft handler is configured.",
-        variant: 'warning'
-      })
     }
+    toast({
+      title: "Draft Saved",
+      description: "Your listing has been saved as a draft.",
+    })
   }
 
-  const handleCreateOrUpdate = () => {
+  const handleCreateListing = () => {
     if (onSubmit && formData) {
       onSubmit(formData)
-      // after successful create/update, navigate back to listing overview
-      navigate('/listings')
-    } else {
-      toast({
-        title: isEditing ? "Nothing to Update" : "Nothing to Create",
-        description: "No submission handler is configured.",
-        variant: 'warning'
-      })
     }
   }
 
   return (
-    <div>
+    <div className="flex items-center justify-between mb-6">
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Home className="h-5 w-5" />
           {listing ? 'Edit Listing' : 'Create New Listing'}
         </CardTitle>
         <CardDescription>
-          {listing
-            ? 'Update the listing details below'
-            : 'Fill in the details to create a new property listing'}
+          {listing ? 'Update the listing details below' : 'Fill in the details to create a new property listing'}
         </CardDescription>
       </CardHeader>
       <div className="flex items-center gap-3">
-        <Button variant="outline" onClick={handleCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigate('/listings')}
+        >
           Cancel
         </Button>
         <Button
@@ -82,9 +60,12 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
           variant="outline"
           onClick={handleSave}
         >
-          Save as Draft
+          Save
         </Button>
-        <Button onClick={handleCreateOrUpdate}>
+        <Button
+          type="button"
+          onClick={handleCreateListing}
+        >
           {isEditing ? 'Update Listing' : 'Create Listing'}
         </Button>
       </div>
