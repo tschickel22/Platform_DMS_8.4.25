@@ -4,14 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Users, Search, Plus, Edit, RotateCcw, Settings, Eye } from 'lucide-react'
 import { mockUsers } from '@/mocks/usersMock'
 import { ClientAgreements } from './components/ClientAgreements'
+import { PortalAdminUserForm } from './components/PortalAdminUserForm'
 
 function ClientPortalAdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
 
   // Use shared mock users data
   const users = mockUsers.sampleUsers
@@ -57,10 +60,27 @@ function ClientPortalAdminPage() {
               Manage client portal access and settings
             </p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Portal User</DialogTitle>
+              </DialogHeader>
+              <PortalAdminUserForm 
+                onSubmit={(userData) => {
+                  console.log('New user data:', userData)
+                  setIsAddUserOpen(false)
+                  // Here you would typically call an API to create the user
+                }}
+                onCancel={() => setIsAddUserOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
