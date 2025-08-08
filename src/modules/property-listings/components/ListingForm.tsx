@@ -140,6 +140,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     },
     ...listing
   })
+  const [currentFormData, setCurrentFormData] = useState<any>({})
 
   const [newAmenity, setNewAmenity] = useState('')
   const [newOutdoorFeature, setNewOutdoorFeature] = useState('')
@@ -153,6 +154,11 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   const [newVirtualTour, setNewVirtualTour] = useState('')
   const [associatedLandId, setAssociatedLandId] = useState<string>(listing?.associatedLandId || '')
   const [associatedInventoryId, setAssociatedInventoryId] = useState<string>(listing?.associatedInventoryId || '')
+
+  // Watch form changes to keep current data updated
+  React.useEffect(() => {
+    setCurrentFormData(formData)
+  }, [formData])
 
   const handleInputChange = (field: keyof Listing, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -210,6 +216,13 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     }
   }
 
+  const handleSave = (data: any) => {
+    console.log('Saving draft:', data)
+    // Here you would typically save to backend as draft
+    // For now, just update local state
+    setFormData(data)
+  }
+
   const handleCancel = () => {
     navigate('/inventory')
   }
@@ -220,7 +233,12 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto p-6">
         <Card>
-          <ListingFormHeader listing={listing} onSubmit={handleSubmit} />
+          <ListingFormHeader 
+            listing={listing} 
+            onSubmit={handleSubmit}
+            onSave={handleSave}
+            formData={currentFormData}
+          />
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
