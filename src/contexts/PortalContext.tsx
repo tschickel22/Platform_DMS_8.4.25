@@ -7,25 +7,58 @@ interface PortalClient {
   email: string
 }
 
-interface PortalContextType {
-  proxiedClient: PortalClient | null
-  isProxying: boolean
+export type PortalContextValue = {
+  client: any | null
+  impersonateClientId?: string | null
+  refresh?: () => void
   getDisplayName: () => string
   getDisplayEmail: () => string
   getCustomerId: () => string
+  isProxying: boolean
+  proxiedClient: any | null
 }
 
-const PortalContext = createContext<PortalContextType | undefined>(undefined)
+const PortalContext = createContext<PortalContextValue | null>(null)
 
 export function usePortal() {
   const context = useContext(PortalContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('usePortal must be used within a PortalProvider')
   }
   return context
 }
 
-interface PortalProviderProps {
+export const PortalProvider: React.FC<
+  React.PropsWithChildren<{ value?: PortalContextValue; impersonatedUser?: any; fallbackUser?: any }>
+> = ({ value, impersonatedUser, fallbackUser, children }) => {
+  const { user } = useAuth()
+  
+  // If value is provided directly, use it
+  if (value) {
+    return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>
+  }
+  
+  // Otherwise, use the existing logic
+  const currentUser = impersonatedUser || fallbackUser || user
+  const isProxying = !!impersonatedUser
+  
+  const getDisplayName = () => currentUser?.name || 'Unknown User'
+  const getDisplayEmail = () => currentUser?.email || 'unknown@example.com'
+  const getCustomerId = () => currentUser?.id || 'unknown'
+  
+  const contextValue: PortalContextValue = {
+    client: currentUser,
+    impersonateClientId: impersonatedUser?.id || null,
+    refresh: () => {},
+    getDisplayName,
+    getDisplayEmail,
+    getCustomerId,
+    isProxying,
+    proxiedClient: impersonatedUser
+  }
+  
+  return <PortalContext.Provider value={contextValue}>{children}</PortalContext.Provider>
+}
   children: ReactNode
   impersonatedUser?: MockUser | null
   fallbackUser?: {
