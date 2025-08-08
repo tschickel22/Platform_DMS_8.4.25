@@ -77,6 +77,7 @@ function App() {
                         <Route path="/commissions/*" element={<CommissionEngine />} />
                         <Route path="/portal/*" element={<ClientPortalAdmin />} />
                         <Route path="/invoices/*" element={<InvoicePayments />} />
+                        <Route path="/listings/*" element={<PropertyListings />} />
                         <Route path="/settings/*" element={<CompanySettings />} />
                         <Route path="/admin/*" element={<PlatformAdmin />} />
                         <Route path="/admin/settings/*" element={<PlatformSettings />} />
