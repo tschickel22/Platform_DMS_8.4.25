@@ -11,7 +11,6 @@ import ListingFormPricingTab from './listing-form/ListingFormPricingTab'
 import ListingFormFeaturesTab from './listing-form/ListingFormFeaturesTab'
 import ListingFormMHDetailsTab from './listing-form/ListingFormMHDetailsTab'
 import ListingFormContactTab from './listing-form/ListingFormContactTab'
-import FormActions from './listing-form/FormActions'
 
 interface ListingFormProps {
   listing?: Listing
@@ -221,7 +220,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto p-6">
         <Card>
-          <ListingFormHeader listing={listing} />
+          <ListingFormHeader listing={listing} onSubmit={handleSubmit} />
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
@@ -304,12 +303,6 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
                   />
                 </TabsContent>
               </Tabs>
-
-              <FormActions
-                listing={listing}
-                onCancel={handleCancel}
-                handleSubmit={handleSubmit}
-              />
             </form>
           </CardContent>
         </Card>
