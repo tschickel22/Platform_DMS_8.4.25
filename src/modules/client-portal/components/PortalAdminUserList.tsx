@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Filter, Edit, ExternalLink, MoreHorizontal, Mail, Phone, Calendar, Users } from 'lucide-react'
+import { Search, Filter, Edit, ExternalLink, MoreHorizontal, Mail, Phone, Calendar, Users, Key } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { PortalAdminUserForm } from './PortalAdminUserForm'
 
 // Mock portal users data
 const mockUsers = [
@@ -51,6 +53,9 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
   const [users, setUsers] = useState(mockUsers)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [editingUser, setEditingUser] = useState<any | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -76,16 +81,42 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
     return matchesSearch && matchesStatus
   })
 
-  const handleResetPassword = (userId: string) => {
-    toast({
-      title: 'Password Reset Link Sent',
-      description: 'A password reset link has been sent to the user\'s email address.',
-    })
+  const handleResetPassword = (user: any) => {
+    setEditingUser(user)
+    setIsResetPasswordDialogOpen(true)
+  }
+
+  const confirmResetPassword = () => {
+    if (editingUser) {
+      setIsResetPasswordDialogOpen(false)
+      setEditingUser(null)
+      toast({
+        title: "Password reset sent",
+        description: `A password reset email has been sent to ${editingUser.email}.`,
+      })
+    }
   }
 
   const handleEditUser = (user: any) => {
-    // This would open the edit user form
-    console.log('Edit user:', user)
+    setEditingUser(user)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateUser = (userData: any) => {
+    if (editingUser) {
+      const updatedUser = {
+        ...editingUser,
+        ...userData,
+        updatedAt: new Date().toISOString()
+      }
+      setUsers(users.map(user => user.id === editingUser.id ? updatedUser : user))
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+      toast({
+        title: "User updated",
+        description: "User information has been successfully updated.",
+      })
+    }
   }
 
   return (
@@ -170,8 +201,9 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
                     variant="outline" 
                     size="sm" 
                     className="shadow-sm"
-                    onClick={() => handleResetPassword(user.id)}
+                    onClick={() => handleResetPassword(user)}
                   >
+                    <Key className="h-3 w-3 mr-1" />
                     Reset Password
                   </Button>
                   <Button 
@@ -197,6 +229,55 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <PortalAdminUserForm
+              initialData={{
+                firstName: editingUser.firstName || '',
+                lastName: editingUser.lastName || '',
+                email: editingUser.email,
+                phone: editingUser.phone || '',
+                role: editingUser.role,
+                status: editingUser.status,
+                permissions: editingUser.permissions || [],
+                portalAccess: editingUser.portalAccess || false,
+                notes: editingUser.notes || ''
+              }}
+              onSubmit={handleUpdateUser}
+              onCancel={() => {
+                setIsEditDialogOpen(false)
+                setEditingUser(null)
+              }}
+              submitLabel="Update User"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Are you sure you want to reset the password for <strong>{editingUser?.firstName} {editingUser?.lastName}</strong>?</p>
+            <p className="text-sm text-muted-foreground">
+              A password reset email will be sent to <strong>{editingUser?.email}</strong>.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsResetPasswordDialogOpen(false)}>Cancel</Button>
+              <Button onClick={confirmResetPassword}>Send Reset Email</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
