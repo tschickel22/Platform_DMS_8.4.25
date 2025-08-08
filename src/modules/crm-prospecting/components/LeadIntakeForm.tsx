@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Plus, Save, X } from 'lucide-react'
 import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
-import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
 import { LeadIntakeForm, LeadFormField, LeadSource } from '../types'
 import { useLeadManagement } from '../hooks/useLeadManagement'
 
