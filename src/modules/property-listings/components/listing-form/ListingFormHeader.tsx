@@ -61,7 +61,7 @@ export default function ListingFormHeader({
         <Button
           type="button"
           variant="outline"
-          onClick={handleCancel}
+          onClick={() => navigate('/listings')}
         >
           Cancel
         </Button>
