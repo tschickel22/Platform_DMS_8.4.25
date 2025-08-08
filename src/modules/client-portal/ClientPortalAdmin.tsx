@@ -73,7 +73,7 @@ function ClientPortalAdminPage() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'white', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
               <PortalAdminUserForm
                 onSubmit={handleAddUser}
                 onCancel={() => setIsAddUserOpen(false)}
