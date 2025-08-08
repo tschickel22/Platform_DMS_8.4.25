@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Users, Search, Plus, Edit, RotateCcw, Settings, Eye } from 'lucide-react'
+import { Plus, Users, Settings, Shield, Eye, Edit, Trash2 } from 'lucide-react'
 import { mockUsers } from '@/mocks/usersMock'
 import { ClientAgreements } from './components/ClientAgreements'
 import { PortalAdminUserForm } from './components/PortalAdminUserForm'
@@ -15,6 +15,8 @@ function ClientPortalAdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
 
   // Use shared mock users data
   const users = mockUsers.sampleUsers
@@ -47,6 +49,17 @@ function ClientPortalAdminPage() {
     // Open client portal in new tab with impersonation parameter
     const portalUrl = `/portalclient/?impersonateClientId=${user.id}`
     window.open(portalUrl, '_blank')
+  }
+
+  const handleEditUser = (userData: any) => {
+    console.log('Updating user:', userData)
+    setIsEditUserOpen(false)
+    setEditingUser(null)
+  }
+
+  const openEditUser = (user: any) => {
+    setEditingUser(user)
+    setIsEditUserOpen(true)
   }
 
   return (
@@ -152,10 +165,27 @@ function ClientPortalAdminPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="ri-search-input"
                 />
+
+                {/* Edit User Dialog */}
+                <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Edit Portal User</DialogTitle>
+                    </DialogHeader>
+                    <PortalAdminUserForm 
+                      user={editingUser}
+                      onSubmit={handleEditUser}
+                      onCancel={() => {
+                        setIsEditUserOpen(false)
+                        setEditingUser(null)
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Users List */}
-              <div className="space-y-4">
+              <PortalAdminUserList onEditUser={openEditUser} />
                 {filteredUsers.map((user) => (
                   <div key={user.id} className="ri-table-row">
                     <div className="flex items-center space-x-4">
