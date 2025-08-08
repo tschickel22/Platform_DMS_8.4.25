@@ -9,10 +9,8 @@ export default function LandManagement() {
     <div className="space-y-6">
       <Routes>
         {/* Main land list view */}
-function LandManagementContent() {
         <Route path="/" element={<LandList />} />
         {/* Create new land record */}
-import { Routes, Route } from 'react-router-dom'
         <Route path="/new" element={<LandForm />} />
         
         {/* Edit existing land record */}
@@ -28,10 +26,10 @@ import { Routes, Route } from 'react-router-dom'
   )
 }
 
-export default function LandManagement() {
+function LandManagementContent() {
   return (
     <Routes>
-      <Route path="/*" element={<LandManagementContent />} />
+      <Route path="/*" element={<LandManagement />} />
     </Routes>
   )
 }
