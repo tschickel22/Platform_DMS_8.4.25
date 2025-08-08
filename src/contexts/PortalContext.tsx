@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react'
 import { MockUser } from '@/mocks/usersMock'
+import { useAuth } from '@/hooks/useAuth'
 
 interface PortalClient {
   id: string
@@ -28,37 +29,7 @@ export function usePortal() {
   return context
 }
 
-export const PortalProvider: React.FC<
-  React.PropsWithChildren<{ value?: PortalContextValue; impersonatedUser?: any; fallbackUser?: any }>
-> = ({ value, impersonatedUser, fallbackUser, children }) => {
-  const { user } = useAuth()
-  
-  // If value is provided directly, use it
-  if (value) {
-    return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>
-  }
-  
-  // Otherwise, use the existing logic
-  const currentUser = impersonatedUser || fallbackUser || user
-  const isProxying = !!impersonatedUser
-  
-  const getDisplayName = () => currentUser?.name || 'Unknown User'
-  const getDisplayEmail = () => currentUser?.email || 'unknown@example.com'
-  const getCustomerId = () => currentUser?.id || 'unknown'
-  
-  const contextValue: PortalContextValue = {
-    client: currentUser,
-    impersonateClientId: impersonatedUser?.id || null,
-    refresh: () => {},
-    getDisplayName,
-    getDisplayEmail,
-    getCustomerId,
-    isProxying,
-    proxiedClient: impersonatedUser
-  }
-  
-  return <PortalContext.Provider value={contextValue}>{children}</PortalContext.Provider>
-}
+interface PortalProviderProps {
   children: ReactNode
   impersonatedUser?: MockUser | null
   fallbackUser?: {
@@ -109,6 +80,9 @@ export function PortalProvider({ children, impersonatedUser, fallbackUser }: Por
   }
 
   const value = {
+    client: proxiedClient,
+    impersonateClientId: proxiedClient?.id || null,
+    refresh: () => {},
     proxiedClient,
     isProxying,
     getDisplayName,
