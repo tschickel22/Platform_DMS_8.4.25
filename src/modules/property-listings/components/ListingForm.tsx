@@ -204,8 +204,10 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
     handleMHDetailsChange('kitchenAppliances', currentAppliances.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = (data: any) => {
+    console.log('Form submitted with data:', data)
+    
+    // Here you would typically send the data to your backend API
     if (typeof onSubmit === 'function') {
       const submissionData = {
         ...formData,
