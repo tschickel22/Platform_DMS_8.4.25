@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Users, Plus, Search, Filter, Phone, Mail, Calendar, TrendingUp, Target, BarChart3, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
 import { Lead, LeadStatus, Task } from '@/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useLeadManagement } from './hooks/useLeadManagement'
@@ -27,6 +29,41 @@ import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority, TaskStatus } from '@/types'
 
+// Mock contact modal component
+function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Contact Lead</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Call
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Schedule
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function LeadsList() {
   const {
     leads,
@@ -44,6 +81,10 @@ function LeadsList() {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [showTaskModal, setShowTaskModal] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [showAIInsights, setShowAIInsights] = useState(false)
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -91,6 +132,21 @@ function LeadsList() {
 
     return matchesSearch && matchesStatus && matchesSource && matchesAssignee
   })
+
+  const handleTaskClick = (leadId: string) => {
+    setSelectedLeadId(leadId)
+    setShowTaskModal(true)
+  }
+
+  const handleContactClick = (leadId: string) => {
+    setSelectedLeadId(leadId)
+    setShowContactModal(true)
+  }
+
+  const handleAIInsightsClick = (leadId: string) => {
+    setSelectedLeadId(leadId)
+    setShowAIInsights(true)
+  }
 
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     await updateLeadStatus(leadId, newStatus)
@@ -446,13 +502,25 @@ function LeadsList() {
             <Button onClick={() => setShowNewLeadForm(true)} className="shadow-sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Lead
-            </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleTaskClick(lead.id)}
+                  >
           </div>
 
-          {/* Leads Table */}
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleContactClick(lead.id)}
+                  >
           <Card className="shadow-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleAIInsightsClick(lead.id)}
+                  >
                 <div>
                   <CardTitle className="text-xl">Leads ({filteredLeads.length})</CardTitle>
                   <CardDescription>
@@ -619,6 +687,37 @@ function LeadsList() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <Dialog open={showTaskModal} onOpenChange={setShowTaskModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Task</DialogTitle>
+          </DialogHeader>
+          <TaskForm 
+            onSubmit={(taskData) => {
+              console.log('Task created:', taskData)
+              setShowTaskModal(false)
+            }}
+            onCancel={() => setShowTaskModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <ContactModal 
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        leadId={selectedLeadId || undefined}
+      />
+
+      <Dialog open={showAIInsights} onOpenChange={setShowAIInsights}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI Insights</DialogTitle>
+          </DialogHeader>
+          <AIInsights />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
