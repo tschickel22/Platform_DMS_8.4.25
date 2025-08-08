@@ -23,6 +23,16 @@ export function AIInsights({ leadId, leadData }: AIInsightsProps) {
   } = useNurturing()
   
   const [loading, setLoading] = useState(false)
+    // Add null/undefined checks before accessing score property
+    if (!lead || typeof lead.score === 'undefined' || lead.score === null) {
+      return // Skip this lead if score is not available
+    }
+    
+    // Add check for lastContact before accessing it
+    if (!lead.lastContact) {
+      return // Skip further processing if lastContact is not available
+    }
+    
   const [activeTab, setActiveTab] = useState('insights')
 
   const leadInsights = aiInsights.filter(insight => insight.leadId === leadId)
