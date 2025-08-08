@@ -17,7 +17,8 @@ import {
   Edit,
   Filter,
   SortAsc,
-  SortDesc
+  SortDesc,
+  Trash2
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -89,50 +90,6 @@ export function LandList() {
 
     return filtered
   }, [searchQuery, statusFilter, zoningFilter, minPrice, maxPrice, sortField, sortDirection, searchLands])
-interface Land {
-  id: string
-  name: string
-  location: string
-  type: string
-  status: string
-  size: number
-  sizeUnit: string
-  value: number
-}
-
-interface LandListProps {
-  lands: Land[]
-  onEdit: (land: Land) => void
-  onDelete: (landId: string) => void
-  onView: (land: Land) => void
-}
-
-export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
-  const getStatusColor = (status: LandStatus) => {
-    switch (status) {
-      case LandStatus.AVAILABLE:
-        return 'bg-green-100 text-green-800'
-      case LandStatus.UNDER_CONTRACT:
-        return 'bg-yellow-100 text-yellow-800'
-      case LandStatus.SOLD:
-        return 'bg-gray-100 text-gray-800'
-      case LandStatus.RESERVED:
-        return 'bg-blue-100 text-blue-800'
-      case LandStatus.OFF_MARKET:
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (lands.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">No lands found</p>
-      </div>
-    )
-  }
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -156,6 +113,23 @@ export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
       )}
     </Button>
   )
+
+  const getStatusColor = (status: LandStatus) => {
+    switch (status) {
+      case LandStatus.AVAILABLE:
+        return 'bg-green-100 text-green-800'
+      case LandStatus.UNDER_CONTRACT:
+        return 'bg-yellow-100 text-yellow-800'
+      case LandStatus.SOLD:
+        return 'bg-gray-100 text-gray-800'
+      case LandStatus.RESERVED:
+        return 'bg-blue-100 text-blue-800'
+      case LandStatus.OFF_MARKET:
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
 
   if (loading) {
     return (
@@ -227,8 +201,6 @@ export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
           </div>
 
           {/* Filters */}
@@ -400,25 +372,6 @@ export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
                     </Button>
                   </Link>
                 </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onView(land)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(land)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(land.id)}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </CardContent>
             </Card>
           ))}
@@ -427,4 +380,5 @@ export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
     </div>
   )
 }
+
 export default LandList;
