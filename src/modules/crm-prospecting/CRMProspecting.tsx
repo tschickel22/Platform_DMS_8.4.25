@@ -43,7 +43,7 @@ export default function CRMProspecting() {
   const location = useLocation()
   const { leads, addLead, updateLead, deleteLead, getLeadsByStatus } = useLeadManagement()
   const { 
-    leads, 
+    leads: filteredLeads,
     loading, 
     error, 
     getLeadByStatus, 
