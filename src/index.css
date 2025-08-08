@@ -1,9 +1,9 @@
+/* Import calendar styles */
+@import url('./modules/calendar-scheduling/index.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import calendar styles */
-@import url('./modules/calendar-scheduling/index.css');
 
 @layer base {
   :root {
