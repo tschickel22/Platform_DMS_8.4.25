@@ -17,15 +17,8 @@ import {
   Edit,
   Filter,
   SortAsc,
-  SortDesc,
-  Trash2
+  SortDesc
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 type SortField = 'price' | 'size' | 'createdAt' | 'address'
 type SortDirection = 'asc' | 'desc'
@@ -91,6 +84,23 @@ export function LandList() {
     return filtered
   }, [searchQuery, statusFilter, zoningFilter, minPrice, maxPrice, sortField, sortDirection, searchLands])
 
+  const getStatusColor = (status: LandStatus) => {
+    switch (status) {
+      case LandStatus.AVAILABLE:
+        return 'bg-green-100 text-green-800'
+      case LandStatus.UNDER_CONTRACT:
+        return 'bg-yellow-100 text-yellow-800'
+      case LandStatus.SOLD:
+        return 'bg-gray-100 text-gray-800'
+      case LandStatus.RESERVED:
+        return 'bg-blue-100 text-blue-800'
+      case LandStatus.OFF_MARKET:
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
@@ -113,23 +123,6 @@ export function LandList() {
       )}
     </Button>
   )
-
-  const getStatusColor = (status: LandStatus) => {
-    switch (status) {
-      case LandStatus.AVAILABLE:
-        return 'bg-green-100 text-green-800'
-      case LandStatus.UNDER_CONTRACT:
-        return 'bg-yellow-100 text-yellow-800'
-      case LandStatus.SOLD:
-        return 'bg-gray-100 text-gray-800'
-      case LandStatus.RESERVED:
-        return 'bg-blue-100 text-blue-800'
-      case LandStatus.OFF_MARKET:
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   if (loading) {
     return (
@@ -380,5 +373,4 @@ export function LandList() {
     </div>
   )
 }
-
 export default LandList;
