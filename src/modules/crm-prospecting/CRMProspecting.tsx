@@ -502,25 +502,12 @@ function LeadsList() {
             <Button onClick={() => setShowNewLeadForm(true)} className="shadow-sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Lead
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleTaskClick(lead.id)}
-                  >
+            </Button>
           </div>
 
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleContactClick(lead.id)}
-                  >
           <Card className="shadow-sm">
             <CardHeader>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleAIInsightsClick(lead.id)}
-                  >
+              <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">Leads ({filteredLeads.length})</CardTitle>
                   <CardDescription>
