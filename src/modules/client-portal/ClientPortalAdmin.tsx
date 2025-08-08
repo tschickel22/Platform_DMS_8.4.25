@@ -17,12 +17,6 @@ function ClientPortalAdminPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
 
   // Use shared mock users data
-
-  const handleAddUser = (userData: any) => {
-    console.log('Adding user:', userData)
-    // TODO: Implement actual user creation logic
-    setIsAddUserOpen(false)
-  }
   const users = mockUsers.sampleUsers
 
   // Filter users based on search query
@@ -73,7 +67,7 @@ function ClientPortalAdminPage() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'white', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
               <PortalAdminUserForm
                 onSubmit={handleAddUser}
                 onCancel={() => setIsAddUserOpen(false)}
