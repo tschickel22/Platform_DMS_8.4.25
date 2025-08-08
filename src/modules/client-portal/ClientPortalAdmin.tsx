@@ -62,21 +62,14 @@ function ClientPortalAdminPage() {
           </div>
           <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl" style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none' }}>
-              <DialogHeader>
-                <DialogTitle>Add New Portal User</DialogTitle>
-              </DialogHeader>
-              <PortalAdminUserForm 
-                onSubmit={(userData) => {
-                  console.log('New user data:', userData)
-                  setIsAddUserOpen(false)
-                  // Here you would typically call an API to create the user
-                }}
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+              <PortalAdminUserForm
+                onSubmit={handleAddUser}
                 onCancel={() => setIsAddUserOpen(false)}
               />
             </DialogContent>
