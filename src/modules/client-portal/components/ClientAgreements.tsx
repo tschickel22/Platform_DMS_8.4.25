@@ -7,10 +7,9 @@ import { usePortal } from '@/contexts/PortalContext'
 import { useMockDataDiscovery } from '@/utils/mockDataDiscovery'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-export function ClientAgreements() {
-  const { getCustomerId, getDisplayName } = usePortal()
-  const customerId = getCustomerId()
-  const customerName = getDisplayName()
+export function ClientAgreements({ adminPreview = false }: { adminPreview?: boolean }) {
+  const customerId = adminPreview ? null : portal?.getCustomerId()
+  const customerName = adminPreview ? 'Admin Preview' : portal?.getDisplayName()
   
   // Use the mock data discovery system
   const { customerData, loading } = useMockDataDiscovery(customerId, customerName)
@@ -402,6 +401,6 @@ export function ClientAgreements() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    adminPreview || agreement.customerId === customerId || agreement.customerName === customerName
   )
 }

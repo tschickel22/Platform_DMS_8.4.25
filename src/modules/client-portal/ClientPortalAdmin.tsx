@@ -266,7 +266,9 @@ function ClientPortalAdminPage() {
         </TabsContent>
 
         <TabsContent value="agreements" className="space-y-4">
-          <ClientAgreements />
+          <PortalProvider value={{ client: null, impersonateClientId: null, refresh: () => {}, getDisplayName: () => 'Admin Preview', getDisplayEmail: () => 'admin@example.com', getCustomerId: () => 'admin', isProxying: false, proxiedClient: null }}>
+            <ClientAgreements adminPreview />
+          </PortalProvider>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
