@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { Listing } from '@/types/listings'
-import { Listing } from '../../types'
 
 interface ListingFormHeaderProps {
   listing?: Listing
