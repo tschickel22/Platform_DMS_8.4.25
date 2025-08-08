@@ -8,6 +8,7 @@ import { useMockDataDiscovery } from '@/utils/mockDataDiscovery'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 export function ClientAgreements({ adminPreview = false }: { adminPreview?: boolean }) {
+  const { portal } = usePortal()
   const customerId = adminPreview ? null : portal?.getCustomerId()
   const customerName = adminPreview ? 'Admin Preview' : portal?.getDisplayName()
   
@@ -315,7 +316,9 @@ export function ClientAgreements({ adminPreview = false }: { adminPreview?: bool
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {customerAgreements.map((agreement) => (
+            {customerAgreements.filter(agreement => 
+              adminPreview || agreement.customerId === customerId || agreement.customerName === customerName
+            ).map((agreement) => (
               <div
                 key={agreement.id}
                 className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
@@ -401,6 +404,6 @@ export function ClientAgreements({ adminPreview = false }: { adminPreview?: bool
           </div>
         </CardContent>
       </Card>
-    adminPreview || agreement.customerId === customerId || agreement.customerName === customerName
+    </div>
   )
 }
