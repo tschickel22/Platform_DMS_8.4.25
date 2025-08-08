@@ -548,11 +548,7 @@ function LeadsList() {
           </div>
 
           <Card 
-            className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-            role="button"
-            tabIndex={0}
-            onClick={() => applyTileFilter('all')}
-            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}
+            className="shadow-sm"
           >
             <CardHeader>
               <div className="flex items-center justify-between">
