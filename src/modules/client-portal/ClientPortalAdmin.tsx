@@ -46,12 +46,12 @@ function ClientPortalAdminPage() {
   }
 
   const handleProxyAsClient = (user: any) => {
-    // Open client portal in new tab with impersonation parameter
-    const portalUrl = `/portalclient/?impersonateClientId=${user.id}`
-    window.open(portalUrl, '_blank')
+  const handleEditUser = (user: any) => {
+    setEditingUser(user)
+    setIsEditUserOpen(true)
   }
 
-  const handleEditUser = (userData: any) => {
+  const handleUpdateUser = (userData: any) => {
     console.log('Updating user:', userData)
     setIsEditUserOpen(false)
     setEditingUser(null)
