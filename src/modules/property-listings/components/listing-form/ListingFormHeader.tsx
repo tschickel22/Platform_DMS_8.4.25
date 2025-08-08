@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast'
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Home } from 'lucide-react'
 import { Listing } from '@/types/listings'
+import { Listing } from '../../types'
 
 interface ListingFormHeaderProps {
   listing?: Listing
@@ -16,19 +17,18 @@ interface ListingFormHeaderProps {
   onSubmit?: (data: any) => void
 }
 
-export default function ListingFormHeader({ 
-  formData, 
-  onSubmit, 
-  onSave, 
-  onCancel 
+export default function ListingFormHeader({
+  listing,
+  isEditing,
+  formData,
+  onSubmit,
+  onSave,
+  onCancel
 }: ListingFormHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
   const handleSave = () => {
-    if (onSave) {
-      onSave(formData)
-    }
     if (onSave && formData) {
       onSave(formData)
     }
