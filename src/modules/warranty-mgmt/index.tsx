@@ -4,15 +4,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Search, Plus, Filter, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { WarrantyClaimList } from './components/WarrantyClaimList';
 import { WarrantyClaimDetail } from './components/WarrantyClaimDetail';
 import { useWarrantyManagement } from './hooks/useWarrantyManagement';
+import { WarrantyClaimForm } from './components/WarrantyClaimForm'
 
 export default function WarrantyManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
   const { claims, loading, createClaim, updateClaim } = useWarrantyManagement();
+  const [isNewClaimOpen, setIsNewClaimOpen] = useState(false)
 
   const filteredClaims = claims.filter(claim =>
     claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,10 +56,26 @@ export default function WarrantyManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Warranty Management</h1>
-          <p className="text-muted-foreground">
-            Manage warranty claims and coverage for vehicles
-          </p>
+          <Dialog open={isNewClaimOpen} onOpenChange={setIsNewClaimOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Claim
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Warranty Claim</DialogTitle>
+              </DialogHeader>
+              <WarrantyClaimForm
+                onSubmit={(claimData) => {
+                  addClaim(claimData)
+                  setIsNewClaimOpen(false)
+                }}
+                onCancel={() => setIsNewClaimOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
         <Button>
           <Plus className="w-4 h-4 mr-2" />
