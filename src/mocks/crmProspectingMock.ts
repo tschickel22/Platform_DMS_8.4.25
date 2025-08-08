@@ -468,14 +468,14 @@ export const mockCrmProspecting = {
 
 // Mock email/SMS templates for nurture sequences
 export const mockEmailTemplates: Record<string, string> = {
-  'welcome-email': 'Welcome to our dealership! We're excited to help you find the perfect RV.',
+  'welcome-email': 'Welcome to our dealership! We\'re excited to help you find the perfect RV.',
   'welcome-sms': 'Thanks for your interest! Call us at (555) 123-4567 to learn more.',
   'inventory-showcase': 'Check out our latest inventory of RVs and trailers.',
   'discovery-call': '', // templated call notes
   'reengagement-email': 'Still looking for the perfect RV? Let us help!',
   'financing-sms': 'Special financing options available this month!',
   'testimonials-email': 'See what our customers are saying about us.',
-  'final-offer-email': 'Last chance—exclusive offer inside! Don't miss out.',
+  'final-offer-email': 'Last chance—exclusive offer inside! Don\'t miss out.',
   'final-call': ''
 };
 
