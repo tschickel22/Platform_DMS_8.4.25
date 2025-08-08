@@ -16,12 +16,19 @@ interface ListingFormHeaderProps {
   onSubmit?: (data: any) => void
 }
 
-export default function ListingFormHeader({ formData, onSubmit, onSave, onCancel }: ListingFormHeaderProps) {
+export default function ListingFormHeader({ 
+  formData, 
+  onSubmit, 
+  onSave, 
+  onCancel 
+}: ListingFormHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
   const handleSave = () => {
-    console.log('Creating listing with data:', formData)
+    if (onSave) {
+      onSave(formData)
+    }
     if (onSave && formData) {
       onSave(formData)
     }
@@ -35,7 +42,17 @@ export default function ListingFormHeader({ formData, onSubmit, onSave, onCancel
     if (onSubmit && formData) {
     }
     // Trigger the form submission
-    onSubmit(formData)
+    if (onSubmit) {
+      onSubmit(formData)
+    }
+  }
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel()
+    } else {
+      navigate(-1)
+    }
   }
 
   return (
@@ -53,7 +70,7 @@ export default function ListingFormHeader({ formData, onSubmit, onSave, onCancel
         <Button
           type="button"
           variant="outline"
-          onClick={() => onCancel ? onCancel() : navigate(-1)}
+          onClick={handleCancel}
         >
           Cancel
         </Button>
