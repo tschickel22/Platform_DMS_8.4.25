@@ -548,7 +548,19 @@ function LeadsList() {
           </div>
 
           <Card 
-            className="shadow-sm"
+            className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('all')}
+            className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('new')}
+            className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('qualified')}
+            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('qualified')}
           >
             <CardHeader>
               <div className="flex items-center justify-between">
