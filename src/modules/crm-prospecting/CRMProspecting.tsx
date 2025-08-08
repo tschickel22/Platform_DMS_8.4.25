@@ -392,7 +392,7 @@ function LeadsList() {
         <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">New Leads</CardTitle>
-            <Users className="h-4 w-4 text-yellow-600" />
+            <Plus className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">
@@ -443,24 +443,8 @@ function LeadsList() {
           <TabsTrigger value="nurturing">Nurturing</TabsTrigger>
           <TabsTrigger value="forms">Intake Forms</TabsTrigger>
           <TabsTrigger value="sources">Sources</TabsTrigger>
-          <CardTitle className="flex items-center justify-between">
-            <span>{getFilterLabel()} ({filteredLeads.length})</span>
-            {activeFilter !== 'all' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setActiveFilter('all')}
-              >
-                Clear Filter
-              </Button>
-            )}
-          </CardTitle>
-          <CardDescription>
-            {activeFilter === 'all' 
-              ? 'Manage and track your sales prospects'
-              : `Showing ${getFilterLabel().toLowerCase()}`
-            }
-          </CardDescription>
+        </TabsList>
+
         <TabsContent value="leads" className="space-y-6">
           {/* Filters */}
           <div className="flex gap-4">
