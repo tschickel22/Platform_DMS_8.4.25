@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { mockEmailTemplates } from '@/mocks/crmProspectingMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { 
   NurtureSequence, 
