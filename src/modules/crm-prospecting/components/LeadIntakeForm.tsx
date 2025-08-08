@@ -489,6 +489,27 @@ export function DynamicLeadForm({ form, onSubmit }: DynamicLeadFormProps) {
       default:
         return null
     }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{form.name}</CardTitle>
+        {form.description && (
+          <CardDescription>{form.description}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {form.fields
+            .sort((a, b) => a.order - b.order)
+            .map(field => renderField(field))}
+          
+          <div className="flex justify-end">
+            <Button type="submit">
+              Submit
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
