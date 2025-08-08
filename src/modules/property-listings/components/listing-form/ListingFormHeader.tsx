@@ -13,6 +13,7 @@ interface ListingFormHeaderProps {
   onSubmit?: (data: any) => void
   onSave?: (data: any) => void
   formData?: any
+  onCancel?: () => void
 }
 
 export default function ListingFormHeader({ listing, isEditing, onCancel, onSave, onSubmit, formData }: ListingFormHeaderProps) {
@@ -51,7 +52,7 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
         <Button
           type="button"
           variant="outline"
-          onClick={() => navigate('/listings')}
+          onClick={() => onCancel ? onCancel() : navigate(-1)}
         >
           Cancel
         </Button>
