@@ -201,7 +201,9 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const submissionData = {
+    if (typeof onSubmit === 'function') {
+      onSubmit(formData)
+    }
       ...formData,
       associatedLandId: associatedLandId || null,
       associatedInventoryId: associatedInventoryId || null,
