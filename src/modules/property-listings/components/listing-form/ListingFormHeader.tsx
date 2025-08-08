@@ -23,24 +23,9 @@ interface ListingFormHeaderProps {
 }
 
 export default function ListingFormHeader({ listing, isEditing, onCancel, onSave, onSubmit, formData }: ListingFormHeaderProps) {
-  listing,
-  isEditing,
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleSave = () => {
-    console.log('Creating listing with data:', formData)
-    if (onSave && formData) {
-      onSave(formData)
-    }
-    toast({
-      title: "Draft Saved",
-      description: "Your listing has been saved as a draft.",
-  onSave,
-  onCancel
-  }
-  const navigate = useNavigate()
-  const { toast } = useToast()
   const handleCancel = () => {
     if (onCancel) {
       onCancel()
@@ -79,15 +64,19 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
     }
   }
 
+  return (
+    <div>
+      <CardHeader>
+        <CardTitle>
+          {listing ? 'Edit Listing' : 'Create New Listing'}
+        </CardTitle>
+        <CardDescription>
+          {listing
+            ? 'Update the listing details below'
+            : 'Fill in the details to create a new property listing'}
         </CardDescription>
-            {listing
-              ? 'Update the listing details below'
-              : 'Fill in the details to create a new property listing'}
+      </CardHeader>
       <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-            {listing ? 'Edit Listing' : 'Create New Listing'}
         <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
@@ -98,9 +87,6 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
         >
           Save as Draft
         </Button>
-        <Button
-          type="button"
-          onClick={handleCreateListing}
         <Button onClick={handleCreateOrUpdate}>
           {isEditing ? 'Update Listing' : 'Create Listing'}
         </Button>
