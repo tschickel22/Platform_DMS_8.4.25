@@ -59,7 +59,7 @@ export function PortalAdminUserForm({
         ? [...prev.permissions, permission]
         : prev.permissions.filter(p => p !== permission)
     }))
-    <div className="space-y-4 max-h-[80vh] overflow-y-auto">
+  }
 
   const availablePermissions = [
     { id: 'view_documents', label: 'View Documents' },
@@ -82,7 +82,7 @@ export function PortalAdminUserForm({
             Create or edit portal user accounts and permissions
           </CardDescription>
         </CardHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -127,9 +127,9 @@ export function PortalAdminUserForm({
                   />
                 </div>
               </div>
-        <div className="space-y-3">
-          <h3 className="text-base font-medium">Role & Status</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -174,8 +174,8 @@ export function PortalAdminUserForm({
                     onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
-        <div className="space-y-3">
-          <h3 className="text-base font-medium">Portal Access</h3>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">
                         <div className="flex items-center gap-2">
@@ -189,9 +189,9 @@ export function PortalAdminUserForm({
                           Inactive
                         </div>
                       </SelectItem>
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium">Permissions</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <SelectItem value="suspended">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           Suspended
                         </div>
                       </SelectItem>
@@ -276,8 +276,8 @@ export function PortalAdminUserForm({
                   </div>
                 )}
               </div>
-          <div className="space-y-3">
-            <h3 className="text-base font-medium">Invitation Settings</h3>
+            )}
+
             {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
