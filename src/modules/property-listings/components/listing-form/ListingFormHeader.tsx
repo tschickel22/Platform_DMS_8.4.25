@@ -1,12 +1,9 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
 import { useToast } from '@/hooks/use-toast'
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Home } from 'lucide-react'
-import { Listing } from '@/types/listings'
 import { Listing } from '@/types/listings'
 
 interface ListingFormHeaderProps {
