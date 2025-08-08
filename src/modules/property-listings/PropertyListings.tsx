@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { 
   Plus, 
@@ -68,7 +67,6 @@ function PropertyListingsDashboard() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [priceRange, setPriceRange] = useState('all')
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   // Filter listings based on search and filters
   const filteredListings = listings.filter(listing => {
@@ -131,20 +129,10 @@ function PropertyListingsDashboard() {
             <Share2 className="h-4 w-4 mr-2" />
             Share All Listings
           </Button>
-          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add New Listing
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Property Listing</DialogTitle>
-              </DialogHeader>
-              <ListingForm onClose={() => setIsAddModalOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => navigate('new')} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Listing
+          </Button>
         </div>
       </div>
 
