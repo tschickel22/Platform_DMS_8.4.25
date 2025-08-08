@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, Plus, Search, Filter, Phone, Mail, Calendar, TrendingUp, Target, BarChart3, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
+import { Users, Plus, Search, Phone, Mail, Calendar, TrendingUp, Target, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
 import { Lead, LeadStatus, Task } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { formatDate } from '@/lib/utils'
@@ -17,7 +17,6 @@ import { PipelineDashboard } from './components/PipelineDashboard'
 import { LeadScoring } from './components/LeadScoring'
 import { ActivityTimeline } from './components/ActivityTimeline'
 import { LeadReminders } from './components/LeadReminders'
-import { LeadIntakeFormBuilder, DynamicLeadForm } from './components/LeadIntakeForm'
 import { NurtureSequences } from './components/NurtureSequences'
 import { AIInsights } from './components/AIInsights'
 import { CommunicationCenter } from './components/CommunicationCenter'
@@ -26,10 +25,9 @@ import { QuotesList } from './components/QuotesList'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
 import { useTasks } from '@/hooks/useTasks'
-import { TaskModule, TaskPriority, TaskStatus } from '@/types'
+import { TaskModule, TaskPriority } from '@/types'
 import { toast } from '@/hooks/use-toast'
 
-// Mock contact modal component
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -76,38 +74,32 @@ function LeadsList() {
     getRemindersByUser,
     getLeadScore
   } = useLeadManagement()
-  
+
   const { createTask } = useTasks()
-  
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sourceFilter, setSourceFilter] = useState<string>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'new' | 'qualified'>('all')
+
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+
+  const [showNewLeadForm, setShowNewLeadForm] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [showAIInsights, setShowAIInsights] = useState(false)
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-  const [sourceFilter, setSourceFilter] = useState<string>('all')
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [showNewLeadForm, setShowNewLeadForm] = useState(false)
-  // Helper to apply tile filter to existing filter system
+
+  // ---- tile filter helper ----
   const applyTileFilter = (type: 'all' | 'new' | 'qualified') => {
     setActiveFilter(type)
-    switch (type) {
-      case 'all':
-        setStatusFilter('all')
-        break
-      case 'new':
-        setStatusFilter(LeadStatus.NEW)
-        break
-      case 'qualified':
-        setStatusFilter(LeadStatus.QUALIFIED)
-        break
-    }
+    if (type === 'all') setStatusFilter('all')
+    if (type === 'new') setStatusFilter(LeadStatus.NEW)
+    if (type === 'qualified') setStatusFilter(LeadStatus.QUALIFIED)
   }
-
-  const [showTaskForm, setShowTaskForm] = useState(false)
-  const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
-  const [activeFilter, setActiveFilter] = useState('all')
 
   const getStatusColor = (status: LeadStatus) => {
     switch (status) {
@@ -138,24 +130,17 @@ function LeadsList() {
   }
 
   const getFilterLabel = () => {
-    switch (activeFilter) {
-      case 'all':
-        return 'All Leads'
-      case 'new':
-        return 'New Leads'
-      case 'qualified':
-        return 'Qualified Leads'
-      default:
-        return 'Leads'
-    }
+    if (activeFilter === 'new') return 'New Leads'
+    if (activeFilter === 'qualified') return 'Qualified Leads'
+    return 'All Leads'
   }
 
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
+    const matchesSearch =
       `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone.includes(searchTerm)
-    
+
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
     const matchesSource = sourceFilter === 'all' || lead.sourceId === sourceFilter
     const matchesAssignee = assigneeFilter === 'all' || lead.assignedTo === assigneeFilter
@@ -163,64 +148,16 @@ function LeadsList() {
     return matchesSearch && matchesStatus && matchesSource && matchesAssignee
   })
 
-  const handleTaskClick = (leadId: string) => {
-    setSelectedLeadId(leadId)
-    setShowTaskModal(true)
-  }
-
-  const handleContactClick = (leadId: string) => {
-    setSelectedLeadId(leadId)
-    setShowContactModal(true)
-  }
-
-  const handleAIInsightsClick = (leadId: string) => {
-    setSelectedLeadId(leadId)
-    setShowAIInsights(true)
-  }
-
-  const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
-    await updateLeadStatus(leadId, newStatus)
-  }
-
-  const handleAssignLead = async (leadId: string, repId: string) => {
-    await assignLead(leadId, repId)
-  }
-
-  const handleNewLeadSuccess = (newLead: Lead) => {
-    // The lead is already added to the state by the createLead function
-    // We can optionally show a success message or redirect to the lead detail
-    console.log('New lead created:', newLead)
-  }
-
-  const handleCreateTask = async (taskData: Partial<Task>) => {
-    try {
-      await createTask(taskData)
-      setShowTaskForm(false)
-      setTaskInitialData(null)
-      toast({
-        title: 'Task Created',
-        description: 'Task has been created successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
-      })
-      throw error
-    }
-  }
-
   const getTaskInitialData = (lead: Lead) => {
     const lastActivity = lead.lastActivity ? new Date(lead.lastActivity) : new Date(lead.createdAt)
     const dueDate = new Date(lastActivity)
-    dueDate.setDate(dueDate.getDate() + 3) // Due in 3 days
+    dueDate.setDate(dueDate.getDate() + 3)
 
     return {
       title: `Follow up with ${lead.firstName} ${lead.lastName}`,
       description: `Follow up on ${lead.status.replace('_', ' ')} lead from ${lead.source}`,
       module: TaskModule.CRM,
-      priority: lead.score && lead.score >= 80 ? TaskPriority.HIGH : 
+      priority: lead.score && lead.score >= 80 ? TaskPriority.HIGH :
                 lead.score && lead.score >= 60 ? TaskPriority.MEDIUM : TaskPriority.LOW,
       sourceId: lead.id,
       sourceType: 'lead',
@@ -236,11 +173,11 @@ function LeadsList() {
   }
 
   const handleCreateTaskForLead = (lead: Lead) => {
-    const initialData = getTaskInitialData(lead)
-    setTaskInitialData(initialData)
+    setTaskInitialData(getTaskInitialData(lead))
     setShowTaskForm(true)
   }
 
+  // ---------- Selected lead view ----------
   if (selectedLead) {
     const leadActivities = getActivitiesByLead(selectedLead.id)
     const leadReminders = getRemindersByUser('current-user').filter(r => r.leadId === selectedLead.id)
@@ -248,48 +185,43 @@ function LeadsList() {
 
     return (
       <div className="space-y-6">
-        {/* Task Form Modal */}
         {showTaskForm && (
           <TaskForm
             initialData={taskInitialData || undefined}
-            onSave={handleCreateTask}
+            onSave={async (taskData) => {
+              await createTask(taskData)
+              setShowTaskForm(false)
+              setTaskInitialData(null)
+              toast({ title: 'Task Created', description: 'Task has been created successfully' })
+            }}
             onCancel={() => setShowTaskForm(false)}
           />
         )}
 
-        {/* Lead Header */}
         <div className="flex items-center justify-between">
           <div>
             <Button variant="outline" onClick={() => setSelectedLead(null)} className="mb-4">
               ← Back to Leads
             </Button>
-            <h1 className="ri-page-title">
-              {selectedLead.firstName} {selectedLead.lastName}
-            </h1>
-            <p className="ri-page-description">
-              Lead details and activity management
-            </p>
+            <h1 className="ri-page-title">{selectedLead.firstName} {selectedLead.lastName}</h1>
+            <p className="ri-page-description">Lead details and activity management</p>
           </div>
           <div className="flex items-center space-x-3">
-            <Badge className={cn("ri-badge-status", getStatusColor(selectedLead.status))}>
+            <Badge className={cn('ri-badge-status', getStatusColor(selectedLead.status))}>
               {selectedLead.status.replace('_', ' ').toUpperCase()}
             </Badge>
             {selectedLead.score && (
-              <Badge className={cn("ri-badge-status", getScoreColor(selectedLead.score))}>
+              <Badge className={cn('ri-badge-status', getScoreColor(selectedLead.score))}>
                 Score: {selectedLead.score}
               </Badge>
             )}
-            <Button 
-              onClick={() => setShowTaskForm(true)}
-              size="sm"
-            >
+            <Button onClick={() => setShowTaskForm(true)} size="sm" variant="outline" className="shadow-sm">
               <ListTodo className="h-4 w-4 mr-2" />
               Create Task
             </Button>
           </div>
         </div>
 
-        {/* Lead Details Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -332,7 +264,7 @@ function LeadsList() {
                           <label className="text-sm font-medium text-muted-foreground capitalize">
                             {key.replace(/([A-Z])/g, ' $1').trim()}
                           </label>
-                          <p className="font-medium">{value}</p>
+                          <p className="font-medium">{value as any}</p>
                         </div>
                       ))}
                     </div>
@@ -378,17 +310,13 @@ function LeadsList() {
     )
   }
 
+  // ---------- List view ----------
   return (
     <div className="space-y-8">
-      {/* New Lead Form Modal */}
       {showNewLeadForm && (
-        <NewLeadForm
-          onClose={() => setShowNewLeadForm(false)}
-          onSuccess={handleNewLeadSuccess}
-        />
+        <NewLeadForm onClose={() => setShowNewLeadForm(false)} onSuccess={() => {}} />
       )}
 
-      {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
           <div>
@@ -404,9 +332,15 @@ function LeadsList() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats tiles – now clickable */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card
+          className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyTileFilter('all')}
+          onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Leads</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
@@ -414,12 +348,18 @@ function LeadsList() {
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">{leads.length}</div>
             <p className="text-xs text-blue-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +12% from last month
+              <TrendingUp className="h-3 w-3 mr-1" /> +12% from last month
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+
+        <Card
+          className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyTileFilter('new')}
+          onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('new')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">New Leads</CardTitle>
             <Users className="h-4 w-4 text-yellow-600" />
@@ -429,12 +369,18 @@ function LeadsList() {
               {leads.filter(l => l.status === LeadStatus.NEW).length}
             </div>
             <p className="text-xs text-yellow-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +8% from last week
+              <TrendingUp className="h-3 w-3 mr-1" /> +8% from last week
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+
+        <Card
+          className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyTileFilter('qualified')}
+          onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('qualified')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Qualified</CardTitle>
             <Target className="h-4 w-4 text-green-600" />
@@ -444,12 +390,18 @@ function LeadsList() {
               {leads.filter(l => l.status === LeadStatus.QUALIFIED).length}
             </div>
             <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +15% from last month
+              <TrendingUp className="h-3 w-3 mr-1" /> +15% from last month
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+
+        <Card
+          className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowAIInsights(true)}
+          onKeyDown={(e) => e.key === 'Enter' && setShowAIInsights(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">AI Insights</CardTitle>
             <Brain className="h-4 w-4 text-purple-600" />
@@ -457,14 +409,13 @@ function LeadsList() {
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">47</div>
             <p className="text-xs text-purple-600 flex items-center mt-1">
-              <Brain className="h-3 w-3 mr-1" />
-              Active recommendations
+              <Brain className="h-3 w-3 mr-1" /> Active recommendations
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Main Content */}
       <Tabs defaultValue="leads" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="leads">Leads</TabsTrigger>
@@ -541,8 +492,8 @@ function LeadsList() {
                   <CardTitle className="flex items-center justify-between">
                     <span>{getFilterLabel()} ({filteredLeads.length})</span>
                     {activeFilter !== 'all' && (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => {
                           setActiveFilter('all')
@@ -554,10 +505,9 @@ function LeadsList() {
                     )}
                   </CardTitle>
                   <CardDescription>
-                    {activeFilter === 'all' 
+                    {activeFilter === 'all'
                       ? 'Manage and track your sales prospects'
-                      : `Showing ${getFilterLabel().toLowerCase()}`
-                    }
+                      : `Showing ${getFilterLabel().toLowerCase()}`}
                   </CardDescription>
                 </div>
                 <Button onClick={() => setShowNewLeadForm(true)} variant="outline" className="shadow-sm">
@@ -576,11 +526,11 @@ function LeadsList() {
                           <h3 className="font-semibold text-foreground">
                             {lead.firstName} {lead.lastName}
                           </h3>
-                          <Badge className={cn("ri-badge-status", getStatusColor(lead.status))}>
+                          <Badge className={cn('ri-badge-status', getStatusColor(lead.status))}>
                             {lead.status.replace('_', ' ').toUpperCase()}
                           </Badge>
                           {lead.score && (
-                            <Badge className={cn("ri-badge-status", getScoreColor(lead.score))}>
+                            <Badge className={cn('ri-badge-status', getScoreColor(lead.score))}>
                               {lead.score}
                             </Badge>
                           )}
@@ -624,9 +574,9 @@ function LeadsList() {
                       </div>
                     </div>
                     <div className="ri-action-buttons">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="shadow-sm"
                         onClick={(e) => {
                           e.stopPropagation()
@@ -638,7 +588,8 @@ function LeadsList() {
                       </Button>
                       <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => {
                         e.stopPropagation()
-                        // Handle quick actions
+                        setSelectedLeadId(lead.id)
+                        setShowContactModal(true)
                       }}>
                         <MessageSquare className="h-3 w-3 mr-1" />
                         Contact
@@ -674,14 +625,10 @@ function LeadsList() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>Lead Intake Forms</CardTitle>
-              <CardDescription>
-                Create and manage dynamic lead capture forms
-              </CardDescription>
+              <CardDescription>Create and manage dynamic lead capture forms</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Form builder coming soon...
-              </div>
+              <div className="text-center py-8 text-muted-foreground">Form builder coming soon...</div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -690,9 +637,7 @@ function LeadsList() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>Lead Sources</CardTitle>
-              <CardDescription>
-                Manage and track lead source performance
-              </CardDescription>
+              <CardDescription>Manage and track lead source performance</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -727,7 +672,7 @@ function LeadsList() {
           <DialogHeader>
             <DialogTitle>Create Task</DialogTitle>
           </DialogHeader>
-          <TaskForm 
+          <TaskForm
             onSubmit={(taskData) => {
               console.log('Task created:', taskData)
               setShowTaskModal(false)
@@ -737,7 +682,7 @@ function LeadsList() {
         </DialogContent>
       </Dialog>
 
-      <ContactModal 
+      <ContactModal
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
         leadId={selectedLeadId || undefined}
