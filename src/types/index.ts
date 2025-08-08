@@ -114,7 +114,6 @@ export interface Vehicle {
   id: string
   vin: string
   make: string
-  status: 'available' | 'sold'
   model: string
   year: number
   type: VehicleType
