@@ -13,6 +13,11 @@ import { WarrantyClaimForm } from './components/WarrantyClaimForm'
 
 export default function WarrantyManagement() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isNewClaimOpen, setIsNewClaimOpen] = useState(false)
+
+  const handleNewClaim = () => {
+    setIsNewClaimOpen(true)
+  }
   const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
   const { claims, loading, createClaim, updateClaim } = useWarrantyManagement();
   const [isNewClaimOpen, setIsNewClaimOpen] = useState(false)
