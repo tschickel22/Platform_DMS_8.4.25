@@ -12,6 +12,22 @@ import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
 import { LeadIntakeForm, LeadFormField, LeadSource } from '../types'
 import { useLeadManagement } from '../hooks/useLeadManagement'
 
+export function LeadIntakeForm() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold">New Lead Intake</h2>
+        <p className="text-sm text-muted-foreground">
+          Capture new lead information
+        </p>
+      </div>
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Lead intake form coming soon</p>
+      </div>
+    </div>
+  )
+}
+
 interface LeadIntakeFormProps {
   form?: LeadIntakeForm
   sources: LeadSource[]
