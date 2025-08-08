@@ -104,32 +104,6 @@ export default function ListingFormLocationTab({
           />
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="latitude">Latitude</Label>
-          <Input
-            id="latitude"
-            type="number"
-            step="any"
-            value={formData.latitude || ''}
-            onChange={(e) => handleInputChange('latitude', parseFloat(e.target.value) || undefined)}
-            placeholder="Enter latitude"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="longitude">Longitude</Label>
-          <Input
-            id="longitude"
-            type="number"
-            step="any"
-            value={formData.longitude || ''}
-            onChange={(e) => handleInputChange('longitude', parseFloat(e.target.value) || undefined)}
-            placeholder="Enter longitude"
-          />
-        </div>
-      </div>
     </div>
   )
 }
