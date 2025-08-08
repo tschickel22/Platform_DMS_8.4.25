@@ -174,7 +174,7 @@ function ClientPortalAdminPage() {
                     </DialogHeader>
                     <PortalAdminUserForm 
                       user={editingUser}
-                      onSubmit={handleEditUser}
+                      onSubmit={handleUpdateUser}
                       onCancel={() => {
                         setIsEditUserOpen(false)
                         setEditingUser(null)
