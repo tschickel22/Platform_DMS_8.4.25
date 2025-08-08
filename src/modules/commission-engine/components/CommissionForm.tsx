@@ -418,3 +418,4 @@ export default function CommissionForm({ ruleId, onSave, onCancel }: CommissionF
     </div>
   )
 }
+export { CommissionForm }
