@@ -282,19 +282,6 @@ function LeadsList() {
             <Button 
               onClick={() => setShowTaskForm(true)}
               size="sm"
-              className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('all')}
-              className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('new')}
-              className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('qualified')}
-              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('qualified')}
             >
               <ListTodo className="h-4 w-4 mr-2" />
               Create Task
@@ -547,21 +534,7 @@ function LeadsList() {
             </Button>
           </div>
 
-          <Card 
-            className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onClick={() => applyTileFilter('all')}
-            className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onClick={() => applyTileFilter('new')}
-            className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onClick={() => applyTileFilter('qualified')}
-            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('qualified')}
-          >
+          <Card className="shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -571,7 +544,10 @@ function LeadsList() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => setActiveFilter('all')}
+                        onClick={() => {
+                          setActiveFilter('all')
+                          setStatusFilter('all')
+                        }}
                       >
                         Clear Filter
                       </Button>
