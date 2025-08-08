@@ -35,7 +35,6 @@ import { PipelineDashboard } from './components/PipelineDashboard'
 import { AIInsights } from './components/AIInsights'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority, TaskStatus } from '@/types'
 
@@ -43,7 +42,16 @@ export default function CRMProspecting() {
   const navigate = useNavigate()
   const location = useLocation()
   const { leads, addLead, updateLead, deleteLead, getLeadsByStatus } = useLeadManagement()
-  const { sequences, templates } = useNurturing()
+  const { 
+    leads, 
+    loading, 
+    error, 
+    getLeadByStatus, 
+    createLead, 
+    updateLead, 
+    deleteLead,
+    getLeadById 
+  } = useLeadManagement()
   const { tasks, addTask } = useTasks()
   
   const [searchTerm, setSearchTerm] = useState('')
