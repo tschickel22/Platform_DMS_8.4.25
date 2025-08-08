@@ -226,7 +226,9 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
   }
 
   const handleCancel = () => {
-    navigate('/inventory')
+    // If onCancel is provided (modal context), use it
+    // Otherwise navigate back to listings page
+    onCancel ? onCancel() : navigate('/listings')
   }
 
   const isManufacturedHome = formData.propertyType === 'manufactured_home'
@@ -240,6 +242,7 @@ export default function ListingForm({ listing, onSubmit, onCancel }: ListingForm
             onSubmit={handleSubmit}
             onSave={handleSave}
             formData={currentFormData}
+            onCancel={handleCancel}
           />
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
