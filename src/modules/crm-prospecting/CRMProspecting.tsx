@@ -27,6 +27,7 @@ import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority, TaskStatus } from '@/types'
+import { toast } from '@/hooks/use-toast'
 
 // Mock contact modal component
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
@@ -90,6 +91,7 @@ function LeadsList() {
   const [showNewLeadForm, setShowNewLeadForm] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
+  const [activeFilter, setActiveFilter] = useState('all')
 
   const getStatusColor = (status: LeadStatus) => {
     switch (status) {
@@ -117,6 +119,19 @@ function LeadsList() {
     if (score >= 60) return 'text-yellow-600 bg-yellow-50'
     if (score >= 40) return 'text-orange-600 bg-orange-50'
     return 'text-red-600 bg-red-50'
+  }
+
+  const getFilterLabel = () => {
+    switch (activeFilter) {
+      case 'all':
+        return 'All Leads'
+      case 'new':
+        return 'New Leads'
+      case 'qualified':
+        return 'Qualified Leads'
+      default:
+        return 'Leads'
+    }
   }
 
   const filteredLeads = leads.filter(lead => {
@@ -392,7 +407,7 @@ function LeadsList() {
         <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">New Leads</CardTitle>
-            <Plus className="h-4 w-4 text-yellow-600" />
+            <Users className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">
@@ -508,9 +523,23 @@ function LeadsList() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl">Leads ({filteredLeads.length})</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{getFilterLabel()} ({filteredLeads.length})</span>
+                    {activeFilter !== 'all' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setActiveFilter('all')}
+                      >
+                        Clear Filter
+                      </Button>
+                    )}
+                  </CardTitle>
                   <CardDescription>
-                    Manage your sales prospects with AI-powered insights and automated nurturing
+                    {activeFilter === 'all' 
+                      ? 'Manage and track your sales prospects'
+                      : `Showing ${getFilterLabel().toLowerCase()}`
+                    }
                   </CardDescription>
                 </div>
                 <Button onClick={() => setShowNewLeadForm(true)} variant="outline" className="shadow-sm">
