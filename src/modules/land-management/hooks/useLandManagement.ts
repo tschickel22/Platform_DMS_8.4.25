@@ -129,9 +129,47 @@ const mockLandData: Land[] = [
 
 const STORAGE_KEY = 'renter-insight-land-data'
 
+// Mock data for development
+const mockLands = [
+  {
+    id: '1',
+    name: 'Sunset Acres Development',
+    location: '123 Development Rd, Austin, TX',
+    type: 'residential',
+    status: 'available',
+    size: 25.5,
+    sizeUnit: 'acres',
+    value: 2500000,
+    purchaseDate: '2023-01-15',
+    zoning: 'R-1 Residential',
+    description: 'Prime residential development land with utilities available',
+    coordinates: { lat: 30.2672, lng: -97.7431 },
+    utilities: ['water', 'sewer', 'electric', 'gas'],
+    restrictions: ['No commercial use', 'Minimum 2000 sq ft homes'],
+    documents: []
+  },
+  {
+    id: '2',
+    name: 'Commerce Park Phase 2',
+    location: '456 Business Blvd, Dallas, TX',
+    type: 'commercial',
+    status: 'in_development',
+    size: 15.2,
+    sizeUnit: 'acres',
+    value: 4200000,
+    purchaseDate: '2022-08-20',
+    zoning: 'C-2 Commercial',
+    description: 'Commercial development with highway access',
+    coordinates: { lat: 32.7767, lng: -96.7970 },
+    utilities: ['water', 'sewer', 'electric'],
+    restrictions: ['Height limit 4 stories', 'No heavy industrial'],
+    documents: []
+  }
+]
+
 export function useLandManagement() {
   const [lands, setLands] = useState<Land[]>([])
-  const [loading, setLoading] = useState(true)
+  const [lands, setLands] = useState(mockLands)
   const [error, setError] = useState<string | null>(null)
 
   // Load data from localStorage on mount
@@ -145,17 +183,12 @@ export function useLandManagement() {
         setLands(mockLandData)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mockLandData))
       }
-    } catch (err) {
-      console.error('Error loading land data:', err)
-      setError('Failed to load land data')
-      setLands(mockLandData)
-    } finally {
-      setLoading(false)
-    }
+    // In a real app, this would load from API
+    // For now, we use mock data
+    setLoading(false)
   }, [])
 
   // Save data to localStorage whenever lands change
-  const saveToStorage = useCallback((newLands: Land[]) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newLands))
     } catch (err) {
@@ -309,17 +342,22 @@ export function useLandManagement() {
 
     // CRUD operations
     getLandRecords,
-    getLandById,
-    createLand,
+    setLands(prev => prev.map(land => 
+      land.id === landId ? { ...land, ...landData } : land
+    ))
     updateLand,
     deleteLand,
 
-    // Search and filter
-    searchLands,
+    setLands(prev => prev.filter(land => land.id !== landId))
     getAvailableLands,
 
     // Utilities
     getPricePerUnit,
-    getZoningTypes
+    const newLand = {
+      ...landData,
+      id: Date.now().toString(),
+      purchaseDate: new Date().toISOString().split('T')[0]
+    }
+    setLands(prev => [...prev, newLand])
   }
 }

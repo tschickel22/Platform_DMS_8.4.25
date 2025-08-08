@@ -19,6 +19,12 @@ import {
   SortAsc,
   SortDesc
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type SortField = 'price' | 'size' | 'createdAt' | 'address'
 type SortDirection = 'asc' | 'desc'
@@ -83,7 +89,25 @@ export function LandList() {
 
     return filtered
   }, [searchQuery, statusFilter, zoningFilter, minPrice, maxPrice, sortField, sortDirection, searchLands])
+interface Land {
+  id: string
+  name: string
+  location: string
+  type: string
+  status: string
+  size: number
+  sizeUnit: string
+  value: number
+}
 
+interface LandListProps {
+  lands: Land[]
+  onEdit: (land: Land) => void
+  onDelete: (landId: string) => void
+  onView: (land: Land) => void
+}
+
+export function LandList({ lands, onEdit, onDelete, onView }: LandListProps) {
   const getStatusColor = (status: LandStatus) => {
     switch (status) {
       case LandStatus.AVAILABLE:
@@ -99,6 +123,15 @@ export function LandList() {
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  if (lands.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No lands found</p>
+      </div>
+    )
   }
 
   const toggleSort = (field: SortField) => {
@@ -194,6 +227,8 @@ export function LandList() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
           </div>
 
           {/* Filters */}
@@ -365,6 +400,25 @@ export function LandList() {
                     </Button>
                   </Link>
                 </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onView(land)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(land)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(land.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardContent>
             </Card>
           ))}
