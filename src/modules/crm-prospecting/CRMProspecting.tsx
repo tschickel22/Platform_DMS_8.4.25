@@ -535,7 +535,13 @@ function LeadsList() {
             </Button>
           </div>
 
-          <Card>
+          <Card 
+            className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('all')}
+            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -545,10 +551,7 @@ function LeadsList() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => {
-                          setActiveFilter('all')
-                          setStatusFilter('all') // Reset actual filter too
-                        }}
+                        onClick={() => setActiveFilter('all')}
                       >
                         Clear Filter
                       </Button>
