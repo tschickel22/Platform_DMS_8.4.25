@@ -89,6 +89,22 @@ function LeadsList() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showNewLeadForm, setShowNewLeadForm] = useState(false)
+  // Helper to apply tile filter to existing filter system
+  const applyTileFilter = (type: 'all' | 'new' | 'qualified') => {
+    setActiveFilter(type)
+    switch (type) {
+      case 'all':
+        setStatusFilter('all')
+        break
+      case 'new':
+        setStatusFilter(LeadStatus.NEW)
+        break
+      case 'qualified':
+        setStatusFilter(LeadStatus.QUALIFIED)
+        break
+    }
+  }
+
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskInitialData, setTaskInitialData] = useState<Partial<Task> | null>(null)
   const [activeFilter, setActiveFilter] = useState('all')
@@ -519,7 +535,25 @@ function LeadsList() {
             </Button>
           </div>
 
-          <Card className="shadow-sm">
+          <Card 
+            className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('all')}
+            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}
+          <Card 
+            className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('new')}
+            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('new')}
+          <Card 
+            className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            role="button"
+            tabIndex={0}
+            onClick={() => applyTileFilter('qualified')}
+            onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('qualified')}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
