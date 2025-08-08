@@ -67,7 +67,7 @@ function ClientPortalAdminPage() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl bg-transparent shadow-none border-none">
               <DialogHeader>
                 <DialogTitle>Add New Portal User</DialogTitle>
               </DialogHeader>
