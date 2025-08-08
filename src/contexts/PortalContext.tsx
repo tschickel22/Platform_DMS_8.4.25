@@ -1,18 +1,20 @@
-import React, { createContext, useContext, ReactNode, useEffect } from 'react'
-import { MockUser } from '@/mocks/usersMock'
+import React, { createContext, useContext, ReactNode } from 'react'
+import { useAuth } from './AuthContext'
 
-interface PortalClient {
+interface User {
   id: string
-  name: string
   email: string
+  name: string
+  role: string
+  tenantId?: string
 }
 
 interface PortalContextType {
-  proxiedClient: PortalClient | null
-  isProxying: boolean
   getDisplayName: () => string
   getDisplayEmail: () => string
   getCustomerId: () => string
+  isProxying: boolean
+  proxiedClient: User | null
 }
 
 const PortalContext = createContext<PortalContextType | undefined>(undefined)
@@ -27,60 +29,35 @@ export function usePortal() {
 
 interface PortalProviderProps {
   children: ReactNode
-  impersonatedUser?: MockUser | null
-  fallbackUser?: {
-    name: string
-    email: string
-  }
+  impersonatedUser?: User | null
+  fallbackUser?: User | null
 }
 
 export function PortalProvider({ children, impersonatedUser, fallbackUser }: PortalProviderProps) {
-  // Convert impersonated user to proxied client format
-  const proxiedClient = impersonatedUser 
-    ? {
-        id: impersonatedUser.id,
-        name: impersonatedUser.name,
-        email: impersonatedUser.email
-      }
-    : null
-
-  const isProxying = !!proxiedClient
-
-  // Add useEffect for logging what PortalProvider receives
-  useEffect(() => {
-    console.log('PortalProvider rendered/re-rendered.')
-    console.log('Received impersonatedUser prop:', impersonatedUser)
-    console.log('Calculated proxiedClient:', proxiedClient)
-    console.log('Is proxying:', isProxying)
-  }, [impersonatedUser, proxiedClient, isProxying]) // Dependencies
-  const getDisplayName = (): string => {
-    if (proxiedClient) {
-      return proxiedClient.name
-    }
-    return fallbackUser?.name || 'User'
+  const { user: authUser } = useAuth()
+  
+  // Determine which user to display
+  const displayUser = impersonatedUser || fallbackUser || authUser
+  const isProxying = !!impersonatedUser
+  
+  const getDisplayName = () => {
+    return displayUser?.name || 'Guest User'
+  }
+  
+  const getDisplayEmail = () => {
+    return displayUser?.email || 'guest@example.com'
+  }
+  
+  const getCustomerId = () => {
+    return displayUser?.id || 'guest-id'
   }
 
-  const getDisplayEmail = (): string => {
-    if (proxiedClient) {
-      return proxiedClient.email
-    }
-    return fallbackUser?.email || ''
-  }
-
-  const getCustomerId = (): string => {
-    if (proxiedClient) {
-      return proxiedClient.id
-    }
-    // Return a default customer ID when not proxying
-    return 'portal-customer-001'
-  }
-
-  const value = {
-    proxiedClient,
-    isProxying,
+  const value: PortalContextType = {
     getDisplayName,
     getDisplayEmail,
-    getCustomerId
+    getCustomerId,
+    isProxying,
+    proxiedClient: impersonatedUser
   }
 
   return (
