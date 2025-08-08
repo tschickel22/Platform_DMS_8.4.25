@@ -1,259 +1,226 @@
 import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Filter, Edit, ExternalLink, MoreHorizontal, Mail, Phone, Calendar, Users, Key } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { Edit, Key, Trash2, User, Mail, Phone, Calendar } from 'lucide-react'
 import { PortalAdminUserForm } from './PortalAdminUserForm'
 
-// Mock portal users data
-const mockUsers = [
-  {
-    id: 'user-1',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    phone: '(555) 123-4567',
-    status: 'active',
-    lastLogin: new Date('2024-01-18'),
-    createdAt: new Date('2023-12-15')
-  },
-  {
-    id: 'user-2',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah.j@example.com',
-    phone: '(555) 987-6543',
-    status: 'active',
-    lastLogin: new Date('2024-01-16'),
-    createdAt: new Date('2023-12-10')
-  },
-  {
-    id: 'user-3',
-    firstName: 'Michael',
-    lastName: 'Davis',
-    email: 'michael.d@example.com',
-    phone: '(555) 456-7890',
-    status: 'inactive',
-    lastLogin: new Date('2023-12-05'),
-    createdAt: new Date('2023-11-20')
+interface PortalUser {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  role: 'admin' | 'user' | 'viewer'
+  status: 'active' | 'inactive' | 'pending'
+  lastLogin?: string
+  createdAt: string
+  permissions: {
+    canViewLoans: boolean
+    canViewAgreements: boolean
+    canViewInvoices: boolean
+    canMakePayments: boolean
+    canUpdateProfile: boolean
   }
-]
-
-interface PortalAdminUserListProps {
-  onImpersonate: (userId: string, userName: string) => void
+  portalAccess: {
+    enabled: boolean
+    features: string[]
+  }
 }
 
-export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps) {
+interface PortalAdminUserListProps {
+  users: PortalUser[]
+  onUserUpdate?: (user: PortalUser) => void
+  onUserDelete?: (userId: string) => void
+}
+
+export function PortalAdminUserList({ users, onUserUpdate, onUserDelete }: PortalAdminUserListProps) {
   const { toast } = useToast()
-  const [users, setUsers] = useState(mockUsers)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [editingUser, setEditingUser] = useState<any | null>(null)
+  const [editingUser, setEditingUser] = useState<PortalUser | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
+  const [resetPasswordUser, setResetPasswordUser] = useState<PortalUser | null>(null)
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-50 text-green-700 border-green-200'
-      case 'inactive':
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-      case 'suspended':
-        return 'bg-red-50 text-red-700 border-red-200'
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-  }
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm)
-    
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter
-
-    return matchesSearch && matchesStatus
-  })
-
-  const handleResetPassword = (user: any) => {
-    setEditingUser(user)
-    setIsResetPasswordDialogOpen(true)
-  }
-
-  const confirmResetPassword = () => {
-    if (editingUser) {
-      setIsResetPasswordDialogOpen(false)
-      setEditingUser(null)
-      toast({
-        title: "Password reset sent",
-        description: `A password reset email has been sent to ${editingUser.email}.`,
-      })
-    }
-  }
-
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user: PortalUser) => {
+    console.log('Edit user clicked:', user)
     setEditingUser(user)
     setIsEditDialogOpen(true)
   }
 
-  const handleUpdateUser = (userData: any) => {
+  const handleResetPassword = (user: PortalUser) => {
+    console.log('Reset password clicked:', user)
+    setResetPasswordUser(user)
+    setIsResetPasswordDialogOpen(true)
+  }
+
+  const handleEditSubmit = (userData: any) => {
     if (editingUser) {
-      const updatedUser = {
-        ...editingUser,
-        ...userData,
-        updatedAt: new Date().toISOString()
-      }
-      setUsers(users.map(user => user.id === editingUser.id ? updatedUser : user))
-      setIsEditDialogOpen(false)
-      setEditingUser(null)
+      const updatedUser = { ...editingUser, ...userData }
+      onUserUpdate?.(updatedUser)
+      
       toast({
         title: "User updated",
-        description: "User information has been successfully updated.",
+        description: `${userData.firstName} ${userData.lastName} has been updated successfully.`,
       })
+    }
+    
+    setIsEditDialogOpen(false)
+    setEditingUser(null)
+  }
+
+  const handleEditCancel = () => {
+    setIsEditDialogOpen(false)
+    setEditingUser(null)
+  }
+
+  const confirmResetPassword = () => {
+    if (resetPasswordUser) {
+      // Here you would typically call an API to reset the password
+      toast({
+        title: "Password reset sent",
+        description: `A password reset email has been sent to ${resetPasswordUser.email}`,
+      })
+    }
+    
+    setIsResetPasswordDialogOpen(false)
+    setResetPasswordUser(null)
+  }
+
+  const cancelResetPassword = () => {
+    setIsResetPasswordDialogOpen(false)
+    setResetPasswordUser(null)
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-800'
+      case 'user': return 'bg-blue-100 text-blue-800'
+      case 'viewer': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="ri-search-bar flex-1">
-          <Search className="ri-search-icon" />
-          <Input
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ri-search-input shadow-sm"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" className="shadow-sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-        </div>
-      </div>
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'inactive': return 'bg-gray-100 text-gray-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
 
-      {/* Users List */}
-      <Card className="shadow-sm">
+  if (users.length === 0) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12 text-muted-foreground">
+            <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-lg font-medium mb-2">No portal users found</p>
+            <p>Portal users will appear here once they are added to the system.</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <>
+      <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Portal Users</CardTitle>
+          <CardTitle>Portal Users</CardTitle>
           <CardDescription>
-            Manage customer portal access and permissions
+            Manage client portal user accounts and permissions
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6 pt-0">
           <div className="space-y-4">
-            {filteredUsers.map((user) => (
+            {users.map((user) => (
               <div key={user.id} className="ri-table-row">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-foreground">{user.firstName} {user.lastName}</h3>
-                      <Badge className={cn("ri-badge-status", getStatusColor(user.status))}>
-                        {user.status.toUpperCase()}
-                      </Badge>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5" />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <Mail className="h-3 w-3 mr-2 text-blue-500" />
-                        {user.email}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-medium">{user.firstName} {user.lastName}</h3>
+                        <Badge className={getRoleColor(user.role)}>
+                          {user.role}
+                        </Badge>
+                        <Badge className={getStatusColor(user.status)}>
+                          {user.status}
+                        </Badge>
                       </div>
-                      <div className="flex items-center">
-                        <Phone className="h-3 w-3 mr-2 text-green-500" />
-                        {user.phone}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-2 text-purple-500" />
-                        Last login: {user.lastLogin.toLocaleDateString()}
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <div className="flex items-center space-x-1">
+                          <Mail className="h-3 w-3" />
+                          <span>{user.email}</span>
+                        </div>
+                        {user.phone && (
+                          <div className="flex items-center space-x-1">
+                            <Phone className="h-3 w-3" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>Created {new Date(user.createdAt).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="ri-action-buttons">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleEditUser(user)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleResetPassword(user)}
-                  >
-                    <Key className="h-3 w-3 mr-1" />
-                    Reset Password
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => onImpersonate(user.id, `${user.firstName} ${user.lastName}`)}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Proxy as Client
-                  </Button>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditUser(user)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResetPassword(user)}
+                    >
+                      <Key className="h-4 w-4 mr-1" />
+                      Reset Password
+                    </Button>
+                    {onUserDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onUserDelete(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No users found</p>
-                <p className="text-sm">Try adjusting your search or filters</p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Edit Portal User</DialogTitle>
+            <DialogDescription>
+              Update user information and permissions
+            </DialogDescription>
           </DialogHeader>
           {editingUser && (
             <PortalAdminUserForm
-              initialData={{
-                firstName: editingUser.firstName || '',
-                lastName: editingUser.lastName || '',
-                email: editingUser.email,
-                phone: editingUser.phone || '',
-                role: editingUser.role,
-                status: editingUser.status,
-                permissions: editingUser.permissions || [],
-                portalAccess: editingUser.portalAccess || false,
-                notes: editingUser.notes || ''
-              }}
-              onSubmit={handleUpdateUser}
-              onCancel={() => {
-                setIsEditDialogOpen(false)
-                setEditingUser(null)
-              }}
+              initialData={editingUser}
+              onSubmit={handleEditSubmit}
+              onCancel={handleEditCancel}
               submitLabel="Update User"
             />
           )}
@@ -265,19 +232,31 @@ export function PortalAdminUserList({ onImpersonate }: PortalAdminUserListProps)
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reset the password for this user?
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <p>Are you sure you want to reset the password for <strong>{editingUser?.firstName} {editingUser?.lastName}</strong>?</p>
-            <p className="text-sm text-muted-foreground">
-              A password reset email will be sent to <strong>{editingUser?.email}</strong>.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsResetPasswordDialogOpen(false)}>Cancel</Button>
-              <Button onClick={confirmResetPassword}>Send Reset Email</Button>
+          {resetPasswordUser && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{resetPasswordUser.firstName} {resetPasswordUser.lastName}</p>
+                <p className="text-sm text-muted-foreground">{resetPasswordUser.email}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A password reset email will be sent to the user's email address. They will be able to create a new password using the link in the email.
+              </p>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={cancelResetPassword}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmResetPassword}>
+                  Send Reset Email
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
