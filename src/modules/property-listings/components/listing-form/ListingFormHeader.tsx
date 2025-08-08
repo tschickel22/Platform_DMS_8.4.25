@@ -1,5 +1,4 @@
 import React from 'react'
-import { useFormContext } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
@@ -12,13 +11,18 @@ interface ListingFormHeaderProps {
   isEditing?: boolean
   listingId?: string
   onSubmit?: (data: any) => void
+  onSave?: (data: any) => void
+  formData?: any
 }
 
-export default function ListingFormHeader({ listing, isEditing, listingId, onSubmit }: ListingFormHeaderProps) {
-  
-  // Check if form context is available
-  const formContext = useFormContext()
-  const { handleSubmit, getValues } = formContext || {}
+export default function ListingFormHeader({
+  listing,
+  isEditing,
+  listingId,
+  onSubmit,
+  onSave,
+  formData
+}: ListingFormHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -27,20 +31,18 @@ export default function ListingFormHeader({ listing, isEditing, listingId, onSub
   }
 
   const handleSave = () => {
-    if (getValues) {
-      const formData = getValues()
-      // TODO: Implement backend saving for drafts
-      console.log('Saving draft:', formData)
-      toast({
-        title: "Draft Saved",
-        description: "Your listing has been saved as a draft.",
-      })
+    if (onSave && formData) {
+      onSave(formData)
     }
+    toast({
+      title: "Draft Saved",
+      description: "Your listing has been saved as a draft.",
+    })
   }
 
   const handleCreateListing = () => {
-    if (onSubmit && handleSubmit) {
-      handleSubmit(onSubmit)()
+    if (onSubmit && formData) {
+      onSubmit(formData)
     }
   }
 
