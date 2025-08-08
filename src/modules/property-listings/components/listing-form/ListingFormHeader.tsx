@@ -14,8 +14,10 @@ interface ListingFormHeaderProps {
   onSave?: (data: any) => void
   formData?: any
   onCancel?: () => void
+  onSubmit: (data: any) => void
 }
-
+  onCancel,
+  onSubmit
 export default function ListingFormHeader({ listing, isEditing, onCancel, onSave, onSubmit, formData }: ListingFormHeaderProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -33,9 +35,8 @@ export default function ListingFormHeader({ listing, isEditing, onCancel, onSave
 
   const handleCreateListing = () => {
     if (onSubmit && formData) {
-      onSubmit(formData)
-    }
-  }
+    // Trigger the form submission
+    onSubmit(formData)
 
   return (
     <div className="flex items-center justify-between mb-6">
