@@ -46,9 +46,7 @@ export default function CRMProspecting() {
     leads: filteredLeads,
     loading, 
     error, 
-    getLeadByStatus, 
     createLead,  
-    deleteLead,
     getLeadById 
   } = useLeadManagement()
   const { tasks, addTask } = useTasks()
