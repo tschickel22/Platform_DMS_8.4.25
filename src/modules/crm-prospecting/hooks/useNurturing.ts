@@ -36,16 +36,16 @@ export function useNurturing() {
     const savedEnrollments = loadFromLocalStorage('renter-insight-enrollments', [])
     const savedCommunicationLogs = loadFromLocalStorage('renter-insight-communication-logs', [])
     const savedAiInsights = loadFromLocalStorage('renter-insight-ai-insights', [])
-        body: template || '',
+    
     // Only initialize with mock data if localStorage is empty
     if (savedEmailTemplates.length === 0) {
-    // Mock email templates
-    const mockEmailTemplates: EmailTemplate[] = [
-      {
-        id: '1',
-        name: 'Welcome New Lead',
-        subject: 'Welcome to {{company_name}}, {{first_name}}!',
-        body: `Hi {{first_name}},
+      // Mock email templates
+      const mockEmailTemplates: EmailTemplate[] = [
+        {
+          id: '1',
+          name: 'Welcome Email',
+          subject: 'Welcome to {{company_name}}, {{first_name}}!',
+          body: `Hi {{first_name}},
 
 Thank you for your interest in our RV inventory! We're excited to help you find the perfect recreational vehicle for your adventures.
 
@@ -59,16 +59,16 @@ In the meantime, feel free to browse our current inventory at {{website_url}}.
 Best regards,
 {{rep_name}}
 {{company_name}}`,
-        type: 'welcome',
-        variables: ['first_name', 'company_name', 'website_url', 'rep_name'],
-        isActive: true,
-        createdAt: new Date('2024-01-01')
-      },
-      {
-        id: '2',
-        name: 'Follow-up After 3 Days',
-        subject: 'Still looking for the perfect RV, {{first_name}}?',
-        body: `Hi {{first_name}},
+          type: 'welcome',
+          variables: ['first_name', 'company_name', 'website_url', 'rep_name'],
+          isActive: true,
+          createdAt: new Date('2024-01-01')
+        },
+        {
+          id: '2',
+          name: 'Follow-up After 3 Days',
+          subject: 'Still looking for the perfect RV, {{first_name}}?',
+          body: `Hi {{first_name}},
 
 I wanted to follow up on your recent inquiry about our RV inventory. Have you had a chance to think about what type of RV would best suit your needs?
 
@@ -81,16 +81,19 @@ You can reply to this email or call me directly at {{rep_phone}}.
 
 Best regards,
 {{rep_name}}`,
-        type: 'follow_up',
-        variables: ['first_name', 'suggested_models', 'rep_phone', 'rep_name'],
-        isActive: true,
-        createdAt: new Date('2024-01-01')
-      }
-    ]
+          type: 'follow_up',
+          variables: ['first_name', 'suggested_models', 'rep_phone', 'rep_name'],
+          isActive: true,
+          createdAt: new Date('2024-01-01')
+        }
+      ]
+      
       setEmailTemplates(mockEmailTemplates)
-      saveToLocalStorage('renter-insight-email-templates', mockEmailTemplates)
     } else {
-      setEmailTemplates(savedEmailTemplates)
+      setEmailTemplates(savedEmailTemplates.map((template: any) => ({
+        ...template,
+        body: template || ''
+      })))
     }
 
     if (savedSmsTemplates.length === 0) {
