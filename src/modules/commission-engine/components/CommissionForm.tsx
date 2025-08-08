@@ -2,418 +2,419 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { X, Save, DollarSign, Percent, Calculator } from 'lucide-react'
-import { Commission, CommissionType } from '@/types'
-import { CommissionRule, FlatCommissionRule, PercentageCommissionRule, TieredCommissionRule } from '../types'
-import { useToast } from '@/hooks/use-toast'
-import { formatCurrency } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Plus, Trash2, Calculator, DollarSign, Percent, Target } from 'lucide-react'
 import { mockCommissionEngine } from '@/mocks/commissionEngineMock'
 
-interface CommissionFormProps {
-  commission?: Commission
-  salesReps: any[] // Using existing sales rep data
-  deals: any[] // Using existing deal data
-  rules: CommissionRule[]
-  onSave: (commissionData: Partial<Commission>, notes?: string) => Promise<void>
-  onCancel: () => void
+interface CommissionRule {
+  id: string
+  name: string
+  type: 'percentage' | 'flat' | 'tiered' | 'bonus'
+  value: number
+  conditions: {
+    minAmount?: number
+    maxAmount?: number
+    productType?: string
+    salesPerson?: string
+    timeframe?: string
+  }
+  isActive: boolean
 }
 
-export function CommissionForm({ commission, salesReps, deals, rules, onSave, onCancel }: CommissionFormProps) {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<Commission>>({
-    salesPersonId: '',
-    dealId: '',
-    type: CommissionType.PERCENTAGE,
-    rate: 0.05,
-    amount: 0,
-    notes: ''
+interface CommissionFormProps {
+  ruleId?: string
+  onSave?: (rule: CommissionRule) => void
+  onCancel?: () => void
+}
+
+export default function CommissionForm({ ruleId, onSave, onCancel }: CommissionFormProps) {
+  const [rule, setRule] = useState<CommissionRule>({
+    id: '',
+    name: '',
+    type: 'percentage',
+    value: 0,
+    conditions: {},
+    isActive: true
   })
-  const [selectedRuleId, setSelectedRuleId] = useState<string>('')
-  const [dealValue, setDealValue] = useState<number>(0)
-  const [notes, setNotes] = useState('')
 
-  // Initialize form with commission data if editing
+  const [tiers, setTiers] = useState<Array<{ min: number; max: number; rate: number }>>([])
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
   useEffect(() => {
-    if (commission) {
-      setFormData({
-        ...commission
-      })
-      setNotes('')
-      
-      // Try to find the deal to set the deal value
-      const deal = deals.find(d => d.id === commission.dealId)
-      if (deal) {
-        setDealValue(deal.value)
+    if (ruleId) {
+      // Load existing rule
+      const existingRule = mockCommissionEngine.sampleRules.find(r => r.id === ruleId)
+      if (existingRule) {
+        setRule(existingRule)
+        // If it's a tiered rule, set up tiers
+        if (existingRule.type === 'tiered' && existingRule.tiers) {
+          setTiers(existingRule.tiers)
+        }
       }
     }
-  }, [commission, deals])
+  }, [ruleId])
 
-  // Update deal value when deal is selected
-  useEffect(() => {
-    if (formData.dealId) {
-      const deal = deals.find(d => d.id === formData.dealId)
-      if (deal) {
-        setDealValue(deal.value)
-      }
+  const handleInputChange = (field: keyof CommissionRule, value: any) => {
+    setRule(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
     }
-  }, [formData.dealId, deals])
+  }
 
-  // Calculate commission amount when rule, deal value, or rate changes
-  useEffect(() => {
-    if (selectedRuleId) {
-      const rule = rules.find(r => r.id === selectedRuleId)
-      if (!rule) return
+  const handleConditionChange = (field: string, value: any) => {
+    setRule(prev => ({
+      ...prev,
+      conditions: {
+        ...prev.conditions,
+        [field]: value
+      }
+    }))
+  }
 
-      let calculatedAmount = 0
+  const addTier = () => {
+    setTiers(prev => [...prev, { min: 0, max: 0, rate: 0 }])
+  }
 
-      switch (rule.type) {
-        case 'flat':
-          calculatedAmount = (rule as FlatCommissionRule).amount
-          setFormData(prev => ({
-            ...prev,
-            type: CommissionType.FLAT,
-            rate: 0,
-            amount: calculatedAmount
-          }))
-          break
-        
-        case 'percentage':
-          const rate = (rule as PercentageCommissionRule).rate
-          calculatedAmount = dealValue * rate
-          setFormData(prev => ({
-            ...prev,
-            type: CommissionType.PERCENTAGE,
-            rate,
-            amount: calculatedAmount
-          }))
-          break
-        
-        case 'tiered':
-          const tiers = (rule as TieredCommissionRule).tiers
-          const applicableTier = tiers.find(tier => 
-            dealValue >= tier.minAmount && 
-            (tier.maxAmount === undefined || dealValue < tier.maxAmount)
-          )
-          if (applicableTier) {
-            calculatedAmount = dealValue * applicableTier.rate
-            setFormData(prev => ({
-              ...prev,
-              type: CommissionType.TIERED,
-              rate: applicableTier.rate,
-              amount: calculatedAmount
-            }))
+  const removeTier = (index: number) => {
+    setTiers(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateTier = (index: number, field: 'min' | 'max' | 'rate', value: number) => {
+    setTiers(prev => prev.map((tier, i) => 
+      i === index ? { ...tier, [field]: value } : tier
+    ))
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!rule.name.trim()) {
+      newErrors.name = 'Rule name is required'
+    }
+
+    if (rule.value <= 0 && rule.type !== 'tiered') {
+      newErrors.value = 'Value must be greater than 0'
+    }
+
+    if (rule.type === 'tiered' && tiers.length === 0) {
+      newErrors.tiers = 'At least one tier is required for tiered commissions'
+    }
+
+    // Validate tiers
+    tiers.forEach((tier, index) => {
+      if (tier.min < 0) {
+        newErrors[`tier_${index}_min`] = 'Minimum amount cannot be negative'
+      }
+      if (tier.max <= tier.min) {
+        newErrors[`tier_${index}_max`] = 'Maximum must be greater than minimum'
+      }
+      if (tier.rate <= 0) {
+        newErrors[`tier_${index}_rate`] = 'Rate must be greater than 0'
+      }
+    })
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSave = () => {
+    if (!validateForm()) return
+
+    const finalRule: CommissionRule = {
+      ...rule,
+      id: rule.id || `rule_${Date.now()}`,
+      ...(rule.type === 'tiered' && { tiers })
+    }
+
+    onSave?.(finalRule)
+  }
+
+  const calculatePreview = () => {
+    const sampleAmount = 50000 // $50,000 sample sale
+    let commission = 0
+
+    switch (rule.type) {
+      case 'percentage':
+        commission = sampleAmount * (rule.value / 100)
+        break
+      case 'flat':
+        commission = rule.value
+        break
+      case 'tiered':
+        // Use tiers array safely with fallback
+        const safeTiers = tiers || []
+        for (const tier of safeTiers) {
+          if (sampleAmount >= tier.min && sampleAmount <= tier.max) {
+            commission = sampleAmount * (tier.rate / 100)
+            break
           }
-          break
-      }
-    } else if (formData.type === CommissionType.PERCENTAGE) {
-      // Manual calculation for percentage type
-      const calculatedAmount = dealValue * (formData.rate || 0)
-      setFormData(prev => ({
-        ...prev,
-        amount: calculatedAmount
-      }))
-    }
-  }, [selectedRuleId, dealValue, formData.rate, formData.type, rules])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!formData.salesPersonId || !formData.dealId) {
-      toast({
-        title: 'Validation Error',
-        description: 'Sales rep and deal are required',
-        variant: 'destructive'
-      })
-      return
+        }
+        break
+      case 'bonus':
+        commission = rule.value
+        break
     }
 
-    if (formData.amount <= 0) {
-      toast({
-        title: 'Validation Error',
-        description: 'Commission amount must be greater than zero',
-        variant: 'destructive'
-      })
-      return
-    }
-
-    setLoading(true)
-    try {
-      await onSave(formData, notes)
-      toast({
-        title: 'Success',
-        description: `Commission ${commission ? 'updated' : 'created'} successfully`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${commission ? 'update' : 'create'} commission`,
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRuleSelect = (ruleId: string) => {
-    setSelectedRuleId(ruleId)
-  }
-
-  const handleManualCalculation = () => {
-    if (formData.type === CommissionType.PERCENTAGE) {
-      const calculatedAmount = dealValue * (formData.rate || 0)
-      setFormData(prev => ({
-        ...prev,
-        amount: calculatedAmount
-      }))
-    }
+    return commission
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="space-y-6">
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{commission ? 'Edit Commission' : 'Create Commission'}</CardTitle>
-              <CardDescription>
-                {commission ? 'Update commission details' : 'Create a new commission record'}
-              </CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            {ruleId ? 'Edit Commission Rule' : 'New Commission Rule'}
+          </CardTitle>
+          <CardDescription>
+            Configure commission rules and conditions for your sales team
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="salesPersonId">Sales Rep *</Label>
-                  <Select 
-                    value={formData.salesPersonId} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, salesPersonId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sales rep" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      {salesReps.map(rep => (
-                        <SelectItem key={rep.id} value={rep.id}>
-                          {rep.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="dealId">Deal *</Label>
-                  <Select 
-                    value={formData.dealId} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, dealId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select deal" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      {deals.map(deal => (
-                        <SelectItem key={deal.id} value={deal.id}>
-                          {deal.name} - {formatCurrency(deal.value)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <CardContent className="space-y-6">
+          {/* Basic Information */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Rule Name</Label>
+              <Input
+                id="name"
+                value={rule.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="Enter rule name"
+                className={errors.name ? 'border-red-500' : ''}
+              />
+              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Commission Type</Label>
+              <Select value={rule.type} onValueChange={(value) => handleInputChange('type', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="flat">Flat Amount</SelectItem>
+                  <SelectItem value="tiered">Tiered</SelectItem>
+                  <SelectItem value="bonus">Bonus</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Commission Value */}
+          {rule.type !== 'tiered' && (
+            <div className="space-y-2">
+              <Label htmlFor="value">
+                {rule.type === 'percentage' ? 'Percentage (%)' : 'Amount ($)'}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="value"
+                  type="number"
+                  value={rule.value}
+                  onChange={(e) => handleInputChange('value', parseFloat(e.target.value) || 0)}
+                  placeholder={rule.type === 'percentage' ? '5.0' : '1000'}
+                  className={`pl-8 ${errors.value ? 'border-red-500' : ''}`}
+                />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  {rule.type === 'percentage' ? <Percent className="h-4 w-4 text-muted-foreground" /> : <DollarSign className="h-4 w-4 text-muted-foreground" />}
                 </div>
               </div>
+              {errors.value && <p className="text-sm text-red-500">{errors.value}</p>}
+            </div>
+          )}
 
-              <div>
-                <Label htmlFor="commissionRule">Commission Rule</Label>
+          {/* Tiered Commission Setup */}
+          {rule.type === 'tiered' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Commission Tiers</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addTier}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Tier
+                </Button>
+              </div>
+              
+              {errors.tiers && <p className="text-sm text-red-500">{errors.tiers}</p>}
+              
+              <div className="space-y-3">
+                {(tiers || []).map((tier, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="flex-1 grid grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Min Amount ($)</Label>
+                        <Input
+                          type="number"
+                          value={tier.min}
+                          onChange={(e) => updateTier(index, 'min', parseFloat(e.target.value) || 0)}
+                          className={errors[`tier_${index}_min`] ? 'border-red-500' : ''}
+                        />
+                        {errors[`tier_${index}_min`] && <p className="text-xs text-red-500">{errors[`tier_${index}_min`]}</p>}
+                      </div>
+                      <div>
+                        <Label className="text-xs">Max Amount ($)</Label>
+                        <Input
+                          type="number"
+                          value={tier.max}
+                          onChange={(e) => updateTier(index, 'max', parseFloat(e.target.value) || 0)}
+                          className={errors[`tier_${index}_max`] ? 'border-red-500' : ''}
+                        />
+                        {errors[`tier_${index}_max`] && <p className="text-xs text-red-500">{errors[`tier_${index}_max`]}</p>}
+                      </div>
+                      <div>
+                        <Label className="text-xs">Rate (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={tier.rate}
+                          onChange={(e) => updateTier(index, 'rate', parseFloat(e.target.value) || 0)}
+                          className={errors[`tier_${index}_rate`] ? 'border-red-500' : ''}
+                        />
+                        {errors[`tier_${index}_rate`] && <p className="text-xs text-red-500">{errors[`tier_${index}_rate`]}</p>}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTier(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Conditions */}
+          <div className="space-y-4">
+            <Label className="text-base font-medium">Conditions (Optional)</Label>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="minAmount">Minimum Sale Amount ($)</Label>
+                <Input
+                  id="minAmount"
+                  type="number"
+                  value={rule.conditions.minAmount || ''}
+                  onChange={(e) => handleConditionChange('minAmount', parseFloat(e.target.value) || undefined)}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxAmount">Maximum Sale Amount ($)</Label>
+                <Input
+                  id="maxAmount"
+                  type="number"
+                  value={rule.conditions.maxAmount || ''}
+                  onChange={(e) => handleConditionChange('maxAmount', parseFloat(e.target.value) || undefined)}
+                  placeholder="No limit"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="productType">Product Type</Label>
                 <Select 
-                  value={selectedRuleId} 
-                  onValueChange={handleRuleSelect}
+                  value={rule.conditions.productType || ''} 
+                  onValueChange={(value) => handleConditionChange('productType', value || undefined)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select rule or enter manually" />
+                    <SelectValue placeholder="All products" />
                   </SelectTrigger>
-                  <SelectContent className="z-50">
-                    <SelectItem value="">Manual Entry</SelectItem>
-                    {rules.filter(r => r.isActive).map(rule => (
-                      <SelectItem key={rule.id} value={rule.id}>
-                        {rule.name} ({rule.type})
-                      </SelectItem>
-                    ))}
+                  <SelectContent>
+                    <SelectItem value="">All Products</SelectItem>
+                    <SelectItem value="RV">RV</SelectItem>
+                    <SelectItem value="Mobile Home">Mobile Home</SelectItem>
+                    <SelectItem value="Accessory">Accessory</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="dealValue">Deal Value</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="dealValue"
-                      type="number"
-                      value={dealValue}
-                      onChange={(e) => setDealValue(parseFloat(e.target.value) || 0)}
-                      className="pl-10"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="commissionType">Commission Type</Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={(value: CommissionType) => setFormData(prev => ({ ...prev, type: value }))}
-                    disabled={!!selectedRuleId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      <SelectItem value={CommissionType.FLAT}>Flat</SelectItem>
-                      <SelectItem value={CommissionType.PERCENTAGE}>Percentage</SelectItem>
-                      <SelectItem value={CommissionType.TIERED}>Tiered</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {formData.type === CommissionType.PERCENTAGE && !selectedRuleId && (
-                <div>
-                  <Label htmlFor="rate">Commission Rate (%)</Label>
-                  <div className="relative">
-                    <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="rate"
-                      type="number"
-                      value={formData.rate ? formData.rate * 100 : ''}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        rate: parseFloat(e.target.value) / 100 || 0
-                      }))}
-                      className="pl-10"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {formData.type === CommissionType.FLAT && !selectedRuleId && (
-                <div>
-                  <Label htmlFor="amount">Flat Commission Amount</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="amount"
-                      type="number"
-                      value={formData.amount || ''}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        amount: parseFloat(e.target.value) || 0
-                      }))}
-                      className="pl-10"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!selectedRuleId && formData.type === CommissionType.PERCENTAGE && (
-                <div className="flex justify-end">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={handleManualCalculation}
-                    size="sm"
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Calculate
-                  </Button>
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="commissionAmount">Commission Amount</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="commissionAmount"
-                    type="number"
-                    value={formData.amount || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      amount: parseFloat(e.target.value) || 0
-                    }))}
-                    className="pl-10"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="timeframe">Timeframe</Label>
+                <Select 
+                  value={rule.conditions.timeframe || ''} 
+                  onValueChange={(value) => handleConditionChange('timeframe', value || undefined)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No timeframe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Timeframe</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+          </div>
 
-            {/* Notes */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="notes">Commission Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Add any notes about this commission"
-                  rows={3}
-                />
+          <Separator />
+
+          {/* Status */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="isActive">Rule Status</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable or disable this commission rule
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="isActive"
+                checked={rule.isActive}
+                onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+              />
+              <Badge variant={rule.isActive ? 'default' : 'secondary'}>
+                {rule.isActive ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <Card className="bg-muted/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Commission Preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-muted-foreground mb-2">
+                Sample calculation for $50,000 sale:
               </div>
-
-              {commission && (
-                <div>
-                  <Label htmlFor="auditNotes">Audit Notes</Label>
-                  <Textarea
-                    id="auditNotes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes about this update (for audit trail)"
-                    rows={2}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {commission ? 'Updating...' : 'Creating...'}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {commission ? 'Update' : 'Create'} Commission
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+              <div className="text-2xl font-bold text-green-600">
+                ${calculatePreview().toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave}>
+          {ruleId ? 'Update Rule' : 'Create Rule'}
+        </Button>
+      </div>
     </div>
   )
 }
