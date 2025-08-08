@@ -15,7 +15,10 @@ interface ListingFormHeaderProps {
 }
 
 export default function ListingFormHeader({ listing, isEditing, listingId, onSubmit }: ListingFormHeaderProps) {
-  const { handleSubmit, getValues } = useFormContext()
+  
+  // Check if form context is available
+  const formContext = useFormContext()
+  const { handleSubmit, getValues } = formContext || {}
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -24,17 +27,19 @@ export default function ListingFormHeader({ listing, isEditing, listingId, onSub
   }
 
   const handleSave = () => {
-    const formData = getValues()
-    // TODO: Implement backend saving for draft
-    console.log('Saving draft:', formData)
-    toast({
-      title: "Draft Saved",
-      description: "Your listing has been saved as a draft and can be completed later.",
-    })
+    if (getValues) {
+      const formData = getValues()
+      // TODO: Implement backend saving for drafts
+      console.log('Saving draft:', formData)
+      toast({
+        title: "Draft Saved",
+        description: "Your listing has been saved as a draft.",
+      })
+    }
   }
 
   const handleCreateListing = () => {
-    if (onSubmit) {
+    if (onSubmit && handleSubmit) {
       handleSubmit(onSubmit)()
     }
   }
