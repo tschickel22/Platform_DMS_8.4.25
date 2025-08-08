@@ -9,61 +9,18 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Plus, Save, X } from 'lucide-react'
 import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
+import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
+import { LeadIntakeForm, LeadFormField, LeadSource } from '../types'
 import { useLeadManagement } from '../hooks/useLeadManagement'
 
-// Define types locally since they may not exist in the types file
-interface LeadFormField {
-  id: string
-  name: string
-  label: string
-  type: 'text' | 'email' | 'phone' | 'select' | 'multiselect' | 'textarea' | 'number' | 'date' | 'checkbox'
-  required: boolean
-  options?: string[]
-  placeholder?: string
-  validation?: any
-  order: number
-  isActive: boolean
-}
-
-interface LeadIntakeForm {
-  id?: string
-  name: string
-  description?: string
-  sourceId: string
-  fields: LeadFormField[]
-  isActive: boolean
-}
-
-interface LeadSource {
-  id: string
-  name: string
-  description?: string
-}
-
-export function LeadIntakeForm() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">New Lead Intake</h2>
-        <p className="text-sm text-muted-foreground">
-          Capture new lead information
-        </p>
-      </div>
-      <div className="text-center py-8 text-muted-foreground">
-        <p>Lead intake form coming soon</p>
-      </div>
-    </div>
-  )
-}
-
-interface LeadIntakeFormBuilderProps {
+interface LeadIntakeFormProps {
   form?: LeadIntakeForm
-  sources?: LeadSource[]
+  sources: LeadSource[]
   onSave: (formData: Partial<LeadIntakeForm>) => void
   onCancel: () => void
 }
 
-export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: LeadIntakeFormBuilderProps) {
+export function LeadIntakeFormBuilder({ form, sources, onSave, onCancel }: LeadIntakeFormProps) {
   const [formData, setFormData] = useState<Partial<LeadIntakeForm>>(form || {
     name: '',
     description: '',
@@ -79,11 +36,11 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
     required: false,
     placeholder: '',
     order: (formData.fields?.length || 0) + 1,
-    isActive: true
   })
-
   // Use mock data as fallback when tenant data is unavailable
-  const leadSources = sources.length > 0 ? sources : mockCrmProspecting.leadSources
+  const leadSources = mockCrmProspecting.leadSources
+  const leadStatuses = mockCrmProspecting.leadStatuses
+  const preferredContactMethods = mockCrmProspecting.preferredContactMethods
   const [showAddField, setShowAddField] = useState(false)
 
   const fieldTypes = [
@@ -171,7 +128,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
               <Label htmlFor="form-name">Form Name</Label>
               <Input
                 id="form-name"
-                value={formData.name || ''}
+                value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., Website Contact Form"
               />
@@ -179,14 +136,14 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
             <div>
               <Label htmlFor="form-source">Lead Source</Label>
               <Select
-                value={formData.sourceId || ''}
+                value={formData.sourceId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, sourceId: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent>
-                  {leadSources.map(source => (
+                  {sources.map(source => (
                     <SelectItem key={source.id} value={source.id}>
                       {source.name}
                     </SelectItem>
@@ -199,7 +156,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
             <Label htmlFor="form-description">Description</Label>
             <Textarea
               id="form-description"
-              value={formData.description || ''}
+              value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Describe the purpose of this form"
             />
@@ -207,7 +164,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
           <div className="flex items-center space-x-2">
             <Checkbox
               id="form-active"
-              checked={formData.isActive || false}
+              checked={formData.isActive}
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: !!checked }))}
             />
             <Label htmlFor="form-active">Active</Label>
@@ -281,7 +238,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
                       <Label htmlFor="field-name">Field Name</Label>
                       <Input
                         id="field-name"
-                        value={newField.name || ''}
+                        value={newField.name}
                         onChange={(e) => setNewField(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="e.g., budget"
                       />
@@ -290,7 +247,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
                       <Label htmlFor="field-label">Field Label</Label>
                       <Input
                         id="field-label"
-                        value={newField.label || ''}
+                        value={newField.label}
                         onChange={(e) => setNewField(prev => ({ ...prev, label: e.target.value }))}
                         placeholder="e.g., Budget Range"
                       />
@@ -298,8 +255,8 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
                     <div>
                       <Label htmlFor="field-type">Field Type</Label>
                       <Select
-                        value={newField.type || 'text'}
-                        onValueChange={(value: LeadFormField['type']) => setNewField(prev => ({ ...prev, type: value }))}
+                        value={newField.type}
+                        onValueChange={(value: any) => setNewField(prev => ({ ...prev, type: value }))}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -317,7 +274,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
                       <Label htmlFor="field-placeholder">Placeholder</Label>
                       <Input
                         id="field-placeholder"
-                        value={newField.placeholder || ''}
+                        value={newField.placeholder}
                         onChange={(e) => setNewField(prev => ({ ...prev, placeholder: e.target.value }))}
                         placeholder="e.g., Enter your budget range"
                       />
@@ -342,7 +299,7 @@ export function LeadIntakeFormBuilder({ form, sources = [], onSave, onCancel }: 
                   <div className="flex items-center space-x-2 mt-4">
                     <Checkbox
                       id="field-required"
-                      checked={newField.required || false}
+                      checked={newField.required}
                       onCheckedChange={(checked) => setNewField(prev => ({ ...prev, required: !!checked }))}
                     />
                     <Label htmlFor="field-required">Required field</Label>
@@ -531,13 +488,12 @@ export function DynamicLeadForm({ form, onSubmit }: DynamicLeadFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {form.fields
             .sort((a, b) => a.order - b.order)
-            .map(field => renderField(field))}
+            .filter(field => field.isActive)
+            .map(renderField)}
           
-          <div className="flex justify-end">
-            <Button type="submit">
-              Submit
-            </Button>
-          </div>
+          <Button type="submit" className="w-full">
+            Submit Lead
+          </Button>
         </form>
       </CardContent>
     </Card>
