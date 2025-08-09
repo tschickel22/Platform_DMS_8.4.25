@@ -49,7 +49,7 @@ function PDIChecklistDashboard() {
   }
   // Use mock data directly
 
-  const templates = mockPDI.sampleTemplates
+ 
   
   
   const { vehicles } = useInventoryManagement()
