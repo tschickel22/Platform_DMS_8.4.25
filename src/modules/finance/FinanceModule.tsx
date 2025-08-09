@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, DollarSign, TrendingUp, Users, Calculator, History, Settings, Search } from 'lucide-react'
+import { Plus, DollarSign, TrendingUp, Users, Calculator, History, Settings, Search, CheckCircle, AlertTriangle } from 'lucide-react'
 import { mockFinance } from '@/mocks/financeMock'
 import { useTenant } from '@/contexts/TenantContext'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
@@ -168,9 +168,21 @@ function FinanceModulePage() {
     }
   }
 
-  const applyTileFilter = (status: string) => {
-    setStatusFilter(status)
-  }
+  const tileProps = (onClick: () => void) => ({
+    onClick,
+    tabIndex: 0,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick();
+      }
+    }
+  });
+
+  const applyTileFilter = (status: string) => () => {
+    setStatusFilter(status);
+    setActiveTab('loans');
+  };
 
   return (
     <div className="space-y-6">
@@ -203,7 +215,7 @@ function FinanceModulePage() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Loans</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -211,15 +223,29 @@ function FinanceModulePage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalLoans}</div>
             <p className="text-xs text-muted-foreground">
-              {activeLoans} active loans
+              All loan accounts
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('Current'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-900">Current Loans</CardTitle>
+            <TrendingUp className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900">
+              {loans.filter(loan => loan.status === 'Current').length}
+            </div>
+            <p className="text-xs text-yellow-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Current payments
+            </p>
+          </CardContent>
+        </Card>
+        <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Portfolio</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalPortfolio)}</div>
@@ -228,8 +254,22 @@ function FinanceModulePage() {
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('Paid Off'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-900">Paid Off</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">
+              {loans.filter(loan => loan.status === 'Paid Off').length}
+            </div>
+            <p className="text-xs text-green-600 flex items-center mt-1">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Completed loans
+            </p>
+          </CardContent>
+        </Card>
+        <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Loan</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -241,16 +281,18 @@ function FinanceModulePage() {
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('Default'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Default Rate</CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-red-900">Default/Overdue</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.1%</div>
-            <p className="text-xs text-muted-foreground">
-              -0.5% from last month
+            <div className="text-2xl font-bold text-red-900">
+              {loans.filter(loan => loan.status === 'Default' || loan.status === 'Overdue').length}
+            </div>
+            <p className="text-xs text-red-600 flex items-center mt-1">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Need attention
             </p>
           </CardContent>
         </Card>
@@ -356,22 +398,11 @@ function FinanceModulePage() {
                   New Loan
                 </Button>
               </div>
-              {/* Filter Indicator */}
-              {statusFilter !== 'all' && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="secondary">
-                    Filtered by: {statusFilter}
-                  </Badge>
-                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-                    Clear Filter
-                  </Button>
-                </div>
-              )}
             </CardHeader>
             <CardContent>
               {/* Search and Filter Controls */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="relative flex-1">
+              <div className="flex flex-wrap gap-4 mb-6">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by customer or vehicle"
@@ -399,74 +430,74 @@ function FinanceModulePage() {
               </div>
 
               <div className="space-y-4">
-                {(() => {
-                  const filteredLoans = loans.filter(loan => 
-                    statusFilter === 'all' || loan.status === statusFilter
-                  )
-                  
-                  return filteredLoans.length > 0 ? (
-                    filteredLoans.map((loan) => (
-                      <div
-                        key={loan.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h4 className="font-semibold">{loan.customerName}</h4>
-                            <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
-                              {loan.status}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
-                          </div>
+                {filteredLoansNew.length > 0 ? filteredLoansNew.map((loan) => (
+                  <div
+                    key={loan.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-semibold">{loan.customerName}</h4>
+                        <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
+                          {loan.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Payment History
+                      </Button>
+                    </div>
+                  </div>
+                )) : (
+                  // Show mock data when no filtered results or no loans
+                  mockFinance.sampleLoans.map((loan) => (
+                    <div
+                      key={loan.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h4 className="font-semibold">{loan.customerName}</h4>
+                          <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
+                            {loan.status}
+                          </Badge>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Payment History
-                          </Button>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    // Show mock data when no filtered results or no loans
-                    mockFinance.sampleLoans.map((loan) => (
-                      <div
-                        key={loan.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h4 className="font-semibold">{loan.customerName}</h4>
-                            <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
-                              {loan.status}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Payment History
-                          </Button>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          Payment History
+                        </Button>
                       </div>
-                    ))
-                  )
-                })()}
+                    </div>
+                  ))
+                )}
+                
+                {mockFinance.sampleLoans.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>No loans found</p>
+                    <p className="text-sm">Create your first loan to get started</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
