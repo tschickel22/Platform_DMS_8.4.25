@@ -2,400 +2,128 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
-import { PDITemplate, PDIInspection, PDIInspectionStatus } from './types'
+import { CheckCircle, AlertTriangle, Clock, FileText, Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
+import { mockPDI } from '@/mocks/pdiMock'
 import { usePDIManagement } from './hooks/usePDIManagement'
-import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
-import { useAuth } from '@/contexts/AuthContext'
-import { useToast } from '@/hooks/use-toast'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
-import { useTasks } from '@/hooks/useTasks'
-import { Task, TaskModule, TaskPriority } from '@/types'
-import { PDITemplateList } from './components/PDITemplateList'
-import { PDITemplateForm } from './components/PDITemplateForm'
-import PDIInspectionList from './components/PDIInspectionList'
 import { PDIInspectionForm } from './components/PDIInspectionForm'
-import PDIInspectionDetail from './components/PDIInspectionDetail'
+import { PDIInspectionDetail } from './components/PDIInspectionDetail'
+import { PDITemplateForm } from './components/PDITemplateForm'
 import { PDINewInspectionForm } from './components/PDINewInspectionForm'
 
-function PDIChecklistDashboard() {
-  const { 
-    templates, 
-    inspections, 
-    createTemplate, 
-    updateTemplate, 
-    deleteTemplate,
-    createInspection,
-    updateInspection,
-    updateInspectionItem,
-    completeInspection,
-    createDefect,
-    addPhoto,
-    addSignoff
-  } = usePDIManagement()
+function PDIInspectionsList() {
+  // Use mock data for now - replace with actual hook data when backend is ready
+  const inspections = mockPDI.sampleInspections
+  const templates = mockPDI.sampleTemplates
+  const { createInspection, updateInspection, deleteInspection } = usePDIManagement()
   
-  const { vehicles } = useInventoryManagement()
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const { createTask } = useTasks()
-  
-  const [activeTab, setActiveTab] = useState('inspections')
-  const [showTemplateForm, setShowTemplateForm] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [showInspectionForm, setShowInspectionForm] = useState(false)
-  const [showNewInspectionForm, setShowNewInspectionForm] = useState(false)
   const [showInspectionDetail, setShowInspectionDetail] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<PDITemplate | null>(null)
-  const [selectedInspection, setSelectedInspection] = useState<PDIInspection | null>(null)
-  const [showTaskForm, setShowTaskForm] = useState(false)
-  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
+  const [showTemplateForm, setShowTemplateForm] = useState(false)
+  const [showNewInspectionForm, setShowNewInspectionForm] = useState(false)
+  const [selectedInspection, setSelectedInspection] = useState(null)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inspections' | 'templates' | 'analytics'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'failed'>('all')
 
-  // Template Management
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'pending' | 'completed' | 'failed') => {
+    setActiveTab('inspections')
+    setStatusFilter(status)
+  }
+
+  // Helper function to create tile props
+  const tileProps = (handler: () => void) => ({
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+  })
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'failed':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Filter inspections based on search and status
+  const filteredInspections = inspections
+    .filter(inspection =>
+      inspection.vehicleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inspection.inspectorName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(inspection => statusFilter === 'all' || inspection.status.toLowerCase() === statusFilter)
+
+  const handleCreateInspection = () => {
+    setSelectedInspection(null)
+    setShowInspectionForm(true)
+  }
+
+  const handleEditInspection = (inspection: any) => {
+    setSelectedInspection(inspection)
+    setShowInspectionForm(true)
+  }
+
+  const handleViewInspection = (inspection: any) => {
+    setSelectedInspection(inspection)
+    setShowInspectionDetail(true)
+  }
+
+  const handleDeleteInspection = async (inspectionId: string) => {
+    if (window.confirm('Are you sure you want to delete this inspection?')) {
+      try {
+        await deleteInspection(inspectionId)
+      } catch (error) {
+        console.error('Failed to delete inspection:', error)
+      }
+    }
+  }
+
   const handleCreateTemplate = () => {
     setSelectedTemplate(null)
     setShowTemplateForm(true)
   }
 
-  const handleEditTemplate = (template: PDITemplate) => {
+  const handleEditTemplate = (template: any) => {
     setSelectedTemplate(template)
     setShowTemplateForm(true)
   }
-
-  const handleViewTemplate = (template: PDITemplate) => {
-    // In a real app, you might want to show a read-only view
-    setSelectedTemplate(template)
-    setShowTemplateForm(true)
-  }
-
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (window.confirm('Are you sure you want to delete this template?')) {
-      try {
-        await deleteTemplate(templateId)
-        toast({
-          title: 'Success',
-          description: 'Template deleted successfully',
-        })
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete template',
-          variant: 'destructive'
-        })
-      }
-    }
-  }
-
-  const handleDuplicateTemplate = async (template: PDITemplate) => {
-    try {
-      const newTemplate = { 
-        ...template,
-        id: undefined,
-        name: `${template.name} (Copy)`,
-      }
-      await createTemplate(newTemplate)
-      toast({
-        title: 'Success',
-        description: 'Template duplicated successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to duplicate template',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleSaveTemplate = async (templateData: Partial<PDITemplate>) => {
-    try {
-      if (selectedTemplate) {
-        await updateTemplate(selectedTemplate.id, templateData)
-      } else {
-        await createTemplate(templateData)
-      }
-      setShowTemplateForm(false)
-      setSelectedTemplate(null)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${selectedTemplate ? 'update' : 'create'} template`,
-        variant: 'destructive'
-      })
-    }
-  }
-
-  // Inspection Management
-  const handleCreateInspection = () => {
-    setShowNewInspectionForm(true)
-  }
-
-  const handleNewInspection = async (inspectionData: Partial<PDIInspection>) => {
-    try {
-      const newInspection = await createInspection(inspectionData)
-      setShowNewInspectionForm(false)
-      
-      toast({
-        title: 'Inspection Created',
-        description: 'New PDI inspection has been created successfully',
-      })
-      
-      // Open the inspection form for the new inspection
-      setSelectedInspection(newInspection)
-      setShowInspectionForm(true)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create inspection',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleViewInspection = (inspection: PDIInspection) => {
-    setSelectedInspection(inspection)
-    setShowInspectionDetail(true)
-  }
-
-  const handleViewInspectionDetail = (inspectionId: string) => {
-    const inspection = inspections.find(i => i.id === inspectionId)
-    if (inspection) {
-      setSelectedInspection(inspection)
-      setShowInspectionDetail(true)
-    }
-  }
-
-  const handleEditInspectionById = (inspectionId: string) => {
-    const inspection = inspections.find(i => i.id === inspectionId)
-    if (inspection) {
-      setSelectedInspection(inspection)
-      setShowInspectionForm(true)
-    }
-  }
-
-  const handleContinueInspection = (inspection: PDIInspection) => {
-    setSelectedInspection(inspection)
-    setShowInspectionForm(true)
-  }
-
-  const handleSaveInspection = async (inspectionId: string, inspectionData: Partial<PDIInspection>) => {
-    
-    try {
-      await updateInspection(inspectionId, inspectionData)
-      toast({
-        title: 'Success',
-        description: 'Inspection saved successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save inspection',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCompleteInspection = async (inspectionId: string, notes?: string) => {
-    try {
-      await completeInspection(inspectionId, notes)
-      setShowInspectionForm(false)
-      setSelectedInspection(null)
-      toast({
-        title: 'Success',
-        description: 'Inspection completed successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to complete inspection',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleUpdateInspectionItem = async (inspectionId: string, itemId: string, itemData: Partial<PDIInspectionItem>) => {
-    try {
-      await updateInspectionItem(inspectionId, itemId, itemData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update item',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleAddDefect = async (inspectionId: string, defectData: Partial<PDIDefect>) => {
-    try {
-      await createDefect(inspectionId, defectData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add defect',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleAddPhoto = async (inspectionId: string, photoData: Partial<PDIPhoto>) => {
-    try {
-      await addPhoto(inspectionId, photoData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add photo',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleAddSignoff = async (inspectionId: string, signoffData: Partial<PDISignoff>) => {
-    try {
-      await addSignoff(inspectionId, {
-        ...signoffData,
-        userId: user?.id || 'current-user'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add signoff',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCreateTask = async (taskData: Partial<Task>) => {
-    try {
-      await createTask(taskData)
-      setShowTaskForm(false)
-      setInitialTaskData(undefined)
-      toast({
-        title: 'Task Created',
-        description: 'Task has been created successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCreateTaskForInspection = (inspection: PDIInspection) => {
-    const vehicle = vehicles.find(v => v.id === inspection.vehicleId)
-    const vehicleInfo = vehicle 
-      ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-      : inspection.vehicleId
-
-    // Determine priority based on inspection status and defects
-    const hasDefects = inspection.defects && inspection.defects.length > 0
-    const priority = hasDefects ? TaskPriority.HIGH : 
-                    inspection.status === PDIInspectionStatus.IN_PROGRESS ? TaskPriority.MEDIUM : 
-                    TaskPriority.LOW
-
-    // Set due date based on inspection status
-    const dueDate = inspection.status === PDIInspectionStatus.IN_PROGRESS 
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for in-progress
-      : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days for others
-
-    setInitialTaskData({
-      sourceId: inspection.id,
-      sourceType: 'pdi_inspection',
-      module: TaskModule.PDI,
-      title: `Complete PDI for ${vehicleInfo}`,
-      description: `PDI Status: ${inspection.status}${hasDefects ? ` (${inspection.defects.length} defects found)` : ''}`,
-      priority,
-      assignedTo: inspection.inspectorId,
-      dueDate,
-      link: `/pdi`,
-      customFields: {
-        vehicleId: inspection.vehicleId,
-        templateId: inspection.templateId,
-        defectCount: inspection.defects?.length || 0
-      }
-    })
-    setShowTaskForm(true)
-  }
-
-  // Stats
-  const totalTemplates = templates.length
-  const activeTemplates = templates.filter(t => t.isActive).length
-  const totalInspections = inspections.length
-  const completedInspections = inspections.filter(i => 
-    i.status === PDIInspectionStatus.COMPLETED || 
-    i.status === PDIInspectionStatus.APPROVED
-  ).length
-  const inProgressInspections = inspections.filter(i => i.status === PDIInspectionStatus.IN_PROGRESS).length
-  const totalDefects = inspections.reduce((sum, i) => sum + i.defects.length, 0)
-  const openDefects = inspections.reduce((sum, i) => 
-    sum + i.defects.filter(d => d.status === 'open' || d.status === 'in_progress').length, 0
-  )
-  const totalPhotos = inspections.reduce((sum, i) => sum + i.photos.length, 0)
 
   return (
     <div className="space-y-8">
-      {/* Task Form Modal */}
-      {showTaskForm && (
-        <TaskForm
-          initialData={initialTaskData}
-          onSave={handleCreateTask}
-          onCancel={() => {
-            setShowTaskForm(false)
-            setInitialTaskData(undefined)
-          }}
-        />
-      )}
-
-      {/* Template Form Modal */}
-      {showTemplateForm && (
-        <PDITemplateForm
-          template={selectedTemplate || undefined}
-          onSave={handleSaveTemplate}
-          onCancel={() => {
-            setShowTemplateForm(false)
-            setSelectedTemplate(null)
-          }}
-        />
-      )}
-
-      {/* New Inspection Form Modal */}
-      {showNewInspectionForm && (
-        <PDINewInspectionForm
-          templates={templates}
-          vehicles={vehicles}
-          currentUserId={user?.id || 'current-user'}
-          onCreateInspection={handleNewInspection}
-          onCancel={() => setShowNewInspectionForm(false)}
-        />
-      )}
-
-      {/* Inspection Form Modal */}
-      {showInspectionForm && selectedInspection && (
+      {/* Modals */}
+      {showInspectionForm && (
         <PDIInspectionForm
           inspection={selectedInspection}
-          vehicles={vehicles}
-          onSave={handleSaveInspection}
-          onComplete={handleCompleteInspection}
-          onUpdateItem={handleUpdateInspectionItem}
-          onAddDefect={handleAddDefect}
-          onAddPhoto={handleAddPhoto}
-          onCancel={() => {
-            setShowInspectionForm(false)
-            setSelectedInspection(null)
-          }}
+          onClose={() => setShowInspectionForm(false)}
         />
       )}
-
-      {/* Inspection Detail Modal */}
+      
       {showInspectionDetail && selectedInspection && (
         <PDIInspectionDetail
           inspection={selectedInspection}
-          vehicles={vehicles}
-          onAddSignoff={handleAddSignoff}
-          onClose={() => {
-            setShowInspectionDetail(false)
-            setSelectedInspection(null)
-          }}
+          onClose={() => setShowInspectionDetail(false)}
+        />
+      )}
+      
+      {showTemplateForm && (
+        <PDITemplateForm
+          template={selectedTemplate}
+          onClose={() => setShowTemplateForm(false)}
+        />
+      )}
+      
+      {showNewInspectionForm && (
+        <PDINewInspectionForm
+          onClose={() => setShowNewInspectionForm(false)}
         />
       )}
 
@@ -408,7 +136,7 @@ function PDIChecklistDashboard() {
               Manage pre-delivery inspections and quality control for homes and vehicles
             </p>
           </div>
-          <Button className="shadow-sm" onClick={handleCreateInspection}>
+          <Button className="shadow-sm" onClick={() => setShowNewInspectionForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Inspection
           </Button>
@@ -417,86 +145,238 @@ function PDIChecklistDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card {...tileProps(() => applyTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Inspections</CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{totalInspections}</div>
-            <p className="text-xs text-blue-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {completedInspections} completed
-            </p>
+            <div className="text-2xl font-bold text-blue-900">{inspections.length}</div>
+            <p className="text-xs text-blue-600">{inspections.filter(i => i.status.toLowerCase() === 'completed').length} completed</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+        <Card {...tileProps(() => applyTileFilter('pending'))} className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">In Progress</CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-yellow-600" />
+            <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-900">{inProgressInspections}</div>
-            <p className="text-xs text-yellow-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Active inspections
-            </p>
+            <div className="text-2xl font-bold text-yellow-900">{inspections.filter(i => i.status.toLowerCase() === 'pending').length}</div>
+            <p className="text-xs text-yellow-600">Active inspections</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
+        <Card {...tileProps(() => applyTileFilter('failed'))} className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-900">Open Defects</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-900">{openDefects}</div>
-            <p className="text-xs text-red-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {totalDefects} total defects
-            </p>
+            <div className="text-2xl font-bold text-red-900">{inspections.filter(i => i.status.toLowerCase() === 'failed').length}</div>
+            <p className="text-xs text-red-600">{inspections.filter(i => i.status.toLowerCase() === 'failed').length} total defects</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card {...tileProps(() => applyTileFilter('completed'))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Templates</CardTitle>
-            <CheckSquare className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">{totalTemplates}</div>
-            <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {activeTemplates} active
-            </p>
+            <div className="text-2xl font-bold text-green-900">{templates.length}</div>
+            <p className="text-xs text-green-600">{templates.filter(t => t.isActive).length} active</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="inspections">Inspections</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Recent Inspections</CardTitle>
+                <CardDescription>Latest inspection activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {inspections.slice(0, 5).map((inspection) => (
+                    <div key={inspection.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{inspection.vehicleId}</p>
+                        <p className="text-sm text-muted-foreground">{inspection.inspectorName}</p>
+                      </div>
+                      <Badge className={getStatusColor(inspection.status)}>
+                        {inspection.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Common tasks and shortcuts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewInspectionForm(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Inspection
+                  </Button>
+                  <Button className="w-full justify-start" variant="outline" onClick={handleCreateTemplate}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Template
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
         <TabsContent value="inspections">
-          <PDIInspectionList
-            inspections={inspections}
-            onNewInspection={handleCreateInspection}
-            onViewInspection={handleViewInspectionDetail}
-            onEditInspection={handleEditInspectionById}
-            onCreateTask={handleCreateTaskForInspection}
-          />
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Inspections</CardTitle>
+              <CardDescription>
+                Manage vehicle pre-delivery inspections
+              </CardDescription>
+              {/* Filter Indicator */}
+              {statusFilter !== 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary">
+                    Filtered by: {statusFilter}
+                  </Badge>
+                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                    Clear Filter
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {filteredInspections.length > 0 ? (
+                  filteredInspections.map((inspection) => (
+                    <div key={inspection.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{inspection.vehicleId}</h3>
+                          <Badge className={getStatusColor(inspection.status)}>
+                            {inspection.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Inspector: {inspection.inspectorName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Date: {new Date(inspection.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewInspection(inspection)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditInspection(inspection)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteInspection(inspection.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>No inspections found</p>
+                    <p className="text-sm">
+                      {statusFilter !== 'all' 
+                        ? `No inspections match the "${statusFilter}" filter`
+                        : 'Try adjusting your search criteria'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="templates">
-          <PDITemplateList
-            templates={templates}
-            onCreateTemplate={handleCreateTemplate}
-            onEditTemplate={handleEditTemplate}
-            onDeleteTemplate={handleDeleteTemplate}
-            onDuplicateTemplate={handleDuplicateTemplate}
-            onViewTemplate={handleViewTemplate}
-          />
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Templates</CardTitle>
+              <CardDescription>
+                Manage inspection templates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {templates.length > 0 ? (
+                  templates.map((template) => (
+                    <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {template.description}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Items: {template.items?.length || 0}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={template.isActive ? "default" : "secondary"}>
+                          {template.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTemplate(template)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No templates found</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Analytics</CardTitle>
+              <CardDescription>
+                Inspection performance and trends
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-muted-foreground py-8">Analytics coming soon...</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
@@ -506,8 +386,8 @@ function PDIChecklistDashboard() {
 export default function PDIChecklist() {
   return (
     <Routes>
-      <Route path="/" element={<PDIChecklistDashboard />} />
-      <Route path="/*" element={<PDIChecklistDashboard />} />
+      <Route path="/" element={<PDIInspectionsList />} />
+      <Route path="/*" element={<PDIInspectionsList />} />
     </Routes>
   )
 }
