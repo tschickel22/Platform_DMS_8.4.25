@@ -42,6 +42,7 @@ function FinanceApplicationDashboard() {
   
   // Admin notes state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
   
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'draft' | 'under_review' | 'approved' | 'denied') => {
@@ -99,6 +100,7 @@ function FinanceApplicationDashboard() {
     }
 
     return currentApplications
+  }, [applications, applicationSearchQuery, statusFilter, applicationDateFilter])
 
   // Filter templates based on search
   const filteredTemplates = React.useMemo(() => {
@@ -841,18 +843,19 @@ function FinanceApplicationDashboard() {
                   />
                 </div>
                 <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
+                  value={applicationStatusFilter}
+                  onValueChange={setApplicationStatusFilter}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="under_review">Pending Review</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="denied">Rejected</SelectItem>
+                    {mockFinanceApplications.statusOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Input
