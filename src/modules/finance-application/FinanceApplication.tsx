@@ -41,10 +41,10 @@ function FinanceApplicationDashboard() {
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
   // Admin notes state
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'pending_review' | 'approved' | 'denied'>('all')
   
   // Helper function to apply tile filters
-  const applyTileFilter = (status: 'all' | 'draft' | 'under_review' | 'approved' | 'denied') => {
+  const applyTileFilter = (status: 'all' | 'draft' | 'pending_review' | 'approved' | 'denied') => {
     setActiveTab('applications')
     setStatusFilter(status)
   }
@@ -247,13 +247,13 @@ function FinanceApplicationDashboard() {
 
   const handleCreateTaskForApplication = (application: FinanceApplicationType) => {
     // Determine priority based on application status
-    const priority = application.status === 'under_review' ? TaskPriority.HIGH :
+    const priority = application.status === 'pending_review' ? TaskPriority.HIGH :
                     application.status === 'submitted' ? TaskPriority.MEDIUM :
                     application.status === 'conditionally_approved' ? TaskPriority.HIGH :
                     TaskPriority.LOW
 
     // Set due date based on status
-    const dueDate = application.status === 'under_review' || application.status === 'conditionally_approved'
+    const dueDate = application.status === 'pending_review' || application.status === 'conditionally_approved'
       ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for urgent review
       : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days for others
 
@@ -301,7 +301,7 @@ function FinanceApplicationDashboard() {
         return 'bg-gray-100 text-gray-800'
       case 'submitted':
         return 'bg-blue-100 text-blue-800'
-      case 'under_review':
+      case 'pending_review':
         return 'bg-yellow-100 text-yellow-800'
       case 'approved':
         return 'bg-green-100 text-green-800'
@@ -760,14 +760,14 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card {...tileProps(() => applyTileFilter('under_review'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card {...tileProps(() => applyTileFilter('pending_review'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {applications.filter(app => app.status === 'under_review').length}
+              {applications.filter(app => app.status === 'pending_review').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Awaiting approval
@@ -822,7 +822,7 @@ function FinanceApplicationDashboard() {
               {statusFilter !== 'all' && (
                 <div className="flex items-center gap-2 mb-4">
                   <Badge variant="secondary">
-                    Filtered by: {statusFilter === 'under_review' ? 'Pending Review' : statusFilter === 'denied' ? 'Rejected' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    Filtered by: {statusFilter === 'pending_review' ? 'Pending Review' : statusFilter === 'denied' ? 'Rejected' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                   </Badge>
                   <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
                     Clear Filter
@@ -851,7 +851,7 @@ function FinanceApplicationDashboard() {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="under_review">Pending Review</SelectItem>
+                    <SelectItem value="pending_review">Pending Review</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="denied">Rejected</SelectItem>
                   </SelectContent>
