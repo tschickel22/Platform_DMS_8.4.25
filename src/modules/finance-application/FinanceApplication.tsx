@@ -46,19 +46,9 @@ function FinanceApplicationDashboard() {
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'draft' | 'pending_review' | 'approved' | 'denied') => {
     setActiveTab('applications')
-    // Map display status to data status
-    const statusMap: Record<string, string> = {
-      'pending_review': 'under_review',
-      'approved': 'approved',
-      'rejected': 'denied',
-      'draft': 'draft',
-      'submitted': 'submitted'
-    }
-    
-    const dataStatus = statusMap[status] || status
-    console.log('🔥 TILE CLICKED - Display status:', status, 'Data status:', dataStatus)
-    setStatusFilter(status === 'all' ? 'all' : dataStatus)
-    console.log('🔥 TILE CLICKED - statusFilter should now be:', status === 'all' ? 'all' : dataStatus)
+    console.log('🔥 TILE CLICKED - Setting statusFilter to:', status)
+    setStatusFilter(status)
+    console.log('🔥 TILE CLICKED - statusFilter should now be:', status)
   }
 
   const tileProps = (handler: () => void) => ({
