@@ -383,6 +383,7 @@ function InvoicesList() {
                             {String(invoice.status).toUpperCase()}
                           </Badge>
                         </div>
+
                         <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                           <div>
                             <span className="font-medium">Customer:</span>
