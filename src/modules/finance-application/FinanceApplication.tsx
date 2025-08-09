@@ -42,10 +42,10 @@ function FinanceApplicationDashboard() {
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
   // Admin notes state
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'approved' | 'rejected'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
   
   // Helper function to apply tile filters
-  const applyTileFilter = (status: 'all' | 'draft' | 'submitted' | 'approved' | 'rejected') => {
+  const applyTileFilter = (status: 'all' | 'draft' | 'under_review' | 'approved' | 'denied') => {
     setActiveTab('applications')
     setStatusFilter(status)
   }
@@ -761,7 +761,7 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card {...tileProps(() => applyTileFilter('submitted'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card {...tileProps(() => applyTileFilter('under_review'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -823,7 +823,7 @@ function FinanceApplicationDashboard() {
               {statusFilter !== 'all' && (
                 <div className="flex items-center gap-2 mb-4">
                   <Badge variant="secondary">
-                    Filtered by: {statusFilter}
+                    Filtered by: {statusFilter === 'under_review' ? 'Under Review' : statusFilter === 'denied' ? 'Denied' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                   </Badge>
                   <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
                     Clear Filter
