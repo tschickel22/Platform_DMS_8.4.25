@@ -384,7 +384,7 @@ function FinanceApplicationDashboard() {
   // Calculate stats
   const draftApplications = applications.filter(app => app.status === 'draft').length
   const rejectedApplications = applications.filter(app => app.status === 'denied').length
-  const pendingReviewApplications = applications.filter(app => app.status === 'under_review').length
+  const pendingReviewApplications = applications.filter(app => app.status === 'pending_review').length
 
   if (selectedApplication && applicationCreationMode === 'completeNow') {
     return (
@@ -882,7 +882,7 @@ function FinanceApplicationDashboard() {
                       <div className="flex items-center space-x-3">
                         <h4 className="font-semibold">{application.customerName || 'Unnamed Application'}</h4>
                         <Badge className={getStatusColor(application.status)}>
-                          {application.status === 'under_review' ? 'PENDING REVIEW' : application.status === 'denied' ? 'REJECTED' : application.status.replace('_', ' ').toUpperCase()}
+                          {application.status === 'pending_review' ? 'PENDING REVIEW' : application.status === 'denied' ? 'REJECTED' : application.status.replace('_', ' ').toUpperCase()}
                         </Badge>
                         {application.fraudCheckStatus && (
                           <Badge variant="outline">
