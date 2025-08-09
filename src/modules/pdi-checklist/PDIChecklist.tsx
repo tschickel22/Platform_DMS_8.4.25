@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
 import { PDITemplate, PDIInspection, PDIInspectionStatus } from './types'
 import { mockPDI } from '@/mocks/pdiMock'
-import { PDIInspection, PDITemplate, PDIStatus } from '@/types'
+import { PDIStatus } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
 // Mock data - inline to avoid import issues
