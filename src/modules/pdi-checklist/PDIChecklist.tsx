@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
 import { PDITemplate, PDIInspection, PDIInspectionStatus } from './types'
-import { usePDIManagement } from './hooks/usePDIManagement'
+import { mockPDI } from '@/mocks/pdiMock'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -24,16 +24,10 @@ function PDIChecklistDashboard() {
     templates, 
     inspections, 
     createTemplate, 
-    updateTemplate, 
-    deleteTemplate,
-    createInspection,
-    updateInspection,
-    updateInspectionItem,
-    completeInspection,
-    createDefect,
-    addPhoto,
-    addSignoff
-  } = usePDIManagement()
+  // Use mock data directly
+  const inspections = mockPDI.sampleInspections
+  const templates = mockPDI.sampleTemplates
+  
   
   const { vehicles } = useInventoryManagement()
   const { user } = useAuth()
@@ -69,19 +63,11 @@ function PDIChecklistDashboard() {
 
   const handleDeleteTemplate = async (templateId: string) => {
     if (window.confirm('Are you sure you want to delete this template?')) {
-      try {
-        await deleteTemplate(templateId)
-        toast({
-          title: 'Success',
-          description: 'Template deleted successfully',
-        })
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete template',
-          variant: 'destructive'
-        })
-      }
+      // Mock save functionality
+      toast({
+        title: 'Success',
+        description: selectedTemplate ? 'Template updated successfully' : 'Template created successfully',
+      })
     }
   }
 
@@ -118,7 +104,7 @@ function PDIChecklistDashboard() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: `Failed to ${selectedTemplate ? 'update' : 'create'} template`,
+        description: 'This is a demo - template changes are not persisted',
         variant: 'destructive'
       })
     }
@@ -300,19 +286,11 @@ function PDIChecklistDashboard() {
 
     setInitialTaskData({
       sourceId: inspection.id,
-      sourceType: 'pdi_inspection',
-      module: TaskModule.PDI,
-      title: `Complete PDI for ${vehicleInfo}`,
-      description: `PDI Status: ${inspection.status}${hasDefects ? ` (${inspection.defects.length} defects found)` : ''}`,
-      priority,
-      assignedTo: inspection.inspectorId,
-      dueDate,
-      link: `/pdi`,
-      customFields: {
-        vehicleId: inspection.vehicleId,
-        templateId: inspection.templateId,
-        defectCount: inspection.defects?.length || 0
-      }
+      toast({
+        title: 'Demo Mode',
+        description: 'Template deletion is not available in demo mode',
+        variant: 'destructive'
+      })
     })
     setShowTaskForm(true)
   }
