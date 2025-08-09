@@ -410,6 +410,10 @@ function QuotesList() {
     setShowTaskForm(true)
   }
 
+  const applyQuoteTileFilter = (status: string) => {
+    setStatusFilter(status)
+  }
+
   const stats = {
     total: quotes.length,
     draft: quotes.filter(q => q.status === 'draft').length,
@@ -473,7 +477,13 @@ function QuotesList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card 
+          className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyQuoteTileFilter('all')}
+          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('all')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Quotes</CardTitle>
             <FileText className="h-4 w-4 text-blue-600" />
@@ -486,7 +496,13 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+        <Card 
+          className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyQuoteTileFilter('sent')}
+          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('sent')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">Pending</CardTitle>
             <FileText className="h-4 w-4 text-yellow-600" />
@@ -499,7 +515,13 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card 
+          className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyQuoteTileFilter('accepted')}
+          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('accepted')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Accepted</CardTitle>
             <FileText className="h-4 w-4 text-green-600" />
@@ -512,7 +534,13 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        <Card 
+          className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => applyQuoteTileFilter('accepted')}
+          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('accepted')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Quote Value</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -1251,34 +1279,6 @@ function QuoteBuilderTab() {
 }
 
 export default function QuoteBuilder() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quotes' | 'builder'>('dashboard')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
-  const [quotes, setQuotes] = useState<Quote[]>(mockQuotes.sampleQuotes)
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
-  const [showQuoteBuilder, setShowQuoteBuilder] = useState(false)
-
-  const pendingQuotes = quotes.filter(q => q.status === 'PENDING')
-  const acceptedQuotes = quotes.filter(q => q.status === 'ACCEPTED')
-  const totalValue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0)
-
-  // Helper function to apply tile filters
-  const applyQuoteTileFilter = (status: 'all' | 'pending' | 'accepted' | 'rejected') => {
-    setActiveTab('quotes')
-    setStatusFilter(status)
-  }
-
-  // Filter quotes based on current filter
-  const filteredQuotes = statusFilter === 'all' 
-    ? quotes 
-    : quotes.filter(quote => {
-        switch (statusFilter) {
-          case 'pending': return quote.status === 'PENDING'
-          case 'accepted': return quote.status === 'ACCEPTED'
-          case 'rejected': return quote.status === 'REJECTED'
-          default: return true
-        }
-      })
-
   return (
     <Routes>
       <Route path="/" element={<QuotesList />} />
