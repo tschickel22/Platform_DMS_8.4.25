@@ -18,6 +18,7 @@ import { ApplicationTypeSelectionModal } from './components/ApplicationTypeSelec
 import { PortalApplicationView } from './components/PortalApplicationView'
 import { InviteCustomerModal } from './components/InviteCustomerModal'
 import { useFinanceApplications } from './hooks/useFinanceApplications'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FinanceApplication as FinanceApplicationType } from './types'
 import { mockFinanceApplications } from './mocks/financeApplicationMock'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
@@ -700,6 +701,7 @@ function FinanceApplicationDashboard() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="space-y-6">
       {/* Task Form Modal */}
       {showTaskForm && (
@@ -968,7 +970,9 @@ function FinanceApplicationDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+            <ErrorBoundary>
   )
+            </ErrorBoundary>
 }
 
 export default function FinanceApplication() {
@@ -978,5 +982,6 @@ export default function FinanceApplication() {
       <Route path="/portal" element={<PortalApplicationView />} />
       <Route path="/*" element={<FinanceApplicationDashboard />} />
     </Routes>
+    </ErrorBoundary>
   )
 }

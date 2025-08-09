@@ -51,7 +51,7 @@ export interface ApplicationSection {
 export interface ApplicationField {
   id: string
   type: FieldType
-  label: string
+  type: 'text' | 'email' | 'phone' | 'number' | 'date' | 'select' | 'checkbox' | 'textarea' | 'file'
   placeholder?: string
   required: boolean
   order: number
