@@ -4,7 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
-import { PDITemplate, PDIInspection, PDIInspectionStatus, PDIInspectionItem, PDIDefect, PDIPhoto, PDISignoff } from './types'
+import {
+  PDITemplate,
+  PDIInspection,
+  PDIInspectionStatus,
+  PDIInspectionItem,
+  PDIDefect,
+  PDIPhoto,
+  PDISignoff
+} from './types'
 import { mockPDI } from '@/mocks/pdiMock'
 import { PDIStatus } from '@/types'
 import { useToast } from '@/hooks/use-toast'
@@ -14,11 +22,9 @@ import PDIInspectionList from './components/PDIInspectionList'
 import { PDIInspectionForm } from './components/PDIInspectionForm'
 import PDIInspectionDetail from './components/PDIInspectionDetail'
 import { PDINewInspectionForm } from './components/PDINewInspectionForm'
-import { PDITemplateList } from './components/PDITemplateList' // <-- named export (fixes error)
+import { PDITemplateList } from './components/PDITemplateList' // named export
 
-// -------------------------------------------------------------
-// Mock data - inline to avoid import issues (kept as in your file)
-// -------------------------------------------------------------
+// --- Inline mocks kept (as in your file) ---
 const mockInspections: PDIInspection[] = [
   {
     id: 'pdi-001',
@@ -85,13 +91,29 @@ const mockTemplates: PDITemplate[] = [
   }
 ]
 
-// -------------------------------------------------------------
-
 function PDIChecklistDashboard() {
-  const { vehicles } = useInventoryManagement()
+  const { vehicles: vehiclesRaw } = useInventoryManagement()
+  const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : [] // null-safe
+
+  // Use mock data (null-safe wrappers)
+  const data = {
+    templates: mockPDI?.sampleTemplates,
+    inspections: mockPDI?.sampleInspections,
+    createTemplate: async (_data: any) => {},
+    updateTemplate: async (_id: string, _data: any) => {},
+    deleteTemplate: async (_id: string) => {},
+    createInspection: async (data: any) => data,
+    updateInspection: async (_id: string, _data: any) => {},
+    completeInspection: async (_id: string, _notes?: string) => {},
+    updateInspectionItem: async (_inspectionId: string, _itemId: string, _data: any) => {},
+    createDefect: async (_inspectionId: string, _data: any) => {},
+    addPhoto: async (_inspectionId: string, _data: any) => {},
+    addSignoff: async (_inspectionId: string, _data: any) => {}
+  }
+
+  const templates = Array.isArray(data.templates) ? data.templates : []
+  const inspections = Array.isArray(data.inspections) ? data.inspections : []
   const {
-    templates,
-    inspections,
     createTemplate,
     updateTemplate,
     deleteTemplate,
@@ -102,21 +124,7 @@ function PDIChecklistDashboard() {
     createDefect,
     addPhoto,
     addSignoff
-  } = {
-    templates: mockPDI.sampleTemplates,
-    inspections: mockPDI.sampleInspections,
-    createTemplate: async (data: any) => {},
-    updateTemplate: async (id: string, data: any) => {},
-    deleteTemplate: async (id: string) => {},
-    createInspection: async (data: any) => data,
-    updateInspection: async (id: string, data: any) => {},
-    completeInspection: async (id: string, notes?: string) => {},
-    updateInspectionItem: async (inspectionId: string, itemId: string, data: any) => {},
-    createDefect: async (inspectionId: string, data: any) => {},
-    addPhoto: async (inspectionId: string, data: any) => {},
-    addSignoff: async (inspectionId: string, data: any) => {}
-  }
-  // Use mock data directly
+  } = data
 
   const { toast } = useToast()
 
@@ -128,9 +136,7 @@ function PDIChecklistDashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState<PDITemplate | null>(null)
   const [selectedInspection, setSelectedInspection] = useState<PDIInspection | null>(null)
 
-  // --------------------
   // Template Management
-  // --------------------
   const handleCreateTemplate = () => {
     setSelectedTemplate(null)
     setShowTemplateForm(true)
@@ -142,7 +148,6 @@ function PDIChecklistDashboard() {
   }
 
   const handleViewTemplate = (template: PDITemplate) => {
-    // In a real app, you might want to show a read-only view
     setSelectedTemplate(template)
     setShowTemplateForm(true)
   }
@@ -151,38 +156,20 @@ function PDIChecklistDashboard() {
     if (window.confirm('Are you sure you want to delete this template?')) {
       try {
         await deleteTemplate(templateId)
-        toast({
-          title: 'Success',
-          description: 'Template deleted successfully'
-        })
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete template',
-          variant: 'destructive'
-        })
+        toast({ title: 'Success', description: 'Template deleted successfully' })
+      } catch {
+        toast({ title: 'Error', description: 'Failed to delete template', variant: 'destructive' })
       }
     }
   }
 
   const handleDuplicateTemplate = async (template: PDITemplate) => {
     try {
-      const newTemplate = {
-        ...template,
-        id: undefined,
-        name: `${template.name} (Copy)`
-      }
+      const newTemplate = { ...template, id: undefined, name: `${template.name} (Copy)` }
       await createTemplate(newTemplate)
-      toast({
-        title: 'Success',
-        description: 'Template duplicated successfully'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to duplicate template',
-        variant: 'destructive'
-      })
+      toast({ title: 'Success', description: 'Template duplicated successfully' })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to duplicate template', variant: 'destructive' })
     }
   }
 
@@ -195,7 +182,7 @@ function PDIChecklistDashboard() {
       }
       setShowTemplateForm(false)
       setSelectedTemplate(null)
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: `Failed to ${selectedTemplate ? 'update' : 'create'} template`,
@@ -204,37 +191,19 @@ function PDIChecklistDashboard() {
     }
   }
 
-  // --------------------
   // Inspection Management
-  // --------------------
-  const handleCreateInspection = () => {
-    setShowNewInspectionForm(true)
-  }
+  const handleCreateInspection = () => setShowNewInspectionForm(true)
 
   const handleNewInspection = async (inspectionData: Partial<PDIInspection>) => {
     try {
       const newInspection = await createInspection(inspectionData)
       setShowNewInspectionForm(false)
-      toast({
-        title: 'Success',
-        description: 'New PDI inspection has been created successfully'
-      })
-
-      // Open the inspection form for the new inspection
+      toast({ title: 'Success', description: 'New PDI inspection has been created successfully' })
       setSelectedInspection(newInspection)
       setShowInspectionForm(true)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create inspection',
-        variant: 'destructive'
-      })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to create inspection', variant: 'destructive' })
     }
-  }
-
-  const handleViewInspection = (inspection: PDIInspection) => {
-    setSelectedInspection(inspection)
-    setShowInspectionDetail(true)
   }
 
   const handleViewInspectionDetail = (inspectionId: string) => {
@@ -253,24 +222,12 @@ function PDIChecklistDashboard() {
     }
   }
 
-  const handleContinueInspection = (inspection: PDIInspection) => {
-    setSelectedInspection(inspection)
-    setShowInspectionForm(true)
-  }
-
   const handleSaveInspection = async (inspectionId: string, inspectionData: Partial<PDIInspection>) => {
     try {
       await updateInspection(inspectionId, inspectionData)
-      toast({
-        title: 'Success',
-        description: 'Inspection saved successfully'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save inspection',
-        variant: 'destructive'
-      })
+      toast({ title: 'Success', description: 'Inspection saved successfully' })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save inspection', variant: 'destructive' })
     }
   }
 
@@ -279,79 +236,54 @@ function PDIChecklistDashboard() {
       await completeInspection(inspectionId, notes)
       setShowInspectionForm(false)
       setSelectedInspection(null)
-      toast({
-        title: 'Success',
-        description: 'Inspection completed successfully'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to complete inspection',
-        variant: 'destructive'
-      })
+      toast({ title: 'Success', description: 'Inspection completed successfully' })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to complete inspection', variant: 'destructive' })
     }
   }
 
-  const handleUpdateInspectionItem = async (inspectionId: string, itemId: string, itemData: Partial<PDIInspectionItem>) => {
+  const handleUpdateInspectionItem = async (
+    inspectionId: string,
+    itemId: string,
+    itemData: Partial<PDIInspectionItem>
+  ) => {
     try {
       await updateInspectionItem(inspectionId, itemId, itemData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update item',
-        variant: 'destructive'
-      })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update item', variant: 'destructive' })
     }
   }
 
   const handleAddDefect = async (inspectionId: string, defectData: Partial<PDIDefect>) => {
     try {
       await createDefect(inspectionId, defectData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add defect',
-        variant: 'destructive'
-      })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add defect', variant: 'destructive' })
     }
   }
 
   const handleAddPhoto = async (inspectionId: string, photoData: Partial<PDIPhoto>) => {
     try {
       await addPhoto(inspectionId, photoData)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add photo',
-        variant: 'destructive'
-      })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add photo', variant: 'destructive' })
     }
   }
 
   const handleAddSignoff = async (inspectionId: string, signoffData: Partial<PDISignoff>) => {
     try {
-      await addSignoff(inspectionId, {
-        ...signoffData,
-        userId: 'current-user' // removed undefined user reference
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add signoff',
-        variant: 'destructive'
-      })
+      await addSignoff(inspectionId, { ...signoffData, userId: 'current-user' })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add signoff', variant: 'destructive' })
     }
   }
 
-  // --------------------
-  // Stats (null-safe)
-  // --------------------
+  // Stats (use the null-safe arrays)
   const totalTemplates = templates.length
   const activeTemplates = templates.filter(t => t.isActive).length
   const totalInspections = inspections.length
-  const completedInspections = inspections.filter(i =>
-    i.status === PDIInspectionStatus.COMPLETED ||
-    i.status === PDIInspectionStatus.APPROVED
+  const completedInspections = inspections.filter(
+    i => i.status === PDIInspectionStatus.COMPLETED || i.status === PDIInspectionStatus.APPROVED
   ).length
   const inProgressInspections = inspections.filter(i => i.status === PDIInspectionStatus.IN_PROGRESS).length
   const totalDefects = inspections.reduce((sum, i) => sum + (i.defects?.length || 0), 0)
