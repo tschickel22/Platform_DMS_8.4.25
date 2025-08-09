@@ -36,7 +36,6 @@ function FinanceApplicationDashboard() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   
   // Search and filter states
-  const [applicationSearchQuery, setApplicationSearchQuery] = useState('')
   const [applicationDateFilter, setApplicationDateFilter] = useState('')
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
@@ -99,7 +98,6 @@ function FinanceApplicationDashboard() {
     }
 
     return currentApplications
-  }, [applications, applicationSearchQuery, statusFilter, applicationDateFilter])
 
   // Filter templates based on search
   const filteredTemplates = React.useMemo(() => {
