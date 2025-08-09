@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -210,7 +211,7 @@ function InvoicesList() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -306,7 +307,7 @@ function InvoicesList() {
             <Receipt className="h-4 w-4 mr-2" />
             Invoices
           </TabsTrigger>
-          <TabsTrigger value="payments" className="flex items-center">
+            <Card {...tileProps(() => applyTileFilter('Paid'))}>
             <CreditCard className="h-4 w-4 mr-2" />
             Payments
           </TabsTrigger>
@@ -315,10 +316,10 @@ function InvoicesList() {
         <TabsContent value="invoices">
           {/* Search and Filters */}
           <div className="flex gap-4">
-            <div className="ri-search-bar">
+            <Card {...tileProps(() => applyTileFilter('all'))}>
               <Search className="ri-search-icon" />
               <Input
-                placeholder="Search invoices..."
+            <Card {...tileProps(() => applyTileFilter('Pending'))}>
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="ri-search-input shadow-sm"
@@ -330,7 +331,7 @@ function InvoicesList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value={InvoiceStatus.DRAFT}>Draft</SelectItem>
+            <Card {...tileProps(() => applyTileFilter('Overdue'))}>
                 <SelectItem value={InvoiceStatus.SENT}>Sent</SelectItem>
                 <SelectItem value={InvoiceStatus.VIEWED}>Viewed</SelectItem>
                 <SelectItem value={InvoiceStatus.PAID}>Paid</SelectItem>
@@ -343,6 +344,17 @@ function InvoicesList() {
               Filter
             </Button>
           </div>
+
+          {statusFilter !== 'all' && (
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary">
+                Filtered by: {statusFilter}
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
 
           {/* Invoices Table */}
           <Card className="shadow-sm">
@@ -482,6 +494,22 @@ export default function InvoicePayments() {
     <Routes>
       <Route path="/" element={<InvoicesList />} />
       <Route path="/*" element={<InvoicesList />} />
-    </Routes>
+  const applyTileFilter = (status: 'all' | 'Paid' | 'Pending' | 'Overdue' | 'Draft') => {
+    setActiveTab('invoices')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'payments' | 'analytics'>('dashboard')
+    (invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (statusFilter === 'all' || invoice.status === statusFilter)
   )
 }
