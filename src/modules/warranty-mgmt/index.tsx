@@ -14,6 +14,21 @@ import { WarrantyClaimForm } from './components/WarrantyClaimForm'
 export default function WarrantyManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewClaimOpen, setIsNewClaimOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'claims' | 'analytics'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'denied' | 'rejected'>('all')
+
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'pending' | 'approved' | 'denied' | 'rejected') => {
+    setActiveTab('claims')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+  })
 
   const handleNewClaim = () => {
     setIsNewClaimOpen(true)
@@ -21,11 +36,13 @@ export default function WarrantyManagement() {
   const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
   const { claims, loading, createClaim, updateClaim } = useWarrantyManagement();
 
-  const filteredClaims = claims.filter(claim =>
-    claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    claim.vehicleVin.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClaims = claims
+    .filter(claim =>
+      claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      claim.vehicleVin.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(claim => statusFilter === 'all' || claim.status.toLowerCase() === statusFilter)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -90,56 +107,56 @@ export default function WarrantyManagement() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Claims</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-900">Total Claims</CardTitle>
+            <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{claims.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-blue-900">{claims.length}</div>
+            <p className="text-xs text-blue-600">
               +12% from last month
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('pending'))} className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Claims</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-yellow-900">Pending Claims</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-yellow-900">
               {claims.filter(c => c.status === 'pending').length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-yellow-600">
               Awaiting review
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('approved'))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved Claims</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-900">Approved Claims</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-green-900">
               {claims.filter(c => c.status === 'approved').length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-green-600">
               Ready for processing
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('denied'))} className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Claim Value</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-red-900">Claim Value</CardTitle>
+            <FileText className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-red-900">
               ${claims.reduce((sum, claim) => sum + claim.claimAmount, 0).toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-red-600">
               Total claim value
             </p>
           </CardContent>
@@ -153,6 +170,17 @@ export default function WarrantyManagement() {
             <CardDescription>
               View and manage all warranty claims
             </CardDescription>
+            {/* Filter Indicator */}
+            {statusFilter !== 'all' && (
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="secondary">
+                  Filtered by: {statusFilter}
+                </Badge>
+                <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                  Clear Filter
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -180,11 +208,28 @@ export default function WarrantyManagement() {
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
             </TabsList>
             <TabsContent value="all" className="space-y-4">
-              <WarrantyClaimList
-                claims={filteredClaims}
-                onSelectClaim={setSelectedClaim}
-                loading={loading}
-              />
+              {filteredClaims.length > 0 ? (
+                <WarrantyClaimList
+                  claims={filteredClaims}
+                  onSelectClaim={setSelectedClaim}
+                  loading={loading}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p>No warranty claims found</p>
+                      <p className="text-sm">
+                        {statusFilter !== 'all' 
+                          ? `No claims match the "${statusFilter}" filter`
+                          : 'Try adjusting your search criteria'
+                        }
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
             <TabsContent value="pending" className="space-y-4">
               <WarrantyClaimList
