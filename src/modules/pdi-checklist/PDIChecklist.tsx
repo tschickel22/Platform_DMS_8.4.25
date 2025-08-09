@@ -210,6 +210,10 @@ function PDIChecklistDashboard() {
 
   const handleNewInspection = async (inspectionData: Partial<PDIInspection>) => {
     try {
+      const newInspection = await createInspection(inspectionData)
+      setShowNewInspectionForm(false)
+      toast({
+        title: 'Success',
         description: 'New PDI inspection has been created successfully',
       })
       
