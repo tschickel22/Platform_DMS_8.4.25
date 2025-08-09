@@ -72,6 +72,10 @@ function FinanceApplicationDashboard() {
 
   // Filter applications based on search and filters
   const filteredApplications = React.useMemo(() => {
+    console.log('🔍 DEBUG - statusFilter:', statusFilter)
+    console.log('🔍 DEBUG - Total applications:', applications.length)
+    console.log('🔍 DEBUG - Application statuses:', applications.map(app => ({ name: app.customerName, status: app.status })))
+    
     let currentApplications = applications
 
     // Search filter (name, email, phone)
@@ -98,6 +102,9 @@ function FinanceApplicationDashboard() {
       })
     }
 
+    console.log('🔍 DEBUG - Filtered applications:', currentApplications.length)
+    console.log('🔍 DEBUG - Filtered app details:', currentApplications.map(app => ({ name: app.customerName, status: app.status })))
+    
     return currentApplications
   }, [applications, applicationSearchQuery, statusFilter, applicationDateFilter])
 
