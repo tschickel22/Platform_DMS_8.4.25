@@ -1251,6 +1251,34 @@ function QuoteBuilderTab() {
 }
 
 export default function QuoteBuilder() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quotes' | 'builder'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
+  const [quotes, setQuotes] = useState<Quote[]>(mockQuotes.sampleQuotes)
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
+  const [showQuoteBuilder, setShowQuoteBuilder] = useState(false)
+
+  const pendingQuotes = quotes.filter(q => q.status === 'PENDING')
+  const acceptedQuotes = quotes.filter(q => q.status === 'ACCEPTED')
+  const totalValue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0)
+
+  // Helper function to apply tile filters
+  const applyQuoteTileFilter = (status: 'all' | 'pending' | 'accepted' | 'rejected') => {
+    setActiveTab('quotes')
+    setStatusFilter(status)
+  }
+
+  // Filter quotes based on current filter
+  const filteredQuotes = statusFilter === 'all' 
+    ? quotes 
+    : quotes.filter(quote => {
+        switch (statusFilter) {
+          case 'pending': return quote.status === 'PENDING'
+          case 'accepted': return quote.status === 'ACCEPTED'
+          case 'rejected': return quote.status === 'REJECTED'
+          default: return true
+        }
+      })
+
   return (
     <Routes>
       <Route path="/" element={<QuotesList />} />
