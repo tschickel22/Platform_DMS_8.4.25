@@ -4,130 +4,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ClipboardCheck, Plus, CheckSquare, AlertTriangle, Image as ImageIcon, TrendingUp, ListTodo } from 'lucide-react'
-import {
-  PDITemplate,
-  PDIInspection,
-  PDIInspectionStatus,
-  PDIInspectionItem,
-  PDIDefect,
-  PDIPhoto,
-  PDISignoff
-} from './types'
-import { mockPDI } from '@/mocks/pdiMock'
-import { PDIStatus } from '@/types'
-import { useToast } from '@/hooks/use-toast'
+import { PDITemplate, PDIInspection, PDIInspectionStatus } from './types'
+import { usePDIManagement } from './hooks/usePDIManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/hooks/use-toast'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
+import { PDITemplateList } from './components/PDITemplateList'
 import { PDITemplateForm } from './components/PDITemplateForm'
 import PDIInspectionList from './components/PDIInspectionList'
 import { PDIInspectionForm } from './components/PDIInspectionForm'
 import PDIInspectionDetail from './components/PDIInspectionDetail'
 import { PDINewInspectionForm } from './components/PDINewInspectionForm'
-import { PDITemplateList } from './components/PDITemplateList' // named export
-
-// --- Inline mocks kept (as in your file) ---
-const mockInspections: PDIInspection[] = [
-  {
-    id: 'pdi-001',
-    vehicleId: 'vh-001',
-    templateId: 'tpl-001',
-    inspectorId: 'user-001',
-    status: 'completed' as PDIStatus,
-    scheduledDate: '2024-01-15',
-    completedDate: '2024-01-15',
-    score: 95,
-    notes: 'All systems checked and operational',
-    customFields: {},
-    createdAt: '2024-01-10',
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: 'pdi-002',
-    vehicleId: 'vh-002',
-    templateId: 'tpl-001',
-    inspectorId: 'user-002',
-    status: 'in_progress' as PDIStatus,
-    scheduledDate: '2024-01-16',
-    score: 0,
-    notes: 'Inspection in progress',
-    customFields: {},
-    createdAt: '2024-01-12',
-    updatedAt: '2024-01-16'
-  },
-  {
-    id: 'pdi-003',
-    vehicleId: 'vh-003',
-    templateId: 'tpl-002',
-    inspectorId: 'user-001',
-    status: 'scheduled' as PDIStatus,
-    scheduledDate: '2024-01-18',
-    score: 0,
-    notes: 'Scheduled for inspection',
-    customFields: {},
-    createdAt: '2024-01-14',
-    updatedAt: '2024-01-14'
-  }
-]
-
-const mockTemplates: PDITemplate[] = [
-  {
-    id: 'tpl-001',
-    name: 'Standard RV Inspection',
-    description: 'Comprehensive pre-delivery inspection for RVs',
-    category: 'RV',
-    items: [],
-    isActive: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: 'tpl-002',
-    name: 'Mobile Home Inspection',
-    description: 'Pre-delivery inspection for mobile homes',
-    category: 'Mobile Home',
-    items: [],
-    isActive: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  }
-]
 
 function PDIChecklistDashboard() {
-  const { vehicles: vehiclesRaw } = useInventoryManagement()
-  const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : [] // null-safe
-
-  // Use mock data (null-safe wrappers)
-  const data = {
-    templates: mockPDI?.sampleTemplates,
-    inspections: mockPDI?.sampleInspections,
-    createTemplate: async (_data: any) => {},
-    updateTemplate: async (_id: string, _data: any) => {},
-    deleteTemplate: async (_id: string) => {},
-    createInspection: async (data: any) => data,
-    updateInspection: async (_id: string, _data: any) => {},
-    completeInspection: async (_id: string, _notes?: string) => {},
-    updateInspectionItem: async (_inspectionId: string, _itemId: string, _data: any) => {},
-    createDefect: async (_inspectionId: string, _data: any) => {},
-    addPhoto: async (_inspectionId: string, _data: any) => {},
-    addSignoff: async (_inspectionId: string, _data: any) => {}
-  }
-
-  const templates = Array.isArray(data.templates) ? data.templates : []
-  const inspections = Array.isArray(data.inspections) ? data.inspections : []
-  const {
-    createTemplate,
-    updateTemplate,
+  const { 
+    templates, 
+    inspections, 
+    createTemplate, 
+    updateTemplate, 
     deleteTemplate,
     createInspection,
     updateInspection,
-    completeInspection,
     updateInspectionItem,
+    completeInspection,
     createDefect,
     addPhoto,
     addSignoff
-  } = data
-
+  } = usePDIManagement()
+  
+  const { vehicles } = useInventoryManagement()
+  const { user } = useAuth()
   const { toast } = useToast()
-
+  const { createTask } = useTasks()
+  
   const [activeTab, setActiveTab] = useState('inspections')
   const [showTemplateForm, setShowTemplateForm] = useState(false)
   const [showInspectionForm, setShowInspectionForm] = useState(false)
@@ -135,6 +47,8 @@ function PDIChecklistDashboard() {
   const [showInspectionDetail, setShowInspectionDetail] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<PDITemplate | null>(null)
   const [selectedInspection, setSelectedInspection] = useState<PDIInspection | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
   // Template Management
   const handleCreateTemplate = () => {
@@ -148,6 +62,7 @@ function PDIChecklistDashboard() {
   }
 
   const handleViewTemplate = (template: PDITemplate) => {
+    // In a real app, you might want to show a read-only view
     setSelectedTemplate(template)
     setShowTemplateForm(true)
   }
@@ -156,20 +71,38 @@ function PDIChecklistDashboard() {
     if (window.confirm('Are you sure you want to delete this template?')) {
       try {
         await deleteTemplate(templateId)
-        toast({ title: 'Success', description: 'Template deleted successfully' })
-      } catch {
-        toast({ title: 'Error', description: 'Failed to delete template', variant: 'destructive' })
+        toast({
+          title: 'Success',
+          description: 'Template deleted successfully',
+        })
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete template',
+          variant: 'destructive'
+        })
       }
     }
   }
 
   const handleDuplicateTemplate = async (template: PDITemplate) => {
     try {
-      const newTemplate = { ...template, id: undefined, name: `${template.name} (Copy)` }
+      const newTemplate = { 
+        ...template,
+        id: undefined,
+        name: `${template.name} (Copy)`,
+      }
       await createTemplate(newTemplate)
-      toast({ title: 'Success', description: 'Template duplicated successfully' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to duplicate template', variant: 'destructive' })
+      toast({
+        title: 'Success',
+        description: 'Template duplicated successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate template',
+        variant: 'destructive'
+      })
     }
   }
 
@@ -182,7 +115,7 @@ function PDIChecklistDashboard() {
       }
       setShowTemplateForm(false)
       setSelectedTemplate(null)
-    } catch {
+    } catch (error) {
       toast({
         title: 'Error',
         description: `Failed to ${selectedTemplate ? 'update' : 'create'} template`,
@@ -192,18 +125,35 @@ function PDIChecklistDashboard() {
   }
 
   // Inspection Management
-  const handleCreateInspection = () => setShowNewInspectionForm(true)
+  const handleCreateInspection = () => {
+    setShowNewInspectionForm(true)
+  }
 
   const handleNewInspection = async (inspectionData: Partial<PDIInspection>) => {
     try {
       const newInspection = await createInspection(inspectionData)
       setShowNewInspectionForm(false)
-      toast({ title: 'Success', description: 'New PDI inspection has been created successfully' })
+      
+      toast({
+        title: 'Inspection Created',
+        description: 'New PDI inspection has been created successfully',
+      })
+      
+      // Open the inspection form for the new inspection
       setSelectedInspection(newInspection)
       setShowInspectionForm(true)
-    } catch {
-      toast({ title: 'Error', description: 'Failed to create inspection', variant: 'destructive' })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create inspection',
+        variant: 'destructive'
+      })
     }
+  }
+
+  const handleViewInspection = (inspection: PDIInspection) => {
+    setSelectedInspection(inspection)
+    setShowInspectionDetail(true)
   }
 
   const handleViewInspectionDetail = (inspectionId: string) => {
@@ -222,12 +172,25 @@ function PDIChecklistDashboard() {
     }
   }
 
+  const handleContinueInspection = (inspection: PDIInspection) => {
+    setSelectedInspection(inspection)
+    setShowInspectionForm(true)
+  }
+
   const handleSaveInspection = async (inspectionId: string, inspectionData: Partial<PDIInspection>) => {
+    
     try {
       await updateInspection(inspectionId, inspectionData)
-      toast({ title: 'Success', description: 'Inspection saved successfully' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to save inspection', variant: 'destructive' })
+      toast({
+        title: 'Success',
+        description: 'Inspection saved successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save inspection',
+        variant: 'destructive'
+      })
     }
   }
 
@@ -236,65 +199,153 @@ function PDIChecklistDashboard() {
       await completeInspection(inspectionId, notes)
       setShowInspectionForm(false)
       setSelectedInspection(null)
-      toast({ title: 'Success', description: 'Inspection completed successfully' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to complete inspection', variant: 'destructive' })
+      toast({
+        title: 'Success',
+        description: 'Inspection completed successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to complete inspection',
+        variant: 'destructive'
+      })
     }
   }
 
-  const handleUpdateInspectionItem = async (
-    inspectionId: string,
-    itemId: string,
-    itemData: Partial<PDIInspectionItem>
-  ) => {
+  const handleUpdateInspectionItem = async (inspectionId: string, itemId: string, itemData: Partial<PDIInspectionItem>) => {
     try {
       await updateInspectionItem(inspectionId, itemId, itemData)
-    } catch {
-      toast({ title: 'Error', description: 'Failed to update item', variant: 'destructive' })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update item',
+        variant: 'destructive'
+      })
     }
   }
 
   const handleAddDefect = async (inspectionId: string, defectData: Partial<PDIDefect>) => {
     try {
       await createDefect(inspectionId, defectData)
-    } catch {
-      toast({ title: 'Error', description: 'Failed to add defect', variant: 'destructive' })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add defect',
+        variant: 'destructive'
+      })
     }
   }
 
   const handleAddPhoto = async (inspectionId: string, photoData: Partial<PDIPhoto>) => {
     try {
       await addPhoto(inspectionId, photoData)
-    } catch {
-      toast({ title: 'Error', description: 'Failed to add photo', variant: 'destructive' })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add photo',
+        variant: 'destructive'
+      })
     }
   }
 
   const handleAddSignoff = async (inspectionId: string, signoffData: Partial<PDISignoff>) => {
     try {
-      await addSignoff(inspectionId, { ...signoffData, userId: 'current-user' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to add signoff', variant: 'destructive' })
+      await addSignoff(inspectionId, {
+        ...signoffData,
+        userId: user?.id || 'current-user'
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add signoff',
+        variant: 'destructive'
+      })
     }
   }
 
-  // Stats (use the null-safe arrays)
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCreateTaskForInspection = (inspection: PDIInspection) => {
+    const vehicle = vehicles.find(v => v.id === inspection.vehicleId)
+    const vehicleInfo = vehicle 
+      ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+      : inspection.vehicleId
+
+    // Determine priority based on inspection status and defects
+    const hasDefects = inspection.defects && inspection.defects.length > 0
+    const priority = hasDefects ? TaskPriority.HIGH : 
+                    inspection.status === PDIInspectionStatus.IN_PROGRESS ? TaskPriority.MEDIUM : 
+                    TaskPriority.LOW
+
+    // Set due date based on inspection status
+    const dueDate = inspection.status === PDIInspectionStatus.IN_PROGRESS 
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for in-progress
+      : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days for others
+
+    setInitialTaskData({
+      sourceId: inspection.id,
+      sourceType: 'pdi_inspection',
+      module: TaskModule.PDI,
+      title: `Complete PDI for ${vehicleInfo}`,
+      description: `PDI Status: ${inspection.status}${hasDefects ? ` (${inspection.defects.length} defects found)` : ''}`,
+      priority,
+      assignedTo: inspection.inspectorId,
+      dueDate,
+      link: `/pdi`,
+      customFields: {
+        vehicleId: inspection.vehicleId,
+        templateId: inspection.templateId,
+        defectCount: inspection.defects?.length || 0
+      }
+    })
+    setShowTaskForm(true)
+  }
+
+  // Stats
   const totalTemplates = templates.length
   const activeTemplates = templates.filter(t => t.isActive).length
   const totalInspections = inspections.length
-  const completedInspections = inspections.filter(
-    i => i.status === PDIInspectionStatus.COMPLETED || i.status === PDIInspectionStatus.APPROVED
+  const completedInspections = inspections.filter(i => 
+    i.status === PDIInspectionStatus.COMPLETED || 
+    i.status === PDIInspectionStatus.APPROVED
   ).length
   const inProgressInspections = inspections.filter(i => i.status === PDIInspectionStatus.IN_PROGRESS).length
-  const totalDefects = inspections.reduce((sum, i) => sum + (i.defects?.length || 0), 0)
-  const openDefects = inspections.reduce(
-    (sum, i) => sum + (i.defects?.filter(d => d.status === 'open' || d.status === 'in_progress').length || 0),
-    0
+  const totalDefects = inspections.reduce((sum, i) => sum + i.defects.length, 0)
+  const openDefects = inspections.reduce((sum, i) => 
+    sum + i.defects.filter(d => d.status === 'open' || d.status === 'in_progress').length, 0
   )
-  const totalPhotos = inspections.reduce((sum, i) => sum + (i.photos?.length || 0), 0)
+  const totalPhotos = inspections.reduce((sum, i) => sum + i.photos.length, 0)
 
   return (
     <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+
       {/* Template Form Modal */}
       {showTemplateForm && (
         <PDITemplateForm
@@ -312,7 +363,7 @@ function PDIChecklistDashboard() {
         <PDINewInspectionForm
           templates={templates}
           vehicles={vehicles}
-          currentUserId={'current-user'}
+          currentUserId={user?.id || 'current-user'}
           onCreateInspection={handleNewInspection}
           onCancel={() => setShowNewInspectionForm(false)}
         />
@@ -433,6 +484,7 @@ function PDIChecklistDashboard() {
             onNewInspection={handleCreateInspection}
             onViewInspection={handleViewInspectionDetail}
             onEditInspection={handleEditInspectionById}
+            onCreateTask={handleCreateTaskForInspection}
           />
         </TabsContent>
 
