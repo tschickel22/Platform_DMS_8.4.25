@@ -272,11 +272,7 @@ function DealsList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('all')}
-              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}>
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Pipeline</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -289,11 +285,7 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('won')}
-              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('won')}>
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Win Rate</CardTitle>
             <Target className="h-4 w-4 text-green-600" />
@@ -306,11 +298,7 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('active')}
-              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('active')}>
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Avg Deal Size</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -323,11 +311,7 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-              role="button"
-              tabIndex={0}
-              onClick={() => applyTileFilter('lost')}
-              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('lost')}>
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Territories</CardTitle>
             <MapPin className="h-4 w-4 text-orange-600" />
