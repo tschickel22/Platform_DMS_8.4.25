@@ -30,6 +30,8 @@ function InventoryList() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
   
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
@@ -56,7 +58,7 @@ function InventoryList() {
         description: 'Task has been created successfully',
       })
     } catch (error) {
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      toast({
         title: 'Error',
         description: 'Failed to create task',
         variant: 'destructive'
@@ -67,10 +69,6 @@ function InventoryList() {
   const handleCreateTaskForVehicle = (vehicle: Vehicle) => {
     // Determine priority based on vehicle status
     const priority = vehicle.status === 'service' ? TaskPriority.HIGH :
-            <Card 
-              {...tileProps(() => applyTileFilter('all'))}
-              className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50"
-            >
                     TaskPriority.LOW
 
     // Set due date based on vehicle status
@@ -83,10 +81,6 @@ function InventoryList() {
       sourceType: 'vehicle',
       module: TaskModule.CRM,
       title: `Follow up on ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-            <Card 
-              {...tileProps(() => applyTileFilter('available'))}
-              className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50"
-            >
       priority,
       dueDate,
       link: `/inventory`,
@@ -99,10 +93,7 @@ function InventoryList() {
     })
     setShowTaskForm(true)
   }
-            <Card 
-              {...tileProps(() => applyTileFilter('sold'))}
-              className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50"
-            >
+
   const handleDeleteVehicle = async (vehicleId: string) => {
     if (window.confirm('Are you sure you want to delete this vehicle?')) {
       try {
@@ -115,10 +106,6 @@ function InventoryList() {
         toast({
           title: 'Error',
           description: 'Failed to delete vehicle',
-            <Card 
-              {...tileProps(() => applyTileFilter('reserved'))}
-              className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50"
-            >
         })
       }
     }
@@ -165,18 +152,6 @@ function InventoryList() {
         description: `Failed to ${selectedVehicle ? 'update' : 'create'} vehicle`,
         variant: 'destructive'
       })
-          {/* Filter Indicator */}
-          {statusFilter !== 'all' && (
-            <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary">
-                Filtered by: {statusFilter}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-                Clear Filter
-              </Button>
-            </div>
-          )}
-
     }
   }
   
@@ -236,6 +211,25 @@ function InventoryList() {
     
     setShowBarcodeScanner(false)
   }
+
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
+    setActiveTab('inventory')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
+  const filteredVehicles = vehicles.filter(vehicle => {
+    const matchesStatus = statusFilter === 'all' || vehicle.status.toLowerCase() === statusFilter.toLowerCase()
+    return matchesStatus
+  })
 
   return (
     <div className="space-y-8">
@@ -317,7 +311,10 @@ function InventoryList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card 
+          {...tileProps(() => applyTileFilter('all'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Units</CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
@@ -330,7 +327,10 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card 
+          {...tileProps(() => applyTileFilter('available'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Available</CardTitle>
             <Package className="h-4 w-4 text-green-600" />
@@ -345,7 +345,10 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+        <Card 
+          {...tileProps(() => applyTileFilter('sold'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">Reserved</CardTitle>
             <Package className="h-4 w-4 text-yellow-600" />
@@ -360,7 +363,10 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        <Card 
+          {...tileProps(() => applyTileFilter('reserved'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -369,43 +375,39 @@ function InventoryList() {
             <div className="text-2xl font-bold text-purple-900">
               {formatCurrency(vehicles.reduce((sum, v) => sum + v.price, 0))}
             </div>
+            <p className="text-xs text-purple-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
               Inventory value
-  // Helper function to apply tile filters
-  const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
-    setActiveTab('inventory')
-    setStatusFilter(status)
-  }
-
-  const tileProps = (handler: () => void) => ({
-    role: 'button' as const,
-    tabIndex: 0,
-    onClick: handler,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
-    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
-  })
-
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Filter Indicator */}
+      {statusFilter !== 'all' && (
+        <div className="flex items-center gap-2 mb-4">
+          <Badge variant="secondary">
+            Filtered by: {statusFilter}
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+            Clear Filter
+          </Button>
+        </div>
+      )}
       
       {/* Inventory Table */}
       <InventoryTable 
-        vehicles={vehicles}
+        vehicles={filteredVehicles}
         onEdit={handleEditVehicle}
-  const filteredVehicles = vehicles.filter(vehicle => {
         onView={handleViewVehicle}
         onStatusChange={handleStatusChange}
         onCreateTask={handleCreateTaskForVehicle}
       />
     </div>
-    const matchesStatus = statusFilter === 'all' || vehicle.status.toLowerCase() === statusFilter.toLowerCase()
+  )
 }
 
 export default function InventoryManagement() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
   return (
     <Routes>
       <Route path="/" element={<InventoryList />} />
