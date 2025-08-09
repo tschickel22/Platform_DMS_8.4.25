@@ -51,11 +51,34 @@ function DealsList() {
   const [repFilter, setRepFilter] = useState<string>('all')
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showDealForm, setShowDealForm] = useState(false)
-  const [activeTab, setActiveTab] = useState('pipeline')
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'deals' | 'analytics' | 'territories' | 'approvals'>('pipeline')
   const [showDealDetail, setShowDealDetail] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const { toast } = useToast()
+
+  // helper: map tile -> tab + filters
+  type Tile = 'pipeline' | 'won' | 'avg' | 'territories'
+  const handleTileClick = (tile: Tile) => {
+    switch (tile) {
+      case 'pipeline':
+        setActiveTab('deals')
+        setStageFilter('all')
+        setRepFilter('all')
+        break
+      case 'won':
+        setActiveTab('deals')
+        setStageFilter(DealStage.CLOSED_WON)
+        break
+      case 'avg':
+        setActiveTab('deals')
+        setStageFilter(DealStage.NEGOTIATION)
+        break
+      case 'territories':
+        setActiveTab('territories')
+        break
+    }
+  }
 
   const getStatusColor = (status: DealStatus) => {
     switch (status) {
