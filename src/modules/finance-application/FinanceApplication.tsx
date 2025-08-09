@@ -797,7 +797,7 @@ function FinanceApplicationDashboard() {
             <div className="text-2xl font-bold text-red-900">{rejectedApplications}</div>
             <p className="text-xs text-red-600 flex items-center mt-1">
               <XCircle className="h-3 w-3 mr-1" />
-              Declined applications
+              Rejected applications
             </p>
           </CardContent>
         </Card>
