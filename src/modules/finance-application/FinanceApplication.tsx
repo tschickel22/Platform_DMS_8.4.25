@@ -42,7 +42,6 @@ function FinanceApplicationDashboard() {
   
   // Admin notes state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
-  const [applicationStatusFilter, setApplicationStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
   
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'draft' | 'under_review' | 'approved' | 'denied') => {
@@ -823,7 +822,7 @@ function FinanceApplicationDashboard() {
               {statusFilter !== 'all' && (
                 <div className="flex items-center gap-2 mb-4">
                   <Badge variant="secondary">
-                    Filtered by: {statusFilter === 'under_review' ? 'Under Review' : statusFilter === 'denied' ? 'Denied' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    Filtered by: {statusFilter === 'under_review' ? 'Pending Review' : statusFilter === 'denied' ? 'Rejected' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                   </Badge>
                   <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
                     Clear Filter
@@ -843,19 +842,18 @@ function FinanceApplicationDashboard() {
                   />
                 </div>
                 <Select
-                  value={applicationStatusFilter}
-                  onValueChange={setApplicationStatusFilter}
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    {mockFinanceApplications.statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="under_review">Pending Review</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="denied">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
