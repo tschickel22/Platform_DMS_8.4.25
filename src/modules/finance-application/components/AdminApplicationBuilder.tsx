@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,16 @@ interface AdminApplicationBuilderProps {
   onDeleteTemplate: (id: string) => void
 }
 
+// Safe defaults in case mocks are missing or out of sync
+const DEFAULT_FIELD_TYPES: Array<{ value: FieldType | string; label: string }> = [
+  { value: 'text', label: 'Text' },
+  { value: 'number', label: 'Number' },
+  { value: 'textarea', label: 'Textarea' },
+  { value: 'select', label: 'Select' },
+  { value: 'radio', label: 'Radio' },
+  { value: 'checkbox', label: 'Checkbox' },
+]
+
 export function AdminApplicationBuilder({
   templates,
   onCreateTemplate,
@@ -33,7 +43,12 @@ export function AdminApplicationBuilder({
   const [showNewTemplateOptions, setShowNewTemplateOptions] = useState(false)
   const [selectedSourceTemplate, setSelectedSourceTemplate] = useState<string>('')
 
-  const fieldTypes = mockFinanceApplications.fieldTypes
+  const fieldTypes = useMemo(
+    () => (mockFinanceApplications?.fieldTypes && Array.isArray(mockFinanceApplications.fieldTypes)
+      ? mockFinanceApplications.fieldTypes
+      : DEFAULT_FIELD_TYPES),
+    []
+  )
 
   const handleCreateTemplate = (sourceTemplateId?: string) => {
     let templateData: Partial<ApplicationTemplate> = {
@@ -43,20 +58,17 @@ export function AdminApplicationBuilder({
       isActive: true
     }
 
-    // If cloning from an existing template
     if (sourceTemplateId) {
       const sourceTemplate = templates.find(t => t.id === sourceTemplateId)
       if (sourceTemplate) {
-        // Deep clone the sections to avoid reference issues
-        const clonedSections = sourceTemplate.sections.map(section => ({
+        const clonedSections = (sourceTemplate.sections ?? []).map(section => ({
           ...section,
-          id: `section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          fields: section.fields.map(field => ({
+          id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          fields: (section.fields ?? []).map(field => ({
             ...field,
-            id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            id: `field-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
           }))
         }))
-        
         templateData = {
           ...templateData,
           description: sourceTemplate.description,
@@ -74,14 +86,9 @@ export function AdminApplicationBuilder({
 
   const handleSaveTemplate = () => {
     if (!editingTemplate || !selectedTemplate) return
-
     onUpdateTemplate(selectedTemplate.id, editingTemplate)
     setEditingTemplate(null)
-    
-    toast({
-      title: 'Template Saved',
-      description: 'Application template has been saved successfully'
-    })
+    toast({ title: 'Template Saved', description: 'Application template has been saved successfully' })
   }
 
   const handleDeleteTemplate = (templateId: string) => {
@@ -91,11 +98,7 @@ export function AdminApplicationBuilder({
         setSelectedTemplate(null)
         setEditingTemplate(null)
       }
-      
-      toast({
-        title: 'Template Deleted',
-        description: 'Application template has been deleted'
-      })
+      toast({ title: 'Template Deleted', description: 'Application template has been deleted' })
     }
   }
 
@@ -106,13 +109,14 @@ export function AdminApplicationBuilder({
       id: `section-${Date.now()}`,
       title: 'New Section',
       description: '',
-      order: (selectedTemplate.sections?.length || 0) + 1,
+      order: ((selectedTemplate.sections?.length ?? 0) + 1),
       fields: []
     }
 
-    const updatedSections = [...(selectedTemplate.sections || []), newSection]
+    const priorSections = selectedTemplate.sections ?? []
+    const updatedSections = [...priorSections, newSection]
     const updatedTemplate = { ...selectedTemplate, sections: updatedSections }
-    
+
     setSelectedTemplate(updatedTemplate)
     setEditingTemplate(updatedTemplate)
     setEditingSection(newSection)
@@ -120,29 +124,27 @@ export function AdminApplicationBuilder({
 
   const handleSaveSection = (section: ApplicationSection) => {
     if (!selectedTemplate || !editingTemplate) return
-
-    const updatedSections = editingTemplate.sections?.map(s => 
-      s.id === section.id ? section : s
-    ) || []
-
+    const baseSections = editingTemplate.sections ?? selectedTemplate.sections ?? []
+    const updatedSections = baseSections.map(s => (s.id === section.id ? section : s))
     const updatedTemplate = { ...editingTemplate, sections: updatedSections }
     setEditingTemplate(updatedTemplate)
-    setSelectedTemplate(updatedTemplate)
+    setSelectedTemplate(updatedTemplate as ApplicationTemplate)
     setEditingSection(null)
   }
 
   const handleDeleteSection = (sectionId: string) => {
     if (!selectedTemplate || !editingTemplate) return
-
-    const updatedSections = editingTemplate.sections?.filter(s => s.id !== sectionId) || []
+    const baseSections = editingTemplate.sections ?? selectedTemplate.sections ?? []
+    const updatedSections = baseSections.filter(s => s.id !== sectionId)
     const updatedTemplate = { ...editingTemplate, sections: updatedSections }
-    
     setEditingTemplate(updatedTemplate)
-    setSelectedTemplate(updatedTemplate)
+    setSelectedTemplate(updatedTemplate as ApplicationTemplate)
   }
 
   const handleAddField = (sectionId: string) => {
-    if (!selectedTemplate || !editingTemplate) return
+    if (!selectedTemplate) return
+    // prefer editingTemplate when present, otherwise selectedTemplate (in case user just entered edit mode)
+    const source = editingTemplate ?? selectedTemplate
 
     const newField: ApplicationField = {
       id: `field-${Date.now()}`,
@@ -153,57 +155,59 @@ export function AdminApplicationBuilder({
       order: 1
     }
 
-    const updatedSections = editingTemplate.sections?.map(section => {
-      if (section.id === sectionId) {
-        return {
-          ...section,
-          fields: [...section.fields, { ...newField, order: section.fields.length + 1 }]
-        }
+    const baseSections = source.sections ?? []
+    const updatedSections = baseSections.map(section => {
+      if (section.id !== sectionId) return section
+      const nextFields = section.fields ?? []
+      return {
+        ...section,
+        fields: [...nextFields, { ...newField, order: nextFields.length + 1 }]
       }
-      return section
-    }) || []
+    })
 
-    const updatedTemplate = { ...editingTemplate, sections: updatedSections }
+    const updatedTemplate = { ...source, sections: updatedSections }
     setEditingTemplate(updatedTemplate)
-    setSelectedTemplate(updatedTemplate)
-    setEditingField(newField)
+    setSelectedTemplate(updatedTemplate as ApplicationTemplate)
+    setEditingField(newField) // opens the inline editor for the newly added field
   }
 
   const handleSaveField = (sectionId: string, field: ApplicationField) => {
-    if (!editingTemplate) return
+    const source = editingTemplate ?? selectedTemplate
+    if (!source) return
 
-    const updatedSections = editingTemplate.sections?.map(section => {
-      if (section.id === sectionId) {
-        return {
-          ...section,
-          fields: section.fields.map(f => f.id === field.id ? field : f)
-        }
+    const baseSections = source.sections ?? []
+    const updatedSections = baseSections.map(section => {
+      if (section.id !== sectionId) return section
+      const safeFields = section.fields ?? []
+      return {
+        ...section,
+        fields: safeFields.map(f => (f.id === field.id ? field : f))
       }
-      return section
-    }) || []
+    })
 
-    const updatedTemplate = { ...editingTemplate, sections: updatedSections }
+    const updatedTemplate = { ...source, sections: updatedSections }
     setEditingTemplate(updatedTemplate)
-    setSelectedTemplate(updatedTemplate)
+    setSelectedTemplate(updatedTemplate as ApplicationTemplate)
     setEditingField(null)
   }
 
   const handleDeleteField = (sectionId: string, fieldId: string) => {
-    if (!editingTemplate) return
+    const source = editingTemplate ?? selectedTemplate
+    if (!source) return
 
-    const updatedSections = editingTemplate.sections?.map(section => {
-      if (section.id === sectionId) {
-        return {
-          ...section,
-          fields: section.fields.filter(f => f.id !== fieldId)
-        }
+    const baseSections = source.sections ?? []
+    const updatedSections = baseSections.map(section => {
+      if (section.id !== sectionId) return section
+      const safeFields = section.fields ?? []
+      return {
+        ...section,
+        fields: safeFields.filter(f => f.id !== fieldId)
       }
-      return section
-    }) || []
+    })
 
-    const updatedTemplate = { ...editingTemplate, sections: updatedSections }
+    const updatedTemplate = { ...source, sections: updatedSections }
     setEditingTemplate(updatedTemplate)
-    setSelectedTemplate(updatedTemplate)
+    setSelectedTemplate(updatedTemplate as ApplicationTemplate)
   }
 
   if (selectedTemplate) {
@@ -212,10 +216,15 @@ export function AdminApplicationBuilder({
         {/* Template Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => {
-              setSelectedTemplate(null)
-              setEditingTemplate(null)
-            }}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSelectedTemplate(null)
+                setEditingTemplate(null)
+                setEditingSection(null)
+                setEditingField(null)
+              }}
+            >
               ← Back to Templates
             </Button>
             <div>
@@ -224,7 +233,7 @@ export function AdminApplicationBuilder({
             </div>
           </div>
           <div className="flex space-x-2">
-            {editingTemplate && (
+            {editingTemplate ? (
               <>
                 <Button variant="outline" onClick={() => setEditingTemplate(null)}>
                   Cancel
@@ -234,8 +243,7 @@ export function AdminApplicationBuilder({
                   Save Template
                 </Button>
               </>
-            )}
-            {!editingTemplate && (
+            ) : (
               <Button onClick={() => setEditingTemplate(selectedTemplate)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Template
@@ -256,21 +264,25 @@ export function AdminApplicationBuilder({
                   <Label htmlFor="templateName">Template Name</Label>
                   <Input
                     id="templateName"
-                    value={editingTemplate.name}
-                    onChange={(e) => setEditingTemplate({
-                      ...editingTemplate,
-                      name: e.target.value
-                    })}
+                    value={editingTemplate.name ?? ''}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        name: e.target.value
+                      })
+                    }
                   />
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isActive"
-                    checked={editingTemplate.isActive}
-                    onCheckedChange={(checked) => setEditingTemplate({
-                      ...editingTemplate,
-                      isActive: !!checked
-                    })}
+                    checked={!!editingTemplate.isActive}
+                    onCheckedChange={(checked) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        isActive: !!checked
+                      })
+                    }
                   />
                   <Label htmlFor="isActive">Active Template</Label>
                 </div>
@@ -279,11 +291,13 @@ export function AdminApplicationBuilder({
                 <Label htmlFor="templateDescription">Description</Label>
                 <Textarea
                   id="templateDescription"
-                  value={editingTemplate.description}
-                  onChange={(e) => setEditingTemplate({
-                    ...editingTemplate,
-                    description: e.target.value
-                  })}
+                  value={editingTemplate.description ?? ''}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      description: e.target.value
+                    })
+                  }
                   rows={3}
                 />
               </div>
@@ -303,7 +317,7 @@ export function AdminApplicationBuilder({
             )}
           </div>
 
-          {selectedTemplate.sections?.map((section) => (
+          {(selectedTemplate.sections ?? []).map((section) => (
             <SectionEditor
               key={section.id}
               section={section}
@@ -345,9 +359,7 @@ export function AdminApplicationBuilder({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Application Templates</CardTitle>
-            <CardDescription>
-              Create and manage finance application templates
-            </CardDescription>
+            <CardDescription>Create and manage finance application templates</CardDescription>
           </div>
           <Button onClick={() => setShowNewTemplateOptions(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -364,13 +376,11 @@ export function AdminApplicationBuilder({
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Create New Template</CardTitle>
-                    <CardDescription>
-                      Choose how to create your new template
-                    </CardDescription>
+                    <CardDescription>Choose how to create your new template</CardDescription>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowNewTemplateOptions(false)
                       setSelectedSourceTemplate('')
@@ -389,18 +399,13 @@ export function AdminApplicationBuilder({
                   >
                     <div className="text-left">
                       <div className="font-medium">Create Blank Template</div>
-                      <div className="text-sm text-muted-foreground">
-                        Start with an empty template
-                      </div>
+                      <div className="text-sm text-muted-foreground">Start with an empty template</div>
                     </div>
                   </Button>
-                  
+
                   <div className="space-y-2">
                     <div className="font-medium text-sm">Or clone from existing:</div>
-                    <Select
-                      value={selectedSourceTemplate}
-                      onValueChange={setSelectedSourceTemplate}
-                    >
+                    <Select value={selectedSourceTemplate} onValueChange={setSelectedSourceTemplate}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select template to clone" />
                       </SelectTrigger>
@@ -412,7 +417,7 @@ export function AdminApplicationBuilder({
                         ))}
                       </SelectContent>
                     </Select>
-                    
+
                     <Button
                       className="w-full"
                       disabled={!selectedSourceTemplate}
@@ -423,10 +428,10 @@ export function AdminApplicationBuilder({
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setShowNewTemplateOptions(false)
                       setSelectedSourceTemplate('')
@@ -453,34 +458,24 @@ export function AdminApplicationBuilder({
                     {template.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {template.description || 'No description'}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{template.description || 'No description'}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {template.sections?.length || 0} sections • 
-                  {template.sections?.reduce((total, section) => total + section.fields.length, 0) || 0} fields
+                  {template.sections?.length ?? 0} sections •{' '}
+                  {(template.sections ?? []).reduce((total, section) => total + (section.fields?.length ?? 0), 0)} fields
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTemplate(template)}
-                >
+                <Button variant="outline" size="sm" onClick={() => setSelectedTemplate(template)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteTemplate(template.id)}
-                >
+                <Button variant="outline" size="sm" onClick={() => handleDeleteTemplate(template.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           ))}
-          
+
           {templates.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <p>No templates created yet</p>
@@ -493,17 +488,18 @@ export function AdminApplicationBuilder({
   )
 }
 
-// Section Editor Component
+/* ----------------------------- Section Editor ----------------------------- */
+
 interface SectionEditorProps {
   section: ApplicationSection
   isEditing: boolean
   editingSection: ApplicationSection | null
   editingField: ApplicationField | null
-  onEditSection: (section: ApplicationSection) => void
+  onEditSection: (section: ApplicationSection | null) => void
   onSaveSection: (section: ApplicationSection) => void
   onDeleteSection: (sectionId: string) => void
   onAddField: (sectionId: string) => void
-  onEditField: (field: ApplicationField) => void
+  onEditField: (field: ApplicationField | null) => void
   onSaveField: (sectionId: string, field: ApplicationField) => void
   onDeleteField: (sectionId: string, fieldId: string) => void
   fieldTypes: Array<{ value: string; label: string }>
@@ -524,16 +520,16 @@ function SectionEditor({
   fieldTypes
 }: SectionEditorProps) {
   const [localSection, setLocalSection] = useState(section)
-
   const isEditingThis = editingSection?.id === section.id
 
-  const handleSave = () => {
-    onSaveSection(localSection)
-  }
+  useEffect(() => {
+    setLocalSection(section)
+  }, [section])
 
+  const handleSave = () => onSaveSection(localSection)
   const handleCancel = () => {
     setLocalSection(section)
-    onEditSection(null as any)
+    onEditSection(null)
   }
 
   return (
@@ -544,32 +540,21 @@ function SectionEditor({
             {isEditing && <GripVertical className="h-4 w-4 text-muted-foreground" />}
             <div>
               <h4 className="font-semibold">{section.title}</h4>
-              {section.description && (
-                <p className="text-sm text-muted-foreground">{section.description}</p>
-              )}
+              {section.description && <p className="text-sm text-muted-foreground">{section.description}</p>}
             </div>
           </div>
           {isEditing && (
             <div className="flex items-center space-x-2">
-              {!isEditingThis && (
+              {!isEditingThis ? (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEditSection(section)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => onEditSection(section)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDeleteSection(section.id)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => onDeleteSection(section.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </>
-              )}
-              {isEditingThis && (
+              ) : (
                 <>
                   <Button variant="outline" size="sm" onClick={handleCancel}>
                     <X className="h-4 w-4" />
@@ -583,51 +568,42 @@ function SectionEditor({
           )}
         </div>
       </CardHeader>
+
       <CardContent>
-        {isEditingThis ? (
+        {isEditingThis && (
           <div className="space-y-4 mb-6">
             <div>
-              <Label htmlFor="sectionTitle">Section Title</Label>
+              <Label htmlFor={`sectionTitle-${section.id}`}>Section Title</Label>
               <Input
-                id="sectionTitle"
+                id={`sectionTitle-${section.id}`}
                 value={localSection.title}
-                onChange={(e) => setLocalSection({
-                  ...localSection,
-                  title: e.target.value
-                })}
+                onChange={(e) => setLocalSection({ ...localSection, title: e.target.value })}
               />
             </div>
             <div>
-              <Label htmlFor="sectionDescription">Description</Label>
+              <Label htmlFor={`sectionDesc-${section.id}`}>Description</Label>
               <Textarea
-                id="sectionDescription"
+                id={`sectionDesc-${section.id}`}
                 value={localSection.description}
-                onChange={(e) => setLocalSection({
-                  ...localSection,
-                  description: e.target.value
-                })}
+                onChange={(e) => setLocalSection({ ...localSection, description: e.target.value })}
                 rows={2}
               />
             </div>
           </div>
-        ) : null}
+        )}
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h5 className="font-medium">Fields ({section.fields.length})</h5>
+            <h5 className="font-medium">Fields ({section.fields?.length ?? 0})</h5>
             {isEditing && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onAddField(section.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => onAddField(section.id)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Field
               </Button>
             )}
           </div>
 
-          {section.fields.map((field) => (
+          {(section.fields ?? []).map((field) => (
             <FieldEditor
               key={field.id}
               field={field}
@@ -641,7 +617,7 @@ function SectionEditor({
             />
           ))}
 
-          {section.fields.length === 0 && (
+          {(section.fields?.length ?? 0) === 0 && (
             <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
               <p className="text-sm">No fields added yet</p>
             </div>
@@ -652,13 +628,14 @@ function SectionEditor({
   )
 }
 
-// Field Editor Component
+/* ------------------------------ Field Editor ------------------------------ */
+
 interface FieldEditorProps {
   field: ApplicationField
   sectionId: string
   isEditing: boolean
   editingField: ApplicationField | null
-  onEditField: (field: ApplicationField) => void
+  onEditField: (field: ApplicationField | null) => void
   onSaveField: (sectionId: string, field: ApplicationField) => void
   onDeleteField: (sectionId: string, fieldId: string) => void
   fieldTypes: Array<{ value: string; label: string }>
@@ -676,68 +653,70 @@ function FieldEditor({
 }: FieldEditorProps) {
   const [localField, setLocalField] = useState(field)
   const [newOption, setNewOption] = useState('')
-
   const isEditingThis = editingField?.id === field.id
 
-  const handleSave = () => {
-    onSaveField(sectionId, localField)
-  }
+  useEffect(() => {
+    setLocalField(field)
+  }, [field])
 
+  const handleSave = () => onSaveField(sectionId, localField)
   const handleCancel = () => {
     setLocalField(field)
-    onEditField(null as any)
+    onEditField(null)
   }
 
   const addOption = () => {
     if (newOption.trim()) {
-      setLocalField({
-        ...localField,
-        options: [...(localField.options || []), newOption.trim()]
-      })
+      setLocalField((prev) => ({
+        ...prev,
+        options: [...(prev.options ?? []), newOption.trim()]
+      }))
       setNewOption('')
     }
   }
 
   const removeOption = (index: number) => {
-    setLocalField({
-      ...localField,
-      options: localField.options?.filter((_, i) => i !== index)
-    })
+    setLocalField((prev) => ({
+      ...prev,
+      options: prev.options?.filter((_, i) => i !== index)
+    }))
   }
 
   if (isEditingThis) {
+    const safeType = (localField.type ?? 'text') as string
+
     return (
       <Card className="border-primary">
         <CardContent className="pt-6">
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="fieldLabel">Field Label</Label>
+                <Label htmlFor={`fieldLabel-${localField.id}`}>Field Label</Label>
                 <Input
-                  id="fieldLabel"
+                  id={`fieldLabel-${localField.id}`}
                   value={localField.label}
-                  onChange={(e) => setLocalField({
-                    ...localField,
-                    label: e.target.value
-                  })}
+                  onChange={(e) => setLocalField({ ...localField, label: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="fieldType">Field Type</Label>
+                <Label htmlFor={`fieldType-${localField.id}`}>Field Type</Label>
                 <Select
-                  value={localField.type}
-                  onValueChange={(value: FieldType) => setLocalField({
-                    ...localField,
-                    type: value,
-                    options: ['select', 'radio', 'checkbox'].includes(value) ? localField.options : undefined
-                  })}
+                  value={safeType}
+                  onValueChange={(value: string) =>
+                    setLocalField((prev) => ({
+                      ...prev,
+                      type: value as FieldType,
+                      // keep options only for types that use them
+                      options: ['select', 'radio', 'checkbox'].includes(value) ? (prev.options ?? []) : undefined
+                    }))
+                  }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id={`fieldType-${localField.id}`}>
+                    <SelectValue placeholder="Choose a type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {fieldTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
+                    {(fieldTypes?.length ? fieldTypes : DEFAULT_FIELD_TYPES).map((type) => (
+                      <SelectItem key={type.value} value={String(type.value)}>
                         {type.label}
                       </SelectItem>
                     ))}
@@ -747,30 +726,24 @@ function FieldEditor({
             </div>
 
             <div>
-              <Label htmlFor="fieldPlaceholder">Placeholder Text</Label>
+              <Label htmlFor={`fieldPh-${localField.id}`}>Placeholder Text</Label>
               <Input
-                id="fieldPlaceholder"
-                value={localField.placeholder}
-                onChange={(e) => setLocalField({
-                  ...localField,
-                  placeholder: e.target.value
-                })}
+                id={`fieldPh-${localField.id}`}
+                value={localField.placeholder ?? ''}
+                onChange={(e) => setLocalField({ ...localField, placeholder: e.target.value })}
               />
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="fieldRequired"
-                checked={localField.required}
-                onCheckedChange={(checked) => setLocalField({
-                  ...localField,
-                  required: !!checked
-                })}
+                id={`fieldReq-${localField.id}`}
+                checked={!!localField.required}
+                onCheckedChange={(checked) => setLocalField({ ...localField, required: !!checked })}
               />
-              <Label htmlFor="fieldRequired">Required Field</Label>
+              <Label htmlFor={`fieldReq-${localField.id}`}>Required Field</Label>
             </div>
 
-            {(['select', 'radio'] as FieldType[]).includes(localField.type) && (
+            {(['select', 'radio', 'checkbox'] as FieldType[]).includes(localField.type as FieldType) && (
               <div>
                 <Label>Options</Label>
                 <div className="space-y-2">
@@ -791,8 +764,8 @@ function FieldEditor({
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {localField.options?.map((option, index) => (
-                      <div key={index} className="flex items-center bg-muted px-2 py-1 rounded">
+                    {(localField.options ?? []).map((option, index) => (
+                      <div key={`${option}-${index}`} className="flex items-center bg-muted px-2 py-1 rounded">
                         <span className="text-sm mr-2">{option}</span>
                         <Button
                           type="button"
@@ -814,9 +787,7 @@ function FieldEditor({
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>
-                Save Field
-              </Button>
+              <Button onClick={handleSave}>Save Field</Button>
             </div>
           </div>
         </CardContent>
@@ -831,30 +802,24 @@ function FieldEditor({
         <div>
           <div className="flex items-center space-x-2">
             <span className="font-medium">{field.label}</span>
-            {field.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="secondary" className="text-xs">
+                Required
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs">
-              {fieldTypes.find(t => t.value === field.type)?.label}
+              {(fieldTypes?.find(t => String(t.value) === String(field.type))?.label) ?? String(field.type)}
             </Badge>
           </div>
-          {field.placeholder && (
-            <p className="text-sm text-muted-foreground">Placeholder: {field.placeholder}</p>
-          )}
+          {field.placeholder && <p className="text-sm text-muted-foreground">Placeholder: {field.placeholder}</p>}
         </div>
       </div>
       {isEditing && (
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEditField(field)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onEditField(field)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDeleteField(sectionId, field.id)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onDeleteField(sectionId, field.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
