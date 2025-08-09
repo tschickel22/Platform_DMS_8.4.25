@@ -352,11 +352,27 @@ function FinanceModulePage() {
                   New Loan
                 </Button>
               </div>
+              {/* Filter Indicator */}
+              {statusFilter !== 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary">
+                    Filtered by: {statusFilter}
+                  </Badge>
+                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                    Clear Filter
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {/* Search and Filter Controls */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                <div className="relative flex-1 min-w-[200px]">
+                {(() => {
+                  const filteredLoans = loans.filter(loan => 
+                    statusFilter === 'all' || loan.status === statusFilter
+                  )
+                  
+                  return filteredLoans.length > 0 ? (
+                    filteredLoans.map((loan) => (
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by customer or vehicle"
@@ -440,18 +456,24 @@ function FinanceModulePage() {
                         <Button variant="outline" size="sm">
                           Payment History
                         </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-                
-                {mockFinance.sampleLoans.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No loans found</p>
-                    <p className="text-sm">Create your first loan to get started</p>
-                  </div>
-                )}
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-12 text-muted-foreground">
+                          <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                          <p>No loans found</p>
+                          <p className="text-sm">
+                            {statusFilter !== 'all' 
+                              ? `No loans match the "${statusFilter}" filter`
+                              : 'Create your first loan to get started'
+                            }
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })()}
               </div>
             </CardContent>
           </Card>
