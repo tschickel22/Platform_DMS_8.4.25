@@ -970,13 +970,13 @@ function FinanceApplicationDashboard() {
         </TabsContent>
       </Tabs>
     </div>
-            <ErrorBoundary>
+    </ErrorBoundary>
   )
-            </ErrorBoundary>
 }
 
 export default function FinanceApplication() {
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/" element={<FinanceApplicationDashboard />} />
       <Route path="/portal" element={<PortalApplicationView />} />
