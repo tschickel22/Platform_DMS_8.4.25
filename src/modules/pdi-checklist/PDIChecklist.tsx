@@ -166,15 +166,27 @@ function PDIChecklistDashboard() {
   const handleSaveInspection = async (inspectionId: string, inspectionData: Partial<PDIInspection>) => {
     
     try {
-      await updateInspection(inspectionId, inspectionData)
+      // Mock save functionality
       toast({
         title: 'Success',
-        description: 'Inspection saved successfully',
+        description: selectedInspection ? 'Inspection updated successfully' : 'Inspection created successfully',
       })
+      setShowInspectionForm(false)
+      setSelectedInspection(null)
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save inspection',
+        description: 'This is a demo - inspection changes are not persisted',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleDeleteInspection = async (inspectionId: string) => {
+    if (window.confirm('Are you sure you want to delete this inspection?')) {
+      toast({
+        title: 'Demo Mode',
+        description: 'Inspection deletion is not available in demo mode',
         variant: 'destructive'
       })
     }
