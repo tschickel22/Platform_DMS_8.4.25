@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge' 
 import { Truck, Plus, Search, Filter, MapPin, Calendar, User, TrendingUp, MessageSquare, Camera, Clock, Eye } from 'lucide-react'
 import { Delivery, DeliveryStatus } from '@/types'
 import { formatDate } from '@/lib/utils'
