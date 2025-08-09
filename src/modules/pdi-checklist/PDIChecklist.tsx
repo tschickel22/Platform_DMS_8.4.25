@@ -383,6 +383,18 @@ function PDIChecklistDashboard() {
             setShowInspectionForm(false)
             setSelectedInspection(null)
           }}
+          {/* Filter Indicator */}
+          {statusFilter !== 'all' && (
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary">
+                Filtered by: {statusFilter.replace('_', ' ')}
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+
         />
       )}
 
