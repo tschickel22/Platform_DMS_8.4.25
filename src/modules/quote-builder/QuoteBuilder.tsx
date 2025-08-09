@@ -410,10 +410,6 @@ function QuotesList() {
     setShowTaskForm(true)
   }
 
-  const applyQuoteTileFilter = (status: string) => {
-    setStatusFilter(status)
-  }
-
   const stats = {
     total: quotes.length,
     draft: quotes.filter(q => q.status === 'draft').length,
@@ -477,13 +473,7 @@ function QuotesList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card 
-          className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-          role="button"
-          tabIndex={0}
-          onClick={() => applyQuoteTileFilter('all')}
-          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('all')}
-        >
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Quotes</CardTitle>
             <FileText className="h-4 w-4 text-blue-600" />
@@ -496,13 +486,7 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card 
-          className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-          role="button"
-          tabIndex={0}
-          onClick={() => applyQuoteTileFilter('sent')}
-          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('sent')}
-        >
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">Pending</CardTitle>
             <FileText className="h-4 w-4 text-yellow-600" />
@@ -515,13 +499,7 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card 
-          className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-          role="button"
-          tabIndex={0}
-          onClick={() => applyQuoteTileFilter('accepted')}
-          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('accepted')}
-        >
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Accepted</CardTitle>
             <FileText className="h-4 w-4 text-green-600" />
@@ -534,13 +512,7 @@ function QuotesList() {
             </p>
           </CardContent>
         </Card>
-        <Card 
-          className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-          role="button"
-          tabIndex={0}
-          onClick={() => applyQuoteTileFilter('accepted')}
-          onKeyDown={(e) => e.key === 'Enter' && applyQuoteTileFilter('accepted')}
-        >
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Quote Value</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -796,6 +768,8 @@ function QuoteBuilderTab() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'quotes' | 'builder'>('dashboard')
   const [quotes] = useState(mockQuoteBuilder.sampleQuotes)
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
+  const [showQuoteBuilder, setShowQuoteBuilder] = useState(false)
+  const [selectedQuote, setSelectedQuote] = useState(null)
   
   // Quote builder state
   const [quoteData, setQuoteData] = useState<QuoteData>({
@@ -1000,15 +974,101 @@ function QuoteBuilderTab() {
       </TabsContent>
 
       <TabsContent value="quotes" className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">Quotes</h2>
-            <p className="text-muted-foreground">Manage your customer quotes</p>
+            <p className="text-muted-foreground">Manage your quotes and proposals</p>
           </div>
-          <Button onClick={() => setActiveTab('builder')}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Quote
-          </Button>
+          <div className="flex items-center gap-4">
+            {statusFilter !== 'all' && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  Filter: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  Clear Filter
+                </Button>
+              </div>
+            )}
+            <Button onClick={() => setShowQuoteBuilder(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Quote
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {filteredQuotes.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No quotes found</p>
+                  <p className="text-sm">
+                    {statusFilter !== 'all' 
+                      ? `No ${statusFilter} quotes available`
+                      : 'Create your first quote to get started'
+                    }
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredQuotes.map((quote) => (
+              <Card key={quote.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">Quote #{quote.quoteNumber}</h3>
+                        <Badge variant={
+                          quote.status === 'ACCEPTED' ? 'default' :
+                          quote.status === 'PENDING' ? 'secondary' :
+                          'destructive'
+                        }>
+                          {quote.status.toLowerCase()}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Customer: {quote.customerName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Valid until: {new Date(quote.validUntil).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right space-y-2">
+                      <div className="text-2xl font-bold">
+                        ${quote.total.toLocaleString()}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedQuote(quote)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Simulate PDF download
+                            console.log('Downloading PDF for quote:', quote.quoteNumber)
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -1039,26 +1099,6 @@ function QuoteBuilderTab() {
               </Button>
             </div>
           )}
-        </div>
-          
-        <div className="space-y-4">
-          {filteredQuotes.map((quote) => (
-            <Card key={quote.id}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">Quote #{quote.id}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {quote.customerName} • ${quote.total.toLocaleString()}
-                    </p>
-                  </div>
-                  <Badge variant={quote.status === 'accepted' ? 'default' : 'secondary'}>
-                    {quote.status}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </TabsContent>
 
