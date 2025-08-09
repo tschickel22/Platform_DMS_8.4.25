@@ -168,6 +168,10 @@ function FinanceModulePage() {
     }
   }
 
+  const applyTileFilter = (status: string) => {
+    setStatusFilter(status)
+  }
+
   return (
     <div className="space-y-6">
       {/* Loan Form Modal */}
@@ -366,13 +370,8 @@ function FinanceModulePage() {
             </CardHeader>
             <CardContent>
               {/* Search and Filter Controls */}
-                {(() => {
-                  const filteredLoans = loans.filter(loan => 
-                    statusFilter === 'all' || loan.status === statusFilter
-                  )
-                  
-                  return filteredLoans.length > 0 ? (
-                    filteredLoans.map((loan) => (
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by customer or vehicle"
@@ -400,78 +399,72 @@ function FinanceModulePage() {
               </div>
 
               <div className="space-y-4">
-                {filteredLoansNew.length > 0 ? filteredLoansNew.map((loan) => (
-                  <div
-                    key={loan.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <h4 className="font-semibold">{loan.customerName}</h4>
-                        <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
-                          {loan.status}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Payment History
-                      </Button>
-                    </div>
-                  </div>
-                )) : (
-                  // Show mock data when no filtered results or no loans
-                  mockFinance.sampleLoans.map((loan) => (
-                    <div
-                      key={loan.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <h4 className="font-semibold">{loan.customerName}</h4>
-                          <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
-                            {loan.status}
-                          </Badge>
+                {(() => {
+                  const filteredLoans = loans.filter(loan => 
+                    statusFilter === 'all' || loan.status === statusFilter
+                  )
+                  
+                  return filteredLoans.length > 0 ? (
+                    filteredLoans.map((loan) => (
+                      <div
+                        key={loan.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <h4 className="font-semibold">{loan.customerName}</h4>
+                            <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
+                              {loan.status}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm">
+                            View Details
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Payment History
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Payment History
-                        </Button>
                     ))
                   ) : (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center py-12 text-muted-foreground">
-                          <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                          <p>No loans found</p>
-                          <p className="text-sm">
-                            {statusFilter !== 'all' 
-                              ? `No loans match the "${statusFilter}" filter`
-                              : 'Create your first loan to get started'
-                            }
-                          </p>
+                    // Show mock data when no filtered results or no loans
+                    mockFinance.sampleLoans.map((loan) => (
+                      <div
+                        key={loan.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <h4 className="font-semibold">{loan.customerName}</h4>
+                            <Badge className={mockFinance.statusColors[loan.status] || 'bg-gray-100 text-gray-800'}>
+                              {loan.status}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {loan.vehicleInfo} • {formatCurrency(loan.loanAmount)} • {loan.termMonths} months
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Balance: {formatCurrency(loan.remainingBalance)} • Next Payment: {formatDate(loan.nextPaymentDate)}
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm">
+                            View Details
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Payment History
+                          </Button>
+                        </div>
+                      </div>
+                    ))
                   )
                 })()}
               </div>
