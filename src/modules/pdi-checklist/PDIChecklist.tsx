@@ -48,7 +48,7 @@ function PDIChecklistDashboard() {
     addSignoff: async (inspectionId: string, data: any) => {}
   }
   // Use mock data directly
-  const inspections = mockPDI.sampleInspections
+
   const templates = mockPDI.sampleTemplates
   
   
