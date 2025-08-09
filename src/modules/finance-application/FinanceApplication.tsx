@@ -42,16 +42,13 @@ function FinanceApplicationDashboard() {
   
   // Admin notes state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'pending_review' | 'approved' | 'denied'>('all')
-
-  // AGGRESSIVE DEBUGGING - This should show in console
-  console.log('🔥 COMPONENT RENDER - statusFilter:', statusFilter)
-  console.log('🔥 TOTAL APPLICATIONS:', mockFinanceApplications.sampleApplications.length)
-  console.log('🔥 ALL APPLICATION STATUSES:', mockFinanceApplications.sampleApplications.map(app => ({ id: app.id, name: app.customerName, status: app.status })))
   
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'draft' | 'pending_review' | 'approved' | 'denied') => {
     setActiveTab('applications')
+    console.log('🔥 TILE CLICKED - Setting statusFilter to:', status)
     setStatusFilter(status)
+    console.log('🔥 TILE CLICKED - statusFilter should now be:', status)
   }
 
   const tileProps = (handler: () => void) => ({
