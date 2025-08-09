@@ -25,7 +25,8 @@ export default function WarrantyManagement() {
     claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     claim.vehicleVin.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  )
+    .filter(claim => statusFilter === 'all' || claim.status.toLowerCase() === statusFilter);
 
   const getStatusColor = (status: string) => {
     switch (status) {
