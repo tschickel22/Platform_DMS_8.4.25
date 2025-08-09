@@ -51,6 +51,24 @@ function DealsList() {
   const [repFilter, setRepFilter] = useState<string>('all')
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showDealForm, setShowDealForm] = useState(false)
+  // Click a stat tile -> jump to a tab and optionally set filters
+  const goToDealsWith = (opts: { stage?: string; rep?: string; tab?: string } = {}) => {
+    if (opts.tab) setActiveTab(opts.tab)
+    else setActiveTab('deals')
+
+    if (typeof opts.stage !== 'undefined') setStageFilter(opts.stage)
+    if (typeof opts.rep !== 'undefined') setRepFilter(opts.rep)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className:
+      'shadow-sm border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
   const [activeTab, setActiveTab] = useState('pipeline')
   const [showDealDetail, setShowDealDetail] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
