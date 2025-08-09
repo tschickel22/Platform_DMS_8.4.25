@@ -378,6 +378,7 @@ function FinanceApplicationDashboard() {
   // Calculate stats
   const draftApplications = applications.filter(app => app.status === 'draft').length
   const rejectedApplications = applications.filter(app => app.status === 'denied').length
+  const pendingReviewApplications = applications.filter(app => app.status === 'under_review').length
 
   if (selectedApplication && applicationCreationMode === 'completeNow') {
     return (
@@ -767,7 +768,7 @@ function FinanceApplicationDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {applications.filter(app => app.status === 'pending_review').length}
+              {pendingReviewApplications}
             </div>
             <p className="text-xs text-muted-foreground">
               Awaiting approval
