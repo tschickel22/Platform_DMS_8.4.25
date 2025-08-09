@@ -53,29 +53,9 @@ function DealsList() {
   const [showDealForm, setShowDealForm] = useState(false)
   const [activeTab, setActiveTab] = useState('pipeline')
   const [showDealDetail, setShowDealDetail] = useState(false)
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'won' | 'lost'>('all')
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const { toast } = useToast()
-
-  // Helper to apply tile filter
-  const applyTileFilter = (type: 'all' | 'active' | 'won' | 'lost') => {
-    setActiveFilter(type)
-    switch (type) {
-      case 'all':
-        setStageFilter('all')
-        break
-      case 'active':
-        setStageFilter('Active')
-        break
-      case 'won':
-        setStageFilter('Won')
-        break
-      case 'lost':
-        setStageFilter('Lost')
-        break
-    }
-  }
 
   const getStatusColor = (status: DealStatus) => {
     switch (status) {
@@ -292,7 +272,11 @@ function DealsList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              role="button"
+              tabIndex={0}
+              onClick={() => applyTileFilter('all')}
+              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('all')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Pipeline</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -305,7 +289,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              role="button"
+              tabIndex={0}
+              onClick={() => applyTileFilter('won')}
+              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('won')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Win Rate</CardTitle>
             <Target className="h-4 w-4 text-green-600" />
@@ -318,7 +306,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              role="button"
+              tabIndex={0}
+              onClick={() => applyTileFilter('active')}
+              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('active')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Avg Deal Size</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -331,7 +323,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              role="button"
+              tabIndex={0}
+              onClick={() => applyTileFilter('lost')}
+              onKeyDown={(e) => e.key === 'Enter' && applyTileFilter('lost')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Territories</CardTitle>
             <MapPin className="h-4 w-4 text-orange-600" />
