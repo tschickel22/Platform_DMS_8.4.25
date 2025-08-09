@@ -1,13 +1,12 @@
-import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { Routes, Route, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Truck, Plus, Search, Filter, MapPin, Calendar, User, TrendingUp, MessageSquare, Camera, Clock, Eye } from 'lucide-react'
+import { Truck, Plus, Search, MapPin, Calendar, User, TrendingUp, MessageSquare, Camera, Eye } from 'lucide-react'
 import { Delivery, DeliveryStatus } from '@/types'
-import { formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
 import { useDeliveryManagement } from './hooks/useDeliveryManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManagement'
@@ -16,8 +15,9 @@ import { DeliveryForm } from './components/DeliveryForm'
 import { DeliveryDetail } from './components/DeliveryDetail'
 import { ETANotificationForm } from './components/ETANotificationForm'
 import { DeliveryPhotoCapture } from './components/DeliveryPhotoCapture'
-import { DeliveryTimeline } from './components/DeliveryTimeline'
 import { DeliveryDashboard } from './components/DeliveryDashboard'
+
+type FilterStatus = 'all' | DeliveryStatus
 
 function DeliveriesList() {
   const { 
@@ -33,19 +33,35 @@ function DeliveriesList() {
   const { vehicles } = useInventoryManagement()
   const { leads } = useLeadManagement()
   const { toast } = useToast()
+
+  const [searchParams, setSearchParams] = useSearchParams()
   const [searchTerm, setSearchTerm] = useState('')
   const [showDeliveryForm, setShowDeliveryForm] = useState(false)
   const [showDeliveryDetail, setShowDeliveryDetail] = useState(false)
   const [showNotificationForm, setShowNotificationForm] = useState(false)
   const [showPhotoCapture, setShowPhotoCapture] = useState(false)
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'deliveries' | 'schedule' | 'analytics'>('dashboard')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed'>('all')
-  
-  // Helper function to apply tile filters
-  const applyTileFilter = (status: 'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed') => {
-    setActiveTab('deliveries')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+
+  // Sync filter from URL (?status=ALL|SCHEDULED|IN_TRANSIT|DELIVERED|CANCELLED)
+  useEffect(() => {
+    const s = (searchParams.get('status') || '').toUpperCase()
+    if (!s || s === 'ALL') {
+      setStatusFilter('all')
+    } else if (
+      s === DeliveryStatus.SCHEDULED ||
+      s === DeliveryStatus.IN_TRANSIT ||
+      s === DeliveryStatus.DELIVERED ||
+      s === DeliveryStatus.CANCELLED
+    ) {
+      setStatusFilter(s as DeliveryStatus)
+    }
+  }, [searchParams])
+
+  // Helper: apply tile filter + reflect in URL
+  const applyTileFilter = (status: FilterStatus) => {
     setStatusFilter(status)
+    setSearchParams(status === 'all' ? { status: 'ALL' } : { status })
   }
 
   const tileProps = (handler: () => void) => ({
@@ -54,7 +70,6 @@ function DeliveriesList() {
     onClick: handler,
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
   })
-
 
   const getStatusColor = (status: DeliveryStatus) => {
     switch (status) {
@@ -71,13 +86,14 @@ function DeliveriesList() {
     }
   }
 
+  const normalizedSearch = searchTerm.toLowerCase()
   const filteredDeliveries = deliveries
-    .filter(delivery =>
-      delivery.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.customerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.address.city.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(d =>
+      d.id.toLowerCase().includes(normalizedSearch) ||
+      d.customerId.toLowerCase().includes(normalizedSearch) ||
+      d.address.city.toLowerCase().includes(normalizedSearch)
     )
-    .filter(delivery => statusFilter === 'all' || delivery.status === statusFilter)
+    .filter(d => statusFilter === 'all' || d.status === statusFilter)
 
   const handleCreateDelivery = () => {
     setSelectedDelivery(null)
@@ -98,23 +114,15 @@ function DeliveriesList() {
   const handleSaveDelivery = async (deliveryData: Partial<Delivery>) => {
     try {
       if (selectedDelivery) {
-        // Update existing delivery
         await updateDelivery(selectedDelivery.id, deliveryData)
-        toast({
-          title: 'Success',
-          description: 'Delivery updated successfully',
-        })
+        toast({ title: 'Success', description: 'Delivery updated successfully' })
       } else {
-        // Create new delivery
         await createDelivery(deliveryData)
-        toast({
-          title: 'Success',
-          description: 'Delivery scheduled successfully',
-        })
+        toast({ title: 'Success', description: 'Delivery scheduled successfully' })
       }
       setShowDeliveryForm(false)
       setSelectedDelivery(null)
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: `Failed to ${selectedDelivery ? 'update' : 'schedule'} delivery`,
@@ -127,16 +135,9 @@ function DeliveriesList() {
     if (window.confirm('Are you sure you want to delete this delivery?')) {
       try {
         await deleteDelivery(deliveryId)
-        toast({
-          title: 'Success',
-          description: 'Delivery deleted successfully',
-        })
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete delivery',
-          variant: 'destructive'
-        })
+        toast({ title: 'Success', description: 'Delivery deleted successfully' })
+      } catch {
+        toast({ title: 'Error', description: 'Failed to delete delivery', variant: 'destructive' })
       }
     }
   }
@@ -144,29 +145,18 @@ function DeliveriesList() {
   const handleStatusChange = async (deliveryId: string, status: DeliveryStatus) => {
     try {
       await updateDeliveryStatus(deliveryId, status)
-      toast({
-        title: 'Status Updated',
-        description: `Delivery status changed to ${status.replace('_', ' ')}`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update delivery status',
-        variant: 'destructive'
-      })
+      toast({ title: 'Status Updated', description: `Delivery status changed to ${status.replace('_', ' ')}` })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update delivery status', variant: 'destructive' })
     }
   }
 
   const handleSendNotification = async (deliveryId: string, data: any) => {
     try {
-      // Update ETA if provided
       if (data.estimatedArrival) {
         await updateETA(deliveryId, data.estimatedArrival)
       }
-      
-      // Send notification
       await sendNotification(deliveryId, data.type, data.message)
-      
       return true
     } catch (error) {
       console.error('Error sending notification:', error)
@@ -176,33 +166,19 @@ function DeliveriesList() {
 
   const handleCapturePhotos = async (photos: string[], captions: string[]) => {
     if (!selectedDelivery) return
-    
     try {
       await addDeliveryPhotos(selectedDelivery.id, photos, captions)
-      
-      // If delivery is in transit, update to delivered
       if (selectedDelivery.status === DeliveryStatus.IN_TRANSIT) {
         await updateDeliveryStatus(selectedDelivery.id, DeliveryStatus.DELIVERED)
       }
-      
       setShowPhotoCapture(false)
-      
-      toast({
-        title: 'Photos Added',
-        description: `${photos.length} photos added to delivery`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add photos',
-        variant: 'destructive'
-      })
+      toast({ title: 'Photos Added', description: `${photos.length} photos added to delivery` })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add photos', variant: 'destructive' })
     }
   }
 
-  const getVehicleById = (vehicleId: string) => {
-    return vehicles.find(v => v.id === vehicleId)
-  }
+  const getVehicleById = (vehicleId: string) => vehicles.find(v => v.id === vehicleId)
 
   return (
     <div className="space-y-8">
@@ -219,7 +195,7 @@ function DeliveriesList() {
           }}
         />
       )}
-      
+
       {/* Delivery Detail Modal */}
       {showDeliveryDetail && selectedDelivery && (
         <DeliveryDetail
@@ -227,13 +203,13 @@ function DeliveriesList() {
           vehicle={getVehicleById(selectedDelivery.vehicleId)}
           onClose={() => setShowDeliveryDetail(false)}
           onEdit={handleEditDelivery}
-          onSendNotification={async (deliveryId, type) => {
+          onSendNotification={async () => {
             setShowDeliveryDetail(false)
             setShowNotificationForm(true)
           }}
         />
       )}
-      
+
       {/* Notification Form Modal */}
       {showNotificationForm && selectedDelivery && (
         <ETANotificationForm
@@ -245,7 +221,7 @@ function DeliveriesList() {
           }}
         />
       )}
-      
+
       {/* Photo Capture Modal */}
       {showPhotoCapture && selectedDelivery && (
         <DeliveryPhotoCapture
@@ -262,9 +238,7 @@ function DeliveriesList() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Delivery Tracker</h1>
-            <p className="ri-page-description">
-              Track vehicle deliveries and logistics
-            </p>
+            <p className="ri-page-description">Track vehicle deliveries and logistics</p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateDelivery}>
             <Plus className="h-4 w-4 mr-2" />
@@ -273,8 +247,8 @@ function DeliveriesList() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="ri-stats-grid"> 
+      {/* Stats Cards (now clickable to filter) */}
+      <div className="ri-stats-grid">
         <Card {...tileProps(() => applyTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Deliveries</CardTitle>
@@ -288,7 +262,8 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card {...tileProps(() => applyTileFilter('scheduled'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
+
+        <Card {...tileProps(() => applyTileFilter(DeliveryStatus.SCHEDULED))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Scheduled</CardTitle>
             <Truck className="h-4 w-4 text-blue-600" />
@@ -303,7 +278,8 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card {...tileProps(() => applyTileFilter('in_transit'))} className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
+
+        <Card {...tileProps(() => applyTileFilter(DeliveryStatus.IN_TRANSIT))} className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">In Transit</CardTitle>
             <Truck className="h-4 w-4 text-yellow-600" />
@@ -318,7 +294,8 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card {...tileProps(() => applyTileFilter('delivered'))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
+
+        <Card {...tileProps(() => applyTileFilter(DeliveryStatus.DELIVERED))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Delivered</CardTitle>
             <Truck className="h-4 w-4 text-green-600" />
@@ -333,6 +310,7 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Notifications</CardTitle>
@@ -361,12 +339,16 @@ function DeliveriesList() {
             className="ri-search-input shadow-sm"
           />
         </div>
+
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={statusFilter === 'all' ? 'ALL' : statusFilter}
+          onChange={(e) => {
+            const v = e.target.value.toUpperCase()
+            applyTileFilter(v === 'ALL' ? 'all' : (v as DeliveryStatus))
+          }}
           className="px-3 py-2 rounded-md border border-input bg-background"
         >
-          <option value="all">All Status</option>
+          <option value="ALL">All Status</option>
           <option value={DeliveryStatus.SCHEDULED}>Scheduled</option>
           <option value={DeliveryStatus.IN_TRANSIT}>In Transit</option>
           <option value={DeliveryStatus.DELIVERED}>Delivered</option>
@@ -378,14 +360,13 @@ function DeliveriesList() {
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl">Deliveries</CardTitle>
-          <CardDescription>
-            Manage and track all vehicle deliveries
-          </CardDescription>
+          <CardDescription>Manage and track all vehicle deliveries</CardDescription>
+
           {/* Filter Indicator */}
           {statusFilter !== 'all' && (
             <div className="flex items-center gap-2 mb-4">
               <Badge variant="secondary">
-                Filtered by: {statusFilter.replace('_', ' ')}
+                Filtered by: {String(statusFilter).replace('_', ' ')}
               </Badge>
               <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
                 Clear Filter
@@ -393,6 +374,7 @@ function DeliveriesList() {
             </div>
           )}
         </CardHeader>
+
         <CardContent>
           <div className="space-y-4">
             {filteredDeliveries.length > 0 ? (
@@ -405,25 +387,27 @@ function DeliveriesList() {
                         {delivery.status.replace('_', ' ').toUpperCase()}
                       </Badge>
                     </div>
+
                     <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <User className="h-3 w-3 mr-2 text-blue-500" />
-                        <span className="font-medium">Customer:</span> 
+                        <span className="font-medium">Customer:</span>
                         <span className="ml-1">{delivery.customerId}</span>
                       </div>
                       <div className="flex items-center">
                         <Calendar className="h-3 w-3 mr-2 text-blue-500" />
-                        <span className="font-medium">Scheduled:</span> 
+                        <span className="font-medium">Scheduled:</span>
                         <span className="ml-1">{formatDate(delivery.scheduledDate)}</span>
                       </div>
                       {delivery.deliveredDate && (
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-2 text-green-500" />
-                          <span className="font-medium">Delivered:</span> 
+                          <span className="font-medium">Delivered:</span>
                           <span className="ml-1">{formatDate(delivery.deliveredDate)}</span>
                         </div>
                       )}
                     </div>
+
                     <div className="mt-2">
                       <div className="flex items-start bg-muted/30 p-2 rounded-md">
                         <MapPin className="h-3 w-3 mr-2 mt-0.5 text-red-500" />
@@ -438,32 +422,33 @@ function DeliveriesList() {
                       )}
                     </div>
                   </div>
-                  <div className="ri-action-buttons"> 
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+
+                  <div className="ri-action-buttons">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="shadow-sm"
                       onClick={() => handleViewDelivery(delivery)}
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="shadow-sm"
                       onClick={() => handleEditDelivery(delivery)}
                     >
                       Edit
                     </Button>
                     {delivery.status === DeliveryStatus.IN_TRANSIT && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="shadow-sm"
                         onClick={() => {
-                          setSelectedDelivery(delivery);
-                          setShowPhotoCapture(true);
+                          setSelectedDelivery(delivery)
+                          setShowPhotoCapture(true)
                         }}
                       >
                         <Camera className="h-3 w-3 mr-1" />
@@ -471,13 +456,13 @@ function DeliveriesList() {
                       </Button>
                     )}
                     {(delivery.status === DeliveryStatus.SCHEDULED || delivery.status === DeliveryStatus.IN_TRANSIT) && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="shadow-sm"
                         onClick={() => {
-                          setSelectedDelivery(delivery);
-                          setShowNotificationForm(true);
+                          setSelectedDelivery(delivery)
+                          setShowNotificationForm(true)
                         }}
                       >
                         <MessageSquare className="h-3 w-3 mr-1" />
@@ -494,10 +479,9 @@ function DeliveriesList() {
                     <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>No deliveries found</p>
                     <p className="text-sm">
-                      {statusFilter !== 'all' 
-                        ? `No deliveries match the "${statusFilter.replace('_', ' ')}" filter`
-                        : 'Try adjusting your search criteria'
-                      }
+                      {statusFilter !== 'all'
+                        ? `No deliveries match the "${String(statusFilter).replace('_', ' ')}" filter`
+                        : 'Try adjusting your search criteria'}
                     </p>
                   </div>
                 </CardContent>
@@ -513,7 +497,7 @@ function DeliveriesList() {
 function DeliveryDashboardView() {
   const { deliveries } = useDeliveryManagement()
   const [showDeliveryForm, setShowDeliveryForm] = useState(false)
-  
+
   return (
     <>
       {showDeliveryForm && (
@@ -524,9 +508,9 @@ function DeliveryDashboardView() {
           onCancel={() => setShowDeliveryForm(false)}
         />
       )}
-      <DeliveryDashboard 
-        deliveries={deliveries} 
-        onScheduleDelivery={() => setShowDeliveryForm(true)} 
+      <DeliveryDashboard
+        deliveries={deliveries}
+        onScheduleDelivery={() => setShowDeliveryForm(true)}
       />
     </>
   )
