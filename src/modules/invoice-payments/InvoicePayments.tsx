@@ -38,6 +38,19 @@ function InvoicesList() {
   const [showInvoiceDetail, setShowInvoiceDetail] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
 
+  const applyTileFilter = (status: 'all' | 'Paid' | 'Pending' | 'Overdue' | 'Draft') => {
+    setActiveTab('invoices')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
   const getStatusColor = (status: InvoiceStatus) => {
     switch (status) {
       case InvoiceStatus.DRAFT:
@@ -213,7 +226,7 @@ function InvoicesList() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50" {...tileProps(() => applyTileFilter('all'))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Invoices</CardTitle>
             <Receipt className="h-4 w-4 text-blue-600" />
@@ -226,7 +239,7 @@ function InvoicesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50" {...tileProps(() => applyTileFilter('Pending'))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Outstanding</CardTitle>
             <DollarSign className="h-4 w-4 text-orange-600" />
@@ -241,7 +254,7 @@ function InvoicesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50" {...tileProps(() => applyTileFilter('Paid'))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Paid This Month</CardTitle>
             <Receipt className="h-4 w-4 text-green-600" />
@@ -256,7 +269,7 @@ function InvoicesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50" {...tileProps(() => applyTileFilter('Overdue'))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Payment Success Rate</CardTitle>
             <CreditCard className="h-4 w-4 text-purple-600" />
@@ -307,7 +320,7 @@ function InvoicesList() {
             <Receipt className="h-4 w-4 mr-2" />
             Invoices
           </TabsTrigger>
-            <Card {...tileProps(() => applyTileFilter('Paid'))}>
+          <TabsTrigger value="payments" className="flex items-center">
             <CreditCard className="h-4 w-4 mr-2" />
             Payments
           </TabsTrigger>
@@ -316,10 +329,10 @@ function InvoicesList() {
         <TabsContent value="invoices">
           {/* Search and Filters */}
           <div className="flex gap-4">
-            <Card {...tileProps(() => applyTileFilter('all'))}>
+            <div className="relative flex-1">
               <Search className="ri-search-icon" />
               <Input
-            <Card {...tileProps(() => applyTileFilter('Pending'))}>
+                placeholder="Search invoices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="ri-search-input shadow-sm"
@@ -331,7 +344,7 @@ function InvoicesList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-            <Card {...tileProps(() => applyTileFilter('Overdue'))}>
+                <SelectItem value={InvoiceStatus.DRAFT}>Draft</SelectItem>
                 <SelectItem value={InvoiceStatus.SENT}>Sent</SelectItem>
                 <SelectItem value={InvoiceStatus.VIEWED}>Viewed</SelectItem>
                 <SelectItem value={InvoiceStatus.PAID}>Paid</SelectItem>
@@ -485,6 +498,7 @@ function InvoicesList() {
           />
         </TabsContent>
       </TabsComponent>
+      </Tabs>
     </div>
   )
 }
@@ -494,22 +508,6 @@ export default function InvoicePayments() {
     <Routes>
       <Route path="/" element={<InvoicesList />} />
       <Route path="/*" element={<InvoicesList />} />
-  const applyTileFilter = (status: 'all' | 'Paid' | 'Pending' | 'Overdue' | 'Draft') => {
-    setActiveTab('invoices')
-    setStatusFilter(status)
-  }
-
-  const tileProps = (handler: () => void) => ({
-    role: 'button' as const,
-    tabIndex: 0,
-    onClick: handler,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
-    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
-  })
-
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'payments' | 'analytics'>('dashboard')
-    (invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === 'all' || invoice.status === statusFilter)
+    </Routes>
   )
 }
