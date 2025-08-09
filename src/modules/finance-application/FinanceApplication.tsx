@@ -42,6 +42,21 @@ function FinanceApplicationDashboard() {
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
   // Admin notes state
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'builder' | 'analytics'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'approved' | 'rejected'>('all')
+  
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'draft' | 'submitted' | 'approved' | 'rejected') => {
+    setActiveTab('applications')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+  })
   const [currentAdminNote, setCurrentAdminNote] = useState('')
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const adminNotesRef = useRef<HTMLTextAreaElement>(null)
@@ -303,6 +318,7 @@ function FinanceApplicationDashboard() {
     }
   }
 
+    .filter(app => statusFilter === 'all' || app.status === statusFilter)
   const handleSaveNotesAndStatus = () => {
     if (selectedApplication) {
       const newStatusToApply = pendingStatus || selectedApplication.status
@@ -316,7 +332,8 @@ function FinanceApplicationDashboard() {
           block: 'center' 
         })
         
-        toast({
+  const filteredApplications = applications
+    .filter(app =>
           title: 'Internal Note Required',
           description: 'Please add an internal note explaining the reason for changing from denied status.',
           variant: 'destructive'
@@ -770,7 +787,7 @@ function FinanceApplicationDashboard() {
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
@@ -850,7 +867,7 @@ function FinanceApplicationDashboard() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+            <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                       <Button
                         variant="outline"
                         size="sm"
@@ -863,20 +880,20 @@ function FinanceApplicationDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleCreateTaskForApplication(application)}
-                      >
+            <Card {...tileProps(() => applyTileFilter('draft'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
                         <ListTodo className="h-4 w-4 mr-2" />
-                        Task
-                      </Button>
+                <CardTitle className="text-sm font-medium text-yellow-900">Draft</CardTitle>
+                <FileText className="h-4 w-4 text-yellow-600" />
                     </div>
                   </div>
-                ))}
-                
+                <div className="text-2xl font-bold text-yellow-900">{draftApplications}</div>
+                <p className="text-xs text-yellow-600 flex items-center mt-1">
                 {filteredApplications.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                     {applications.length === 0 ? (
                       <>
-                        <p>No finance applications yet</p>
+            <Card {...tileProps(() => applyTileFilter('submitted'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                         <p className="text-sm">Create your first application to get started</p>
                       </>
                     ) : (
@@ -889,7 +906,7 @@ function FinanceApplicationDashboard() {
                 )}
               </div>
             </CardContent>
-          </Card>
+            <Card {...tileProps(() => applyTileFilter('approved'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
@@ -902,6 +919,19 @@ function FinanceApplicationDashboard() {
               onChange={(e) => setTemplateSearchQuery(e.target.value)}
               className="pl-10"
             />
+            <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-red-900">Rejected</CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-900">{rejectedApplications}</div>
+                <p className="text-xs text-red-600 flex items-center mt-1">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Declined applications
+                </p>
+              </CardContent>
+            </Card>
           </div>
           
           <AdminApplicationBuilder
@@ -925,3 +955,14 @@ export default function FinanceApplication() {
     </Routes>
   )
 }
+              {/* Filter Indicator */}
+              {statusFilter !== 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary">
+                    Filtered by: {statusFilter}
+                  </Badge>
+                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                    Clear Filter
+                  </Button>
+                </div>
+              )}
