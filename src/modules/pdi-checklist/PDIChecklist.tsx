@@ -114,7 +114,7 @@ function PDIChecklistDashboard() {
  
   
   
-  const inspections = mockInspections
+
   const templates = mockTemplates
   const { toast } = useToast()
   const { createTask } = useTasks()
