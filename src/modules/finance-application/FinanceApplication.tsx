@@ -42,10 +42,10 @@ function FinanceApplicationDashboard() {
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
   // Admin notes state
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'under_review' | 'approved' | 'denied'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'approved' | 'rejected'>('all')
   
   // Helper function to apply tile filters
-  const applyTileFilter = (status: 'all' | 'draft' | 'under_review' | 'approved' | 'denied') => {
+  const applyTileFilter = (status: 'all' | 'draft' | 'submitted' | 'approved' | 'rejected') => {
     setActiveTab('applications')
     setStatusFilter(status)
   }
