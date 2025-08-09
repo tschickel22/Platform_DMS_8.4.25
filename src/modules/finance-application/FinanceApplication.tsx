@@ -37,7 +37,6 @@ function FinanceApplicationDashboard() {
   
   // Search and filter states
   const [applicationSearchQuery, setApplicationSearchQuery] = useState('')
-  const [applicationStatusFilter, setApplicationStatusFilter] = useState('all')
   const [applicationDateFilter, setApplicationDateFilter] = useState('')
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
@@ -86,8 +85,8 @@ function FinanceApplicationDashboard() {
     }
 
     // Status filter
-    if (applicationStatusFilter !== 'all') {
-      currentApplications = currentApplications.filter(app => app.status === applicationStatusFilter)
+    if (statusFilter !== 'all') {
+      currentApplications = currentApplications.filter(app => app.status === statusFilter)
     }
 
     // Date filter (created on or after)
@@ -100,7 +99,6 @@ function FinanceApplicationDashboard() {
     }
 
     return currentApplications
-  }, [applications, applicationSearchQuery, applicationStatusFilter, applicationDateFilter])
 
   // Filter templates based on search
   const filteredTemplates = React.useMemo(() => {
@@ -823,7 +821,7 @@ function FinanceApplicationDashboard() {
               {statusFilter !== 'all' && (
                 <div className="flex items-center gap-2 mb-4">
                   <Badge variant="secondary">
-                    Filtered by: {statusFilter === 'under_review' ? 'Under Review' : statusFilter === 'denied' ? 'Denied' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    Filtered by: {statusFilter === 'under_review' ? 'Pending Review' : statusFilter === 'denied' ? 'Rejected' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                   </Badge>
                   <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
                     Clear Filter
@@ -843,19 +841,18 @@ function FinanceApplicationDashboard() {
                   />
                 </div>
                 <Select
-                  value={applicationStatusFilter}
-                  onValueChange={setApplicationStatusFilter}
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    {mockFinanceApplications.statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="under_review">Pending Review</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="denied">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
