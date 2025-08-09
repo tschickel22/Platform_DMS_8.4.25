@@ -290,7 +290,11 @@ function DealsList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        {/* Total Pipeline -> go to Deals, clear filters */}
+        <Card
+          {...tileProps(() => goToDealsWith({ stage: 'all', rep: 'all', tab: 'deals' }))}
+          className="bg-gradient-to-br from-blue-50 to-blue-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Pipeline</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -303,7 +307,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        {/* Win Rate -> go to Deals filtered to Closed Won */}
+        <Card
+          {...tileProps(() => goToDealsWith({ stage: DealStage.CLOSED_WON, tab: 'deals' }))}
+          className="bg-gradient-to-br from-green-50 to-green-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Win Rate</CardTitle>
             <Target className="h-4 w-4 text-green-600" />
@@ -316,7 +324,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        {/* Avg Deal Size -> go to Deals filtered to Negotiation */}
+        <Card
+          {...tileProps(() => goToDealsWith({ stage: DealStage.NEGOTIATION, tab: 'deals' }))}
+          className="bg-gradient-to-br from-purple-50 to-purple-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Avg Deal Size</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
@@ -329,7 +341,11 @@ function DealsList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
+        {/* Territories -> jump to Territories tab */}
+        <Card
+          {...tileProps(() => goToDealsWith({ tab: 'territories' }))}
+          className="bg-gradient-to-br from-orange-50 to-orange-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Territories</CardTitle>
             <MapPin className="h-4 w-4 text-orange-600" />
