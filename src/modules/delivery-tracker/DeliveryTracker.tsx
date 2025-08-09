@@ -378,35 +378,28 @@ function DeliveriesList() {
         <CardHeader>
           <CardTitle className="text-xl">Deliveries</CardTitle>
           <CardDescription>
-            Track and manage vehicle deliveries
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredDeliveries.map((delivery) => (
-              <div key={delivery.id} className="ri-table-row">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-foreground">Delivery #{delivery.id}</h3>
-                      <Badge className={cn("ri-badge-status", getStatusColor(delivery.status))}>
                         {delivery.status.replace('_', ' ').toUpperCase()}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <User className="h-3 w-3 mr-2 text-blue-500" />
+          {/* Filter Indicator */}
+          {statusFilter !== 'all' && (
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary">
+                Filtered by: {statusFilter.replace('_', ' ')}
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+
                         <span className="font-medium">Customer:</span> 
                         <span className="ml-1">{delivery.customerId}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <User className="h-3 w-3 mr-2 text-green-500" />
-                        <span className="font-medium">Driver:</span> 
-                        <span className="ml-1">{delivery.driver || 'Not assigned'}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-2 text-purple-500" />
-                        <span className="font-medium">Scheduled:</span> 
+            {filteredDeliveries.length > 0 ? (
+              filteredDeliveries.map((delivery) => (
                         <span className="ml-1">{formatDate(delivery.scheduledDate)}</span>
                       </div>
                       {delivery.deliveredDate && (
@@ -488,6 +481,22 @@ function DeliveriesList() {
                 <p>No deliveries found</p>
                 <p className="text-sm">Try adjusting your search or filters</p>
               </div>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>No deliveries found</p>
+                    <p className="text-sm">
+                      {statusFilter !== 'all' 
+                        ? `No deliveries match the "${statusFilter.replace('_', ' ')}" filter`
+                        : 'Try adjusting your search criteria'
+                      }
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </CardContent>
