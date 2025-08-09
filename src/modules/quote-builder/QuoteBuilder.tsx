@@ -447,9 +447,209 @@ function QuotesList() {
       {viewingQuote && (
         <QuoteDetailModal
           quote={viewingQuote}
+// Types
+interface QuoteLineItem {
+  id: string
+  name: string
+  description: string
+  quantity: number
+  unitPrice: number
+  category: string
+  isBundle?: boolean
+  discount?: number
+  discountType?: 'percentage' | 'fixed'
+  total: number
+}
+
+interface QuoteData {
+  id: string
+  customerName: string
+  customerEmail: string
+  validUntil: string
+  items: QuoteLineItem[]
+  subtotal: number
+  totalDiscount: number
+  taxRate: number
+  tax: number
+  total: number
+  status: 'draft' | 'pending' | 'accepted' | 'rejected'
+}
+
+// Pure functions for pricing calculations
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return Math.random().toString(36).substring(2, 15)
+}
+
+function calculateLineTotal(item: QuoteLineItem): number {
+  const baseTotal = item.quantity * item.unitPrice
+  
+  if (!item.discount || item.discount === 0) {
+    return baseTotal
+  }
+  
+  if (item.discountType === 'percentage') {
+    return baseTotal * (1 - item.discount / 100)
+  } else if (item.discountType === 'fixed') {
+    return Math.max(0, baseTotal - item.discount)
+  }
+  
+  return baseTotal
+}
+
+function applyPricingRulesToItems(items: QuoteLineItem[]): QuoteLineItem[] {
+  const processedItems = items.map(item => ({ ...item }))
+  
+  // Count accessory items
+  const accessoryItems = processedItems.filter(item => 
+    item.category.toLowerCase() === 'accessory'
+  )
+  
+  // Apply rules
+  processedItems.forEach(item => {
+    // Reset discounts first
+    item.discount = 0
+    item.discountType = 'percentage'
+    
+    // Rule 1: 3+ accessory items get 10% discount
+    if (accessoryItems.length >= 3 && item.category.toLowerCase() === 'accessory') {
+      item.discount = 10
+      item.discountType = 'percentage'
+    }
+    
+    // Rule 2: Bundle items get $500 fixed discount
+    if (item.isBundle) {
+      item.discount = 500
+      item.discountType = 'fixed'
+    }
+    
+    // Recalculate line total
+    item.total = calculateLineTotal(item)
+  })
+  
+  return processedItems
+}
+
           onClose={handleCloseView}
-          onEdit={handleEditQuote}
-        />
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quotes' | 'builder'>('dashboard')
+  const [quotes] = useState(mockQuoteBuilder.sampleQuotes)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
+  
+  // Quote builder state
+  const [quoteData, setQuoteData] = useState<QuoteData>({
+    id: generateId(),
+    customerName: '',
+    customerEmail: '',
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    items: [],
+    subtotal: 0,
+    totalDiscount: 0,
+    taxRate: 0.08,
+    tax: 0,
+    total: 0,
+    status: 'draft'
+  })
+  
+  const [newItem, setNewItem] = useState({
+    name: '',
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+    category: 'vehicle',
+    isBundle: false
+  })
+
+  // Helper function for tile clicks
+  function applyQuoteTileFilter(status: 'all' | 'pending' | 'accepted' | 'rejected') {
+    setActiveTab('quotes')
+    setStatusFilter(status)
+  }
+
+  // Recalculate totals whenever items or tax rate changes
+  useEffect(() => {
+    const subtotal = quoteData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    const totalDiscount = quoteData.items.reduce((sum, item) => {
+      const baseTotal = item.quantity * item.unitPrice
+      return sum + (baseTotal - item.total)
+    }, 0)
+    const tax = (subtotal - totalDiscount) * quoteData.taxRate
+    const total = (subtotal - totalDiscount) + tax
+
+    setQuoteData(prev => ({
+      ...prev,
+      subtotal,
+      totalDiscount,
+      tax,
+      total
+    }))
+  }, [quoteData.items, quoteData.taxRate])
+
+  // Add item handler
+  const handleAddItem = () => {
+    if (!newItem.name || newItem.unitPrice <= 0) return
+
+    setQuoteData(prev => {
+      const newItemWithId: QuoteLineItem = {
+        id: generateId(),
+        ...newItem,
+        total: newItem.quantity * newItem.unitPrice
+      }
+      
+      const updatedItems = [...prev.items, newItemWithId]
+      const processedItems = applyPricingRulesToItems(updatedItems)
+      
+      return {
+        ...prev,
+        items: processedItems
+      }
+    })
+
+    // Reset form
+    setNewItem({
+      name: '',
+      description: '',
+      quantity: 1,
+      unitPrice: 0,
+      category: 'vehicle',
+      isBundle: false
+    })
+  }
+
+  // Remove item handler
+  const handleRemoveItem = (itemId: string) => {
+    setQuoteData(prev => {
+      const updatedItems = prev.items.filter(item => item.id !== itemId)
+      const processedItems = applyPricingRulesToItems(updatedItems)
+      
+      return {
+        ...prev,
+        items: processedItems
+      }
+    })
+  }
+
+  // Update item handler
+  const handleUpdateItem = (itemId: string, updates: Partial<QuoteLineItem>) => {
+    setQuoteData(prev => {
+      const updatedItems = prev.items.map(item => 
+        item.id === itemId ? { ...item, ...updates } : item
+      )
+      const processedItems = applyPricingRulesToItems(updatedItems)
+      
+      return {
+        ...prev,
+        items: processedItems
+      }
+    })
+  }
+
+  // Export quote handler
+  const handleExportQuote = () => {
+    console.log('Exporting quote:', quoteData)
+    alert('Quote exported successfully! (Simulated)')
+  }
       )}
 
       {/* Page Header */}
@@ -459,6 +659,20 @@ function QuotesList() {
             <h1 className="ri-page-title">Quote Builder</h1>
             <p className="ri-page-description">
               Create and manage customer quotes with advanced pricing rules
+  // Filter quotes based on status
+  const filteredQuotes = statusFilter === 'all' 
+    ? quotes 
+    : quotes.filter(q => q.status === statusFilter)
+
+  // Tile props helper
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'shadow-sm border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring'
+  })
+
             </p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateQuote}>
@@ -466,6 +680,10 @@ function QuotesList() {
             New Quote
           </Button>
         </div>
+        <Button onClick={() => setActiveTab('builder')}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Quote
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -608,16 +826,20 @@ function QuotesList() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="shadow-sm"
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-4">
                     onClick={() => handleViewQuote(quote)}
                   >
                     <Eye className="h-3 w-3 mr-1" />
+          <TabsTrigger value="builder">Quote Builder</TabsTrigger>
                     View
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="shadow-sm"
+            <Card 
+              {...tileProps(() => applyQuoteTileFilter('all'))}
+              className="bg-gradient-to-br from-blue-50 to-blue-100/50"
+            >
                     onClick={() => handleEditQuote(quote)}
                   >
                     <Edit className="h-3 w-3 mr-1" />
@@ -630,7 +852,10 @@ function QuotesList() {
                       className="shadow-sm"
                       onClick={() => handleSendQuote(quote.id)}
                     >
-                      <Send className="h-3 w-3 mr-1" />
+            <Card 
+              {...tileProps(() => applyQuoteTileFilter('pending'))}
+              className="bg-gradient-to-br from-yellow-50 to-yellow-100/50"
+            >
                       Send
                     </Button>
                   )}
@@ -643,7 +868,10 @@ function QuotesList() {
                     <Copy className="h-3 w-3 mr-1" />
                     Copy
                   </Button>
-                  <Button 
+            <Card 
+              {...tileProps(() => applyQuoteTileFilter('accepted'))}
+              className="bg-gradient-to-br from-green-50 to-green-100/50"
+            >
                     variant="outline" 
                     size="sm" 
                     className="shadow-sm"
@@ -656,7 +884,10 @@ function QuotesList() {
                     variant="outline" 
                     size="sm" 
                     className="shadow-sm text-red-600 hover:text-red-700"
-                    onClick={() => handleDeleteQuote(quote.id)}
+            <Card 
+              {...tileProps(() => applyQuoteTileFilter('accepted'))}
+              className="bg-gradient-to-br from-purple-50 to-purple-100/50"
+            >
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -669,7 +900,7 @@ function QuotesList() {
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No quotes found</p>
                 <p className="text-sm">Create your first quote to get started</p>
-              </div>
+                {filteredQuotes.map((quote) => (
             )}
           </div>
         </CardContent>
@@ -679,9 +910,238 @@ function QuotesList() {
 }
 
 export default function QuoteBuilder() {
+          {/* Filter indicator */}
+          {statusFilter !== 'all' && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                Filtered by: {statusFilter}
+              </Badge>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setStatusFilter('all')}
+              >
+                Clear Filter
+              </Button>
+            </div>
+          )}
+          
   return (
     <Routes>
       <Route path="/" element={<QuotesList />} />
+
+        <TabsContent value="builder" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Quote Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quote Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerName">Customer Name</Label>
+                  <Input
+                    id="customerName"
+                    value={quoteData.customerName}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, customerName: e.target.value }))}
+                    placeholder="Enter customer name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail">Customer Email</Label>
+                  <Input
+                    id="customerEmail"
+                    type="email"
+                    value={quoteData.customerEmail}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                    placeholder="Enter customer email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="validUntil">Valid Until</Label>
+                  <Input
+                    id="validUntil"
+                    type="date"
+                    value={quoteData.validUntil}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, validUntil: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    value={quoteData.taxRate}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Add Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Item</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="itemName">Item Name</Label>
+                  <Input
+                    id="itemName"
+                    value={newItem.name}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter item name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="itemDescription">Description</Label>
+                  <Input
+                    id="itemDescription"
+                    value={newItem.description}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter description"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      value={newItem.quantity}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unitPrice">Unit Price</Label>
+                    <Input
+                      id="unitPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newItem.unitPrice}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={newItem.category} onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vehicle">Vehicle</SelectItem>
+                      <SelectItem value="accessory">Accessory</SelectItem>
+                      <SelectItem value="service">Service</SelectItem>
+                      <SelectItem value="warranty">Warranty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isBundle"
+                    checked={newItem.isBundle}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, isBundle: e.target.checked }))}
+                  />
+                  <Label htmlFor="isBundle">Bundle Item ($500 discount)</Label>
+                </div>
+                <Button onClick={handleAddItem} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quote Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {quoteData.items.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No items added yet. Add items above to build your quote.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {quoteData.items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-sm text-muted-foreground">{item.description}</div>
+                        <div className="text-sm">
+                          {item.quantity} × ${item.unitPrice.toFixed(2)} = ${(item.quantity * item.unitPrice).toFixed(2)}
+                          {item.discount && item.discount > 0 && (
+                            <span className="text-green-600 ml-2">
+                              (-{item.discountType === 'percentage' ? `${item.discount}%` : `$${item.discount}`})
+                            </span>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="mt-1">
+                          {item.category}
+                          {item.isBundle && ' • Bundle'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-right">
+                          <div className="font-medium">${item.total.toFixed(2)}</div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quote Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal (pre-discount):</span>
+                  <span>${quoteData.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>Total Discount:</span>
+                  <span>-${quoteData.totalDiscount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax ({(quoteData.taxRate * 100).toFixed(1)}%):</span>
+                  <span>${quoteData.tax.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total:</span>
+                  <span>${quoteData.total.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <Button onClick={handleExportQuote} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Quote (PDF)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       <Route path="/*" element={<QuotesList />} />
     </Routes>
   )
