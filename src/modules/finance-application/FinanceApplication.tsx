@@ -316,9 +316,6 @@ function FinanceApplicationDashboard() {
     }
   }
 
-  const filteredApplicationsByStatus = applications
-    .filter(app => statusFilter === 'all' || app.status === statusFilter)
-
   const handleSaveNotesAndStatus = () => {
     if (selectedApplication) {
       const newStatusToApply = pendingStatus || selectedApplication.status
@@ -926,6 +923,9 @@ function FinanceApplicationDashboard() {
                       <>
                         <p>No applications found matching your criteria</p>
                         <p className="text-sm">Try adjusting your search or filters</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Debug: statusFilter = "{statusFilter}", total apps = {applications.length}
+                        </p>
                       </>
                     )}
                   </div>
