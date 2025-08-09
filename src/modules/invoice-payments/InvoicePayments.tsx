@@ -41,16 +41,11 @@ function InvoicesList() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'Completed' | 'Pending' | 'Failed'>('all')
 
   // Normalize status strings so enum/string variations won't break filtering
-  const normalizeStatus = (s: string) => s?.toLowerCase()
+  const normalizeStatus = (s: string | undefined | null) => (s ?? '').toLowerCase()
 
   const applyTileFilter = (status: 'all' | 'draft' | 'paid' | 'overdue') => {
     setActiveTab('invoices')
     setStatusFilter(status)
-  }
-
-  const applyPaymentTileFilter = (status: 'all' | 'Completed' | 'Pending' | 'Failed') => {
-    setActiveTab('payments')
-    setPaymentStatusFilter(status)
   }
 
   const tileProps = (handler: () => void) => ({
@@ -61,12 +56,19 @@ function InvoicesList() {
     className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
   })
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = paymentStatusFilter === 'all' || payment.status === paymentStatusFilter
-    return matchesSearch && matchesStatus
-  })
+  // SAFE payment filtering (guard against undefined fields)
+  const filteredPayments = useMemo(() => {
+    const q = searchTerm.toLowerCase()
+    return payments.filter(p => {
+      const name = String((p as any).customerName ?? '').toLowerCase()
+      const method = String((p as any).paymentMethod ?? '').toLowerCase()
+      const matchesSearch = q ? (name.includes(q) || method.includes(q)) : true
+      const matchesStatus =
+        paymentStatusFilter === 'all' ||
+        normalizeStatus(p.status as any) === normalizeStatus(paymentStatusFilter)
+      return matchesSearch && matchesStatus
+    })
+  }, [payments, searchTerm, paymentStatusFilter])
 
   const getStatusColor = (status: string) => {
     switch (normalizeStatus(status)) {
@@ -221,7 +223,7 @@ function InvoicesList() {
         </div>
       </div>
 
-      {/* KPI cards & integration blurb – simple wrapper (NOT the Tabs icon) */}
+      {/* KPI cards & integration blurb */}
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50" {...tileProps(() => applyTileFilter('all'))}>
@@ -466,20 +468,8 @@ function InvoicesList() {
         </TabsContent>
 
         <TabsContent value="payments">
-          {/* Payment Filter Indicator */}
-          {paymentStatusFilter !== 'all' && (
-            <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary">
-                Filtered by: {paymentStatusFilter}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={() => applyPaymentTileFilter('all')}>
-                Clear Filter
-              </Button>
-            </div>
-          )}
-
           <PaymentHistory
-            payments={payments}
+            payments={filteredPayments}
             onViewPaymentDetails={(payment) => {
               const invoice = invoices.find(i => i.id === payment.invoiceId)
               if (invoice) {
