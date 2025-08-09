@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Plus, FileText, Settings, CreditCard, Eye, Users, Search, Save, User, Clock } from 'lucide-react'
+import { Plus, FileText, Settings, CreditCard, Eye, Users, Search, Save, User, Clock, XCircle } from 'lucide-react'
 import { ListTodo } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
@@ -42,7 +42,6 @@ function FinanceApplicationDashboard() {
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
   
   // Admin notes state
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'builder' | 'analytics'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'approved' | 'rejected'>('all')
   
   // Helper function to apply tile filters
@@ -318,7 +317,9 @@ function FinanceApplicationDashboard() {
     }
   }
 
+  const filteredApplicationsByStatus = applications
     .filter(app => statusFilter === 'all' || app.status === statusFilter)
+
   const handleSaveNotesAndStatus = () => {
     if (selectedApplication) {
       const newStatusToApply = pendingStatus || selectedApplication.status
@@ -332,8 +333,7 @@ function FinanceApplicationDashboard() {
           block: 'center' 
         })
         
-  const filteredApplications = applications
-    .filter(app =>
+        toast({
           title: 'Internal Note Required',
           description: 'Please add an internal note explaining the reason for changing from denied status.',
           variant: 'destructive'
@@ -376,6 +376,9 @@ function FinanceApplicationDashboard() {
     }
   }
 
+  // Calculate stats
+  const draftApplications = applications.filter(app => app.status === 'draft').length
+  const rejectedApplications = applications.filter(app => app.status === 'denied').length
 
   if (selectedApplication && applicationCreationMode === 'completeNow') {
     return (
@@ -732,7 +735,7 @@ function FinanceApplicationDashboard() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -745,7 +748,20 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('draft'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-900">Draft</CardTitle>
+            <FileText className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900">{draftApplications}</div>
+            <p className="text-xs text-yellow-600 flex items-center mt-1">
+              Pending Review
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card {...tileProps(() => applyTileFilter('submitted'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -760,7 +776,7 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card {...tileProps(() => applyTileFilter('approved'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -773,22 +789,22 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Processing Time</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-red-900">Rejected</CardTitle>
+            <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.3 days</div>
-            <p className="text-xs text-muted-foreground">
-              -0.5 days from last month
+            <div className="text-2xl font-bold text-red-900">{rejectedApplications}</div>
+            <p className="text-xs text-red-600 flex items-center mt-1">
+              <XCircle className="h-3 w-3 mr-1" />
+              Declined applications
             </p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
@@ -803,6 +819,18 @@ function FinanceApplicationDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Filter Indicator */}
+              {statusFilter !== 'all' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary">
+                    Filtered by: {statusFilter}
+                  </Badge>
+                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+                    Clear Filter
+                  </Button>
+                </div>
+              )}
+
               {/* Search and Filter Controls */}
               <div className="flex flex-wrap gap-4 mb-6">
                 <div className="relative flex-1 min-w-[200px]">
@@ -867,7 +895,7 @@ function FinanceApplicationDashboard() {
                         )}
                       </div>
                     </div>
-            <Card {...tileProps(() => applyTileFilter('all'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+                    <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -880,20 +908,19 @@ function FinanceApplicationDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleCreateTaskForApplication(application)}
-            <Card {...tileProps(() => applyTileFilter('draft'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+                      >
                         <ListTodo className="h-4 w-4 mr-2" />
-                <CardTitle className="text-sm font-medium text-yellow-900">Draft</CardTitle>
-                <FileText className="h-4 w-4 text-yellow-600" />
+                        Create Task
+                      </Button>
                     </div>
                   </div>
-                <div className="text-2xl font-bold text-yellow-900">{draftApplications}</div>
-                <p className="text-xs text-yellow-600 flex items-center mt-1">
+                ))}
                 {filteredApplications.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                     {applications.length === 0 ? (
                       <>
-            <Card {...tileProps(() => applyTileFilter('submitted'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+                        <p>No applications yet</p>
                         <p className="text-sm">Create your first application to get started</p>
                       </>
                     ) : (
@@ -906,7 +933,7 @@ function FinanceApplicationDashboard() {
                 )}
               </div>
             </CardContent>
-            <Card {...tileProps(() => applyTileFilter('approved'))} className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+          </Card>
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
@@ -919,19 +946,6 @@ function FinanceApplicationDashboard() {
               onChange={(e) => setTemplateSearchQuery(e.target.value)}
               className="pl-10"
             />
-            <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-red-900">Rejected</CardTitle>
-                <XCircle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-900">{rejectedApplications}</div>
-                <p className="text-xs text-red-600 flex items-center mt-1">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Declined applications
-                </p>
-              </CardContent>
-            </Card>
           </div>
           
           <AdminApplicationBuilder
@@ -955,14 +969,3 @@ export default function FinanceApplication() {
     </Routes>
   )
 }
-              {/* Filter Indicator */}
-              {statusFilter !== 'all' && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="secondary">
-                    Filtered by: {statusFilter}
-                  </Badge>
-                  <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-                    Clear Filter
-                  </Button>
-                </div>
-              )}
