@@ -38,8 +38,9 @@ function InvoicesList() {
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
   const [showInvoiceDetail, setShowInvoiceDetail] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'Completed' | 'Pending' | 'Failed'>('all')
 
-  // Normalize status strings so enum/string variations won’t break filtering
+  // Normalize status strings so enum/string variations won't break filtering
   const normalizeStatus = (s: string) => s?.toLowerCase()
 
   const applyTileFilter = (status: 'all' | 'draft' | 'paid' | 'overdue') => {
@@ -382,18 +383,6 @@ function InvoicesList() {
                             {String(invoice.status).toUpperCase()}
                           </Badge>
                         </div>
-                {/* Payment Filter Indicator */}
-                {paymentStatusFilter !== 'all' && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge variant="secondary">
-                      Filtered by: {paymentStatusFilter}
-                    </Badge>
-                    <Button variant="ghost" size="sm" onClick={() => applyPaymentTileFilter('all')}>
-                      Clear Filter
-                    </Button>
-                  </div>
-                )}
-
                         <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                           <div>
                             <span className="font-medium">Customer:</span>
@@ -476,6 +465,18 @@ function InvoicesList() {
         </TabsContent>
 
         <TabsContent value="payments">
+          {/* Payment Filter Indicator */}
+          {paymentStatusFilter !== 'all' && (
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary">
+                Filtered by: {paymentStatusFilter}
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => applyPaymentTileFilter('all')}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+
           <PaymentHistory
             payments={payments}
             onViewPaymentDetails={(payment) => {
@@ -495,7 +496,6 @@ function InvoicesList() {
 export default function InvoicePayments() {
   return (
     <Routes>
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'Completed' | 'Pending' | 'Failed'>('all')
       <Route path="/" element={<InvoicesList />} />
       <Route path="/*" element={<InvoicesList />} />
     </Routes>
