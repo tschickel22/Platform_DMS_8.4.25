@@ -112,7 +112,7 @@ function FinanceApplicationDashboard() {
 
   // Filter templates based on search
   const filteredTemplates = React.useMemo(() => {
-    let currentTemplates = templates
+    let currentTemplates = templates || []
 
     if (templateSearchQuery) {
       const lowerCaseQuery = templateSearchQuery.toLowerCase()
