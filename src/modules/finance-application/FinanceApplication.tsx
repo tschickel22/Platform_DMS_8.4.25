@@ -875,7 +875,7 @@ function FinanceApplicationDashboard() {
                       <div className="flex items-center space-x-3">
                         <h4 className="font-semibold">{application.customerName || 'Unnamed Application'}</h4>
                         <Badge className={getStatusColor(application.status)}>
-                          {application.status === 'denied' ? 'REJECTED' : application.status.replace('_', ' ').toUpperCase()}
+                          {application.status === 'under_review' ? 'PENDING REVIEW' : application.status === 'denied' ? 'REJECTED' : application.status.replace('_', ' ').toUpperCase()}
                         </Badge>
                         {application.fraudCheckStatus && (
                           <Badge variant="outline">
