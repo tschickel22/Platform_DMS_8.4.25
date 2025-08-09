@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge' 
 import { Truck, Plus, Search, Filter, MapPin, Calendar, User, TrendingUp, MessageSquare, Camera, Clock, Eye } from 'lucide-react'
@@ -34,12 +35,25 @@ function DeliveriesList() {
   const { leads } = useLeadManagement()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showDeliveryForm, setShowDeliveryForm] = useState(false)
   const [showDeliveryDetail, setShowDeliveryDetail] = useState(false)
   const [showNotificationForm, setShowNotificationForm] = useState(false)
   const [showPhotoCapture, setShowPhotoCapture] = useState(false)
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed') => {
+    setActiveTab('deliveries')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
 
   const getStatusColor = (status: DeliveryStatus) => {
     switch (status) {
@@ -505,6 +519,8 @@ function DeliveryDashboardView() {
 }
 
 export default function DeliveryTracker() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'deliveries' | 'schedule' | 'analytics'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed'>('all')
   return (
     <Routes>
       <Route path="/" element={<DeliveryDashboardView />} />
