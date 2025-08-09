@@ -795,7 +795,10 @@ function FinanceApplicationDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-red-50 to-red-100/50">
+        <Card 
+          {...tileProps(() => applyTileFilter('denied'))} 
+          className="border-0 bg-gradient-to-br from-red-50 to-red-100/50 cursor-pointer hover:shadow-md transition-all duration-200"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-900">Rejected</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
