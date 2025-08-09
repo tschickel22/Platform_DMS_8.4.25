@@ -5,7 +5,20 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Receipt, Plus, Search, Filter, Send, Eye, Download, CreditCard, TrendingUp, DollarSign, CheckCircle, Clock } from 'lucide-react'
+import {
+  Receipt,
+  Plus,
+  Search,
+  Filter,
+  Send,
+  Eye,
+  Download,
+  CreditCard,
+  TrendingUp,
+  DollarSign,
+  CheckCircle,
+  Clock
+} from 'lucide-react'
 import { Invoice, InvoiceStatus, Payment } from '@/types'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -22,66 +35,55 @@ function InvoicesList() {
     createInvoice,
     updateInvoice,
     deleteInvoice,
-    updateInvoiceStatus, // kept for parity (unused here)
+    // updateInvoiceStatus, // kept in hook for parity if needed elsewhere
     sendInvoice,
     sendPaymentRequest,
     recordPayment
   } = useInvoiceManagement()
 
+  // Always work with arrays to avoid "reading 'length' of undefined"
   const invoices = useMemo<Invoice[]>(() => invoicesRaw ?? [], [invoicesRaw])
   const payments = useMemo<Payment[]>(() => paymentsRaw ?? [], [paymentsRaw])
 
   const { toast } = useToast()
+
+  // UI state
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices')
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
   const [showInvoiceDetail, setShowInvoiceDetail] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+
+  // Payments filter state (driven by tiles)
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'Completed' | 'Pending' | 'Failed'>('all')
 
-  // Normalize status strings so enum/string variations won't break filtering
-  const normalizeStatus = (s: string | undefined | null) => (s ?? '').toLowerCase()
+  // Helpers
+  const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase()
 
-  const applyTileFilter = (status: 'all' | 'draft' | 'paid' | 'overdue') => {
+  const applyTileFilter = (status: 'all' | 'draft' | 'paid' | 'overdue' | 'sent' | 'viewed' | 'cancelled') => {
     setActiveTab('invoices')
     setStatusFilter(status)
+  }
+
+  const applyPaymentTileFilter = (status: 'all' | 'Completed' | 'Pending' | 'Failed') => {
+    setActiveTab('payments')
+    setPaymentStatusFilter(status)
   }
 
   const tileProps = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
     onClick: handler,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') handler()
+    },
     className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
   })
 
-  // SAFE payment filtering (guard against undefined fields)
-  const filteredPayments = useMemo(() => {
-    const q = searchTerm.toLowerCase()
-    return payments.filter(p => {
-      const name = String((p as any).customerName ?? '').toLowerCase()
-      const method = String((p as any).paymentMethod ?? '').toLowerCase()
-      const matchesSearch = q ? (name.includes(q) || method.includes(q)) : true
-      const matchesStatus =
-        paymentStatusFilter === 'all' ||
-        normalizeStatus(p.status as any) === normalizeStatus(paymentStatusFilter)
-      return matchesSearch && matchesStatus
-    })
-  }, [payments, searchTerm, paymentStatusFilter])
+  // ------- Derived data (safe/normalized) -------
 
-  const getStatusColor = (status: string) => {
-    switch (normalizeStatus(status)) {
-      case normalizeStatus(InvoiceStatus.DRAFT): return 'bg-gray-50 text-gray-700 border-gray-200'
-      case normalizeStatus(InvoiceStatus.SENT): return 'bg-blue-50 text-blue-700 border-blue-200'
-      case normalizeStatus(InvoiceStatus.VIEWED): return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case normalizeStatus(InvoiceStatus.PAID): return 'bg-green-50 text-green-700 border-green-200'
-      case normalizeStatus(InvoiceStatus.OVERDUE): return 'bg-red-50 text-red-700 border-red-200'
-      case normalizeStatus(InvoiceStatus.CANCELLED): return 'bg-gray-50 text-gray-700 border-gray-200'
-      default: return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-  }
-
+  // Invoices filtering
   const filteredInvoices = invoices
     .filter(inv => {
       const q = searchTerm.toLowerCase()
@@ -90,7 +92,55 @@ function InvoicesList() {
         (inv.customerId ?? '').toLowerCase().includes(q)
       )
     })
-    .filter(inv => statusFilter === 'all' || normalizeStatus(String(inv.status)) === statusFilter)
+    .filter(inv => statusFilter === 'all' || normalize(inv.status) === statusFilter)
+
+  // Payments filtering (driven by tiles)
+  const filteredPayments = useMemo(() => {
+    const want = normalize(paymentStatusFilter)
+    return payments.filter(p => {
+      const matchesStatus = want === 'all' || normalize(p.status) === want
+      return matchesStatus
+    })
+  }, [payments, paymentStatusFilter])
+
+  // KPI helpers (guard against NaN)
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0)
+  const invTotal = (i: Invoice) => Number((i as any).total ?? (i as any).totalAmount ?? 0)
+
+  const outstandingTotal = formatCurrency(
+    sum(invoices.filter(i => normalize(i.status) !== 'paid').map(invTotal))
+  )
+  const overdueTotal = formatCurrency(
+    sum(invoices.filter(i => normalize(i.status) === 'overdue').map(invTotal))
+  )
+  const paidThisMonth = formatCurrency(
+    sum(invoices.filter(i => normalize(i.status) === normalize(InvoiceStatus.PAID)).map(i => Number((i as any).total ?? 0)))
+  )
+
+  const paymentsByStatus = useMemo(() => {
+    const counts = { completed: 0, pending: 0, failed: 0 }
+    for (const p of payments) {
+      const s = normalize(p.status)
+      if (s in counts) (counts as any)[s]++
+    }
+    return counts
+  }, [payments])
+
+  const successfulPayments = paymentsByStatus.completed
+
+  const getInvoiceStatusColor = (status: string) => {
+    switch (normalize(status)) {
+      case normalize(InvoiceStatus.DRAFT): return 'bg-gray-50 text-gray-700 border-gray-200'
+      case normalize(InvoiceStatus.SENT): return 'bg-blue-50 text-blue-700 border-blue-200'
+      case normalize(InvoiceStatus.VIEWED): return 'bg-yellow-50 text-yellow-700 border-yellow-200'
+      case normalize(InvoiceStatus.PAID): return 'bg-green-50 text-green-700 border-green-200'
+      case normalize(InvoiceStatus.OVERDUE): return 'bg-red-50 text-red-700 border-red-200'
+      case normalize(InvoiceStatus.CANCELLED): return 'bg-gray-50 text-gray-700 border-gray-200'
+      default: return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
+  // ------- Actions -------
 
   const handleCreateInvoice = () => {
     setSelectedInvoice(null)
@@ -119,7 +169,7 @@ function InvoicesList() {
       }
       setShowInvoiceForm(false)
       setSelectedInvoice(null)
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: `Failed to ${selectedInvoice ? 'update' : 'create'} invoice`,
@@ -168,24 +218,11 @@ function InvoicesList() {
     }
   }
 
-  // Safe aggregates (avoid NaN/crashes if fields are missing)
-  const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0)
-  const invTotal = (i: Invoice) => Number(i.total ?? (i as any).totalAmount ?? 0)
-
-  const outstandingTotal = formatCurrency(
-    sum(invoices.filter(i => normalizeStatus(String(i.status)) !== 'paid').map(invTotal))
-  )
-  const overdueTotal = formatCurrency(
-    sum(invoices.filter(i => normalizeStatus(String(i.status)) === 'overdue').map(invTotal))
-  )
-  const paidThisMonth = formatCurrency(
-    sum(invoices.filter(i => normalizeStatus(String(i.status)) === normalizeStatus(InvoiceStatus.PAID)).map(i => Number(i.total ?? 0)))
-  )
-  const successfulPayments = payments.filter(p => normalizeStatus(String(p.status)) === 'completed').length
+  // ------- Render -------
 
   return (
     <div className="space-y-8">
-      {/* Invoice Form Modal */}
+      {/* Modals/Drawers */}
       {showInvoiceForm && (
         <InvoiceForm
           invoice={selectedInvoice || undefined}
@@ -197,7 +234,6 @@ function InvoicesList() {
         />
       )}
 
-      {/* Invoice Detail Drawer/Modal */}
       {showInvoiceDetail && selectedInvoice && (
         <InvoiceDetail
           invoice={selectedInvoice}
@@ -214,7 +250,9 @@ function InvoicesList() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Invoice & Payments</h1>
-            <p className="ri-page-description">Manage invoices and process payments via Zego integration</p>
+            <p className="ri-page-description">
+              Manage invoices and process payments via Zego integration
+            </p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateInvoice}>
             <Plus className="h-4 w-4 mr-2" />
@@ -326,6 +364,7 @@ function InvoicesList() {
           </TabsTrigger>
         </TabsList>
 
+        {/* ------------ Invoices Tab ------------ */}
         <TabsContent value="invoices">
           {/* Search and Filters */}
           <div className="flex gap-4">
@@ -344,12 +383,12 @@ function InvoicesList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.DRAFT)}>Draft</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.SENT)}>Sent</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.VIEWED)}>Viewed</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.PAID)}>Paid</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.OVERDUE)}>Overdue</SelectItem>
-                <SelectItem value={normalizeStatus(InvoiceStatus.CANCELLED)}>Cancelled</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.DRAFT)}>Draft</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.SENT)}>Sent</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.VIEWED)}>Viewed</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.PAID)}>Paid</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.OVERDUE)}>Overdue</SelectItem>
+                <SelectItem value={normalize(InvoiceStatus.CANCELLED)}>Cancelled</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" className="shadow-sm">
@@ -367,7 +406,7 @@ function InvoicesList() {
             </div>
           )}
 
-          {/* Invoices Table */}
+          {/* Invoices List */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl">Invoices</CardTitle>
@@ -381,7 +420,7 @@ function InvoicesList() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="font-semibold text-foreground">{invoice.number}</h3>
-                          <Badge className={cn('ri-badge-status', getStatusColor(String(invoice.status)))}>
+                          <Badge className={cn('ri-badge-status', getInvoiceStatusColor(String(invoice.status)))}>
                             {String(invoice.status).toUpperCase()}
                           </Badge>
                         </div>
@@ -440,7 +479,7 @@ function InvoicesList() {
                         <Download className="h-3 w-3 mr-1" />
                         PDF
                       </Button>
-                      {normalizeStatus(String(invoice.status)) !== 'paid' && (
+                      {normalize(invoice.status) !== 'paid' && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -467,7 +506,58 @@ function InvoicesList() {
           </Card>
         </TabsContent>
 
+        {/* ------------ Payments Tab ------------ */}
         <TabsContent value="payments">
+          {/* Payment KPI tiles with click filters */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card {...tileProps(() => applyPaymentTileFilter('all'))}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{payments.length}</div>
+              </CardContent>
+            </Card>
+
+            <Card {...tileProps(() => applyPaymentTileFilter('Completed'))} className="bg-green-50/60">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.completed}</div>
+              </CardContent>
+            </Card>
+
+            <Card {...tileProps(() => applyPaymentTileFilter('Pending'))} className="bg-yellow-50/60">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.pending}</div>
+              </CardContent>
+            </Card>
+
+            <Card {...tileProps(() => applyPaymentTileFilter('Failed'))} className="bg-red-50/60">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Failed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.failed}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filter indicator for payments */}
+          {paymentStatusFilter !== 'all' && (
+            <div className="flex items-center gap-2 my-4">
+              <Badge variant="secondary">Filtered by: {paymentStatusFilter}</Badge>
+              <Button variant="ghost" size="sm" onClick={() => applyPaymentTileFilter('all')}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+
+          {/* Payments list/history (now receives filteredPayments) */}
           <PaymentHistory
             payments={filteredPayments}
             onViewPaymentDetails={(payment) => {
