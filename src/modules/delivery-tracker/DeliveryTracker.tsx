@@ -40,6 +40,9 @@ function DeliveriesList() {
   const [showNotificationForm, setShowNotificationForm] = useState(false)
   const [showPhotoCapture, setShowPhotoCapture] = useState(false)
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'deliveries' | 'schedule' | 'analytics'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed'>('all')
+  
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed') => {
     setActiveTab('deliveries')
@@ -378,12 +381,8 @@ function DeliveriesList() {
         <CardHeader>
           <CardTitle className="text-xl">Deliveries</CardTitle>
           <CardDescription>
-                        {delivery.status.replace('_', ' ').toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <User className="h-3 w-3 mr-2 text-blue-500" />
+            Manage and track all vehicle deliveries
+          </CardDescription>
           {/* Filter Indicator */}
           {statusFilter !== 'all' && (
             <div className="flex items-center gap-2 mb-4">
@@ -395,11 +394,28 @@ function DeliveriesList() {
               </Button>
             </div>
           )}
-
-                        <span className="font-medium">Customer:</span> 
-                        <span className="ml-1">{delivery.customerId}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             {filteredDeliveries.length > 0 ? (
               filteredDeliveries.map((delivery) => (
+                <div key={delivery.id} className="ri-list-item">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-lg">Delivery #{delivery.id}</h3>
+                      <Badge className={cn("text-xs", getStatusColor(delivery.status))}>
+                        {delivery.status.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <User className="h-3 w-3 mr-2 text-blue-500" />
+                        <span className="font-medium">Customer:</span> 
+                        <span className="ml-1">{delivery.customerId}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-2 text-blue-500" />
+                        <span className="font-medium">Scheduled:</span> 
                         <span className="ml-1">{formatDate(delivery.scheduledDate)}</span>
                       </div>
                       {delivery.deliveredDate && (
@@ -424,63 +440,54 @@ function DeliveriesList() {
                       )}
                     </div>
                   </div>
-                </div>
-                <div className="ri-action-buttons"> 
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleViewDelivery(delivery)}
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    View
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleEditDelivery(delivery)}
-                  >
-                    Edit
-                  </Button>
-                  {delivery.status === DeliveryStatus.IN_TRANSIT && (
+                  <div className="ri-action-buttons"> 
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="shadow-sm"
-                      onClick={() => {
-                        setSelectedDelivery(delivery);
-                        setShowPhotoCapture(true);
-                      }}
+                      onClick={() => handleViewDelivery(delivery)}
                     >
-                      <Camera className="h-3 w-3 mr-1" />
-                      Photos
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
                     </Button>
-                  )}
-                  {(delivery.status === DeliveryStatus.SCHEDULED || delivery.status === DeliveryStatus.IN_TRANSIT) && (
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="shadow-sm"
-                      onClick={() => {
-                        setSelectedDelivery(delivery);
-                        setShowNotificationForm(true);
-                      }}
+                      onClick={() => handleEditDelivery(delivery)}
                     >
-                      <MessageSquare className="h-3 w-3 mr-1" />
-                      Notify
+                      Edit
                     </Button>
-                  )}
+                    {delivery.status === DeliveryStatus.IN_TRANSIT && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="shadow-sm"
+                        onClick={() => {
+                          setSelectedDelivery(delivery);
+                          setShowPhotoCapture(true);
+                        }}
+                      >
+                        <Camera className="h-3 w-3 mr-1" />
+                        Photos
+                      </Button>
+                    )}
+                    {(delivery.status === DeliveryStatus.SCHEDULED || delivery.status === DeliveryStatus.IN_TRANSIT) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="shadow-sm"
+                        onClick={() => {
+                          setSelectedDelivery(delivery);
+                          setShowNotificationForm(true);
+                        }}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        Notify
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            
-            {filteredDeliveries.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No deliveries found</p>
-                <p className="text-sm">Try adjusting your search or filters</p>
-              </div>
               ))
             ) : (
               <Card>
@@ -528,8 +535,6 @@ function DeliveryDashboardView() {
 }
 
 export default function DeliveryTracker() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'deliveries' | 'schedule' | 'analytics'>('dashboard')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in_transit' | 'delivered' | 'delayed'>('all')
   return (
     <Routes>
       <Route path="/" element={<DeliveryDashboardView />} />
