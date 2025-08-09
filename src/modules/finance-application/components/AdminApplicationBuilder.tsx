@@ -150,7 +150,8 @@ export function AdminApplicationBuilder({
       label: 'New Field',
       placeholder: '',
       required: false,
-      order: 1
+      order: 1,
+      options: undefined // Explicitly set to undefined for non-option field types
     }
 
     const updatedSections = editingTemplate.sections?.map(section => {
@@ -674,7 +675,14 @@ function FieldEditor({
   onDeleteField,
   fieldTypes
 }: FieldEditorProps) {
-  const [localField, setLocalField] = useState(field)
+  const [localField, setLocalField] = useState(() => {
+    // Ensure options array exists for field types that need it
+    const needsOptions = ['select', 'radio', 'checkbox'].includes(field.type)
+    return {
+      ...field,
+      options: needsOptions ? (field.options || []) : field.options
+    }
+  })
   const [newOption, setNewOption] = useState('')
 
   const isEditingThis = editingField?.id === field.id
@@ -692,7 +700,7 @@ function FieldEditor({
     if (newOption.trim()) {
       setLocalField({
         ...localField,
-        options: [...(localField.options || []), newOption.trim()]
+        options: [...(localField.options ?? []), newOption.trim()]
       })
       setNewOption('')
     }
@@ -701,7 +709,7 @@ function FieldEditor({
   const removeOption = (index: number) => {
     setLocalField({
       ...localField,
-      options: localField.options?.filter((_, i) => i !== index)
+      options: (localField.options ?? []).filter((_, i) => i !== index)
     })
   }
 
@@ -729,7 +737,9 @@ function FieldEditor({
                   onValueChange={(value: FieldType) => setLocalField({
                     ...localField,
                     type: value,
-                    options: ['select', 'radio', 'checkbox'].includes(value) ? localField.options : undefined
+                    options: ['select', 'radio', 'checkbox'].includes(value) 
+                      ? (localField.options ?? []) 
+                      : undefined
                   })}
                 >
                   <SelectTrigger>
@@ -791,7 +801,7 @@ function FieldEditor({
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {localField.options?.map((option, index) => (
+                    {(localField.options ?? []).map((option, index) => (
                       <div key={index} className="flex items-center bg-muted px-2 py-1 rounded">
                         <span className="text-sm mr-2">{option}</span>
                         <Button

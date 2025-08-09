@@ -56,7 +56,7 @@ export interface ApplicationField {
   required: boolean
   order: number
   options?: string[] // For select, radio, checkbox fields
-  validation?: FieldValidation
+  options?: string[] | null
   conditionalLogic?: ConditionalLogic
 }
 
