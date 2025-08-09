@@ -383,18 +383,6 @@ function PDIChecklistDashboard() {
             setShowInspectionForm(false)
             setSelectedInspection(null)
           }}
-          {/* Filter Indicator */}
-          {statusFilter !== 'all' && (
-            <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary">
-                Filtered by: {statusFilter.replace('_', ' ')}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-                Clear Filter
-              </Button>
-            </div>
-          )}
-
         />
       )}
 
@@ -428,7 +416,7 @@ function PDIChecklistDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="ri-stats-grid">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Inspections</CardTitle>
