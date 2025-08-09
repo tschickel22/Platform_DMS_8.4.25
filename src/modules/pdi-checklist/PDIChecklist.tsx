@@ -57,9 +57,8 @@ function PDIInspectionsList() {
   // Filter inspections based on search and status
   const filteredInspections = inspections
     .filter(inspection =>
-      (inspection.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (inspection.vehicleId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (inspection.inspectorName || '').toLowerCase().includes(searchTerm.toLowerCase())
+      inspection.vehicleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inspection.inspectorName.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter(inspection => statusFilter === 'all' || inspection.status.toLowerCase() === statusFilter)
 
