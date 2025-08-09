@@ -51,12 +51,12 @@ export interface ApplicationSection {
 export interface ApplicationField {
   id: string
   type: FieldType
-  type: 'text' | 'email' | 'phone' | 'number' | 'date' | 'select' | 'checkbox' | 'textarea' | 'file'
+  label: string
   placeholder?: string
   required: boolean
   order: number
   options?: string[] // For select, radio, checkbox fields
-  options?: string[] | null
+  validation?: FieldValidation
   conditionalLogic?: ConditionalLogic
 }
 

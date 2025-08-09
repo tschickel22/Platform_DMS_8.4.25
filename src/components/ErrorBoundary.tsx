@@ -32,6 +32,11 @@ export class ErrorBoundary extends Component<Props, State> {
     })
   }
 
+  handleReload = () => {
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined })
+    window.location.reload()
+  }
+
   handleReset = () => {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined })
   }
@@ -43,13 +48,13 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-[400px] flex items-center justify-center p-4">
+        <div className="min-h-screen flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
-              <CardTitle className="text-red-900">Something went wrong</CardTitle>
+              <CardTitle className="text-xl text-red-900">Something went wrong</CardTitle>
               <CardDescription>
                 An unexpected error occurred while rendering this component.
               </CardDescription>
@@ -58,29 +63,32 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3">
                   <p className="text-sm text-red-800 font-medium">Error:</p>
-                  <p className="text-sm text-red-700 mt-1">
-                    {this.state.error.message}
-                  </p>
+                  <p className="text-sm text-red-700 mt-1">{this.state.error.message}</p>
                 </div>
               )}
               
-              <div className="flex flex-col gap-2">
-                <Button onClick={this.handleReset} className="w-full">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={this.handleReset} 
+                  variant="outline" 
+                  className="flex-1"
+                >
                   Try Again
                 </Button>
                 <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()} 
-                  className="w-full"
+                  onClick={this.handleReload} 
+                  className="flex-1"
                 >
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   Reload Page
                 </Button>
               </div>
               
-              <p className="text-xs text-muted-foreground text-center">
-                If this problem persists, please contact support.
-              </p>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  If this problem persists, please contact support.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

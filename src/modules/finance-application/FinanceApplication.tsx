@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import ErrorBoundary from '@/components/ErrorBoundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -701,9 +700,7 @@ function FinanceApplicationDashboard() {
   }
 
   return (
-    <ErrorBoundary>
-    <ErrorBoundary>
-      <div className="space-y-6">
+    <div className="space-y-6">
       {/* Task Form Modal */}
       {showTaskForm && (
         <TaskForm
@@ -951,29 +948,35 @@ function FinanceApplicationDashboard() {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
-            <ErrorBoundary>
-              <AdminApplicationBuilder
-                templates={filteredTemplates}
-                onCreateTemplate={createTemplate}
-                onUpdateTemplate={updateTemplate}
-                onDeleteTemplate={deleteTemplate}
-              />
-            </ErrorBoundary>
+          {/* Template Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search templates by name or description"
+              value={templateSearchQuery}
+              onChange={(e) => setTemplateSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <AdminApplicationBuilder
+            templates={filteredTemplates}
+            onCreateTemplate={createTemplate}
+            onUpdateTemplate={updateTemplate}
+            onDeleteTemplate={deleteTemplate}
+          />
         </TabsContent>
       </Tabs>
-      </div>
-    </ErrorBoundary>
-    </ErrorBoundary>
+    </div>
   )
 }
 
 export default function FinanceApplication() {
   return (
-    <ErrorBoundary>
     <Routes>
       <Route path="/" element={<FinanceApplicationDashboard />} />
+      <Route path="/portal" element={<PortalApplicationView />} />
       <Route path="/*" element={<FinanceApplicationDashboard />} />
     </Routes>
-    </ErrorBoundary>
   )
 }
