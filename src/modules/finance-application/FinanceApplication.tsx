@@ -464,7 +464,7 @@ function FinanceApplicationDashboard() {
                 <div className="flex items-center space-x-2">
                   <Label className="text-sm font-medium">Status:</Label>
                   <Select
-                    value={pendingStatus || selectedApplication.status}
+                    value={statusFilter}
                     onValueChange={handleStatusChange}
                   >
                     <SelectTrigger className="w-[200px]">
