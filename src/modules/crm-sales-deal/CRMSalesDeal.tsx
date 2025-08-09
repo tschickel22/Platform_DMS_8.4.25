@@ -53,9 +53,29 @@ function DealsList() {
   const [showDealForm, setShowDealForm] = useState(false)
   const [activeTab, setActiveTab] = useState('pipeline')
   const [showDealDetail, setShowDealDetail] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'won' | 'lost'>('all')
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const { toast } = useToast()
+
+  // Helper to apply tile filter
+  const applyTileFilter = (type: 'all' | 'active' | 'won' | 'lost') => {
+    setActiveFilter(type)
+    switch (type) {
+      case 'all':
+        setStageFilter('all')
+        break
+      case 'active':
+        setStageFilter('Active')
+        break
+      case 'won':
+        setStageFilter('Won')
+        break
+      case 'lost':
+        setStageFilter('Lost')
+        break
+    }
+  }
 
   const getStatusColor = (status: DealStatus) => {
     switch (status) {
