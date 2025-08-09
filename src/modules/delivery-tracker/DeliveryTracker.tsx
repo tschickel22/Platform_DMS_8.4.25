@@ -276,7 +276,7 @@ function DeliveriesList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid"> 
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card {...tileProps(() => applyTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Deliveries</CardTitle>
             <Truck className="h-4 w-4 text-blue-600" />
@@ -289,7 +289,7 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card {...tileProps(() => applyTileFilter('scheduled'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Scheduled</CardTitle>
             <Truck className="h-4 w-4 text-blue-600" />
@@ -304,7 +304,7 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+        <Card {...tileProps(() => applyTileFilter('in_transit'))} className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">In Transit</CardTitle>
             <Truck className="h-4 w-4 text-yellow-600" />
@@ -319,7 +319,7 @@ function DeliveriesList() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card {...tileProps(() => applyTileFilter('delivered'))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Delivered</CardTitle>
             <Truck className="h-4 w-4 text-green-600" />
