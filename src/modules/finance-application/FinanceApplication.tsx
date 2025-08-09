@@ -953,31 +953,19 @@ function FinanceApplicationDashboard() {
 
         <TabsContent value="templates" className="space-y-4">
             <ErrorBoundary>
-              <ApplicationsTab 
-                applications={applications}
-                templates={templates}
-                selectedTemplate={selectedTemplate}
-                onTemplateSelect={setSelectedTemplate}
-                onCreateApplication={createApplication}
-                onUpdateApplication={updateApplication}
-                onDeleteApplication={deleteApplication}
-              />
-            </ErrorBoundary>
-          </div>
-          
-          <AdminApplicationBuilder
-            templates={filteredTemplates}
-            onCreateTemplate={createTemplate}
-            onUpdateTemplate={updateTemplate}
-            onDeleteTemplate={deleteTemplate}
-            <ErrorBoundary>
               <AdminApplicationBuilder
-                templates={templates}
+                templates={filteredTemplates}
                 onCreateTemplate={createTemplate}
                 onUpdateTemplate={updateTemplate}
                 onDeleteTemplate={deleteTemplate}
               />
             </ErrorBoundary>
+        </TabsContent>
+      </Tabs>
+      </div>
+    </ErrorBoundary>
+    </ErrorBoundary>
+  )
 }
 
 export default function FinanceApplication() {
@@ -985,12 +973,8 @@ export default function FinanceApplication() {
     <ErrorBoundary>
     <Routes>
       <Route path="/" element={<FinanceApplicationDashboard />} />
-            <ErrorBoundary>
-              <AnalyticsTab applications={applications} />
-            </ErrorBoundary>
       <Route path="/*" element={<FinanceApplicationDashboard />} />
     </Routes>
-      </div>
     </ErrorBoundary>
   )
 }
