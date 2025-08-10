@@ -544,11 +544,11 @@ function InvoicesList() {
   )
 }
 
-export default function InvoicePayments() 
-  return ({
+export default function InvoicePayments() {
+  return (
     <Routes>
-      <Route path="/" element={<InvoicesList />} />
-      <Route path="/*" element={<InvoicesList />} />
+      <Route index element={<InvoicesList />} />
+      <Route path="*" element={<InvoicesList />} />
     </Routes>
   )
 }
