@@ -545,9 +545,10 @@ function InvoicesList() {
 }
 
 export default function InvoicePayments() 
-  return (
+  return ({
     <Routes>
       <Route path="/" element={<InvoicesList />} />
       <Route path="/*" element={<InvoicesList />} />
     </Routes>
   )
+}
