@@ -13,11 +13,11 @@ import {
   Send,
   Eye,
   Download,
+  CreditCard,
   TrendingUp,
   DollarSign,
   CheckCircle,
-  Clock,
-  CreditCard
+  Clock
 } from 'lucide-react'
 import { Invoice, InvoiceStatus, Payment } from '@/types'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
@@ -37,53 +37,42 @@ function InvoicesList() {
     deleteInvoice,
     sendInvoice,
     sendPaymentRequest,
-    recordPayment,
+    recordPayment
   } = useInvoiceManagement()
 
-  // normalize to arrays to avoid .length on undefined
+  // Always operate on arrays (avoid .length on undefined)
   const invoices = useMemo<Invoice[]>(() => invoicesRaw ?? [], [invoicesRaw])
   const payments = useMemo<Payment[]>(() => paymentsRaw ?? [], [paymentsRaw])
 
   const { toast } = useToast()
 
-  // ---------- UI state ----------
+  // UI state
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'cancelled'>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices')
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
   const [showInvoiceDetail, setShowInvoiceDetail] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
 
-  // Payment tab filter (drives PaymentHistory via props)
+  // Payments filter (driven by the single compact tile row)
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'Completed' | 'Pending' | 'Failed'>('all')
 
-  // ---------- helpers ----------
+  // Helpers
   const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase()
-  const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0)
-  const invTotal = (i: Invoice) => Number((i as any).total ?? (i as any).totalAmount ?? 0)
+  const isActive = (want: string) => normalize(paymentStatusFilter) === normalize(want)
 
-  // Tiles: shared accessibility and click wiring
   const tileProps = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
     onClick: handler,
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
-    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+    className:
+      'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded-lg transition-shadow'
   })
 
-  // Clicking the invoice KPI tiles
-  const applyInvoiceTileFilter = (status: typeof statusFilter) => {
-    setActiveTab('invoices')
-    setStatusFilter(status)
-  }
+  // ----------------- Derived data -----------------
 
-  // Clicking the payment KPI tiles (these are rendered inside PaymentHistory; we pass handlers)
-  const applyPaymentTileFilter = (status: typeof paymentStatusFilter) => {
-    setActiveTab('payments')
-    setPaymentStatusFilter(status)
-  }
-
-  // ---------- derived: invoices ----------
+  // Invoice filtering
   const filteredInvoices = invoices
     .filter(inv => {
       const q = searchTerm.toLowerCase()
@@ -94,6 +83,16 @@ function InvoicesList() {
     })
     .filter(inv => statusFilter === 'all' || normalize(inv.status) === statusFilter)
 
+  // Payments filtering (used by history list)
+  const filteredPayments = useMemo(() => {
+    const want = normalize(paymentStatusFilter)
+    return payments.filter(p => want === 'all' || normalize(p.status) === want)
+  }, [payments, paymentStatusFilter])
+
+  // KPI helpers
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0)
+  const invTotal = (i: Invoice) => Number((i as any).total ?? (i as any).totalAmount ?? 0)
+
   const outstandingTotal = formatCurrency(
     sum(invoices.filter(i => normalize(i.status) !== 'paid').map(invTotal))
   )
@@ -103,6 +102,15 @@ function InvoicesList() {
   const paidThisMonth = formatCurrency(
     sum(invoices.filter(i => normalize(i.status) === normalize(InvoiceStatus.PAID)).map(i => Number((i as any).total ?? 0)))
   )
+
+  const paymentsByStatus = useMemo(() => {
+    const counts = { completed: 0, pending: 0, failed: 0 }
+    for (const p of payments) {
+      const s = normalize(p.status)
+      if (s in counts) (counts as any)[s]++
+    }
+    return counts
+  }, [payments])
 
   const getInvoiceStatusColor = (status: string) => {
     switch (normalize(status)) {
@@ -116,7 +124,8 @@ function InvoicesList() {
     }
   }
 
-  // ---------- actions ----------
+  // ----------------- Actions -----------------
+
   const handleCreateInvoice = () => {
     setSelectedInvoice(null)
     setShowInvoiceForm(true)
@@ -193,12 +202,11 @@ function InvoicesList() {
     }
   }
 
-  // successful payments metric (display only)
-  const successfulPayments = payments.filter(p => normalize(p.status) === 'completed').length
+  // ----------------- Render -----------------
 
   return (
     <div className="space-y-8">
-      {/* Modals / Drawers */}
+      {/* Modals/Drawers */}
       {showInvoiceForm && (
         <InvoiceForm
           invoice={selectedInvoice || undefined}
@@ -220,12 +228,12 @@ function InvoicesList() {
         />
       )}
 
-      {/* Header */}
+      {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Invoice & Payments</h1>
-            <p className="ri-page-description">Manage invoices and process payments</p>
+            <p className="ri-page-description">Manage invoices and process payments via Zego integration</p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateInvoice}>
             <Plus className="h-4 w-4 mr-2" />
@@ -234,9 +242,9 @@ function InvoicesList() {
         </div>
       </div>
 
-      {/* KPI tiles (Invoices) — clickable filters */}
+      {/* KPIs (Invoices-focused) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card {...tileProps(() => applyInvoiceTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Invoices</CardTitle>
             <Receipt className="h-4 w-4 text-blue-600" />
@@ -250,7 +258,7 @@ function InvoicesList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => applyInvoiceTileFilter('all'))} className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900">Outstanding</CardTitle>
             <DollarSign className="h-4 w-4 text-orange-600" />
@@ -264,7 +272,7 @@ function InvoicesList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => applyInvoiceTileFilter('paid'))} className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Paid This Month</CardTitle>
             <Receipt className="h-4 w-4 text-green-600" />
@@ -278,7 +286,7 @@ function InvoicesList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => { setActiveTab('payments'); applyPaymentTileFilter('all') })} className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Payment Success Rate</CardTitle>
             <CreditCard className="h-4 w-4 text-purple-600" />
@@ -287,11 +295,40 @@ function InvoicesList() {
             <div className="text-2xl font-bold text-purple-900">98.5%</div>
             <p className="text-xs text-purple-600 flex items-center mt-1">
               <CheckCircle className="h-3 w-3 mr-1" />
-              {successfulPayments} successful payments
+              {payments.filter(p => normalize(p.status) === 'completed').length} successful payments
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Zego Integration info */}
+      <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-blue-900">
+            <CreditCard className="h-5 w-5 text-blue-600" />
+            <span>Zego Payment Integration</span>
+          </CardTitle>
+          <CardDescription className="text-blue-700">
+            Seamlessly process payments and send payment requests to customers
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">99.9%</div>
+              <p className="text-sm text-blue-700">Uptime</p>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">2.9%</div>
+              <p className="text-sm text-blue-700">Processing Fee</p>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">24/7</div>
+              <p className="text-sm text-blue-700">Support</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content Tabs */}
       <TabsComponent value={activeTab} onValueChange={(v) => setActiveTab(v as 'invoices' | 'payments')} className="space-y-6">
@@ -306,7 +343,7 @@ function InvoicesList() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ---------- Invoices tab ---------- */}
+        {/* ---------------- Invoices tab ---------------- */}
         <TabsContent value="invoices">
           {/* Search & filters */}
           <div className="flex gap-4">
@@ -319,8 +356,8 @@ function InvoicesList() {
                 className="ri-search-input shadow-sm"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-              <SelectTrigger className="w-44">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -438,11 +475,88 @@ function InvoicesList() {
           </Card>
         </TabsContent>
 
-        {/* ---------- Payments tab ---------- */}
+        {/* ---------------- Payments tab ---------------- */}
         <TabsContent value="payments" className="space-y-6">
-          {/* Filter indicator for payments */}
+          {/* SINGLE compact row of tiles (style like the “bottom” row) */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card
+              {...tileProps(() => setPaymentStatusFilter('all'))}
+              className={cn(
+                'border border-dashed bg-muted/30 hover:shadow-sm',
+                isActive('all') && 'ring-2 ring-primary/50'
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  Total Payments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{payments.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(sum(payments.map(p => Number(p.amount ?? 0))))} processed
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card
+              {...tileProps(() => setPaymentStatusFilter('Completed'))}
+              className={cn(
+                'bg-green-50 border-green-100 hover:shadow-sm',
+                isActive('Completed') && 'ring-2 ring-green-400'
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  Completed <CheckCircle className="h-4 w-4 text-green-600" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.completed}</div>
+                <p className="text-xs text-green-700 mt-1">100.0% success rate</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              {...tileProps(() => setPaymentStatusFilter('Pending'))}
+              className={cn(
+                'bg-yellow-50 border-yellow-100 hover:shadow-sm',
+                isActive('Pending') && 'ring-2 ring-yellow-400'
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  Pending <Clock className="h-4 w-4 text-yellow-600" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.pending}</div>
+                <p className="text-xs text-yellow-700 mt-1">Awaiting processing</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              {...tileProps(() => setPaymentStatusFilter('Failed'))}
+              className={cn(
+                'bg-red-50 border-red-100 hover:shadow-sm',
+                isActive('Failed') && 'ring-2 ring-red-400'
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  Failed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paymentsByStatus.failed}</div>
+                <p className="text-xs text-red-700 mt-1">0.0% failure rate</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filter indicator */}
           {paymentStatusFilter !== 'all' && (
-            <div className="flex items-center gap-2 -mb-2">
+            <div className="flex items-center gap-2">
               <Badge variant="secondary">Filtered by: {paymentStatusFilter}</Badge>
               <Button variant="ghost" size="sm" onClick={() => setPaymentStatusFilter('all')}>
                 Clear Filter
@@ -450,9 +564,9 @@ function InvoicesList() {
             </div>
           )}
 
-          {/* Let PaymentHistory render its (top) tiles; we pass filter + handler to enable clicks */}
+          {/* Payments list (fed with filteredPayments) */}
           <PaymentHistory
-            payments={payments}
+            payments={filteredPayments}
             onViewPaymentDetails={(payment) => {
               const invoice = invoices.find(i => i.id === payment.invoiceId)
               if (invoice) {
@@ -460,9 +574,6 @@ function InvoicesList() {
                 setShowInvoiceDetail(true)
               }
             }}
-            // These props enable the tile click → filter behavior in PaymentHistory.
-            // If your PaymentHistory doesn't type these props, the cast prevents TS complaints.
-            {...({ filter: paymentStatusFilter, onFilterChange: applyPaymentTileFilter } as any)}
           />
         </TabsContent>
       </TabsComponent>
