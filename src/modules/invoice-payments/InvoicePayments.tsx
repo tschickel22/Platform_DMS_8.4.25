@@ -251,7 +251,7 @@ function InvoicesList() {
           <div>
             <h1 className="ri-page-title">Invoice & Payments</h1>
             <p className="ri-page-description">
-              Manage invoices and process payments via Zego integration
+              Manage invoices and process payments
             </p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateInvoice}>
