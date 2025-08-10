@@ -321,6 +321,8 @@ function InvoicesList() {
           </Card>
         </div>
 
+      </div>
+
       {/* Main Content Tabs */}
       <TabsComponent value={activeTab} onValueChange={(v) => setActiveTab(v as 'invoices' | 'payments')} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
