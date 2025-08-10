@@ -551,4 +551,3 @@ export default function InvoicePayments() {
       <Route path="/*" element={<InvoicesList />} />
     </Routes>
   )
-}
