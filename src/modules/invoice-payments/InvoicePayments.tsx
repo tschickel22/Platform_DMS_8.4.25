@@ -321,36 +321,6 @@ function InvoicesList() {
           </Card>
         </div>
 
-        {/* Zego Integration Info */}
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-blue-900">
-              <CreditCard className="h-5 w-5 text-blue-600" />
-              <span>Zego Payment Integration</span>
-            </CardTitle>
-            <CardDescription className="text-blue-700">
-              Seamlessly process payments and send payment requests to customers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center p-4 bg-white/50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">99.9%</div>
-                <p className="text-sm text-blue-700">Uptime</p>
-              </div>
-              <div className="text-center p-4 bg-white/50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">2.9%</div>
-                <p className="text-sm text-blue-700">Processing Fee</p>
-              </div>
-              <div className="text-center p-4 bg-white/50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">24/7</div>
-                <p className="text-sm text-blue-700">Support</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content Tabs */}
       <TabsComponent value={activeTab} onValueChange={(v) => setActiveTab(v as 'invoices' | 'payments')} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
