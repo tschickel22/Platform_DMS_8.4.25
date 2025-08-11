@@ -37,6 +37,7 @@ export default function InventoryManagement() {
   const [showAddMH, setShowAddMH] = useState(false)
   const [showAddRVModal, setShowAddRVModal] = useState(false)
   const [showAddMHModal, setShowAddMHModal] = useState(false)
+  const [inventory, setInventory] = useState<any[]>([])
   const [showImport, setShowImport] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
@@ -94,6 +95,46 @@ export default function InventoryManagement() {
   const handleAddMH = () => {
     console.log('Add MH button clicked')
     setShowAddMHModal(true)
+  }
+
+  const handleSaveRV = (formData: any) => {
+    // Create new RV inventory item with unique ID
+    const newRVItem = {
+      id: Date.now().toString(), // Simple ID generation
+      type: 'RV',
+      ...formData,
+      createdAt: new Date().toISOString(),
+      status: 'Available'
+    }
+    
+    // Add to inventory state
+    setInventory(prev => [...prev, newRVItem])
+    
+    // Close modal
+    setShowAddRVModal(false)
+    
+    // Show success message (you could add a toast notification here)
+    console.log('RV inventory item created:', newRVItem)
+  }
+
+  const handleSaveMH = (formData: any) => {
+    // Create new MH inventory item with unique ID
+    const newMHItem = {
+      id: Date.now().toString(), // Simple ID generation
+      type: 'MH',
+      ...formData,
+      createdAt: new Date().toISOString(),
+      status: 'Available'
+    }
+    
+    // Add to inventory state
+    setInventory(prev => [...prev, newMHItem])
+    
+    // Close modal
+    setShowAddMHModal(false)
+    
+    // Show success message (you could add a toast notification here)
+    console.log('MH inventory item created:', newMHItem)
   }
 
   const handleCloseRVModal = () => {
