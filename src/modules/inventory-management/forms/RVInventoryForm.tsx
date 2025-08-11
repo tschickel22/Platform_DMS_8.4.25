@@ -1,371 +1,227 @@
-import React, { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { X, Plus, Upload, HelpCircle } from 'lucide-react'
-import { RVVehicle } from '../state/types'
-import { validateRVForRequiredFields } from '../utils/validators'
+import { X, Plus, Upload, Camera } from 'lucide-react'
 
 interface RVInventoryFormProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  editingItem?: RVVehicle | null
-  onSave: (vehicle: RVVehicle) => void
+  onSubmit: (data: any) => void
+  onCancel: () => void
+  initialData?: any
 }
 
-const initialFormData: Partial<RVVehicle> = {
-  type: 'RV',
-  vin: '',
-  make: '',
-  model: '',
-  year: new Date().getFullYear(),
-  mileage: 0,
-  bodyStyle: '',
-  fuelType: 'Gasoline',
-  transmission: 'Automatic',
-  exteriorColor: '',
-  interiorColor: '',
-  price: 0,
-  currency: 'USD',
-  availability: 'InStock',
-  condition: 'Used',
-  description: '',
-  images: [],
-  url: '',
-  seller: {
-    name: '',
-    telephone: '',
-    address: {
-      streetAddress: '',
-      addressLocality: '',
-      addressRegion: '',
-      postalCode: '',
-      addressCountry: 'US'
-    }
-  },
-  features: [],
-  specifications: {}
-}
+export default function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormProps) {
+  const [formData, setFormData] = useState({
+    // Basic Information
+    vin: initialData?.vin || '',
+    make: initialData?.make || '',
+    model: initialData?.model || '',
+    year: initialData?.year || new Date().getFullYear(),
+    mileage: initialData?.mileage || '',
+    bodyStyle: initialData?.bodyStyle || '',
+    
+    // Vehicle Details
+    fuelType: initialData?.fuelType || '',
+    transmission: initialData?.transmission || '',
+    exteriorColor: initialData?.exteriorColor || '',
+    interiorColor: initialData?.interiorColor || '',
+    condition: initialData?.condition || '',
+    availability: initialData?.availability || '',
+    
+    // RV Specific
+    rvType: initialData?.rvType || '',
+    length: initialData?.length || '',
+    slideOuts: initialData?.slideOuts || '',
+    sleeps: initialData?.sleeps || '',
+    awning: initialData?.awning || false,
+    generator: initialData?.generator || false,
+    
+    // Pricing
+    msrp: initialData?.msrp || '',
+    salePrice: initialData?.salePrice || '',
+    cost: initialData?.cost || '',
+    
+    // Features
+    features: initialData?.features || [],
+    
+    // Description
+    description: initialData?.description || '',
+    
+    // Images
+    images: initialData?.images || []
+  })
 
-const bodyStyleOptions = [
-  'Class A',
-  'Class B',
-  'Class C',
-  'Travel Trailer',
-  'Fifth Wheel',
-  'Toy Hauler',
-  'Pop-up Camper',
-  'Truck Camper',
-  'Motorhome',
-  'Park Model'
-]
-
-const fuelTypeOptions = [
-  'Gasoline',
-  'Diesel',
-  'Electric',
-  'Hybrid',
-  'Propane'
-]
-
-const transmissionOptions = [
-  'Automatic',
-  'Manual',
-  'CVT'
-]
-
-const availabilityOptions = [
-  { value: 'InStock', label: 'In Stock' },
-  { value: 'OutOfStock', label: 'Out of Stock' },
-  { value: 'PreOrder', label: 'Pre-Order' },
-  { value: 'BackOrder', label: 'Back Order' },
-  { value: 'Discontinued', label: 'Discontinued' },
-  { value: 'SoldOut', label: 'Sold Out' }
-]
-
-const conditionOptions = [
-  'New',
-  'Used',
-  'Certified Pre-Owned',
-  'Refurbished'
-]
-
-export function RVInventoryForm({ open, onOpenChange, editingItem, onSave }: RVInventoryFormProps) {
-  const [formData, setFormData] = useState<Partial<RVVehicle>>(initialFormData)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [imageUrls, setImageUrls] = useState<string[]>([])
-  const [newImageUrl, setNewImageUrl] = useState('')
   const [newFeature, setNewFeature] = useState('')
-
-  const mode = editingItem ? 'edit' : 'add'
-  const title = mode === 'edit' ? 'Edit RV' : 'Add RV'
-
-  useEffect(() => {
-    if (editingItem) {
-      setFormData(editingItem)
-      setImageUrls(editingItem.images || [])
-    } else {
-      setFormData(initialFormData)
-      setImageUrls([])
-    }
-    setErrors({})
-  }, [editingItem, open])
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors[field]
-        return newErrors
-      })
-    }
   }
 
-  const handleNestedInputChange = (parentField: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [parentField]: {
-        ...prev[parentField] as any,
-        [field]: value
-      }
-    }))
-  }
-
-  const handleAddressChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      seller: {
-        ...prev.seller!,
-        address: {
-          ...prev.seller!.address,
-          [field]: value
-        }
-      }
-    }))
-  }
-
-  const handleAddImage = () => {
-    if (newImageUrl.trim()) {
-      setImageUrls(prev => [...prev, newImageUrl.trim()])
-      setNewImageUrl('')
-    }
-  }
-
-  const handleRemoveImage = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const handleAddFeature = () => {
+  const addFeature = () => {
     if (newFeature.trim()) {
       setFormData(prev => ({
         ...prev,
-        features: [...(prev.features || []), newFeature.trim()]
+        features: [...prev.features, newFeature.trim()]
       }))
       setNewFeature('')
     }
   }
 
-  const handleRemoveFeature = (index: number) => {
+  const removeFeature = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      features: prev.features?.filter((_, i) => i !== index) || []
+      features: prev.features.filter((_: any, i: number) => i !== index)
     }))
   }
 
-  const handleCancel = () => {
-    onOpenChange(false)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit(formData)
   }
 
-  const handleSave = () => {
-    const vehicleData = {
-      ...formData,
-      images: imageUrls
-    } as RVVehicle
+  // Dropdown options
+  const makeOptions = [
+    'Winnebago', 'Thor', 'Forest River', 'Jayco', 'Coachmen', 'Keystone', 'Heartland', 
+    'Grand Design', 'Newmar', 'Tiffin', 'Holiday Rambler', 'Fleetwood', 'Dutchmen', 
+    'Prime Time', 'Palomino', 'Gulf Stream', 'Cruiser RV', 'KZ', 'Northwood', 'Lance'
+  ]
 
-    const validationErrors = validateRVForRequiredFields(vehicleData)
-    
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors)
-      return
-    }
+  const bodyStyleOptions = [
+    'Class A Motorhome', 'Class B Motorhome', 'Class C Motorhome', 'Travel Trailer', 
+    'Fifth Wheel', 'Toy Hauler', 'Pop-up Camper', 'Truck Camper', 'Park Model', 
+    'Destination Trailer', 'Hybrid Trailer', 'Teardrop Trailer'
+  ]
 
-    // Generate ID if adding new vehicle
-    if (!editingItem) {
-      vehicleData.id = `rv-${Date.now()}`
-    }
+  const rvTypeOptions = [
+    'Motorhome', 'Travel Trailer', 'Fifth Wheel', 'Toy Hauler', 'Pop-up', 'Truck Camper'
+  ]
 
-    onSave(vehicleData)
-    onOpenChange(false)
-  }
+  const fuelTypeOptions = [
+    'Gasoline', 'Diesel', 'Electric', 'Hybrid', 'Propane'
+  ]
 
-  const canGenerate = formData.vin && formData.make && formData.model && formData.year
+  const transmissionOptions = [
+    'Automatic', 'Manual', 'CVT', '6-Speed Automatic', '8-Speed Automatic', '10-Speed Automatic'
+  ]
+
+  const conditionOptions = [
+    'New', 'Used - Excellent', 'Used - Good', 'Used - Fair', 'Certified Pre-Owned', 'Damaged'
+  ]
+
+  const availabilityOptions = [
+    'Available', 'Sold', 'Pending', 'On Hold', 'In Transit', 'Service Required'
+  ]
+
+  const slideOutOptions = [
+    '0', '1', '2', '3', '4', '5+'
+  ]
+
+  const sleepsOptions = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10+'
+  ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-background border-b pb-4 mb-6 z-10">
-          <DialogHeader>
-            <div className="flex justify-between items-center">
-              <DialogTitle>
-                {mode === 'add' ? 'Add' : 'Edit'} RV
-              </DialogTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>
-                  {mode === 'add' ? 'Add RV' : 'Save'}
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {initialData ? 'Edit RV' : 'Add RV'}
+          </h1>
+          <p className="text-muted-foreground">
+            {initialData ? 'Update RV information' : 'Add a new RV to inventory'}
+          </p>
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            {initialData ? 'Update RV' : 'Add RV'}
+          </Button>
+        </div>
+      </div>
 
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Basic Information</h3>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>
+              Enter the basic details about the RV
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="vin">VIN *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Vehicle Identification Number - unique 17-character identifier</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Label htmlFor="vin">VIN *</Label>
                 <Input
                   id="vin"
-                  value={formData.vin || ''}
-                  onChange={(e) => handleInputChange('vin', e.target.value.toUpperCase())}
-                  placeholder="1HGBH41JXMN109186"
-                  maxLength={17}
-                  className={errors.vin ? 'border-red-500' : ''}
+                  value={formData.vin}
+                  onChange={(e) => handleInputChange('vin', e.target.value)}
+                  placeholder="Enter VIN number"
+                  required
                 />
-                {errors.vin && <p className="text-sm text-red-500">{errors.vin}</p>}
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="make">Make *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Vehicle manufacturer (e.g., Ford, Winnebago, Airstream)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  id="make"
-                  value={formData.make || ''}
-                  onChange={(e) => handleInputChange('make', e.target.value)}
-                  placeholder="Winnebago"
-                  className={errors.make ? 'border-red-500' : ''}
-                />
-                {errors.make && <p className="text-sm text-red-500">{errors.make}</p>}
+                <Label htmlFor="make">Make *</Label>
+                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select make" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {makeOptions.map((make) => (
+                      <SelectItem key={make} value={make}>
+                        {make}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="model">Model *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Specific model name or number</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Label htmlFor="model">Model *</Label>
                 <Input
                   id="model"
-                  value={formData.model || ''}
+                  value={formData.model}
                   onChange={(e) => handleInputChange('model', e.target.value)}
-                  placeholder="Vista 32KE"
-                  className={errors.model ? 'border-red-500' : ''}
+                  placeholder="Enter model"
+                  required
                 />
-                {errors.model && <p className="text-sm text-red-500">{errors.model}</p>}
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="year">Year *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Model year of the vehicle</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Label htmlFor="year">Year *</Label>
                 <Input
                   id="year"
                   type="number"
-                  value={formData.year || ''}
+                  value={formData.year}
                   onChange={(e) => handleInputChange('year', parseInt(e.target.value))}
-                  placeholder="2023"
+                  placeholder="Enter year"
                   min="1900"
                   max={new Date().getFullYear() + 1}
-                  className={errors.year ? 'border-red-500' : ''}
+                  required
                 />
-                {errors.year && <p className="text-sm text-red-500">{errors.year}</p>}
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="mileage">Mileage</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Current odometer reading in miles</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Label htmlFor="mileage">Mileage</Label>
                 <Input
                   id="mileage"
                   type="number"
-                  value={formData.mileage || ''}
-                  onChange={(e) => handleInputChange('mileage', parseInt(e.target.value) || 0)}
-                  placeholder="25000"
-                  min="0"
+                  value={formData.mileage}
+                  onChange={(e) => handleInputChange('mileage', e.target.value)}
+                  placeholder="Enter mileage"
                 />
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="bodyStyle">Body Style *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Type of RV (Class A, Class B, Travel Trailer, etc.)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Select value={formData.bodyStyle || ''} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
-                  <SelectTrigger className={errors.bodyStyle ? 'border-red-500' : ''}>
+                <Label htmlFor="bodyStyle">Body Style *</Label>
+                <Select value={formData.bodyStyle} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select body style" />
                   </SelectTrigger>
                   <SelectContent>
@@ -376,18 +232,21 @@ export function RVInventoryForm({ open, onOpenChange, editingItem, onSave }: RVI
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.bodyStyle && <p className="text-sm text-red-500">{errors.bodyStyle}</p>}
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Vehicle Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Vehicle Details</h3>
+        {/* Vehicle Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vehicle Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Fuel Type</Label>
-                <Select value={formData.fuelType || ''} onValueChange={(value) => handleInputChange('fuelType', value)}>
+                <Select value={formData.fuelType} onValueChange={(value) => handleInputChange('fuelType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
@@ -400,10 +259,9 @@ export function RVInventoryForm({ open, onOpenChange, editingItem, onSave }: RVI
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="transmission">Transmission</Label>
-                <Select value={formData.transmission || ''} onValueChange={(value) => handleInputChange('transmission', value)}>
+                <Select value={formData.transmission} onValueChange={(value) => handleInputChange('transmission', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select transmission" />
                   </SelectTrigger>
@@ -416,30 +274,27 @@ export function RVInventoryForm({ open, onOpenChange, editingItem, onSave }: RVI
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="exteriorColor">Exterior Color</Label>
                 <Input
                   id="exteriorColor"
-                  value={formData.exteriorColor || ''}
+                  value={formData.exteriorColor}
                   onChange={(e) => handleInputChange('exteriorColor', e.target.value)}
-                  placeholder="White"
+                  placeholder="Enter exterior color"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="interiorColor">Interior Color</Label>
                 <Input
                   id="interiorColor"
-                  value={formData.interiorColor || ''}
+                  value={formData.interiorColor}
                   onChange={(e) => handleInputChange('interiorColor', e.target.value)}
-                  placeholder="Tan"
+                  placeholder="Enter interior color"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition || ''} onValueChange={(value) => handleInputChange('condition', value)}>
+                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
@@ -452,237 +307,207 @@ export function RVInventoryForm({ open, onOpenChange, editingItem, onSave }: RVI
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability || ''} onValueChange={(value) => handleInputChange('availability', value)}>
+                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availabilityOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {availabilityOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Pricing */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Pricing</h3>
+        {/* RV Specific Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>RV Specific Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="price">Price *</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Asking price in the specified currency</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price || ''}
-                  onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                  placeholder="125000"
-                  min="0"
-                  step="0.01"
-                  className={errors.price ? 'border-red-500' : ''}
-                />
-                {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select value={formData.currency || 'USD'} onValueChange={(value) => handleInputChange('currency', value)}>
+                <Label htmlFor="rvType">RV Type</Label>
+                <Select value={formData.rvType} onValueChange={(value) => handleInputChange('rvType', value)}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select RV type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="CAD">CAD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
+                    {rvTypeOptions.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length">Length (ft)</Label>
+                <Input
+                  id="length"
+                  type="number"
+                  value={formData.length}
+                  onChange={(e) => handleInputChange('length', e.target.value)}
+                  placeholder="Enter length in feet"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slideOuts">Slide Outs</Label>
+                <Select value={formData.slideOuts} onValueChange={(value) => handleInputChange('slideOuts', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select number of slide outs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slideOutOptions.map((count) => (
+                      <SelectItem key={count} value={count}>
+                        {count}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sleeps">Sleeps</Label>
+                <Select value={formData.sleeps} onValueChange={(value) => handleInputChange('sleeps', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sleeping capacity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sleepsOptions.map((count) => (
+                      <SelectItem key={count} value={count}>
+                        {count}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Images */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Images</h3>
-            <div className="space-y-4">
-              <div className="flex gap-2">
+        {/* Pricing */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="msrp">MSRP</Label>
                 <Input
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="flex-1"
+                  id="msrp"
+                  type="number"
+                  value={formData.msrp}
+                  onChange={(e) => handleInputChange('msrp', e.target.value)}
+                  placeholder="Enter MSRP"
                 />
-                <Button type="button" onClick={handleAddImage} disabled={!newImageUrl.trim()}>
-                  <Plus className="h-4 w-4" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="salePrice">Sale Price</Label>
+                <Input
+                  id="salePrice"
+                  type="number"
+                  value={formData.salePrice}
+                  onChange={(e) => handleInputChange('salePrice', e.target.value)}
+                  placeholder="Enter sale price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cost">Cost</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  value={formData.cost}
+                  onChange={(e) => handleInputChange('cost', e.target.value)}
+                  placeholder="Enter cost"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Features */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Features</CardTitle>
+            <CardDescription>
+              Add key features and amenities
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder="Enter a feature"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+              />
+              <Button type="button" onClick={addFeature}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {formData.features.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.features.map((feature: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {feature}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => removeFeature(index)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Description */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Enter detailed description..."
+              rows={4}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Images */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Images</CardTitle>
+            <CardDescription>
+              Upload photos of the RV
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Drag and drop images here, or click to select files
+                </p>
+                <Button type="button" variant="outline" size="sm">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Select Images
                 </Button>
               </div>
-              
-              {imageUrls.length > 0 && (
-                <div className="space-y-2">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                      <span className="flex-1 text-sm truncate">{url}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveImage(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Features</h3>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newFeature}
-                  onChange={(e) => setNewFeature(e.target.value)}
-                  placeholder="Air conditioning, Generator, Solar panels..."
-                  className="flex-1"
-                />
-                <Button type="button" onClick={handleAddFeature} disabled={!newFeature.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {formData.features && formData.features.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.features.map((feature, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      {feature}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-transparent"
-                        onClick={() => handleRemoveFeature(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Seller Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Seller Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sellerName">Seller Name</Label>
-                <Input
-                  id="sellerName"
-                  value={formData.seller?.name || ''}
-                  onChange={(e) => handleNestedInputChange('seller', 'name', e.target.value)}
-                  placeholder="ABC RV Sales"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sellerPhone">Phone</Label>
-                <Input
-                  id="sellerPhone"
-                  value={formData.seller?.telephone || ''}
-                  onChange={(e) => handleNestedInputChange('seller', 'telephone', e.target.value)}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="streetAddress">Street Address</Label>
-                <Input
-                  id="streetAddress"
-                  value={formData.seller?.address?.streetAddress || ''}
-                  onChange={(e) => handleAddressChange('streetAddress', e.target.value)}
-                  placeholder="123 Main St"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={formData.seller?.address?.addressLocality || ''}
-                  onChange={(e) => handleAddressChange('addressLocality', e.target.value)}
-                  placeholder="Anytown"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={formData.seller?.address?.addressRegion || ''}
-                  onChange={(e) => handleAddressChange('addressRegion', e.target.value)}
-                  placeholder="CA"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="zipCode">ZIP Code</Label>
-                <Input
-                  id="zipCode"
-                  value={formData.seller?.address?.postalCode || ''}
-                  onChange={(e) => handleAddressChange('postalCode', e.target.value)}
-                  placeholder="12345"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Description and URL */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Additional Information</h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Detailed description of the RV..."
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="url">Listing URL</Label>
-                <Input
-                  id="url"
-                  value={formData.url || ''}
-                  onChange={(e) => handleInputChange('url', e.target.value)}
-                  placeholder="https://example.com/rv/12345"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
   )
 }
