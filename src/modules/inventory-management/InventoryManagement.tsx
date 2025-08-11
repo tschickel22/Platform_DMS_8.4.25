@@ -350,7 +350,7 @@ export default function InventoryManagement() {
 
           {/* Add RV Modal */}
           <Dialog open={showAddRVModal} onOpenChange={setShowAddRVModal}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ zIndex: 60 }}>
               <DialogHeader>
                 <DialogTitle>Add RV</DialogTitle>
               </DialogHeader>
@@ -360,7 +360,7 @@ export default function InventoryManagement() {
 
           {/* Add MH Modal */}
           <Dialog open={showAddMHModal} onOpenChange={setShowAddMHModal}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ zIndex: 60 }}>
               <DialogHeader>
                 <DialogTitle>Add MH</DialogTitle>
               </DialogHeader>
