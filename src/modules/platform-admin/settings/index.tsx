@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { WarrantyIntegrationSettings } from './components/WarrantyIntegrationSettings'
 import { useSettings } from './utils/useSettings'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
 export default function PlatformAdminSettings() {
   const { toast } = useToast()
@@ -50,10 +51,6 @@ export default function PlatformAdminSettings() {
         <TabsContent value="general">
           <Card>
             <CardHeader>
-        
-        <TabsContent value="syndication">
-          <SyndicationSettings />
-        </TabsContent>
               <CardTitle>General Settings</CardTitle>
               <CardDescription>
                 Configure basic platform settings
@@ -104,6 +101,10 @@ export default function PlatformAdminSettings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="syndication">
+          <SyndicationSettings />
         </TabsContent>
 
         <TabsContent value="email">
@@ -359,8 +360,5 @@ export default function PlatformAdminSettings() {
         </TabsContent>
       </Tabs>
     </div>
-  )
-  )
-}
   )
 }
