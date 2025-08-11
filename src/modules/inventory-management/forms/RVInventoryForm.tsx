@@ -171,7 +171,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
+                <Select value={formData.make || ''} onValueChange={(value) => handleInputChange('make', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
@@ -219,7 +219,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bodyStyle">Body Style *</Label>
-                <Select value={formData.bodyStyle} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
+                <Select value={formData.bodyStyle || ''} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select body style" />
                   </SelectTrigger>
@@ -245,7 +245,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Fuel Type</Label>
-                <Select value={formData.fuelType} onValueChange={(value) => handleInputChange('fuelType', value)}>
+                <Select value={formData.fuelType || ''} onValueChange={(value) => handleInputChange('fuelType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
@@ -260,7 +260,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="transmission">Transmission</Label>
-                <Select value={formData.transmission} onValueChange={(value) => handleInputChange('transmission', value)}>
+                <Select value={formData.transmission || ''} onValueChange={(value) => handleInputChange('transmission', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select transmission" />
                   </SelectTrigger>
@@ -293,7 +293,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                <Select value={formData.condition || ''} onValueChange={(value) => handleInputChange('condition', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
@@ -308,7 +308,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
+                <Select value={formData.availability || ''} onValueChange={(value) => handleInputChange('availability', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
@@ -334,7 +334,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rvType">RV Type</Label>
-                <Select value={formData.rvType} onValueChange={(value) => handleInputChange('rvType', value)}>
+                <Select value={formData.rvType || ''} onValueChange={(value) => handleInputChange('rvType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select RV type" />
                   </SelectTrigger>
@@ -359,7 +359,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slideOuts">Slide Outs</Label>
-                <Select value={formData.slideOuts} onValueChange={(value) => handleInputChange('slideOuts', value)}>
+                <Select value={formData.slideOuts || ''} onValueChange={(value) => handleInputChange('slideOuts', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select number of slide outs" />
                   </SelectTrigger>
@@ -374,7 +374,7 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sleeps">Sleeps</Label>
-                <Select value={formData.sleeps} onValueChange={(value) => handleInputChange('sleeps', value)}>
+                <Select value={formData.sleeps || ''} onValueChange={(value) => handleInputChange('sleeps', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select sleeping capacity" />
                   </SelectTrigger>
