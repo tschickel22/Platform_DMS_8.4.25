@@ -202,7 +202,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
+                <Select value={formData.make || ''} onValueChange={(value) => handleInputChange('make', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
@@ -240,7 +240,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="homeType">Home Type *</Label>
-                <Select value={formData.homeType} onValueChange={(value) => handleInputChange('homeType', value)}>
+                <Select value={formData.homeType || ''} onValueChange={(value) => handleInputChange('homeType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select home type" />
                   </SelectTrigger>
@@ -357,7 +357,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="roofMaterial">Roof Material</Label>
-                <Select value={formData.roofMaterial} onValueChange={(value) => handleInputChange('roofMaterial', value)}>
+                <Select value={formData.roofMaterial || ''} onValueChange={(value) => handleInputChange('roofMaterial', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select roof material" />
                   </SelectTrigger>
@@ -372,7 +372,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="flooringType">Flooring Type</Label>
-                <Select value={formData.flooringType} onValueChange={(value) => handleInputChange('flooringType', value)}>
+                <Select value={formData.flooringType || ''} onValueChange={(value) => handleInputChange('flooringType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select flooring type" />
                   </SelectTrigger>
@@ -413,7 +413,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                <Select value={formData.condition || ''} onValueChange={(value) => handleInputChange('condition', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
@@ -428,7 +428,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
+                <Select value={formData.availability || ''} onValueChange={(value) => handleInputChange('availability', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
