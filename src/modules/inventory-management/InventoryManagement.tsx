@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
+import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign, Search } from 'lucide-react'
 import { Vehicle, VehicleStatus, VehicleType } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
@@ -20,6 +20,7 @@ import { TagType } from '@/modules/tagging-engine/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
+import { mockInventory } from '@/data/mockInventory'
 
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle } = useInventoryManagement()
@@ -34,6 +35,10 @@ function InventoryList() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+  const [isAddHomeModalOpen, setIsAddHomeModalOpen] = useState(false)
+  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
   
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
@@ -233,6 +238,15 @@ function InventoryList() {
     return matchesStatus
   })
 
+  // Filter inventory based on search and status
+  const filteredInventory = mockInventory.sampleVehicles.filter(vehicle => {
+    const matchesSearch = vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === 'all' || vehicle.status.toLowerCase() === filterStatus.toLowerCase()
+    return matchesSearch && matchesStatus
+  })
+
   return (
     <div className="space-y-8">
       {/* Task Form Modal */}
@@ -302,37 +316,28 @@ function InventoryList() {
             <Button variant="outline" onClick={() => setShowCSVImport(true)}>
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
-              <Dialog open={isAddHomeModalOpen} onOpenChange={setIsAddHomeModalOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Home
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add New Home</DialogTitle>
-                  </DialogHeader>
-                  <VehicleForm 
-                    onSubmit={(data) => {
-  // Filter inventory based on search and status
-  const filteredInventory = mockInventory.sampleVehicles.filter(vehicle => {
-    const matchesSearch = vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = filterStatus === 'all' || vehicle.status.toLowerCase() === filterStatus.toLowerCase()
-    return matchesSearch && matchesStatus
-  })
-
-                      console.log('New home data:', data)
-                      setIsAddHomeModalOpen(false)
-                      // Handle form submission here
-                    }}
-                    onCancel={() => setIsAddHomeModalOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
             </Button>
+            <Dialog open={isAddHomeModalOpen} onOpenChange={setIsAddHomeModalOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Home
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Home</DialogTitle>
+                </DialogHeader>
+                <VehicleForm 
+                  onSubmit={(data) => {
+                    console.log('New home data:', data)
+                    setIsAddHomeModalOpen(false)
+                    // Handle form submission here
+                  }}
+                  onCancel={() => setIsAddHomeModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
@@ -383,8 +388,9 @@ function InventoryList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">
-            <div className="text-2xl font-bold">{mockInventory.sampleVehicles.length}</div>
+              <div className="text-2xl font-bold">{mockInventory.sampleVehicles.length}</div>
             </div>
+            <p className="text-xs text-yellow-600 flex items-center mt-1">
               {mockInventory.sampleVehicles.filter(v => v.status === 'Available').length} available
               <TrendingUp className="h-3 w-3 mr-1" />
               Pending sale
@@ -395,11 +401,9 @@ function InventoryList() {
           {...tileProps(() => applyTileFilter('reserved'))}
           className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50"
         >
-            <div className="text-2xl font-bold">
-              {mockInventory.sampleVehicles.filter(v => v.type === 'RV').length}
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900">Total Value</CardTitle>
-              {mockInventory.sampleVehicles.filter(v => v.type === 'RV' && v.status === 'Available').length} available
+            <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
@@ -409,11 +413,9 @@ function InventoryList() {
               <TrendingUp className="h-3 w-3 mr-1" />
               Inventory value
             </p>
-            <div className="text-2xl font-bold">
-              {mockInventory.sampleVehicles.filter(v => v.type === 'Manufactured Home').length}
-            </div>
+          </CardContent>
         </Card>
-              {mockInventory.sampleVehicles.filter(v => v.type === 'Manufactured Home' && v.status === 'Available').length} available
+      </div>
 
       {/* Filter Indicator */}
       {statusFilter !== 'all' && (
@@ -423,16 +425,10 @@ function InventoryList() {
           </Badge>
           <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
             Clear Filter
-            <div className="text-2xl font-bold">
-              {mockInventory.sampleVehicles.filter(v => v.status === 'Pending').length}
-            </div>
+          </Button>
         </div>
-              Awaiting completion
+      )}
       
-      {/* Inventory Table */}
-      <InventoryTable 
-        vehicles={filteredVehicles}
-        onEdit={handleEditVehicle}
       {/* Search and Filter */}
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-sm">
@@ -456,7 +452,15 @@ function InventoryList() {
         </select>
       </div>
 
+      {/* Inventory Table */}
+      <InventoryTable 
+        vehicles={filteredVehicles}
+        onEdit={handleEditVehicle}
         onView={handleViewVehicle}
+        onDelete={handleDeleteVehicle}
+        onStatusChange={handleStatusChange}
+      />
+
       {filteredInventory.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -481,7 +485,7 @@ function InventoryList() {
               </Button>
             </div>
           )}
-      <Route path="/" element={<InventoryList />} />
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredInventory.map((vehicle) => (
@@ -530,6 +534,14 @@ function InventoryList() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+export default function InventoryManagement() {
+  return (
+    <Routes>
+      <Route path="/" element={<InventoryList />} />
     </Routes>
   )
 }
