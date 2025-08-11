@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Eye, Edit, Trash2, MoreHorizontal } from 'lucide-react'
+import { Eye, Edit, Trash2, MoreHorizontal, Package } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/select'
 
+interface InventoryItem {
+  id: string
+  type: 'RV' | 'MH'
+  vin: string
+  make: string
+  model: string
+  year: number
+  status: string
+  createdAt: string
+  [key: string]: any
+}
+
 interface InventoryTableProps {
   vehicles: Vehicle[]
   onView: (vehicle: Vehicle) => void
   onEdit: (vehicle: Vehicle) => void
   onDelete: (vehicle: Vehicle) => void
   onStatusChange: (vehicle: Vehicle, newStatus: Vehicle['status']) => void
+  inventory?: InventoryItem[]
 }
 
 const getStatusColor = (status: Vehicle['status']) => {
@@ -72,9 +85,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   onView,
   onEdit,
   onDelete,
-  onStatusChange
+  onStatusChange,
+  inventory = []
 }) => {
-  if (!Array.isArray(vehicles) || vehicles.length === 0) {
+  // Combine vehicles with inventory
+  const allInventory = [...vehicles, ...inventory]
+
+  if (!Array.isArray(allInventory) || allInventory.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -90,7 +107,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Inventory ({vehicles.length})</CardTitle>
+        <CardTitle>Inventory ({allInventory.length})</CardTitle>
         <CardDescription>
           Manage your RV and manufactured home inventory
         </CardDescription>
@@ -109,13 +126,21 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vehicles.map((vehicle) => (
+              {allInventory.map((vehicle) => (
                 <TableRow key={vehicle.id}>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{getVehicleTitle(vehicle)}</div>
+                      <div className="font-medium">
+                        {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
+                          getVehicleTitle(vehicle as Vehicle) : 
+                          `${vehicle.year} ${vehicle.make} ${vehicle.model || vehicle.name}`
+                        }
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {getVehicleSubtitle(vehicle)}
+                        {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
+                          getVehicleSubtitle(vehicle as Vehicle) :
+                          `VIN: ${vehicle.vin}`
+                        }
                       </div>
                     </div>
                   </TableCell>
@@ -125,7 +150,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {formatPrice(vehicle)}
+                    {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
+                      formatPrice(vehicle as Vehicle) :
+                      `$${vehicle.price?.toLocaleString() || 'TBD'}`
+                    }
                   </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(vehicle.status)}>
@@ -135,7 +163,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                   <TableCell className="text-sm text-muted-foreground">
                     {vehicle.type === 'MH' ? 
                       `${(vehicle as MHVehicle).city}, ${(vehicle as MHVehicle).state}` : 
-                      'Mobile'
+                      vehicle.location || 'Mobile'
                     }
                   </TableCell>
                   <TableCell>
@@ -143,21 +171,21 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onView(vehicle)}
+                        onClick={() => onView(vehicle as Vehicle)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEdit(vehicle)}
+                        onClick={() => onEdit(vehicle as Vehicle)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onDelete(vehicle)}
+                        onClick={() => onDelete(vehicle as Vehicle)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

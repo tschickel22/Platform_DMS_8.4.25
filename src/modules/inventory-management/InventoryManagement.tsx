@@ -407,6 +407,7 @@ export default function InventoryManagement() {
                     onEdit={handleEdit}
                     onView={handleView}
                     onDelete={deleteVehicle}
+                    inventory={inventory}
                   />
                 </TabsContent>
 
@@ -416,6 +417,7 @@ export default function InventoryManagement() {
                     onEdit={handleEdit}
                     onView={handleView}
                     onDelete={deleteVehicle}
+                    inventory={inventory}
                   />
                 </TabsContent>
 
@@ -425,6 +427,7 @@ export default function InventoryManagement() {
                     onEdit={handleEdit}
                     onView={handleView}
                     onDelete={deleteVehicle}
+                    inventory={inventory}
                   />
                 </TabsContent>
               </Tabs>
