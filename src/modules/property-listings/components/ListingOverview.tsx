@@ -1,304 +1,532 @@
-import React from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  MoreHorizontal,
-  Edit,
-  Copy,
-  Play,
-  Pause,
-  Trash2,
-  Share,
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  Edit, 
+  Play, 
+  Pause, 
+  Copy, 
+  Trash, 
+  Share, 
   Eye,
-  FileImage,
-  DollarSign
+  Home,
+  Car,
+  DollarSign,
+  Calendar
 } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
+import ListingForm from './ListingForm'
+import ShareListingModal from './ShareListingModal'
 
 interface Listing {
   id: string
   companyId: string
-  inventoryId: string
+  title: string
   listingType: 'manufactured_home' | 'rv'
   offerType: 'for_sale' | 'for_rent' | 'both'
-  status: 'active' | 'paused' | 'removed' | 'draft'
-  title?: string
+  status: 'draft' | 'active' | 'paused' | 'removed'
   salePrice?: number
   rentPrice?: number
-  description?: string
-  searchResultsText?: string
+  make: string
+  model: string
+  year: number
+  location: {
+    city: string
+    state: string
+  }
   media?: {
-    photos: string[]
     primaryPhoto?: string
+    photos: string[]
   }
-  location?: {
-    city?: string
-    state?: string
-    postalCode?: string
-  }
-  make?: string
-  model?: string
-  year?: number
-  bedrooms?: number
-  bathrooms?: number
-  createdAt: string
-  updatedAt: string
+  activePartners: string[]
   lastExported?: string
-  activePartnersCount?: number
+  updatedAt: string
+  createdAt: string
 }
 
-interface ListingOverviewProps {
-  listings: Listing[]
-  onEdit: (listing: Listing) => void
-  onClone: (listing: Listing) => void
-  onToggleStatus: (listing: Listing) => void
-  onRemove: (listing: Listing) => void
-}
+export default function ListingOverview() {
+  const { tenant } = useTenant()
+  const [listings, setListings] = useState<Listing[]>([])
+  const [filteredListings, setFilteredListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [selectedType, setSelectedType] = useState<string>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingListing, setEditingListing] = useState<Listing | null>(null)
+  const [sharingListing, setSharingListing] = useState<Listing | null>(null)
+  const [selectedListings, setSelectedListings] = useState<string[]>([])
 
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'default'
-    case 'paused':
-      return 'secondary'
-    case 'draft':
-      return 'outline'
-    case 'removed':
-      return 'destructive'
-    default:
-      return 'outline'
+  useEffect(() => {
+    fetchListings()
+  }, [])
+
+  useEffect(() => {
+    filterListings()
+  }, [listings, searchQuery, selectedStatus, selectedType])
+
+  const fetchListings = async () => {
+    try {
+      setLoading(true)
+      // Mock data for now - replace with actual API call
+      const mockListings: Listing[] = [
+        {
+          id: 'listing_1',
+          companyId: tenant?.id || 'company_1',
+          title: '2020 Clayton Homes Patriot',
+          listingType: 'manufactured_home',
+          offerType: 'for_sale',
+          status: 'active',
+          salePrice: 89900,
+          make: 'Clayton Homes',
+          model: 'Patriot',
+          year: 2020,
+          location: { city: 'Austin', state: 'TX' },
+          media: {
+            primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+            photos: ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg']
+          },
+          activePartners: ['mhvillage', 'zillow'],
+          lastExported: '2024-01-15T10:30:00Z',
+          updatedAt: '2024-01-15T14:22:00Z',
+          createdAt: '2024-01-10T09:15:00Z'
+        },
+        {
+          id: 'listing_2',
+          companyId: tenant?.id || 'company_1',
+          title: '2019 Forest River Cherokee',
+          listingType: 'rv',
+          offerType: 'for_rent',
+          status: 'active',
+          rentPrice: 1200,
+          make: 'Forest River',
+          model: 'Cherokee',
+          year: 2019,
+          location: { city: 'Dallas', state: 'TX' },
+          media: {
+            primaryPhoto: 'https://images.pexels.com/photos/2476632/pexels-photo-2476632.jpeg',
+            photos: ['https://images.pexels.com/photos/2476632/pexels-photo-2476632.jpeg']
+          },
+          activePartners: ['rvtrader'],
+          lastExported: '2024-01-14T16:45:00Z',
+          updatedAt: '2024-01-14T18:10:00Z',
+          createdAt: '2024-01-08T11:30:00Z'
+        },
+        {
+          id: 'listing_3',
+          companyId: tenant?.id || 'company_1',
+          title: '2021 Champion Homes Revolution',
+          listingType: 'manufactured_home',
+          offerType: 'both',
+          status: 'draft',
+          salePrice: 125000,
+          rentPrice: 1800,
+          make: 'Champion Homes',
+          model: 'Revolution',
+          year: 2021,
+          location: { city: 'Houston', state: 'TX' },
+          activePartners: [],
+          updatedAt: '2024-01-12T09:45:00Z',
+          createdAt: '2024-01-12T09:45:00Z'
+        }
+      ]
+      setListings(mockListings)
+    } catch (error) {
+      console.error('Error fetching listings:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
-const formatPrice = (price?: number) => {
-  if (!price) return 'N/A'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(price)
-}
+  const filterListings = () => {
+    let filtered = listings
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
+    if (searchQuery) {
+      filtered = filtered.filter(listing => 
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.model.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
 
-const getListingTitle = (listing: Listing) => {
-  if (listing.title) return listing.title
-  
-  const year = listing.year || 'Unknown'
-  const make = listing.make || 'Unknown'
-  const model = listing.model || 'Model'
-  
-  return `${year} ${make} ${model}`
-}
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(listing => listing.status === selectedStatus)
+    }
 
-export function ListingOverview({ listings, onEdit, onClone, onToggleStatus, onRemove }: ListingOverviewProps) {
-  const handleShare = (listing: Listing) => {
-    // TODO: Implement sharing functionality
-    console.log('Share listing:', listing.id)
+    if (selectedType !== 'all') {
+      filtered = filtered.filter(listing => listing.listingType === selectedType)
+    }
+
+    setFilteredListings(filtered)
   }
 
-  const handlePreview = (listing: Listing) => {
-    // TODO: Open feed preview
-    console.log('Preview feed for listing:', listing.id)
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'paused': return 'bg-yellow-100 text-yellow-800'
+      case 'removed': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getTypeIcon = (type: string) => {
+    return type === 'manufactured_home' ? <Home className="h-4 w-4" /> : <Car className="h-4 w-4" />
+  }
+
+  const formatPrice = (listing: Listing) => {
+    if (listing.offerType === 'for_sale' && listing.salePrice) {
+      return `$${listing.salePrice.toLocaleString()}`
+    }
+    if (listing.offerType === 'for_rent' && listing.rentPrice) {
+      return `$${listing.rentPrice.toLocaleString()}/mo`
+    }
+    if (listing.offerType === 'both' && listing.salePrice && listing.rentPrice) {
+      return `$${listing.salePrice.toLocaleString()} / $${listing.rentPrice.toLocaleString()}/mo`
+    }
+    return 'Price not set'
+  }
+
+  const handleStatusToggle = async (listing: Listing) => {
+    const newStatus = listing.status === 'active' ? 'paused' : 'active'
+    // API call would go here
+    console.log(`Toggle status for ${listing.id} to ${newStatus}`)
+    
+    setListings(prev => prev.map(l => 
+      l.id === listing.id ? { ...l, status: newStatus } : l
+    ))
+  }
+
+  const handleClone = (listing: Listing) => {
+    const cloned = {
+      ...listing,
+      id: `listing_${Date.now()}`,
+      title: `${listing.title} (Copy)`,
+      status: 'draft' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    setListings(prev => [cloned, ...prev])
+  }
+
+  const handleDelete = async (listingId: string) => {
+    if (confirm('Are you sure you want to delete this listing?')) {
+      setListings(prev => prev.filter(l => l.id !== listingId))
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Property Listings</h1>
+            <p className="text-gray-600">Manage your property listings and syndication</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16"></TableHead>
-              <TableHead>Listing</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Offer</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Partners</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead className="w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listings.map((listing) => (
-              <TableRow key={listing.id}>
-                <TableCell>
-                  <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                    {listing.media?.primaryPhoto ? (
-                      <img
-                        src={listing.media.primaryPhoto}
-                        alt={getListingTitle(listing)}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          target.nextElementSibling?.classList.remove('hidden')
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Property Listings</h1>
+          <p className="text-gray-600">Manage your property listings and syndication</p>
+        </div>
+        <Button onClick={() => setShowAddModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Listing
+        </Button>
+      </div>
+
+      {/* Toolbar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search listings..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select 
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="paused">Paused</option>
+                <option value="removed">Removed</option>
+              </select>
+              <select 
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="manufactured_home">Manufactured Home</option>
+                <option value="rv">RV</option>
+              </select>
+              {selectedListings.length > 0 && (
+                <>
+                  <Button variant="outline" size="sm">
+                    <Share className="h-4 w-4 mr-2" />
+                    Share Selected ({selectedListings.length})
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    Bulk Actions
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Listings Table */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredListings.length === 0 ? (
+            <div className="text-center py-12">
+              <Home className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No listings found</h3>
+              <p className="text-gray-600 mb-6">
+                {searchQuery || selectedStatus !== 'all' || selectedType !== 'all' 
+                  ? 'Try adjusting your filters or search query'
+                  : 'Get started by creating your first property listing'
+                }
+              </p>
+              {!searchQuery && selectedStatus === 'all' && selectedType === 'all' && (
+                <Button onClick={() => setShowAddModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Listing
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <input 
+                      type="checkbox" 
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedListings(filteredListings.map(l => l.id))
+                        } else {
+                          setSelectedListings([])
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Listing</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Offer</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Partners</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Export</TableHead>
+                  <TableHead>Updated</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredListings.map((listing) => (
+                  <TableRow key={listing.id}>
+                    <TableCell>
+                      <input 
+                        type="checkbox"
+                        checked={selectedListings.includes(listing.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedListings(prev => [...prev, listing.id])
+                          } else {
+                            setSelectedListings(prev => prev.filter(id => id !== listing.id))
+                          }
                         }}
                       />
-                    ) : null}
-                    <FileImage className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="font-medium text-sm">
-                      {getListingTitle(listing)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      ID: {listing.inventoryId}
-                    </div>
-                    {listing.location?.city && listing.location?.state && (
-                      <div className="text-xs text-muted-foreground">
-                        {listing.location.city}, {listing.location.state}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">
-                    {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
-                  </Badge>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="space-y-1">
-                    {listing.offerType === 'for_sale' && (
-                      <Badge variant="secondary" className="text-xs">Sale</Badge>
-                    )}
-                    {listing.offerType === 'for_rent' && (
-                      <Badge variant="secondary" className="text-xs">Rent</Badge>
-                    )}
-                    {listing.offerType === 'both' && (
-                      <div className="space-y-1">
-                        <Badge variant="secondary" className="text-xs">Sale</Badge>
-                        <Badge variant="secondary" className="text-xs">Rent</Badge>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="space-y-1 text-sm">
-                    {(listing.offerType === 'for_sale' || listing.offerType === 'both') && listing.salePrice && (
-                      <div className="flex items-center text-xs">
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        {formatPrice(listing.salePrice)}
-                      </div>
-                    )}
-                    {(listing.offerType === 'for_rent' || listing.offerType === 'both') && listing.rentPrice && (
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        {formatPrice(listing.rentPrice)}/mo
-                      </div>
-                    )}
-                    {!listing.salePrice && !listing.rentPrice && (
-                      <span className="text-xs text-muted-foreground">No price set</span>
-                    )}
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="text-sm">
-                    {listing.activePartnersCount || 0}
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(listing.status)}>
-                    {listing.status}
-                  </Badge>
-                </TableCell>
-                
-                <TableCell>
-                  <div className="text-sm text-muted-foreground">
-                    {formatDate(listing.updatedAt)}
-                  </div>
-                </TableCell>
-                
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => onEdit(listing)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onClone(listing)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Clone
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onShare(listing)}>
-                        <Share className="h-4 w-4 mr-2" />
-                        Share
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onToggleStatus(listing)}>
-                        {listing.status === 'active' ? (
-                          <>
-                            <Pause className="h-4 w-4 mr-2" />
-                            Pause
-                          </>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {listing.media?.primaryPhoto ? (
+                          <img 
+                            src={listing.media.primaryPhoto} 
+                            alt={listing.title}
+                            className="w-12 h-8 object-cover rounded"
+                          />
                         ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Activate
-                          </>
+                          <div className="w-12 h-8 bg-gray-200 rounded flex items-center justify-center">
+                            {getTypeIcon(listing.listingType)}
+                          </div>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleShare(listing)}>
-                        <Share className="h-4 w-4 mr-2" />
-                        Share
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePreview(listing)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Feed Preview
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => onRemove(listing)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                        <div>
+                          <div className="font-medium">{listing.title}</div>
+                          <div className="text-sm text-gray-600">
+                            {listing.location.city}, {listing.location.state}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(listing.listingType)}
+                        <span className="capitalize">
+                          {listing.listingType.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {listing.offerType.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        {formatPrice(listing)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {listing.activePartners.length > 0 ? (
+                          listing.activePartners.map(partner => (
+                            <Badge key={partner} variant="secondary" className="text-xs">
+                              {partner}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm">None</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(listing.status)}>
+                        {listing.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {listing.lastExported ? (
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(listing.lastExported).toLocaleDateString()}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">Never</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-600">
+                        {new Date(listing.updatedAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingListing(listing)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStatusToggle(listing)}
+                        >
+                          {listing.status === 'active' ? (
+                            <Pause className="h-3 w-3" />
+                          ) : (
+                            <Play className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleClone(listing)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSharingListing(listing)}
+                        >
+                          <Share className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(listing.id)}
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modals */}
+      {(showAddModal || editingListing) && (
+        <ListingForm
+          listing={editingListing}
+          open={showAddModal || !!editingListing}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowAddModal(false)
+              setEditingListing(null)
+            }
+          }}
+          onSave={(listing) => {
+            if (editingListing) {
+              setListings(prev => prev.map(l => l.id === listing.id ? listing : l))
+            } else {
+              setListings(prev => [listing, ...prev])
+            }
+            setShowAddModal(false)
+            setEditingListing(null)
+          }}
+        />
+      )}
+
+      {sharingListing && (
+        <ShareListingModal
+          listing={sharingListing}
+          open={!!sharingListing}
+          onOpenChange={(open) => !open && setSharingListing(null)}
+        />
+      )}
+    </div>
   )
 }

@@ -1,281 +1,258 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/hooks/use-toast'
+import { 
+  Globe, 
+  Home, 
+  Car, 
+  Mail, 
+  ExternalLink, 
+  Settings,
+  Info,
+  AlertCircle
+} from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 
 interface Partner {
   id: string
   name: string
-  types: string[]
-  format: 'json' | 'xml'
-  leadEmail: string
-  listingTypes: string[]
-  exportUrl?: string
-  active: boolean
-}
-
-interface CompanyPartnerConfig {
-  partnerId: string
-  companyId: string
-  active: boolean
-  leadEmail?: string
+  description: string
+  listingTypes: ('manufactured_home' | 'rv')[]
+  isGloballyActive: boolean
+  isCompanyActive: boolean
+  companyLeadEmail?: string
+  exportUrl: string
 }
 
 export default function ListingPartnersSettings() {
   const { tenant } = useTenant()
-  const { toast } = useToast()
-  
-  const [partners, setPartners] = useState<Partner[]>([])
-  const [companyConfigs, setCompanyConfigs] = useState<CompanyPartnerConfig[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  // Mock data for development - replace with actual API calls
-  useEffect(() => {
-    const mockPartners: Partner[] = [
-      {
-        id: 'mhvillage',
-        name: 'MH Village',
-        types: ['MH'],
-        format: 'json',
-        leadEmail: 'leads@mhvillage.com',
-        listingTypes: ['manufactured_home'],
-        exportUrl: `${window.location.origin}/.netlify/functions/syndication-feed?partnerId=mhvillage&companyId=${tenant?.id}`,
-        active: true
-      },
-      {
-        id: 'rvtrader',
-        name: 'RV Trader',
-        types: ['RV'],
-        format: 'json',
-        leadEmail: 'leads@rvtrader.com',
-        listingTypes: ['rv'],
-        exportUrl: `${window.location.origin}/.netlify/functions/syndication-feed?partnerId=rvtrader&companyId=${tenant?.id}`,
-        active: true
-      },
-      {
-        id: 'zillow',
-        name: 'Zillow',
-        types: ['MH', 'RV'],
-        format: 'xml',
-        leadEmail: 'partners@zillow.com',
-        listingTypes: ['manufactured_home', 'rv'],
-        exportUrl: `${window.location.origin}/.netlify/functions/syndication-feed?partnerId=zillow&companyId=${tenant?.id}&format=xml`,
-        active: true
-      }
-    ]
-    
-    const mockConfigs: CompanyPartnerConfig[] = [
-      {
-        partnerId: 'mhvillage',
-        companyId: tenant?.id || 'demo-company',
-        active: false,
-        leadEmail: 'sales@mycompany.com'
-      }
-    ]
-    
-    setPartners(mockPartners)
-    setCompanyConfigs(mockConfigs)
-    setLoading(false)
-  }, [tenant?.id])
-
-  const getCompanyConfig = (partnerId: string): CompanyPartnerConfig => {
-    return companyConfigs.find(c => c.partnerId === partnerId) || {
-      partnerId,
-      companyId: tenant?.id || '',
-      active: false
+  const [companyId, setCompanyId] = useState(tenant?.id || '')
+  const [partners, setPartners] = useState<Partner[]>([
+    {
+      id: 'mhvillage',
+      name: 'MHVillage',
+      description: 'Leading manufactured home marketplace',
+      listingTypes: ['manufactured_home'],
+      isGloballyActive: true,
+      isCompanyActive: true,
+      companyLeadEmail: 'leads@ourcompany.com',
+      exportUrl: 'https://api.listings.com/feed/mhvillage?companyId=company123'
+    },
+    {
+      id: 'rvtrader',
+      name: 'RV Trader',
+      description: 'Premier RV marketplace platform',
+      listingTypes: ['rv'],
+      isGloballyActive: true,
+      isCompanyActive: false,
+      exportUrl: 'https://api.listings.com/feed/rvtrader?companyId=company123'
+    },
+    {
+      id: 'zillow',
+      name: 'Zillow',
+      description: 'Real estate marketplace integration',
+      listingTypes: ['manufactured_home', 'rv'],
+      isGloballyActive: false,
+      isCompanyActive: false,
+      exportUrl: 'https://api.listings.com/feed/zillow?companyId=company123'
     }
+  ])
+
+  const handlePartnerToggle = (partnerId: string) => {
+    setPartners(prev => prev.map(partner => 
+      partner.id === partnerId 
+        ? { ...partner, isCompanyActive: !partner.isCompanyActive }
+        : partner
+    ))
   }
 
-  const updateCompanyConfig = async (partnerId: string, updates: Partial<CompanyPartnerConfig>) => {
-    setSaving(true)
-    try {
-      const existingIndex = companyConfigs.findIndex(c => c.partnerId === partnerId)
-      const updatedConfig = {
-        ...getCompanyConfig(partnerId),
-        ...updates
-      }
-      
-      if (existingIndex >= 0) {
-        const newConfigs = [...companyConfigs]
-        newConfigs[existingIndex] = updatedConfig
-        setCompanyConfigs(newConfigs)
-      } else {
-        setCompanyConfigs([...companyConfigs, updatedConfig])
-      }
-      
-      // TODO: Save to backend
-      // await fetch(`/.netlify/functions/company-partners-crud`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(updatedConfig)
-      // })
-      
-      toast({
-        title: 'Settings Saved',
-        description: 'Partner settings have been updated successfully.'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save partner settings.',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
-    }
+  const handleLeadEmailChange = (partnerId: string, email: string) => {
+    setPartners(prev => prev.map(partner => 
+      partner.id === partnerId 
+        ? { ...partner, companyLeadEmail: email }
+        : partner
+    ))
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({
-        title: 'Copied',
-        description: 'Export URL copied to clipboard.'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy to clipboard.',
-        variant: 'destructive'
-      })
-    }
-  }
+  const activePartnersCount = partners.filter(p => p.isCompanyActive).length
 
-  if (loading) {
-    return (
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Listing Partners</h2>
+        <p className="text-gray-600">Manage your syndication partners and lead routing</p>
+      </div>
+
+      {/* Company ID Section */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8 text-muted-foreground">
-            Loading partner settings...
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Company Configuration
+          </CardTitle>
+          <CardDescription>
+            Your unique company identifier for syndication feeds
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="companyId">Company ID</Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="companyId"
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+                placeholder="your-company-id"
+                className="font-mono"
+              />
+              <Button variant="outline">Update</Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              This ID is used in feed URLs and must be unique across the platform
+            </p>
           </div>
         </CardContent>
       </Card>
-    )
-  }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Syndication Partners</CardTitle>
-        <CardDescription>
-          Configure your company settings for each available syndication partner. 
-          You'll need to provide your Company ID to each partner and configure lead routing.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {partners.map((partner) => {
-          const config = getCompanyConfig(partner.id)
-          
-          return (
-            <div key={partner.id} className="border rounded-lg p-4 space-y-4">
+      {/* Partners Status Overview */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-green-600">{activePartnersCount}</p>
+              <p className="text-sm text-gray-600">Active Partners</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600">
+                {partners.filter(p => p.isGloballyActive).length}
+              </p>
+              <p className="text-sm text-gray-600">Available Partners</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-600">
+                {partners.filter(p => p.companyLeadEmail).length}
+              </p>
+              <p className="text-sm text-gray-600">Custom Lead Emails</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Partners List */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Available Partners</h3>
+        
+        {partners.map((partner) => (
+          <Card key={partner.id} className={`${!partner.isGloballyActive ? 'opacity-60' : ''}`}>
+            <CardContent className="pt-6">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <h4 className="font-medium">{partner.name}</h4>
-                    <div className="flex space-x-1">
-                      {partner.types.map(type => (
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                      <h4 className="text-lg font-semibold">{partner.name}</h4>
+                    </div>
+                    
+                    <div className="flex gap-1">
+                      {partner.listingTypes.map((type) => (
                         <Badge key={type} variant="secondary" className="text-xs">
-                          {type}
+                          {type === 'manufactured_home' ? (
+                            <>
+                              <Home className="h-3 w-3 mr-1" />
+                              MH
+                            </>
+                          ) : (
+                            <>
+                              <Car className="h-3 w-3 mr-1" />
+                              RV
+                            </>
+                          )}
                         </Badge>
                       ))}
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {partner.format.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Default lead email: {partner.leadEmail}
-                  </p>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor={`${partner.id}-active`}>Active</Label>
-                  <Switch
-                    id={`${partner.id}-active`}
-                    checked={config.active}
-                    onCheckedChange={(checked) => 
-                      updateCompanyConfig(partner.id, { active: checked })
-                    }
-                    disabled={saving}
-                  />
-                </div>
-              </div>
-              
-              {config.active && (
-                <div className="grid gap-4 pt-4 border-t">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`${partner.id}-company-id`}>
-                        Your Company ID at {partner.name}
-                      </Label>
-                      <Input
-                        id={`${partner.id}-company-id`}
-                        placeholder="Enter your company ID"
-                        value={config.companyId || ''}
-                        onChange={(e) => 
-                          updateCompanyConfig(partner.id, { companyId: e.target.value })
-                        }
-                        disabled={saving}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        This is the ID {partner.name} assigned to your company
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor={`${partner.id}-lead-email`}>
-                        Lead Email Override (Optional)
-                      </Label>
-                      <Input
-                        id={`${partner.id}-lead-email`}
-                        type="email"
-                        placeholder="leads@yourcompany.com"
-                        value={config.leadEmail || ''}
-                        onChange={(e) => 
-                          updateCompanyConfig(partner.id, { leadEmail: e.target.value })
-                        }
-                        disabled={saving}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Override default lead routing for this partner
-                      </p>
-                    </div>
+
+                    {!partner.isGloballyActive && (
+                      <Badge variant="outline" className="text-xs">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Inactive
+                      </Badge>
+                    )}
                   </div>
                   
-                  <div>
-                    <Label>Export URL for {partner.name}</Label>
-                    <div className="flex mt-1">
-                      <Input
-                        value={partner.exportUrl || ''}
-                        readOnly
-                        className="font-mono text-sm"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => copyToClipboard(partner.exportUrl || '')}
-                      >
-                        Copy
-                      </Button>
+                  <p className="text-gray-600 mb-4">{partner.description}</p>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">EXPORT URL</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <ExternalLink className="h-4 w-4 text-gray-400" />
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                          {partner.exportUrl}
+                        </code>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Provide this URL to {partner.name} for automated listing imports
-                    </p>
+                    
+                    {partner.isCompanyActive && (
+                      <div>
+                        <Label htmlFor={`leadEmail-${partner.id}`}>
+                          Lead Email Override (optional)
+                        </Label>
+                        <div className="flex gap-2 mt-1">
+                          <div className="relative flex-1">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <Input
+                              id={`leadEmail-${partner.id}`}
+                              type="email"
+                              value={partner.companyLeadEmail || ''}
+                              onChange={(e) => handleLeadEmailChange(partner.id, e.target.value)}
+                              placeholder="leads@yourcompany.com"
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Override the default lead email for this partner
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
-      </CardContent>
-    </Card>
+
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      {partner.isCompanyActive ? 'Active' : 'Inactive'}
+                    </span>
+                    <Switch
+                      checked={partner.isCompanyActive}
+                      onCheckedChange={() => handlePartnerToggle(partner.id)}
+                      disabled={!partner.isGloballyActive}
+                    />
+                  </div>
+                  
+                  {!partner.isGloballyActive && (
+                    <div className="text-xs text-gray-500 text-right">
+                      <Info className="h-3 w-3 inline mr-1" />
+                      Contact admin to enable
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end pt-6 border-t">
+        <Button size="lg">
+          Save Partner Settings
+        </Button>
+      </div>
+    </div>
   )
 }

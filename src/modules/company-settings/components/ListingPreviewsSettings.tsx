@@ -1,273 +1,308 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
+import { 
+  Globe, 
+  Lock, 
+  Clock, 
+  Link, 
+  Eye, 
+  Calendar, 
+  BarChart3,
+  Trash,
+  Copy,
+  ExternalLink
+} from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
-import { Trash2, ExternalLink } from 'lucide-react'
 
 interface ShareToken {
-  token: string
-  type: 'single' | 'selection' | 'catalog'
+  id: string
   title: string
-  listingIds: string[]
+  type: 'catalog' | 'selection' | 'single'
+  url: string
+  shortUrl: string
   createdAt: string
   expiresAt?: string
-  isRevoked: boolean
-  clickCount?: number
-}
-
-interface ListingPreviewSettings {
-  enablePublicCatalog: boolean
-  requireTokenForCatalog: boolean
-  defaultTokenExpiry: string // '7d', '30d', '90d', 'never'
-  enableAnalytics: boolean
+  isActive: boolean
+  views: number
+  clicks: number
 }
 
 export default function ListingPreviewsSettings() {
   const { tenant } = useTenant()
-  const { toast } = useToast()
-  
-  const [settings, setSettings] = useState<ListingPreviewSettings>({
+  const [settings, setSettings] = useState({
     enablePublicCatalog: true,
-    requireTokenForCatalog: false,
-    defaultTokenExpiry: '30d',
-    enableAnalytics: true
+    requireTokenAccess: false,
+    defaultTokenExpiry: 30, // days
+    allowGuestViewing: true,
+    enableShareAnalytics: true,
+    watermarkEnabled: false
   })
-  const [shareTokens, setShareTokens] = useState<ShareToken[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
 
-  // Mock data for development - replace with actual API calls
-  useEffect(() => {
-    const mockTokens: ShareToken[] = [
-      {
-        token: 'abc123xyz',
-        type: 'catalog',
-        title: 'All Active Listings',
-        listingIds: [],
-        createdAt: '2024-01-15T10:00:00Z',
-        expiresAt: '2024-02-15T10:00:00Z',
-        isRevoked: false,
-        clickCount: 45
-      },
-      {
-        token: 'def456uvw',
-        type: 'selection',
-        title: 'Premium RV Collection',
-        listingIds: ['rv-001', 'rv-002', 'rv-003'],
-        createdAt: '2024-01-10T14:30:00Z',
-        expiresAt: '2024-04-10T14:30:00Z',
-        isRevoked: false,
-        clickCount: 23
-      }
-    ]
-    
-    setShareTokens(mockTokens)
-    setLoading(false)
-  }, [])
+  const [tokens, setTokens] = useState<ShareToken[]>([
+    {
+      id: 'token_1',
+      title: 'Main Catalog',
+      type: 'catalog',
+      url: 'https://yourcompany.listings.com/catalog',
+      shortUrl: 'https://short.ly/abc123',
+      createdAt: '2024-01-10T10:30:00Z',
+      expiresAt: '2024-02-10T10:30:00Z',
+      isActive: true,
+      views: 1247,
+      clicks: 89
+    },
+    {
+      id: 'token_2',
+      title: 'RV Selection',
+      type: 'selection',
+      url: 'https://yourcompany.listings.com/selection/rv',
+      shortUrl: 'https://short.ly/def456',
+      createdAt: '2024-01-15T14:20:00Z',
+      isActive: true,
+      views: 456,
+      clicks: 23
+    },
+    {
+      id: 'token_3',
+      title: 'Premium MH Listing',
+      type: 'single',
+      url: 'https://yourcompany.listings.com/listing/premium-mh',
+      shortUrl: 'https://short.ly/ghi789',
+      createdAt: '2024-01-20T09:15:00Z',
+      expiresAt: '2024-01-27T09:15:00Z',
+      isActive: false,
+      views: 89,
+      clicks: 7
+    }
+  ])
 
-  const saveSettings = async () => {
-    setSaving(true)
-    try {
-      // TODO: Save to backend
-      // await fetch(`/.netlify/functions/company-settings-crud`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ section: 'listing_previews', settings })
-      // })
-      
-      toast({
-        title: 'Settings Saved',
-        description: 'Listing preview settings have been updated successfully.'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save settings.',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
+  const handleSettingChange = (key: keyof typeof settings, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleRevokeToken = (tokenId: string) => {
+    if (confirm('Are you sure you want to revoke this share token?')) {
+      setTokens(prev => prev.map(token => 
+        token.id === tokenId ? { ...token, isActive: false } : token
+      ))
     }
   }
 
-  const revokeToken = async (token: string) => {
-    try {
-      // TODO: Call revoke API
-      // await fetch(`/.netlify/functions/share-link-crud?companyId=${tenant?.id}&token=${token}`, {
-      //   method: 'DELETE'
-      // })
-      
-      setShareTokens(tokens => 
-        tokens.map(t => t.token === token ? { ...t, isRevoked: true } : t)
-      )
-      
-      toast({
-        title: 'Token Revoked',
-        description: 'Share link has been revoked and is no longer accessible.'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to revoke token.',
-        variant: 'destructive'
-      })
+  const handleDeleteToken = (tokenId: string) => {
+    if (confirm('Are you sure you want to delete this share token?')) {
+      setTokens(prev => prev.filter(token => token.id !== tokenId))
     }
   }
 
-  const copyShareUrl = async (token: string, type: string) => {
-    const baseUrl = window.location.origin
-    const url = type === 'single' ? 
-      `${baseUrl}/${tenant?.slug}/p/${token}` : 
-      `${baseUrl}/${tenant?.slug}/l/${token}`
-    
-    try {
-      await navigator.clipboard.writeText(url)
-      toast({
-        title: 'URL Copied',
-        description: 'Share URL has been copied to clipboard.'
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy URL.',
-        variant: 'destructive'
-      })
-    }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+  const getTokenTypeColor = (type: string) => {
+    switch (type) {
+      case 'catalog': return 'bg-blue-100 text-blue-800'
+      case 'selection': return 'bg-green-100 text-green-800'
+      case 'single': return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   const isExpired = (expiresAt?: string) => {
-    if (!expiresAt) return false
-    return new Date() > new Date(expiresAt)
-  }
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8 text-muted-foreground">
-            Loading preview settings...
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return expiresAt ? new Date() > new Date(expiresAt) : false
   }
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Listing Previews</h2>
+        <p className="text-gray-600">Configure public catalog access and manage share tokens</p>
+      </div>
+
+      {/* Public Catalog Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Listing Previews</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Public Catalog Settings
+          </CardTitle>
           <CardDescription>
-            Control how your listings are shared and accessed publicly.
+            Control how your listings are publicly accessible
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Public Catalog</Label>
-                <div className="text-sm text-muted-foreground">
-                  Allow public access to your listings catalog at /{tenant?.slug}/listings
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable public catalog</Label>
+                  <p className="text-sm text-gray-600">
+                    Allow public access to your listing catalog
+                  </p>
                 </div>
+                <Switch
+                  checked={settings.enablePublicCatalog}
+                  onCheckedChange={(checked) => handleSettingChange('enablePublicCatalog', checked)}
+                />
               </div>
-              <Switch
-                checked={settings.enablePublicCatalog}
-                onCheckedChange={(checked) => 
-                  setSettings(s => ({ ...s, enablePublicCatalog: checked }))
-                }
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Token for Catalog</Label>
-                <div className="text-sm text-muted-foreground">
-                  Require a share token to access the catalog (more private)
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Require token for access</Label>
+                  <p className="text-sm text-gray-600">
+                    Require share tokens to view listings
+                  </p>
                 </div>
+                <Switch
+                  checked={settings.requireTokenAccess}
+                  onCheckedChange={(checked) => handleSettingChange('requireTokenAccess', checked)}
+                  disabled={!settings.enablePublicCatalog}
+                />
               </div>
-              <Switch
-                checked={settings.requireTokenForCatalog}
-                onCheckedChange={(checked) => 
-                  setSettings(s => ({ ...s, requireTokenForCatalog: checked }))
-                }
-                disabled={!settings.enablePublicCatalog}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Share Analytics</Label>
-                <div className="text-sm text-muted-foreground">
-                  Track clicks and engagement on shared links
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Allow guest viewing</Label>
+                  <p className="text-sm text-gray-600">
+                    Allow non-registered users to view listings
+                  </p>
                 </div>
-              </div>
-              <Switch
-                checked={settings.enableAnalytics}
-                onCheckedChange={(checked) => 
-                  setSettings(s => ({ ...s, enableAnalytics: checked }))
-                }
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Default Token Expiry</Label>
-              <Select
-                value={settings.defaultTokenExpiry}
-                onValueChange={(value) => 
-                  setSettings(s => ({ ...s, defaultTokenExpiry: value }))
-                }
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">7 days</SelectItem>
-                  <SelectItem value="30d">30 days</SelectItem>
-                  <SelectItem value="90d">90 days</SelectItem>
-                  <SelectItem value="never">Never expires</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="text-sm text-muted-foreground">
-                Default expiration time for new share links
+                <Switch
+                  checked={settings.allowGuestViewing}
+                  onCheckedChange={(checked) => handleSettingChange('allowGuestViewing', checked)}
+                  disabled={!settings.enablePublicCatalog}
+                />
               </div>
             </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <Button onClick={saveSettings} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Settings'}
-            </Button>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable share analytics</Label>
+                  <p className="text-sm text-gray-600">
+                    Track views and clicks on shared listings
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enableShareAnalytics}
+                  onCheckedChange={(checked) => handleSettingChange('enableShareAnalytics', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Watermark images</Label>
+                  <p className="text-sm text-gray-600">
+                    Add company branding to shared images
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.watermarkEnabled}
+                  onCheckedChange={(checked) => handleSettingChange('watermarkEnabled', checked)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="defaultExpiry">Default token expiry (days)</Label>
+                <Input
+                  id="defaultExpiry"
+                  type="number"
+                  value={settings.defaultTokenExpiry}
+                  onChange={(e) => handleSettingChange('defaultTokenExpiry', parseInt(e.target.value) || 30)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Default expiration for new share tokens
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
-      
+
+      {/* Public URLs */}
+      {settings.enablePublicCatalog && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link className="h-5 w-5" />
+              Public URLs
+            </CardTitle>
+            <CardDescription>
+              Direct access URLs for your public listings
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Main Catalog URL</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={`https://${tenant?.slug || 'yourcompany'}.listings.com/catalog`}
+                  readOnly
+                  className="font-mono text-sm"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => copyToClipboard(`https://${tenant?.slug || 'yourcompany'}.listings.com/catalog`)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.open(`https://${tenant?.slug || 'yourcompany'}.listings.com/catalog`, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label>Individual Listing URL Pattern</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={`https://${tenant?.slug || 'yourcompany'}.listings.com/listing/{listingId}`}
+                  readOnly
+                  className="font-mono text-sm"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => copyToClipboard(`https://${tenant?.slug || 'yourcompany'}.listings.com/listing/{listingId}`)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Share Tokens */}
       <Card>
         <CardHeader>
-          <CardTitle>Active Share Links</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Active Share Tokens
+          </CardTitle>
           <CardDescription>
-            Manage and monitor your active share links. You can revoke access at any time.
+            Manage existing share tokens and their analytics
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {shareTokens.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No share links created yet.</p>
-              <p className="text-sm">Share links will appear here when you create them from the listings workspace.</p>
+          {tokens.length === 0 ? (
+            <div className="text-center py-12">
+              <Lock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No share tokens</h3>
+              <p className="text-gray-600">
+                Share tokens will appear here when you create them from the listings page
+              </p>
             </div>
           ) : (
             <Table>
@@ -275,64 +310,103 @@ export default function ListingPreviewsSettings() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Expires</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Clicks</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Analytics</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shareTokens.map((shareToken) => (
-                  <TableRow key={shareToken.token}>
-                    <TableCell className="font-medium">
-                      {shareToken.title}
-                      {shareToken.listingIds.length > 0 && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {shareToken.listingIds.length} listings
-                        </Badge>
-                      )}
+                {tokens.map((token) => (
+                  <TableRow key={token.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{token.title}</p>
+                        <p className="text-sm text-gray-600 font-mono">{token.shortUrl}</p>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {shareToken.type}
+                      <Badge className={getTokenTypeColor(token.type)}>
+                        {token.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(shareToken.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {shareToken.expiresAt ? formatDate(shareToken.expiresAt) : 'Never'}
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {token.isActive ? (
+                          isExpired(token.expiresAt) ? (
+                            <Badge variant="outline" className="text-red-600 border-red-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Expired
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-green-600 border-green-200">
+                              Active
+                            </Badge>
+                          )
+                        ) : (
+                          <Badge variant="outline" className="text-gray-600">
+                            Revoked
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {shareToken.isRevoked ? (
-                        <Badge variant="destructive">Revoked</Badge>
-                      ) : isExpired(shareToken.expiresAt) ? (
-                        <Badge variant="secondary">Expired</Badge>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(token.createdAt).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {token.expiresAt ? (
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Clock className="h-3 w-3" />
+                          {new Date(token.expiresAt).toLocaleDateString()}
+                        </div>
                       ) : (
-                        <Badge variant="default">Active</Badge>
+                        <span className="text-sm text-gray-500">Never</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {settings.enableAnalytics ? (shareToken.clickCount || 0) : 'N/A'}
+                      {settings.enableShareAnalytics ? (
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {token.views}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <BarChart3 className="h-3 w-3" />
+                            {token.clicks}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">-</span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <TableCell>
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyShareUrl(shareToken.token, shareToken.type)}
-                          disabled={shareToken.isRevoked || isExpired(shareToken.expiresAt)}
+                          onClick={() => copyToClipboard(token.shortUrl)}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <Copy className="h-3 w-3" />
                         </Button>
+                        {token.isActive && !isExpired(token.expiresAt) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRevokeToken(token.id)}
+                          >
+                            <Lock className="h-3 w-3" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => revokeToken(shareToken.token)}
-                          disabled={shareToken.isRevoked || isExpired(shareToken.expiresAt)}
+                          onClick={() => handleDeleteToken(token.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash className="h-3 w-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -343,6 +417,13 @@ export default function ListingPreviewsSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end pt-6 border-t">
+        <Button size="lg">
+          Save Preview Settings
+        </Button>
+      </div>
     </div>
   )
 }

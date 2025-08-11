@@ -31,6 +31,7 @@ import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 import PublicListingView from '@/modules/property-listings/components/PublicListingView'
 import PublicCatalogView from '@/modules/property-listings/components/PublicCatalogView'
 import LandManagement from '@/modules/land-management/LandManagement'
@@ -82,6 +83,7 @@ function App() {
                           <Route path="/admin/settings/*" element={<PlatformSettings />} />
                           <Route path="/reports/*" element={<ReportingSuite />} />
                           <Route path="/client-applications/*" element={<FinanceApplication />} />
+                          <Route path="/marketing/*" element={<PropertyListings />} />
                           <Route path="/marketing/listings/*" element={<PropertyListings />} />
                           <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
                           <Route path="/tags/*" element={<TaggingEngine />} />

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Settings, Save, Plus, Edit, Trash2, Users, Building, Palette, Tag, Mail, Globe } from 'lucide-react'
@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { CustomFieldModal } from './components/CustomFieldModal'
 import { BrandingSettings } from './components/BrandingSettings'
+import ListingPartnersSettings from './components/ListingPartnersSettings'
+import ListingPreviewsSettings from './components/ListingPreviewsSettings'
 import { LabelOverrides } from './components/LabelOverrides'
 import { NotificationTemplates } from './components/NotificationTemplates'
 import { IntegrationSettings } from './components/IntegrationSettings'
@@ -42,6 +44,8 @@ function CompanySettingsPage() {
     { id: 'users', name: 'Users', icon: Users },
     { id: 'custom-fields', name: 'Custom Fields', icon: Settings },
     { id: 'warranty', name: 'Warranty', icon: Settings },
+    { id: 'listing-partners', name: 'Listing Partners', icon: Globe },
+    { id: 'listing-previews', name: 'Listing Previews', icon: Settings },
   ]
   const modules = mockCompanySettings.customFields.modules
 
@@ -381,6 +385,8 @@ function CompanySettingsPage() {
         {activeTab === 'users' && renderUsersSettings()}
         {activeTab === 'custom-fields' && renderCustomFieldsSettings()}
         {activeTab === 'warranty' && <WarrantySettings />}
+        {activeTab === 'listing-partners' && <ListingPartnersSettings />}
+        {activeTab === 'listing-previews' && <ListingPreviewsSettings />}
       </div>
     </div>
   )

@@ -51,17 +51,15 @@ const navigationItems = [
     ]
   },
   {
-  {
-    name: 'Marketing',
+    id: 'marketing',
+    title: 'Marketing',
+    icon: Building2,
+    hasSubmenu: true,
     items: [
-      {
-        name: 'Property Listings',
-        href: '/marketing/listings',
-        icon: Building2,
-        current: location.pathname.startsWith('/marketing/listings'),
-      },
-    ],
+      { title: 'Property Listings', href: '/marketing/listings', icon: Building2 }
+    ]
   },
+  {
     id: 'finance-agreements',
     title: 'Finance & Agreements',
     icon: DollarSign,
@@ -229,25 +227,6 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-    </div>
-
-    {/* Marketing */}
-    <div className="space-y-1">
-      <div className="flex items-center px-3 py-2 text-sm font-medium text-muted-foreground">
-        <Building className="mr-2 h-4 w-4" />
-        Marketing
-      </div>
-      <Link
-        to="/marketing/listings"
-        className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-          location.pathname.startsWith('/marketing/listings')
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-        }`}
-      >
-        <FileText className="mr-2 h-4 w-4" />
-        Property Listings
-      </Link>
     </div>
   )
 }
