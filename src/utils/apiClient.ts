@@ -1,3 +1,4 @@
+// src/utils/apiClient.ts
 // API Client utility for handling Netlify Functions with graceful fallbacks
 import { toast } from '@/hooks/use-toast'
 
@@ -20,7 +21,7 @@ class ApiClient {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          ...options.headers,
+          ...(options.headers || {}),
         },
       })
 
@@ -28,7 +29,6 @@ class ApiClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      // Check if response is actually JSON
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
@@ -38,17 +38,17 @@ class ApiClient {
       return { data, success: true }
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error)
-      
-      // Show user-friendly toast notification
+
+      // User-friendly toast
       toast({
         title: 'Connection Error',
         description: 'Unable to connect to server. Please try again.',
         variant: 'destructive',
       })
 
-      return { 
+      return {
         error: error instanceof Error ? error.message : 'Unknown error',
-        success: false 
+        success: false,
       }
     }
   }
@@ -75,7 +75,7 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'DELETE' })
   }
 
-  // Health check function
+  // Health check
   async ping(): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE}/ping`)
@@ -86,50 +86,47 @@ class ApiClient {
     }
   }
 
-  // Listings CRUD
-  listingsCrud: {
+  // Listings CRUD (fixed: valid class field, uses API_BASE, and common request helper)
+  listingsCrud = {
     getListings: async (companyId: string) => {
-      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
-      const response = await fetch(url)
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
+      const res = await this.get<any>(`/listings-crud?companyId=${encodeURIComponent(companyId)}`)
+      if (!res.success) throw new Error(res.error || 'Failed to fetch listings')
+      return res.data
     },
-    
+
     getListing: async (companyId: string, listingId: string) => {
-      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
-      const response = await fetch(url)
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
+      const res = await this.get<any>(
+        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`
+      )
+      if (!res.success) throw new Error(res.error || 'Failed to fetch listing')
+      return res.data
     },
-    
+
     createListing: async (companyId: string, listingData: any) => {
-      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingData)
-      })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
+      const res = await this.post<any>(
+        `/listings-crud?companyId=${encodeURIComponent(companyId)}`,
+        listingData
+      )
+      if (!res.success) throw new Error(res.error || 'Failed to create listing')
+      return res.data
     },
-    
+
     updateListing: async (companyId: string, listingId: string, updates: any) => {
-      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
+      const res = await this.put<any>(
+        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`,
+        updates
+      )
+      if (!res.success) throw new Error(res.error || 'Failed to update listing')
+      return res.data
     },
-    
+
     deleteListing: async (companyId: string, listingId: string) => {
-      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
-      const response = await fetch(url, { method: 'DELETE' })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
-    }
+      const res = await this.delete<any>(
+        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`
+      )
+      if (!res.success) throw new Error(res.error || 'Failed to delete listing')
+      return res.data
+    },
   }
 }
 
