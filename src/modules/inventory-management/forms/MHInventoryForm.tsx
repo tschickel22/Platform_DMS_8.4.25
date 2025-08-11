@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { X, Plus, Upload, Camera } from 'lucide-react'
 
 interface MHInventoryFormProps {
@@ -573,15 +574,15 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </Button>
             </div>
             {formData.features.length > 0 && (
-              value={String(formData.availability ?? '')}
+              <div className="flex flex-wrap gap-2">
                 {formData.features.map((feature: string, index: number) => (
                   <Badge key={index} variant="secondary" className="flex items-center gap-1">
                     {feature}
                     <X
                       className="h-3 w-3 cursor-pointer"
-              <SelectContent position="popper" sideOffset={6} className="z-[80]">
+                      onClick={() => removeFeature(index)}
                     />
-                  <SelectItem key={status} value={String(status)}>{status}</SelectItem>
+                  </Badge>
                 ))}
               </div>
             )}
