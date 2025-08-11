@@ -10,6 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { X, Plus, Upload, Camera } from 'lucide-react'
 
+// Debug logging function
+const debugLog = (message: string, data?: any) => {
+  console.log(`[MH Form Debug] ${message}`, data || '')
+}
+
 interface MHInventoryFormProps {
   onSubmit: (data: any) => void
   onCancel: () => void
@@ -18,6 +23,8 @@ interface MHInventoryFormProps {
 
 export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHInventoryFormProps) {
   const [formData, setFormData] = useState({
+    // Debug: Log initial form data
+    ...(() => { debugLog('Form initialized'); return {}; })(),
     // Basic Information
     vin: initialData?.vin || '',
     make: initialData?.make || '',
@@ -69,10 +76,16 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
   const [newFeature, setNewFeature] = useState('')
 
   const handleInputChange = (field: string, value: any) => {
+    debugLog(`Input change - Field: ${field}, Value: ${value}`)
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleSelectChange = (field: string, value: string) => {
+    debugLog(`Select change - Field: ${field}, Value: ${value}`)
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const addFeature = () => {
@@ -82,6 +95,7 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
         features: [...prev.features, newFeature.trim()]
       }))
       setNewFeature('')
+      debugLog('Added amenity:', newFeature.trim())
     }
   }
 
@@ -90,11 +104,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
       ...prev,
       features: prev.features.filter((_: any, i: number) => i !== index)
     }))
+    debugLog('Removed amenity at index:', index)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
+    debugLog('Form submitted with data:', formData)
   }
 
   // Dropdown options
@@ -203,13 +219,24 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
-                  <SelectTrigger>
+                <Select 
+                  value={formData.make} 
+                  onValueChange={(value) => {
+                    debugLog('Make dropdown changed:', value)
+                    handleSelectChange('make', value)
+                  }}
+                  onOpenChange={(open) => debugLog('Make dropdown open state:', open)}
+                >
+                  <SelectTrigger onClick={() => debugLog('Make dropdown trigger clicked')}>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent onCloseAutoFocus={() => debugLog('Make dropdown closed')}>
                     {makeOptions.map((make) => (
-                      <SelectItem key={make} value={make}>
+                      <SelectItem 
+                        key={make} 
+                        value={make}
+                        onClick={() => debugLog('Make item clicked:', make)}
+                      >
                         {make}
                       </SelectItem>
                     ))}
@@ -241,13 +268,24 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="homeType">Home Type *</Label>
-                <Select value={formData.homeType} onValueChange={(value) => handleInputChange('homeType', value)}>
-                  <SelectTrigger>
+                <Select 
+                  value={formData.homeType} 
+                  onValueChange={(value) => {
+                    debugLog('Home Type dropdown changed:', value)
+                    handleSelectChange('homeType', value)
+                  }}
+                  onOpenChange={(open) => debugLog('Home Type dropdown open state:', open)}
+                >
+                  <SelectTrigger onClick={() => debugLog('Home Type dropdown trigger clicked')}>
                     <SelectValue placeholder="Select home type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent onCloseAutoFocus={() => debugLog('Home Type dropdown closed')}>
                     {homeTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>
+                      <SelectItem 
+                        key={type} 
+                        value={type}
+                        onClick={() => debugLog('Home Type item clicked:', type)}
+                      >
                         {type}
                       </SelectItem>
                     ))}
@@ -358,8 +396,15 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="roofMaterial">Roof Material</Label>
-                <Select value={formData.roofMaterial} onValueChange={(value) => handleInputChange('roofMaterial', value)}>
-                  <SelectTrigger>
+                <Select 
+                  value={formData.roofMaterial} 
+                  onValueChange={(value) => {
+                    debugLog('Roof Material dropdown changed:', value)
+                    handleSelectChange('roofMaterial', value)
+                  }}
+                  onOpenChange={(open) => debugLog('Roof Material dropdown open state:', open)}
+                >
+                  <SelectTrigger onClick={() => debugLog('Roof Material dropdown trigger clicked')}>
                     <SelectValue placeholder="Select roof material" />
                   </SelectTrigger>
                   <SelectContent>
@@ -414,8 +459,15 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
-                  <SelectTrigger>
+                <Select 
+                  value={formData.condition} 
+                  onValueChange={(value) => {
+                    debugLog('Condition dropdown changed:', value)
+                    handleSelectChange('condition', value)
+                  }}
+                  onOpenChange={(open) => debugLog('Condition dropdown open state:', open)}
+                >
+                  <SelectTrigger onClick={() => debugLog('Condition dropdown trigger clicked')}>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
                   <SelectContent>
@@ -429,8 +481,15 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
-                  <SelectTrigger>
+                <Select 
+                  value={formData.availability} 
+                  onValueChange={(value) => {
+                    debugLog('Availability dropdown changed:', value)
+                    handleSelectChange('availability', value)
+                  }}
+                  onOpenChange={(open) => debugLog('Availability dropdown open state:', open)}
+                >
+                  <SelectTrigger onClick={() => debugLog('Availability dropdown trigger clicked')}>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
                   <SelectContent>
