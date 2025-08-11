@@ -29,7 +29,8 @@ export function useInventoryManagement() {
     }
   ]
 
-  useEffect(() => {
+  const initializeMockData = () => {
+    useEffect(() => {
     initializeMockData()
   }, [mockVehicles])
 
@@ -150,6 +151,10 @@ export function useInventoryManagement() {
 
     setVehicles(savedVehicles)
   }
+
+  useEffect(() => {
+    initializeMockData()
+  }, [mockVehicles])
 
   const saveVehiclesToStorage = (updatedVehicles: Vehicle[]) => {
     saveToLocalStorage('renter-insight-vehicles', updatedVehicles)
