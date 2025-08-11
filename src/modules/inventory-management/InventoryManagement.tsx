@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   Plus, 
   Upload, 
@@ -34,6 +35,8 @@ export default function InventoryManagement() {
   // Local state for UI controls
   const [showAddRV, setShowAddRV] = useState(false)
   const [showAddMH, setShowAddMH] = useState(false)
+  const [showAddRVModal, setShowAddRVModal] = useState(false)
+  const [showAddMHModal, setShowAddMHModal] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
@@ -82,6 +85,24 @@ export default function InventoryManagement() {
     const price = v.type === 'RV' ? (v as RVVehicle).price : (v as MHVehicle).askingPrice
     return sum + (price || 0)
   }, 0)
+
+  const handleAddRV = () => {
+    console.log('Add RV button clicked')
+    setShowAddRVModal(true)
+  }
+
+  const handleAddMH = () => {
+    console.log('Add MH button clicked')
+    setShowAddMHModal(true)
+  }
+
+  const handleCloseRVModal = () => {
+    setShowAddRVModal(false)
+  }
+
+  const handleCloseMHModal = () => {
+    setShowAddMHModal(false)
+  }
 
   const handleEdit = (vehicle: Vehicle) => {
     setEditingItem(vehicle)
@@ -154,11 +175,11 @@ export default function InventoryManagement() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setShowAddRV(true)}>
+              <Button onClick={handleAddRV}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add RV
               </Button>
-              <Button onClick={() => setShowAddMH(true)} variant="outline">
+              <Button onClick={handleAddMH} variant="outline">
                 <Plus className="h-4 w-4 mr-2" />
                 Add MH
               </Button>
@@ -326,6 +347,26 @@ export default function InventoryManagement() {
               </Tabs>
             </CardContent>
           </Card>
+
+          {/* Add RV Modal */}
+          <Dialog open={showAddRVModal} onOpenChange={setShowAddRVModal}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add RV</DialogTitle>
+              </DialogHeader>
+              <RVInventoryForm onClose={handleCloseRVModal} />
+            </DialogContent>
+          </Dialog>
+
+          {/* Add MH Modal */}
+          <Dialog open={showAddMHModal} onOpenChange={setShowAddMHModal}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add MH</DialogTitle>
+              </DialogHeader>
+              <MHInventoryForm onClose={handleCloseMHModal} />
+            </DialogContent>
+          </Dialog>
 
           {/* Dialogs */}
           <RVInventoryForm
