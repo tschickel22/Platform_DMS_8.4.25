@@ -39,13 +39,14 @@ export default function PlatformAdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="syndication">Syndication</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
           <TabsTrigger value="sms">SMS</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
+          <TabsTrigger value="warranty">Warranty</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -358,6 +359,7 @@ export default function PlatformAdminSettings() {
         <TabsContent value="warranty">
           <WarrantyIntegrationSettings />
         </TabsContent>
+      </Tabs>
     </div>
   )
 }
