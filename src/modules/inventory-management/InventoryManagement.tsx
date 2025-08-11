@@ -1,74 +1,55 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
-  Upload,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Truck,
-  Home,
-  QrCode
-} from 'lucide-react'
-import { mockInventory } from '@/mocks/inventoryMock'
+import { Plus, Search, Upload, QrCode, DollarSign } from 'lucide-react'
+
 import { useInventoryManagement } from './hooks/useInventoryManagement'
-import { RVInventoryForm } from './forms/RVInventoryForm'
-import { MHInventoryForm } from './forms/MHInventoryForm'
-import { BarcodeScanner } from './components/BarcodeScanner'
-import { CSVSmartImport } from './components/CSVSmartImport'
-import { InventoryTable } from './components/InventoryTable'
-import { VehicleDetail } from './components/VehicleDetail'
+
+// IMPORTANT: these imports assume default exports.
+// If your files export named components, switch back to { Named } form.
+import RVInventoryForm from './forms/RVInventoryForm'
+import MHInventoryForm from './forms/MHInventoryForm'
+import BarcodeScanner from './components/BarcodeScanner'
+import CSVSmartImport from './components/CSVSmartImport'
+import InventoryTable from './components/InventoryTable'
+import VehicleDetail from './components/VehicleDetail'
 
 export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
-  const [showVehicleDetail, setShowVehicleDetail] = useState(false)
   const [showRVForm, setShowRVForm] = useState(false)
   const [showMHForm, setShowMHForm] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [showImport, setShowImport] = useState(false)
 
-  const {
-    inventory,
-    addVehicle,
-    updateVehicle,
-    deleteVehicle
-  } = useInventoryManagement()
+  const { inventory, addVehicle, updateVehicle, deleteVehicle } = useInventoryManagement()
 
+  // -- Stats (local, no hook dependency) --------------------------------------
   const stats = useMemo(() => {
     const toLower = (v?: string) => (v || '').toLowerCase()
     const totalUnits = inventory.length
     const available = inventory.filter(i => toLower(i.status) === 'available').length
     const reserved  = inventory.filter(i => toLower(i.status) === 'reserved').length
     const sold      = inventory.filter(i => toLower(i.status) === 'sold').length
-    const totalValue = inventory.reduce((sum, i) => sum + Number(i.price ?? 0), 0)
+    const totalValue = inventory.reduce((sum, i) => sum + Number(i?.price ?? 0), 0)
     return { totalUnits, available, reserved, sold, totalValue }
   }, [inventory])
 
-  // Filter inventory based on search and filters
+  // -- Filtering --------------------------------------------------------------
   const filteredInventory = useMemo(() => {
     const q = searchTerm.toLowerCase()
     return inventory.filter(v => {
-      const make  = (v.make ?? '').toLowerCase()
-      const model = (v.model ?? '').toLowerCase()
-      const vin   = (v.vin ?? '').toLowerCase()
-      const stock = (v.stockNumber ?? '').toLowerCase()
-      const type  = (v.type ?? '').toLowerCase()
+      const make   = (v.make ?? '').toLowerCase()
+      const model  = (v.model ?? '').toLowerCase()
+      const vin    = (v.vin ?? '').toLowerCase()
+      const stock  = (v.stockNumber ?? '').toLowerCase()
+      const type   = (v.type ?? '').toLowerCase()
       const status = (v.status ?? '').toLowerCase()
 
       const matchesSearch =
@@ -81,34 +62,35 @@ export default function InventoryManagement() {
     })
   }, [inventory, searchTerm, statusFilter, typeFilter])
 
-  const handleAddVehicle = (vehicleData) => {
+  // -- CRUD handlers ----------------------------------------------------------
+  const handleAddVehicle = (vehicleData: any) => {
     addVehicle(vehicleData)
     setShowRVForm(false)
     setShowMHForm(false)
   }
 
-  const handleUpdateVehicle = (vehicleData) => {
+  const handleUpdateVehicle = (vehicleData: any) => {
     updateVehicle(vehicleData)
     setSelectedVehicle(null)
   }
 
-  const handleDeleteVehicle = (vehicleId) => {
+  const handleDeleteVehicle = (vehicleId: string) => {
     deleteVehicle(vehicleId)
     setSelectedVehicle(null)
   }
 
-  const handleScanComplete = (scannedData) => {
-    // Handle barcode scan result
+  // -- Tools handlers ---------------------------------------------------------
+  const handleScanComplete = (scannedData: any) => {
     console.log('Scanned data:', scannedData)
     setShowScanner(false)
   }
 
-  const handleImportComplete = (importedData) => {
-    // Handle CSV import result
+  const handleImportComplete = (importedData: any) => {
     console.log('Imported data:', importedData)
     setShowImport(false)
   }
 
+  // -- Render -----------------------------------------------------------------
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -128,9 +110,7 @@ export default function InventoryManagement() {
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New RV</DialogTitle>
-                <DialogDescription>
-                  Add a new RV to your inventory
-                </DialogDescription>
+                <DialogDescription>Add a new RV to your inventory</DialogDescription>
               </DialogHeader>
               <RVInventoryForm onSubmit={handleAddVehicle} onCancel={() => setShowRVForm(false)} />
             </DialogContent>
@@ -146,9 +126,7 @@ export default function InventoryManagement() {
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Manufactured Home</DialogTitle>
-                <DialogDescription>
-                  Add a new manufactured home to your inventory
-                </DialogDescription>
+                <DialogDescription>Add a new manufactured home to your inventory</DialogDescription>
               </DialogHeader>
               <MHInventoryForm onSubmit={handleAddVehicle} onCancel={() => setShowMHForm(false)} />
             </DialogContent>
@@ -164,9 +142,7 @@ export default function InventoryManagement() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Import Inventory</DialogTitle>
-                <DialogDescription>
-                  Import inventory data from a CSV file
-                </DialogDescription>
+                <DialogDescription>Import inventory data from a CSV file</DialogDescription>
               </DialogHeader>
               <CSVSmartImport onComplete={handleImportComplete} />
             </DialogContent>
@@ -182,9 +158,7 @@ export default function InventoryManagement() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Barcode Scanner</DialogTitle>
-                <DialogDescription>
-                  Scan a barcode to quickly find or add inventory
-                </DialogDescription>
+                <DialogDescription>Scan a barcode to quickly find or add inventory</DialogDescription>
               </DialogHeader>
               <BarcodeScanner onScanComplete={handleScanComplete} />
             </DialogContent>
@@ -252,7 +226,9 @@ export default function InventoryManagement() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${Number(stats.totalValue || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${Number(stats.totalValue || 0).toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">Inventory worth</p>
           </CardContent>
         </Card>
@@ -268,7 +244,7 @@ export default function InventoryManagement() {
           {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search by make, model, VIN, or stock number..."
                 value={searchTerm}
@@ -276,6 +252,7 @@ export default function InventoryManagement() {
                 className="pl-10"
               />
             </div>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="All Status" />
@@ -288,6 +265,7 @@ export default function InventoryManagement() {
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
+
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="All Types" />
@@ -304,19 +282,21 @@ export default function InventoryManagement() {
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="all">All ({filteredInventory.length})</TabsTrigger>
-              <TabsTrigger value="rv">RVs ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'rv').length})</TabsTrigger>
-              <TabsTrigger value="mh">MH ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'mh').length})</TabsTrigger>
+              <TabsTrigger value="rv">
+                RVs ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'rv').length})
+              </TabsTrigger>
+              <TabsTrigger value="mh">
+                MH ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'mh').length})
+              </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="all" className="mt-6">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Inventory ({filteredInventory.length})</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your RV and manufactured home inventory
-                  </p>
+                  <p className="text-sm text-muted-foreground">Manage your RV and manufactured home inventory</p>
                 </div>
-                <InventoryTable 
+                <InventoryTable
                   inventory={filteredInventory}
                   onViewDetails={setSelectedVehicle}
                   onEdit={setSelectedVehicle}
@@ -324,38 +304,34 @@ export default function InventoryManagement() {
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="rv" className="mt-6">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">
-                    RV Inventory ({filteredInventory.filter(v => v.type === 'RV').length})
+                    RV Inventory ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'rv').length})
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Recreational vehicles in inventory
-                  </p>
+                  <p className="text-sm text-muted-foreground">Recreational vehicles in inventory</p>
                 </div>
-                <InventoryTable 
-                  inventory={filteredInventory.filter(v => v.type === 'RV')}
+                <InventoryTable
+                  inventory={filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'rv')}
                   onViewDetails={setSelectedVehicle}
                   onEdit={setSelectedVehicle}
                   onDelete={handleDeleteVehicle}
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="mh" className="mt-6">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">
-                    MH Inventory ({filteredInventory.filter(v => v.type === 'MH').length})
+                    MH Inventory ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'mh').length})
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Manufactured homes in inventory
-                  </p>
+                  <p className="text-sm text-muted-foreground">Manufactured homes in inventory</p>
                 </div>
-                <InventoryTable 
-                  inventory={filteredInventory.filter(v => v.type === 'MH')}
+                <InventoryTable
+                  inventory={filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'mh')}
                   onViewDetails={setSelectedVehicle}
                   onEdit={setSelectedVehicle}
                   onDelete={handleDeleteVehicle}
@@ -370,7 +346,7 @@ export default function InventoryManagement() {
       {selectedVehicle && (
         <Dialog open={!!selectedVehicle} onOpenChange={() => setSelectedVehicle(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <VehicleDetail 
+            <VehicleDetail
               vehicle={selectedVehicle}
               onUpdate={handleUpdateVehicle}
               onDelete={handleDeleteVehicle}
