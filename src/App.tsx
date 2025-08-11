@@ -31,6 +31,8 @@ import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
+import PublicListingView from '@/modules/property-listings/components/PublicListingView'
+import PublicCatalogView from '@/modules/property-listings/components/PublicCatalogView'
 import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
@@ -50,6 +52,11 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   {/* Client Portal Routes - these will render ClientPortal directly */}
                   <Route path="/portalclient/*" element={<ClientPortalLayout />} />
+                  {/* Public Listing Routes - no authentication required */}
+                  <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
+                  <Route path="/:companySlug/listing/:listingId" element={<PublicListingView />} />
+                  <Route path="/:companySlug/l/:token" element={<PublicCatalogView />} />
+                  <Route path="/:companySlug/p/:token" element={<PublicListingView />} />
                   {/* Main Application Routes - these will render the Layout */}
                   <Route path="/*" element={
                     <ProtectedRoute>

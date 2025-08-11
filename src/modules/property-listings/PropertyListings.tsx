@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { ListingOverview } from './components/ListingOverview'
 import { ListingForm } from './components/ListingForm'
+import ShareListingModal from './components/ShareListingModal'
 import { 
   Plus, 
   Filter, 
@@ -57,6 +59,8 @@ export default function PropertyListings() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingListing, setEditingListing] = useState<Listing | null>(null)
+  const [shareModalListing, setShareModalListing] = useState<any>(null)
+  const [shareAllModalOpen, setShareAllModalOpen] = useState(false)
 
   const fetchListings = async () => {
     if (!tenant?.id) return
@@ -273,6 +277,13 @@ export default function PropertyListings() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShareAllModalOpen(true)}
+            disabled={listings.filter(l => l.status === 'active').length === 0}
+          >
+            Share All Active
+          </Button>
           <Button onClick={handleAddListing}>
             <Plus className="h-4 w-4 mr-2" />
             Add Listing
@@ -352,6 +363,9 @@ export default function PropertyListings() {
           onClone={handleCloneListing}
           onToggleStatus={handleToggleStatus}
           onRemove={handleRemoveListing}
+          onShareListing={(listing) => {
+            setShareModalListing(listing)
+          }}
         />
       )}
 
@@ -366,6 +380,49 @@ export default function PropertyListings() {
           }}
         />
       )}
+
+      {shareModalListing && (
+        <ShareListingModal
+          isOpen={!!shareModalListing}
+          onClose={() => setShareModalListing(null)}
+          listing={shareModalListing}
+          companySlug="demo-company"
+        />
+      )}
+
+      {/* Share All Modal */}
+      <Dialog open={shareAllModalOpen} onOpenChange={setShareAllModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share All Active Listings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Create a shared catalog link containing all your active listings.
+            </p>
+            <div className="bg-muted p-4 rounded-lg">
+              <p className="text-sm">
+                <strong>{listings.filter(l => l.status === 'active').length}</strong> active listings will be included
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={() => setShareAllModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                // This would generate a catalog share link
+                toast({
+                  title: "Feature Coming Soon",
+                  description: "Catalog sharing will be available in the next update"
+                })
+                setShareAllModalOpen(false)
+              }}>
+                Generate Catalog Link
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
