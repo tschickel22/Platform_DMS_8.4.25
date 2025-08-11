@@ -34,16 +34,33 @@ function InventoryList() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+  const [isVehicleFormOpen, setIsVehicleFormOpen] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState<any>(null)
+
+  // Handle opening the modal for adding new vehicle
+  const handleAddVehicle = () => {
+    console.log('Opening add vehicle modal')
+    setEditingVehicle(null) // Clear any editing state
+    setIsVehicleFormOpen(true)
+  }
+
+  // Handle opening the modal for editing vehicle
+  const handleEditVehicle = (vehicle: any) => {
+    console.log('Opening edit vehicle modal for:', vehicle)
+    setEditingVehicle(vehicle)
+    setIsVehicleFormOpen(true)
+  }
+
+  // Handle closing the modal
+  const handleCloseModal = () => {
+    console.log('Closing vehicle modal')
+    setIsVehicleFormOpen(false)
+    setEditingVehicle(null)
+  }
 
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
     setVehicleFormMode('add')
-    setShowVehicleForm(true)
-  }
-
-  const handleEditVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle)
-    setVehicleFormMode('edit')
     setShowVehicleForm(true)
   }
 
@@ -110,7 +127,7 @@ function InventoryList() {
   const handleSubmitVehicle = async (vehicleData: Partial<Vehicle>) => {
     try {
       if (selectedVehicle) {
-        // minimal “update” behavior preserved
+        // minimal "update" behavior preserved
         await updateVehicleStatus(selectedVehicle.id, vehicleData.status || selectedVehicle.status)
         toast({ title: 'Vehicle Updated', description: 'Vehicle information has been updated' })
       } else {
@@ -244,9 +261,12 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            <Button onClick={handleCreateVehicle}>
+            <Button 
+              onClick={handleAddVehicle}
+              className="bg-primary hover:bg-primary/90"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Add Home
+              Add New Vehicle
             </Button>
           </div>
         </div>
@@ -327,6 +347,15 @@ function InventoryList() {
           </Button>
         </div>
       )}
+
+      {/* Vehicle Form Modal */}
+      <VehicleForm
+        isOpen={isVehicleFormOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleVehicleSubmit}
+        vehicle={editingVehicle}
+        mode={editingVehicle ? 'edit' : 'add'}
+      />
 
       {/* Inventory Table */}
       <InventoryTable

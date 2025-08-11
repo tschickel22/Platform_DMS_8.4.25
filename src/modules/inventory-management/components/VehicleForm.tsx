@@ -109,8 +109,18 @@ export default function VehicleForm({ isOpen, onClose, onSubmit, vehicle, mode =
     }
   }, [vehicle, mode, isOpen])
 
-  const handleInputChange = (field: string, value: string) =>
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    
+    // Reset subType when type changes
+    if (field === 'type') {
+      setFormData(prev => ({
+        ...prev,
+        type: value,
+        subType: '' // Reset subType when type changes
+      }))
+    }
+  }
 
   const handleAddFeature = () => {
     const f = newFeature.trim()
@@ -162,7 +172,10 @@ export default function VehicleForm({ isOpen, onClose, onSubmit, vehicle, mode =
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="type">Type *</Label>
-                  <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)}>
+                  <Select value={formData.type} onValueChange={(value) => {
+                    console.log('Type selected:', value)
+                    handleInputChange('type', value)
+                  }}>
                     <SelectTrigger><SelectValue placeholder="Select vehicle type" /></SelectTrigger>
                     <SelectContent className={SELECT_LAYER}>
                       <SelectItem value="RV">RV</SelectItem>
@@ -174,7 +187,10 @@ export default function VehicleForm({ isOpen, onClose, onSubmit, vehicle, mode =
                 {!!(formData.type && availableSubTypes.length) && (
                   <div>
                     <Label htmlFor="subType">{isRV ? 'RV Type' : 'Home Type'} *</Label>
-                    <Select value={formData.subType} onValueChange={(v) => handleInputChange('subType', v)}>
+                    <Select value={formData.subType} onValueChange={(value) => {
+                      console.log('Sub-type selected:', value)
+                      handleInputChange('subType', value)
+                    }}>
                       <SelectTrigger><SelectValue placeholder={`Select ${isRV ? 'RV' : 'home'} type`} /></SelectTrigger>
                       <SelectContent className={SELECT_LAYER}>
                         {availableSubTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
