@@ -256,6 +256,10 @@ export function ListingOverview({ listings, onEdit, onClone, onToggleStatus, onR
                         <Copy className="h-4 w-4 mr-2" />
                         Clone
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onShare(listing)}>
+                        <Share className="h-4 w-4 mr-2" />
+                        Share
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => onToggleStatus(listing)}>
                         {listing.status === 'active' ? (
