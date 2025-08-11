@@ -171,13 +171,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
+                <Select value={String(formData.make ?? '')} onValueChange={(value) => handleInputChange('make', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {makeOptions.map((make) => (
-                      <SelectItem key={make} value={make}>
+                      <SelectItem key={make} value={String(make)}>
                         {make}
                       </SelectItem>
                     ))}
@@ -219,13 +219,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bodyStyle">Body Style *</Label>
-                <Select value={formData.bodyStyle} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
+                <Select value={String(formData.bodyStyle ?? '')} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select body style" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {bodyStyleOptions.map((style) => (
-                      <SelectItem key={style} value={style}>
+                      <SelectItem key={style} value={String(style)}>
                         {style}
                       </SelectItem>
                     ))}
@@ -245,13 +245,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Fuel Type</Label>
-                <Select value={formData.fuelType} onValueChange={(value) => handleInputChange('fuelType', value)}>
+                <Select value={String(formData.fuelType ?? '')} onValueChange={(value) => handleInputChange('fuelType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {fuelTypeOptions.map((fuel) => (
-                      <SelectItem key={fuel} value={fuel}>
+                      <SelectItem key={fuel} value={String(fuel)}>
                         {fuel}
                       </SelectItem>
                     ))}
@@ -260,13 +260,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="transmission">Transmission</Label>
-                <Select value={formData.transmission} onValueChange={(value) => handleInputChange('transmission', value)}>
+                <Select value={String(formData.transmission ?? '')} onValueChange={(value) => handleInputChange('transmission', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select transmission" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {transmissionOptions.map((trans) => (
-                      <SelectItem key={trans} value={trans}>
+                      <SelectItem key={trans} value={String(trans)}>
                         {trans}
                       </SelectItem>
                     ))}
@@ -293,13 +293,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                <Select value={String(formData.condition ?? '')} onValueChange={(value) => handleInputChange('condition', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {conditionOptions.map((condition) => (
-                      <SelectItem key={condition} value={condition}>
+                      <SelectItem key={condition} value={String(condition)}>
                         {condition}
                       </SelectItem>
                     ))}
@@ -308,13 +308,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
+                <Select value={String(formData.availability ?? '')} onValueChange={(value) => handleInputChange('availability', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {availabilityOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
+                      <SelectItem key={status} value={String(status)}>
                         {status}
                       </SelectItem>
                     ))}
@@ -334,13 +334,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rvType">RV Type</Label>
-                <Select value={formData.rvType} onValueChange={(value) => handleInputChange('rvType', value)}>
+                <Select value={String(formData.rvType ?? '')} onValueChange={(value) => handleInputChange('rvType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select RV type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {rvTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>
+                      <SelectItem key={type} value={String(type)}>
                         {type}
                       </SelectItem>
                     ))}
@@ -359,13 +359,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slideOuts">Slide Outs</Label>
-                <Select value={formData.slideOuts} onValueChange={(value) => handleInputChange('slideOuts', value)}>
+                <Select value={String(formData.slideOuts ?? '')} onValueChange={(value) => handleInputChange('slideOuts', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select number of slide outs" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {slideOutOptions.map((count) => (
-                      <SelectItem key={count} value={count}>
+                      <SelectItem key={count} value={String(count)}>
                         {count}
                       </SelectItem>
                     ))}
@@ -374,13 +374,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sleeps">Sleeps</Label>
-                <Select value={formData.sleeps} onValueChange={(value) => handleInputChange('sleeps', value)}>
+                <Select value={String(formData.sleeps ?? '')} onValueChange={(value) => handleInputChange('sleeps', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select sleeping capacity" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
                     {sleepsOptions.map((count) => (
-                      <SelectItem key={count} value={count}>
+                      <SelectItem key={count} value={String(count)}>
                         {count}
                       </SelectItem>
                     ))}
