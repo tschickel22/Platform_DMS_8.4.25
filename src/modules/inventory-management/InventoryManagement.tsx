@@ -2,16 +2,14 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button' 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign, Search } from 'lucide-react'
+import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus, VehicleType } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
 import { InventoryTable } from './components/InventoryTable'
-import VehicleForm from './components/VehicleForm'
+import { VehicleForm } from './components/VehicleForm'
 import { VehicleDetail } from './components/VehicleDetail'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
@@ -20,7 +18,6 @@ import { TagType } from '@/modules/tagging-engine/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
-import { mockInventory } from "@/mocks/inventoryMock";
 
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle } = useInventoryManagement()
@@ -35,10 +32,6 @@ function InventoryList() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
-  const [isAddHomeModalOpen, setIsAddHomeModalOpen] = useState(false)
-  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
   
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
@@ -238,15 +231,6 @@ function InventoryList() {
     return matchesStatus
   })
 
-  // Filter inventory based on search and status
-  const filteredInventory = mockInventory.sampleVehicles.filter(vehicle => {
-    const matchesSearch = vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = filterStatus === 'all' || vehicle.status.toLowerCase() === filterStatus.toLowerCase()
-    return matchesSearch && matchesStatus
-  })
-
   return (
     <div className="space-y-8">
       {/* Task Form Modal */}
@@ -317,27 +301,10 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            <Dialog open={isAddHomeModalOpen} onOpenChange={setIsAddHomeModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Home
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add New Home</DialogTitle>
-                </DialogHeader>
-                <VehicleForm 
-                  onSubmit={(data) => {
-                    console.log('New home data:', data)
-                    setIsAddHomeModalOpen(false)
-                    // Handle form submission here
-                  }}
-                  onCancel={() => setIsAddHomeModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+            <Button onClick={handleCreateVehicle}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Home
+            </Button>
           </div>
         </div>
       </div>
@@ -388,10 +355,9 @@ function InventoryList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">
-              <div className="text-2xl font-bold">{mockInventory.sampleVehicles.length}</div>
+              {vehicles.filter(v => v.status === VehicleStatus.RESERVED).length}
             </div>
             <p className="text-xs text-yellow-600 flex items-center mt-1">
-              {mockInventory.sampleVehicles.filter(v => v.status === 'Available').length} available
               <TrendingUp className="h-3 w-3 mr-1" />
               Pending sale
             </p>
@@ -429,111 +395,14 @@ function InventoryList() {
         </div>
       )}
       
-      {/* Search and Filter */}
-      <div className="flex gap-4 items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search by make, model, or VIN..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-        >
-          <option value="all">All Status</option>
-          <option value="available">Available</option>
-          <option value="sold">Sold</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
-
       {/* Inventory Table */}
       <InventoryTable 
         vehicles={filteredVehicles}
         onEdit={handleEditVehicle}
         onView={handleViewVehicle}
-        onDelete={handleDeleteVehicle}
         onStatusChange={handleStatusChange}
+        onCreateTask={handleCreateTaskForVehicle}
       />
-
-      {filteredInventory.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="text-lg font-medium mb-2">
-            {searchTerm || filterStatus !== 'all' ? 'No matching inventory' : 'No inventory items'}
-          </h3>
-          <p className="mb-4">
-            {searchTerm || filterStatus !== 'all' 
-              ? 'Try adjusting your search or filter criteria.' 
-              : 'Get started by adding your first vehicle or manufactured home.'
-            }
-          </p>
-          {!searchTerm && filterStatus === 'all' && (
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => setIsAddVehicleModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Vehicle
-              </Button>
-              <Button variant="outline" onClick={() => setIsAddHomeModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Home
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredInventory.map((vehicle) => (
-            <Card key={vehicle.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </CardTitle>
-                  <Badge variant={vehicle.status === 'Available' ? 'default' : 
-                                vehicle.status === 'Sold' ? 'secondary' : 'outline'}>
-                    {vehicle.status}
-                  </Badge>
-                </div>
-                <CardDescription>
-                  {vehicle.type} • VIN: {vehicle.vin}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Purchase Price:</span>
-                    <span className="font-medium">${vehicle.purchasePrice?.toLocaleString() || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Retail Price:</span>
-                    <span className="font-medium">${vehicle.retailPrice?.toLocaleString() || 'N/A'}</span>
-                  </div>
-                  {vehicle.condition && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Condition:</span>
-                      <span className="font-medium">{vehicle.condition}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    View Details
-                  </Button>
-                  <Button size="sm" className="flex-1">
-                    Edit
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -542,6 +411,7 @@ export default function InventoryManagement() {
   return (
     <Routes>
       <Route path="/" element={<InventoryList />} />
+      <Route path="/*" element={<InventoryList />} />
     </Routes>
   )
 }
