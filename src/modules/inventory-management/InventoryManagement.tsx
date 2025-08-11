@@ -13,7 +13,7 @@ import { useInventoryManagement } from './hooks/useInventoryManagement'
 // If your files export named components, switch back to { Named } form.
 import RVInventoryForm from './forms/RVInventoryForm'
 import MHInventoryForm from './forms/MHInventoryForm'
-import BarcodeScanner from './components/BarcodeScanner'
+import { BarcodeScanner } from './components/BarcodeScanner'
 import CSVSmartImport from './components/CSVSmartImport'
 import InventoryTable from './components/InventoryTable'
 import VehicleDetail from './components/VehicleDetail'
