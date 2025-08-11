@@ -25,35 +25,19 @@ import {
 } from 'lucide-react'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
-import RVInventoryForm from './forms/RVInventoryForm'
-import MHInventoryForm from './forms/MHInventoryForm'
-// Helper function to calculate inventory stats
-const getInventoryStats = (inventory: any[]) => {
-  const totalUnits = inventory.length
-  const availableUnits = inventory.filter(item => item.status === 'Available').length
-  const reservedUnits = inventory.filter(item => item.status === 'Reserved').length
-  const soldUnits = inventory.filter(item => item.status === 'Sold').length
-  const totalValue = inventory.reduce((sum, item) => sum + (item.price || 0), 0)
-  
-  return {
-    totalUnits,
-    availableUnits,
-    reservedUnits,
-    soldUnits,
-    totalValue
-  }
-}
-
-import { VehicleDetail } from './components/VehicleDetail'
-import { InventoryTable } from './components/InventoryTable'
+import { RVInventoryForm } from './forms/RVInventoryForm'
+import { MHInventoryForm } from './forms/MHInventoryForm'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import { CSVSmartImport } from './components/CSVSmartImport'
+import { InventoryTable } from './components/InventoryTable'
+import { VehicleDetail } from './components/VehicleDetail'
 
 export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [selectedVehicle, setSelectedVehicle] = useState(null)
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
+  const [showVehicleDetail, setShowVehicleDetail] = useState(false)
   const [showRVForm, setShowRVForm] = useState(false)
   const [showMHForm, setShowMHForm] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
@@ -63,23 +47,36 @@ export default function InventoryManagement() {
     inventory,
     addVehicle,
     updateVehicle,
-    deleteVehicle,
-    getInventoryStats
+    deleteVehicle
   } = useInventoryManagement()
 
-  const stats = getInventoryStats()
+  const stats = useMemo(() => {
+    const toLower = (v?: string) => (v || '').toLowerCase()
+    const totalUnits = inventory.length
+    const available = inventory.filter(i => toLower(i.status) === 'available').length
+    const reserved  = inventory.filter(i => toLower(i.status) === 'reserved').length
+    const sold      = inventory.filter(i => toLower(i.status) === 'sold').length
+    const totalValue = inventory.reduce((sum, i) => sum + Number(i.price ?? 0), 0)
+    return { totalUnits, available, reserved, sold, totalValue }
+  }, [inventory])
 
   // Filter inventory based on search and filters
   const filteredInventory = useMemo(() => {
-    return inventory.filter(vehicle => {
-      const matchesSearch = vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          vehicle.stockNumber.toLowerCase().includes(searchTerm.toLowerCase())
-      
-      const matchesStatus = statusFilter === 'all' || vehicle.status.toLowerCase() === statusFilter.toLowerCase()
-      const matchesType = typeFilter === 'all' || vehicle.type.toLowerCase() === typeFilter.toLowerCase()
-      
+    const q = searchTerm.toLowerCase()
+    return inventory.filter(v => {
+      const make  = (v.make ?? '').toLowerCase()
+      const model = (v.model ?? '').toLowerCase()
+      const vin   = (v.vin ?? '').toLowerCase()
+      const stock = (v.stockNumber ?? '').toLowerCase()
+      const type  = (v.type ?? '').toLowerCase()
+      const status = (v.status ?? '').toLowerCase()
+
+      const matchesSearch =
+        make.includes(q) || model.includes(q) || vin.includes(q) || stock.includes(q)
+
+      const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase()
+      const matchesType = typeFilter === 'all' || type === typeFilter.toLowerCase()
+
       return matchesSearch && matchesStatus && matchesType
     })
   }, [inventory, searchTerm, statusFilter, typeFilter])
@@ -255,7 +252,7 @@ export default function InventoryManagement() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${Number(stats.totalValue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Inventory worth</p>
           </CardContent>
         </Card>
@@ -307,12 +304,8 @@ export default function InventoryManagement() {
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="all">All ({filteredInventory.length})</TabsTrigger>
-              <TabsTrigger value="rv">
-                RVs ({filteredInventory.filter(v => v.type === 'RV').length})
-              </TabsTrigger>
-              <TabsTrigger value="mh">
-                MH ({filteredInventory.filter(v => v.type === 'MH').length})
-              </TabsTrigger>
+              <TabsTrigger value="rv">RVs ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'rv').length})</TabsTrigger>
+              <TabsTrigger value="mh">MH ({filteredInventory.filter(v => (v.type ?? '').toLowerCase() === 'mh').length})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="all" className="mt-6">
