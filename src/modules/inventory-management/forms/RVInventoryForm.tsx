@@ -15,7 +15,7 @@ interface RVInventoryFormProps {
   initialData?: any
 }
 
-function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormProps) {
+export default function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormProps) {
   const [formData, setFormData] = useState({
     // Basic Information
     vin: initialData?.vin || '',
@@ -511,6 +511,3 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
     </div>
   )
 }
-
-export default RVInventoryForm
-export { RVInventoryForm }
