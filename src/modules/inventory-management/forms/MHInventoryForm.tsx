@@ -202,13 +202,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select value={String(formData.make ?? '')} onValueChange={(value) => handleInputChange('make', value)}>
+                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {makeOptions.map((make) => (
-                      <SelectItem key={make} value={String(make)}>
+                      <SelectItem key={make} value={make}>
                         {make}
                       </SelectItem>
                     ))}
@@ -240,13 +240,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="homeType">Home Type *</Label>
-                <Select value={String(formData.homeType ?? '')} onValueChange={(value) => handleInputChange('homeType', value)}>
+                <Select value={formData.homeType} onValueChange={(value) => handleInputChange('homeType', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select home type" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {homeTypeOptions.map((type) => (
-                      <SelectItem key={type} value={String(type)}>
+                      <SelectItem key={type} value={type}>
                         {type}
                       </SelectItem>
                     ))}
@@ -266,13 +266,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="width">Width</Label>
-                <Select value={String(formData.width ?? '')} onValueChange={(value) => handleInputChange('width', value)}>
+                <Select value={formData.width} onValueChange={(value) => handleInputChange('width', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select width" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {widthOptions.map((width) => (
-                      <SelectItem key={width} value={String(width)}>
+                      <SelectItem key={width} value={width}>
                         {width}
                       </SelectItem>
                     ))}
@@ -301,13 +301,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bedrooms">Bedrooms</Label>
-                <Select value={String(formData.bedrooms ?? '')} onValueChange={(value) => handleInputChange('bedrooms', value)}>
+                <Select value={formData.bedrooms} onValueChange={(value) => handleInputChange('bedrooms', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select bedrooms" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {bedroomOptions.map((count) => (
-                      <SelectItem key={count} value={String(count)}>
+                      <SelectItem key={count} value={count}>
                         {count}
                       </SelectItem>
                     ))}
@@ -316,13 +316,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bathrooms">Bathrooms</Label>
-                <Select value={String(formData.bathrooms ?? '')} onValueChange={(value) => handleInputChange('bathrooms', value)}>
+                <Select value={formData.bathrooms} onValueChange={(value) => handleInputChange('bathrooms', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select bathrooms" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {bathroomOptions.map((count) => (
-                      <SelectItem key={count} value={String(count)}>
+                      <SelectItem key={count} value={count}>
                         {count}
                       </SelectItem>
                     ))}
@@ -413,13 +413,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select value={String(formData.condition ?? '')} onValueChange={(value) => handleInputChange('condition', value)}>
+                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {conditionOptions.map((condition) => (
-                      <SelectItem key={condition} value={String(condition)}>
+                      <SelectItem key={condition} value={condition}>
                         {condition}
                       </SelectItem>
                     ))}
@@ -428,13 +428,13 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select value={String(formData.availability ?? '')} onValueChange={(value) => handleInputChange('availability', value)}>
+                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={6} className="z-[90] max-h-72 overflow-auto">
+                  <SelectContent>
                     {availabilityOptions.map((status) => (
-                      <SelectItem key={status} value={String(status)}>
+                      <SelectItem key={status} value={status}>
                         {status}
                       </SelectItem>
                     ))}
