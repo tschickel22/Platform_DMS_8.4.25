@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Vehicle, VehicleStatus, VehicleType } from '@/types'
+// import { mockInventory } from '@/mocks/inventoryMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import Papa from 'papaparse'
 
@@ -7,12 +7,34 @@ export function useInventoryManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Mock data for now since mockInventory might not be available
+  const mockVehicles: Vehicle[] = [
+    {
+      id: '1',
+      vin: 'TEST123456789',
+      make: 'Forest River',
+      model: 'Cherokee',
+      year: 2023,
+      type: 'RV',
+      subType: 'Travel Trailer',
+      status: 'Available',
+      price: 45000,
+      cost: 35000,
+      location: 'Lot A-1',
+      mileage: 0,
+      condition: 'New',
+      features: ['Air Conditioning', 'Slide Out'],
+      images: [],
+      notes: 'Brand new travel trailer'
+    }
+  ]
+
   useEffect(() => {
     initializeMockData()
-  }, [])
+  }, [mockVehicles])
 
-  const initializeMockData = () => {
-    // Load existing vehicles from localStorage or use mock data
+        // Use mock data for now
+        const data = mockVehicles
     const savedVehicles = loadFromLocalStorage('renter-insight-vehicles', [
       {
         id: '1',
@@ -184,6 +206,7 @@ export function useInventoryManagement() {
       setVehicles(updatedVehicles)
       saveVehiclesToStorage(updatedVehicles)
 
+        setVehicles([])
       return newVehicle
     } finally {
       setLoading(false)

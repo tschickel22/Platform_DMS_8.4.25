@@ -67,6 +67,11 @@ function InventoryList() {
   const handleViewVehicle = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle)
     setShowVehicleDetail(true)
+
+  const handleVehiclesSplit = (vehicle: Vehicle) => {
+    console.log('Splitting vehicle:', vehicle)
+    // Add split functionality here
+  }
   }
 
   const handleCreateTask = async (taskData: Partial<Task>) => {
@@ -268,6 +273,7 @@ function InventoryList() {
               <Plus className="h-4 w-4 mr-2" />
               Add New Vehicle
             </Button>
+            onSplit={handleVehiclesSplit}
           </div>
         </div>
       </div>

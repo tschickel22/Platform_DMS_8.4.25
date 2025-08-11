@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Search, Filter, Edit, Trash2, Eye, Package } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Package, Search, Filter, Eye, Edit, Trash2, Download, Upload, MoreHorizontal, ScanIcon as ScanBarcode, Image as ImageIcon, Video, Check, X } from 'lucide-react'
@@ -22,6 +22,7 @@ interface InventoryTableProps {
   onEdit: (vehicle: Vehicle) => void
   onDelete: (vehicleId: string) => void
   onView: (vehicle: Vehicle) => void
+  onSplit?: (vehicle: Vehicle) => void
   onStatusChange: (vehicleId: string, status: VehicleStatus) => void
   onCreateTask: (vehicle: Vehicle) => void
 }
@@ -32,7 +33,8 @@ export function InventoryTable({
   onDelete, 
   onView, 
   onStatusChange,
-  onCreateTask
+  onView,
+  onSplit
 }: InventoryTableProps) {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
@@ -475,6 +477,15 @@ export function InventoryTable({
                           <ListTodo className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => onDelete(vehicle.id)}>
+                  {onSplit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSplit(vehicle)}
+                    >
+                      <Package className="h-4 w-4" />
+                    </Button>
+                  )}
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
