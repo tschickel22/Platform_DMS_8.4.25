@@ -14,8 +14,7 @@ interface VehicleFormProps {
   onCancel: () => void
 }
 
-export { VehicleForm }
-export default VehicleForm
+function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleFormProps) {
   // Primary vehicle type state
   const [vehicleType, setVehicleType] = useState<string>(vehicle?.type || '')
   const [vehicleSubType, setVehicleSubType] = useState<string>(vehicle?.subType || '')
@@ -369,3 +368,6 @@ export default VehicleForm
     </Card>
   )
 }
+
+export { VehicleForm }
+export default VehicleForm
