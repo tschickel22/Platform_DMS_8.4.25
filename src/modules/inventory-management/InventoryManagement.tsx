@@ -145,7 +145,20 @@ export default function InventoryManagement() {
       createdAt: new Date().toISOString(),
       status: 'Available'
     }
-    setInventory(prev => [...prev, newRV])
+    // Create new RV inventory item
+    const newRVItem = {
+      id: `rv-${Date.now()}`,
+      type: 'RV',
+      ...formData,
+      createdAt: new Date().toISOString(),
+      status: 'Available'
+    }
+    
+    // Add to inventory state
+    setInventory(prev => [...prev, newRVItem])
+    console.log('RV Added:', newRVItem)
+    
+    // Close modal
     setShowAddRVModal(false)
   }
 
@@ -157,7 +170,20 @@ export default function InventoryManagement() {
       createdAt: new Date().toISOString(),
       status: 'Available'
     }
-    setInventory(prev => [...prev, newMH])
+    // Create new MH inventory item  
+    const newMHItem = {
+      id: `mh-${Date.now()}`,
+      type: 'MH',
+      ...formData,
+      createdAt: new Date().toISOString(),
+      status: 'Available'
+    }
+    
+    // Add to inventory state
+    setInventory(prev => [...prev, newMHItem])
+    console.log('MH Added:', newMHItem)
+    
+    // Close modal
     setShowAddMHModal(false)
   }
 
@@ -479,6 +505,30 @@ export default function InventoryManagement() {
           />
         </div>
 
+
+      {/* Display Created Inventory */}
+      {inventory.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4">Created Inventory ({inventory.length} items)</h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {inventory.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="text-sm">{item.type} - {item.make} {item.model}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1 text-sm">
+                    <p><strong>VIN:</strong> {item.vin}</p>
+                    <p><strong>Year:</strong> {item.year}</p>
+                    <p><strong>Status:</strong> {item.status}</p>
+                    <p><strong>Created:</strong> {new Date(item.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
         {/* Display Created Inventory */}
         {inventory.length > 0 && (
           <div className="mt-8">

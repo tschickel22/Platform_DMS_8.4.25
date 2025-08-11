@@ -83,6 +83,14 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Basic validation - check if required fields are filled
+    if (!formData.vin || !formData.make || !formData.model || !formData.year) {
+      alert('Please fill in all required fields (VIN, Make, Model, Year)')
+      return
+    }
+    
+    // Only submit if we have valid data
     onSubmit(formData)
   }
 
