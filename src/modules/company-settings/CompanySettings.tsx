@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Save, Plus, Edit, Trash2, Building, Palette, Tag, Mail } from 'lucide-react'
+import { Save, Plus, Edit, Trash2, Building, Tag, Mail } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { CustomField, CustomFieldType } from '@/types'
 import { useToast } from '@/hooks/use-toast'
