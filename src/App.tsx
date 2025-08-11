@@ -74,6 +74,7 @@ function App() {
                           <Route path="/admin/settings/*" element={<PlatformSettings />} />
                           <Route path="/reports/*" element={<ReportingSuite />} />
                           <Route path="/client-applications/*" element={<FinanceApplication />} />
+                          <Route path="/marketing/listings/*" element={<PropertyListings />} />
                           <Route path="/warranty-mgmt" element={<WarrantyManagement />} />
                           <Route path="/tags/*" element={<TaggingEngine />} />
                           <Route path="/tasks/*" element={<TaskCenter />} />
