@@ -1,338 +1,348 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Vehicle, RVVehicle, MHVehicle } from '../state/types'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { X, Edit, Package, DollarSign, Calendar, Truck, Wrench, FileText, Image as ImageIcon, Video } from 'lucide-react'
-import { ListTodo } from 'lucide-react'
-import { Vehicle, VehicleStatus, VehicleType } from '@/types'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Car, 
+  Home, 
+  MapPin, 
+  DollarSign, 
+  Calendar, 
+  Palette, 
+  Fuel, 
+  Settings, 
+  Bed, 
+  Bath,
+  Phone,
+  Mail,
+  Globe
+} from 'lucide-react'
 
 interface VehicleDetailProps {
-  vehicle: Vehicle
-  onClose: () => void
-  onEdit: (vehicle: Vehicle) => void
-  onCreateTask: (vehicle: Vehicle) => void
+  vehicle: Vehicle | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export function VehicleDetail({ vehicle, onClose, onEdit, onCreateTask }: VehicleDetailProps) {
-  const getStatusColor = (status: VehicleStatus) => {
-    switch (status) {
-      case VehicleStatus.AVAILABLE:
-        return 'bg-green-50 text-green-700 border-green-200'
-      case VehicleStatus.RESERVED:
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case VehicleStatus.SOLD:
-        return 'bg-blue-50 text-blue-700 border-blue-200'
-      case VehicleStatus.SERVICE:
-        return 'bg-orange-50 text-orange-700 border-orange-200'
-      case VehicleStatus.DELIVERED:
-        return 'bg-purple-50 text-purple-700 border-purple-200'
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
+const formatPrice = (vehicle: Vehicle): string => {
+  if (vehicle.type === 'RV') {
+    return `$${vehicle.price?.toLocaleString() || '0'}`
+  } else if (vehicle.type === 'MH') {
+    return `$${vehicle.askingPrice?.toLocaleString() || '0'}`
   }
+  return '$0'
+}
 
-  const getTypeLabel = (type: VehicleType) => {
-    return type.replace('_', ' ').toUpperCase()
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+const RVDetails: React.FC<{ rv: RVVehicle }> = ({ rv }) => (
+  <div className="space-y-6">
+    {/* Basic Info */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Car className="h-5 w-5" />
+          Vehicle Information
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">VIN</p>
+            <p className="font-mono">{rv.vehicleIdentificationNumber}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Year</p>
+            <p>{rv.modelDate}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Make</p>
+            <p>{rv.brand}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Model</p>
+            <p>{rv.model}</p>
+          </div>
+          {rv.bodyStyle && (
             <div>
-              <CardTitle className="text-xl">{vehicle.year} {vehicle.make} {vehicle.model}</CardTitle>
-              <CardDescription>
-                VIN: {vehicle.vin}
-              </CardDescription>
+              <p className="text-sm font-medium text-muted-foreground">Body Style</p>
+              <p>{rv.bodyStyle}</p>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button onClick={() => {
-                onClose();
-                onEdit(vehicle);
-              }} size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Home/RV
-              </Button>
-              <Button onClick={() => onCreateTask(vehicle)} size="sm" variant="outline">
-                <ListTodo className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
+          )}
+          {rv.color && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Color</p>
+              <p>{rv.color}</p>
             </div>
+          )}
+        </div>
+        
+        {rv.mileage && (
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Mileage</p>
+            <p>{rv.mileage.toLocaleString()} miles</p>
           </div>
+        )}
+        
+        <div className="grid grid-cols-2 gap-4">
+          {rv.fuelType && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Fuel Type</p>
+              <p>{rv.fuelType}</p>
+            </div>
+          )}
+          {rv.vehicleTransmission && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Transmission</p>
+              <p>{rv.vehicleTransmission}</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Pricing */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Pricing
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <span className="text-2xl font-bold">{formatPrice(rv)}</span>
+          <Badge>{rv.status}</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          Currency: {rv.priceCurrency}
+        </p>
+      </CardContent>
+    </Card>
+
+    {/* Seller Info */}
+    {(rv.sellerName || rv.sellerPhone || rv.sellerEmail) && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Seller Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Vehicle Header */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className={cn("ri-badge-status", getStatusColor(vehicle.status))}>
-              {vehicle.status.toUpperCase()}
-            </Badge>
-            <Badge variant="outline">
-              {getTypeLabel(vehicle.type)}
-            </Badge>
-            <div className="ml-auto font-bold text-lg text-primary">
-              {formatCurrency(vehicle.price)}
+        <CardContent className="space-y-2">
+          {rv.sellerName && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{rv.sellerName}</span>
             </div>
+          )}
+          {rv.sellerPhone && (
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <span>{rv.sellerPhone}</span>
+            </div>
+          )}
+          {rv.sellerEmail && (
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span>{rv.sellerEmail}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )}
+
+    {/* Description */}
+    {rv.description && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed">{rv.description}</p>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+)
+
+const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
+  <div className="space-y-6">
+    {/* Basic Info */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Home className="h-5 w-5" />
+          Home Information
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Home Type</p>
+            <p>{mh.homeType}</p>
           </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Year</p>
+            <p>{mh.year}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Make</p>
+            <p>{mh.make}</p>
+          </div>
+          {mh.model && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Model</p>
+              <p>{mh.model}</p>
+            </div>
+          )}
+        </div>
+        
+        {mh.serialNumber && (
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Serial Number</p>
+            <p className="font-mono">{mh.serialNumber}</p>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-2">
+            <Bed className="h-4 w-4 text-muted-foreground" />
+            <span>{mh.bedrooms} Bedrooms</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Bath className="h-4 w-4 text-muted-foreground" />
+            <span>{mh.bathrooms} Bathrooms</span>
+          </div>
+        </div>
+        
+        {(mh.width1 || mh.length1) && (
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
+            <p>{mh.width1 && mh.length1 ? `${mh.width1}' × ${mh.length1}'` : 'Not specified'}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
 
-          {/* Vehicle Tabs */}
-          <Tabs defaultValue="details" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="images">Images</TabsTrigger>
-              <TabsTrigger value="features">Features</TabsTrigger>
-              <TabsTrigger value="videos">Videos</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
+    {/* Location */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          Location
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <p>{mh.address1}</p>
+          {mh.address2 && <p>{mh.address2}</p>}
+          <p>{mh.city}, {mh.state} {mh.zip9}</p>
+          {mh.countyName && (
+            <p className="text-sm text-muted-foreground">County: {mh.countyName}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
 
-            <TabsContent value="details" className="space-y-4">
-              {/* Basic Details */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Make</label>
-                  <p className="font-medium">{vehicle.make}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Model</label>
-                  <p className="font-medium">{vehicle.model}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Year</label>
-                  <p className="font-medium">{vehicle.year}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">VIN</label>
-                  <p className="font-medium font-mono">{vehicle.vin}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Type</label>
-                  <p className="font-medium">{getTypeLabel(vehicle.type)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Location</label>
-                  <p className="font-medium">{vehicle.location}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Price</label>
-                  <p className="font-medium text-primary">{formatCurrency(vehicle.price)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Cost</label>
-                  <p className="font-medium">{formatCurrency(vehicle.cost)}</p>
-                </div>
-              </div>
+    {/* Pricing */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Pricing
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-2xl font-bold">{formatPrice(mh)}</span>
+          <Badge>{mh.status}</Badge>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          {mh.lotRent && (
+            <div>
+              <p className="font-medium text-muted-foreground">Lot Rent</p>
+              <p>{mh.lotRent}</p>
+            </div>
+          )}
+          {mh.taxes && (
+            <div>
+              <p className="font-medium text-muted-foreground">Taxes</p>
+              <p>{mh.taxes}</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
 
-              {/* Specifications */}
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3">Specifications</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {vehicle.customFields?.exteriorColor && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Exterior Color</label>
-                      <p className="font-medium">{vehicle.customFields.exteriorColor}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.interiorColor && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Interior Color</label>
-                      <p className="font-medium">{vehicle.customFields.interiorColor}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.length && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Length</label>
-                      <p className="font-medium">{vehicle.customFields.length} ft</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.weight && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Weight</label>
-                      <p className="font-medium">{vehicle.customFields.weight} lbs</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.sleeps && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Sleeps</label>
-                      <p className="font-medium">{vehicle.customFields.sleeps}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.slideouts && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Slideouts</label>
-                      <p className="font-medium">{vehicle.customFields.slideouts}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.fuelType && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Fuel Type</label>
-                      <p className="font-medium">{vehicle.customFields.fuelType}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.mileage && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Mileage</label>
-                      <p className="font-medium">{vehicle.customFields.mileage}</p>
-                    </div>
-                  )}
-                  {vehicle.customFields?.condition && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Condition</label>
-                      <p className="font-medium">{vehicle.customFields.condition}</p>
-                    </div>
-                  )}
-                  
-                  {/* MH-specific fields */}
-                  {(vehicle.type === VehicleType.SINGLE_WIDE || 
-                    vehicle.type === VehicleType.DOUBLE_WIDE || 
-                    vehicle.type === VehicleType.TRIPLE_WIDE || 
-                    vehicle.type === VehicleType.PARK_MODEL || 
-                    vehicle.type === VehicleType.MODULAR_HOME) && (
-                    <>
-                      {vehicle.customFields?.squareFootage && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Square Footage</label>
-                          <p className="font-medium">{vehicle.customFields.squareFootage} sq ft</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.bedrooms && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Bedrooms</label>
-                          <p className="font-medium">{vehicle.customFields.bedrooms}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.bathrooms && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Bathrooms</label>
-                          <p className="font-medium">{vehicle.customFields.bathrooms}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.constructionType && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Construction Type</label>
-                          <p className="font-medium">{vehicle.customFields.constructionType}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.exteriorSiding && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Exterior Siding</label>
-                          <p className="font-medium">{vehicle.customFields.exteriorSiding}</p>
-                        </div>
-                      )}
-                      {vehicle.customFields?.roofType && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Roof Type</label>
-                          <p className="font-medium">{vehicle.customFields.roofType}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="images">
-              {vehicle.images && vehicle.images.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {vehicle.images.map((image, index) => (
-                    <div key={index} className="overflow-hidden rounded-md">
-                      <img 
-                        src={image} 
-                        alt={`${vehicle.make} ${vehicle.model} ${index + 1}`} 
-                        className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No images available</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="features">
-              {vehicle.features && vehicle.features.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {vehicle.features.map((feature, index) => (
-                    <div key={index} className="flex items-center p-2 bg-muted/30 rounded-md">
-                      <Package className="h-4 w-4 mr-2 text-primary" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No features listed</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="videos">
-              {vehicle.customFields?.videos && vehicle.customFields.videos.length > 0 ? (
-                <div className="space-y-4">
-                  {vehicle.customFields.videos.map((video, index) => (
-                    <div key={index} className="p-3 bg-muted/30 rounded-md">
-                      <div className="flex items-center mb-2">
-                        <Video className="h-4 w-4 mr-2 text-primary" />
-                        <a 
-                          href={video} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          Video {index + 1}
-                        </a>
-                      </div>
-                      {/* In a real app, you might embed the video here */}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No videos available</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="notes">
-              {vehicle.customFields?.notes ? (
-                <div className="p-4 bg-muted/30 rounded-md whitespace-pre-wrap">
-                  {vehicle.customFields.notes}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No notes available</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button variant="outline" onClick={() => onCreateTask(vehicle)}>
-              <ListTodo className="h-4 w-4 mr-2" />
-              Create Task
-            </Button>
-            <Button onClick={() => onEdit(vehicle)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Home/RV
-            </Button>
+    {/* Features */}
+    {(mh.centralAir || mh.garage || mh.deck || mh.fireplace) && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Features</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {mh.centralAir === 'Yes' && <div>✓ Central Air</div>}
+            {mh.garage === 'Yes' && <div>✓ Garage</div>}
+            {mh.carport === 'Yes' && <div>✓ Carport</div>}
+            {mh.deck === 'Yes' && <div>✓ Deck</div>}
+            {mh.patio === 'Yes' && <div>✓ Patio</div>}
+            {mh.fireplace === 'Yes' && <div>✓ Fireplace</div>}
+            {mh.laundryRoom === 'Yes' && <div>✓ Laundry Room</div>}
+            {mh.storageShed === 'Yes' && <div>✓ Storage Shed</div>}
           </div>
         </CardContent>
       </Card>
-    </div>
+    )}
+
+    {/* Description */}
+    {mh.description && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed">{mh.description}</p>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+)
+
+export const VehicleDetail: React.FC<VehicleDetailProps> = ({
+  vehicle,
+  open,
+  onOpenChange
+}) => {
+  if (!vehicle) return null
+
+  const getVehicleTitle = (): string => {
+    if (vehicle.type === 'RV') {
+      const rv = vehicle as RVVehicle
+      return `${rv.modelDate || ''} ${rv.brand || ''} ${rv.model || ''}`.trim()
+    } else if (vehicle.type === 'MH') {
+      const mh = vehicle as MHVehicle
+      return `${mh.year || ''} ${mh.make || ''} ${mh.model || ''}`.trim()
+    }
+    return 'Vehicle Details'
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{getVehicleTitle()}</DialogTitle>
+          <DialogDescription>
+            {vehicle.type === 'RV' ? 'Recreational Vehicle' : 'Manufactured Home'} Details
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="mt-6">
+          {vehicle.type === 'RV' ? (
+            <RVDetails rv={vehicle as RVVehicle} />
+          ) : (
+            <MHDetails mh={vehicle as MHVehicle} />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
