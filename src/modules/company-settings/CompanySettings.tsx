@@ -16,8 +16,8 @@ import { LabelOverrides } from './components/LabelOverrides'
 import { NotificationTemplates } from './components/NotificationTemplates'
 import { IntegrationSettings } from './components/IntegrationSettings'
 import WarrantySettings from './components/WarrantySettings'
-import { mockCompanySettings } from '@/mocks/companySettingsMock'
-import { ListingPreviewsSettings } from './components/ListingPreviewsSettings'
+import ListingPartnersSettings from './components/ListingPartnersSettings'
+import ListingPreviewsSettings from './components/ListingPreviewsSettings'
 
 function CompanySettingsPage() {
   const { tenant, getCustomFields, updateTenant, addCustomField, updateCustomField, deleteCustomField } = useTenant()
