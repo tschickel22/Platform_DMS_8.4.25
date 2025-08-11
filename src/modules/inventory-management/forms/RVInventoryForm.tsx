@@ -139,7 +139,6 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
           </p>
         </div>
         <div className="flex gap-2">
-            onClick={onCancel}
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
