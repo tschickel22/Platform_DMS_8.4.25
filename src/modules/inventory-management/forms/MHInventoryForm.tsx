@@ -22,47 +22,83 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
     make: initialData?.make || '',
     model: initialData?.model || '',
     year: initialData?.year || new Date().getFullYear(),
-    serialNumber: initialData?.serialNumber || '',
+    serialNumber: initialData?.serialNumber || 'MHF295739J', // Sample Data
+    color: initialData?.color || 'Yellow', // Sample Data
     
     // Mobile Home Specific
-    homeType: initialData?.homeType || '',
-    width: initialData?.width || '',
-    length: initialData?.length || '',
+    homeType: initialData?.homeType || 'Mobile', // Sample Data
+    width: initialData?.width || 28, // Sample Data, now number input
+    length: initialData?.length || 66, // Sample Data, now number input
+    width2: initialData?.width2 || '', // New field
+    length2: initialData?.length2 || '', // New field
+    width3: initialData?.width3 || '', // New field
+    length3: initialData?.length3 || '', // New field
     squareFootage: initialData?.squareFootage || '',
-    bedrooms: initialData?.bedrooms || '',
-    bathrooms: initialData?.bathrooms || '',
+    bedrooms: initialData?.bedrooms || '3', // Sample Data
+    bathrooms: initialData?.bathrooms || '3', // Sample Data
     
     // Construction Details
-    exteriorMaterial: initialData?.exteriorMaterial || '',
-    roofMaterial: initialData?.roofMaterial || '',
+    exteriorMaterial: initialData?.exteriorMaterial || 'Vinyl', // Sample Data
+    roofMaterial: initialData?.roofMaterial || 'Shingled', // Sample Data
     flooringType: initialData?.flooringType || '',
     insulationType: initialData?.insulationType || '',
+    ceilingType: initialData?.ceilingType || 'Drywall', // New field, Sample Data
+    wallType: initialData?.wallType || 'Drywall', // New field, Sample Data
     
     // Condition & Status
     condition: initialData?.condition || '',
     availability: initialData?.availability || '',
     location: initialData?.location || '',
     
-    // Features & Amenities
-    hasFireplace: initialData?.hasFireplace || false,
-    hasDeck: initialData?.hasDeck || false,
-    hasStorage: initialData?.hasStorage || false,
-    hasCarport: initialData?.hasCarport || false,
-    centralAir: initialData?.centralAir || false,
+    // Features & Amenities (updated with new fields)
+    hasFireplace: initialData?.hasFireplace || true, // Sample Data
+    hasDeck: initialData?.hasDeck || true, // Sample Data
+    hasStorage: initialData?.hasStorage || false, // Sample Data
+    hasCarport: initialData?.hasCarport || false, // Sample Data
+    centralAir: initialData?.centralAir || true, // Sample Data
+    garage: initialData?.garage || true, // New field, Sample Data
+    thermopane: initialData?.thermopane || false, // New field, Sample Data
+    gutters: initialData?.gutters || true, // New field, Sample Data
+    shutters: initialData?.shutters || true, // New field, Sample Data
+    patio: initialData?.patio || false, // New field, Sample Data
+    cathedralCeiling: initialData?.cathedralCeiling || true, // New field, Sample Data
+    ceilingFan: initialData?.ceilingFan || true, // New field, Sample Data
+    skylight: initialData?.skylight || true, // New field, Sample Data
+    walkinCloset: initialData?.walkinCloset || true, // New field, Sample Data
+    laundryRoom: initialData?.laundryRoom || true, // New field, Sample Data
+    pantry: initialData?.pantry || true, // New field, Sample Data
+    sunRoom: initialData?.sunRoom || true, // New field, Sample Data
+    basement: initialData?.basement || false, // New field, Sample Data
+    gardenTub: initialData?.gardenTub || true, // New field, Sample Data
+    garbageDisposal: initialData?.garbageDisposal || true, // New field, Sample Data
+    refrigerator: initialData?.refrigerator || false, // New field, Sample Data
+    microwave: initialData?.microwave || false, // New field, Sample Data
+    oven: initialData?.oven || false, // New field, Sample Data
+    dishwasher: initialData?.dishwasher || true, // New field, Sample Data
+    clothesWasher: initialData?.clothesWasher || false, // New field, Sample Data
+    clothesDryer: initialData?.clothesDryer || false, // New field, Sample Data
     
-    // Pricing
-    msrp: initialData?.msrp || '',
+    // Pricing & Terms
+    msrp: initialData?.msrp || 10000, // Sample Data
     salePrice: initialData?.salePrice || '',
     cost: initialData?.cost || '',
+    terms: initialData?.terms || 'Financing availabled ...', // New field, Sample Data
+    utilities: initialData?.utilities || 125, // New field, Sample Data
+    repo: initialData?.repo || false, // New field, Sample Data
+    packageType: initialData?.packageType || '', // New field
+    salePending: initialData?.salePending || false, // New field, Sample Data
     
-    // Features
+    // Features (additional)
     features: initialData?.features || [],
     
     // Description
-    description: initialData?.description || '',
+    description: initialData?.description || 'This is a great looking home in excellent condition ...', // Sample Data
     
-    // Images
-    images: initialData?.images || []
+    // Images/Media Links
+    photoURL: initialData?.photoURL || 'http://www.seller.com/photo.php?key=13432', // New field, Sample Data
+    virtualTour: initialData?.virtualTour || 'https://www.youtube.com/watch?v=wTPR4f8QLEQ', // New field, Sample Data
+    salesPhoto: initialData?.salesPhoto || 'http://www.seller.com/photo.php?key=13432', // New field, Sample Data
+    images: initialData?.images || [] // Existing image array for uploads
   })
 
   const [newFeature, setNewFeature] = useState('')
@@ -116,9 +152,8 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
     'Tiny Home', 'Manufactured Home', 'Mobile Home'
   ]
 
-  const widthOptions = [
-    '12 ft', '14 ft', '16 ft', '18 ft', '20 ft', '24 ft', '28 ft', '32 ft'
-  ]
+  // widthOptions removed as width is now a number input
+  // length is also a number input
 
   const bedroomOptions = [
     '1', '2', '3', '4', '5', '6+'
@@ -155,6 +190,14 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
 
   const locationOptions = [
     'On Lot', 'In Transit', 'Factory', 'Customer Site', 'Storage', 'Display Model'
+  ]
+
+  const packageTypeOptions = [ // New options for Package Type
+    'Standard', 'Premium', 'Luxury', 'Basic', 'Custom'
+  ]
+
+  const stateOptions = [ // Options for State
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ]
 
   return (
@@ -261,6 +304,116 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Input
+                  id="color"
+                  value={formData.color}
+                  onChange={(e) => handleInputChange('color', e.target.value)}
+                  placeholder="Enter color"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Address Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Address Details</CardTitle>
+            <CardDescription>
+              Information about where the mobile home is sited
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="locationType">Location Type</Label>
+                <Input
+                  id="locationType"
+                  value={formData.locationType}
+                  onChange={(e) => handleInputChange('locationType', e.target.value)}
+                  placeholder="e.g., Community"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="communityKey">Community Key</Label>
+                <Input
+                  id="communityKey"
+                  value={formData.communityKey}
+                  onChange={(e) => handleInputChange('communityKey', e.target.value)}
+                  placeholder="e.g., 161"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="communityName">Community Name</Label>
+                <Input
+                  id="communityName"
+                  value={formData.communityName}
+                  onChange={(e) => handleInputChange('communityName', e.target.value)}
+                  placeholder="e.g., Chateau Algoma Estates"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address1">Address Line 1</Label>
+                <Input
+                  id="address1"
+                  value={formData.address1}
+                  onChange={(e) => handleInputChange('address1', e.target.value)}
+                  placeholder="e.g., 12345 Maple Street"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address2">Address Line 2</Label>
+                <Input
+                  id="address2"
+                  value={formData.address2}
+                  onChange={(e) => handleInputChange('address2', e.target.value)}
+                  placeholder="Enter second address line (if any)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  placeholder="e.g., Rockford"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select value={formData.state || ''} onValueChange={(value) => handleInputChange('state', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stateOptions.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zip9">Zip Code</Label>
+                <Input
+                  id="zip9"
+                  value={formData.zip9}
+                  onChange={(e) => handleInputChange('zip9', e.target.value)}
+                  placeholder="e.g., 493414321"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="countyName">County Name</Label>
+                <Input
+                  id="countyName"
+                  value={formData.countyName}
+                  onChange={(e) => handleInputChange('countyName', e.target.value)}
+                  placeholder="e.g., Kent"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -273,28 +426,63 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="width">Width</Label>
-                <Select value={formData.width} onValueChange={(value) => handleInputChange('width', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select width" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {widthOptions.map((width) => (
-                      <SelectItem key={width} value={width}>
-                        {width}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="width">Primary Width (ft)</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  value={formData.width}
+                  onChange={(e) => handleInputChange('width', parseFloat(e.target.value))}
+                  placeholder="Enter primary width in feet"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="length">Length (ft)</Label>
+                <Label htmlFor="length">Primary Length (ft)</Label>
                 <Input
                   id="length"
                   type="number"
                   value={formData.length}
-                  onChange={(e) => handleInputChange('length', e.target.value)}
-                  placeholder="Enter length in feet"
+                  onChange={(e) => handleInputChange('length', parseFloat(e.target.value))}
+                  placeholder="Enter primary length in feet"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="width2">Secondary Width (ft)</Label>
+                <Input
+                  id="width2"
+                  type="number"
+                  value={formData.width2}
+                  onChange={(e) => handleInputChange('width2', parseFloat(e.target.value))}
+                  placeholder="Enter secondary width in feet"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length2">Secondary Length (ft)</Label>
+                <Input
+                  id="length2"
+                  type="number"
+                  value={formData.length2}
+                  onChange={(e) => handleInputChange('length2', parseFloat(e.target.value))}
+                  placeholder="Enter secondary length in feet"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="width3">Tertiary Width (ft)</Label>
+                <Input
+                  id="width3"
+                  type="number"
+                  value={formData.width3}
+                  onChange={(e) => handleInputChange('width3', parseFloat(e.target.value))}
+                  placeholder="Enter tertiary width in feet"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length3">Tertiary Length (ft)</Label>
+                <Input
+                  id="length3"
+                  type="number"
+                  value={formData.length3}
+                  onChange={(e) => handleInputChange('length3', parseFloat(e.target.value))}
+                  placeholder="Enter tertiary length in feet"
                 />
               </div>
               <div className="space-y-2">
@@ -408,6 +596,24 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="ceilingType">Ceiling Type</Label>
+                <Input
+                  id="ceilingType"
+                  value={formData.ceilingType}
+                  onChange={(e) => handleInputChange('ceilingType', e.target.value)}
+                  placeholder="e.g., Drywall"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="wallType">Wall Type</Label>
+                <Input
+                  id="wallType"
+                  value={formData.wallType}
+                  onChange={(e) => handleInputChange('wallType', e.target.value)}
+                  placeholder="e.g., Drywall"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -515,14 +721,182 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
                 />
                 <Label htmlFor="centralAir">Central Air</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="garage"
+                  checked={formData.garage}
+                  onCheckedChange={(checked) => handleInputChange('garage', checked)}
+                />
+                <Label htmlFor="garage">Garage</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="thermopane"
+                  checked={formData.thermopane}
+                  onCheckedChange={(checked) => handleInputChange('thermopane', checked)}
+                />
+                <Label htmlFor="thermopane">Thermopane Windows</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="gutters"
+                  checked={formData.gutters}
+                  onCheckedChange={(checked) => handleInputChange('gutters', checked)}
+                />
+                <Label htmlFor="gutters">Gutters</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="shutters"
+                  checked={formData.shutters}
+                  onCheckedChange={(checked) => handleInputChange('shutters', checked)}
+                />
+                <Label htmlFor="shutters">Shutters</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="patio"
+                  checked={formData.patio}
+                  onCheckedChange={(checked) => handleInputChange('patio', checked)}
+                />
+                <Label htmlFor="patio">Patio</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="cathedralCeiling"
+                  checked={formData.cathedralCeiling}
+                  onCheckedChange={(checked) => handleInputChange('cathedralCeiling', checked)}
+                />
+                <Label htmlFor="cathedralCeiling">Cathedral Ceiling</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ceilingFan"
+                  checked={formData.ceilingFan}
+                  onCheckedChange={(checked) => handleInputChange('ceilingFan', checked)}
+                />
+                <Label htmlFor="ceilingFan">Ceiling Fan</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="skylight"
+                  checked={formData.skylight}
+                  onCheckedChange={(checked) => handleInputChange('skylight', checked)}
+                />
+                <Label htmlFor="skylight">Skylight</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="walkinCloset"
+                  checked={formData.walkinCloset}
+                  onCheckedChange={(checked) => handleInputChange('walkinCloset', checked)}
+                />
+                <Label htmlFor="walkinCloset">Walk-in Closet</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="laundryRoom"
+                  checked={formData.laundryRoom}
+                  onCheckedChange={(checked) => handleInputChange('laundryRoom', checked)}
+                />
+                <Label htmlFor="laundryRoom">Laundry Room</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="pantry"
+                  checked={formData.pantry}
+                  onCheckedChange={(checked) => handleInputChange('pantry', checked)}
+                />
+                <Label htmlFor="pantry">Pantry</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sunRoom"
+                  checked={formData.sunRoom}
+                  onCheckedChange={(checked) => handleInputChange('sunRoom', checked)}
+                />
+                <Label htmlFor="sunRoom">Sun Room</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="basement"
+                  checked={formData.basement}
+                  onCheckedChange={(checked) => handleInputChange('basement', checked)}
+                />
+                <Label htmlFor="basement">Basement</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="gardenTub"
+                  checked={formData.gardenTub}
+                  onCheckedChange={(checked) => handleInputChange('gardenTub', checked)}
+                />
+                <Label htmlFor="gardenTub">Garden Tub</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="garbageDisposal"
+                  checked={formData.garbageDisposal}
+                  onCheckedChange={(checked) => handleInputChange('garbageDisposal', checked)}
+                />
+                <Label htmlFor="garbageDisposal">Garbage Disposal</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="refrigerator"
+                  checked={formData.refrigerator}
+                  onCheckedChange={(checked) => handleInputChange('refrigerator', checked)}
+                />
+                <Label htmlFor="refrigerator">Refrigerator</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="microwave"
+                  checked={formData.microwave}
+                  onCheckedChange={(checked) => handleInputChange('microwave', checked)}
+                />
+                <Label htmlFor="microwave">Microwave</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="oven"
+                  checked={formData.oven}
+                  onCheckedChange={(checked) => handleInputChange('oven', checked)}
+                />
+                <Label htmlFor="oven">Oven</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="dishwasher"
+                  checked={formData.dishwasher}
+                  onCheckedChange={(checked) => handleInputChange('dishwasher', checked)}
+                />
+                <Label htmlFor="dishwasher">Dishwasher</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="clothesWasher"
+                  checked={formData.clothesWasher}
+                  onCheckedChange={(checked) => handleInputChange('clothesWasher', checked)}
+                />
+                <Label htmlFor="clothesWasher">Clothes Washer</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="clothesDryer"
+                  checked={formData.clothesDryer}
+                  onCheckedChange={(checked) => handleInputChange('clothesDryer', checked)}
+                />
+                <Label htmlFor="clothesDryer">Clothes Dryer</Label>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pricing */}
+        {/* Pricing & Terms */}
         <Card>
           <CardHeader>
-            <CardTitle>Pricing</CardTitle>
+            <CardTitle>Pricing & Terms</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -555,6 +929,59 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
                   onChange={(e) => handleInputChange('cost', e.target.value)}
                   placeholder="Enter cost"
                 />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="terms">Terms of Sale Description</Label>
+              <Textarea
+                id="terms"
+                value={formData.terms}
+                onChange={(e) => handleInputChange('terms', e.target.value)}
+                placeholder="Enter terms of sale description"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="utilities">Approx. Monthly Utilities</Label>
+                <Input
+                  id="utilities"
+                  type="number"
+                  value={formData.utilities}
+                  onChange={(e) => handleInputChange('utilities', e.target.value)}
+                  placeholder="Enter estimated utilities"
+                />
+              </div>
+              <div className="flex items-center space-x-2 mt-6">
+                <Checkbox
+                  id="repo"
+                  checked={formData.repo}
+                  onCheckedChange={(checked) => handleInputChange('repo', checked)}
+                />
+                <Label htmlFor="repo">Repossessed Home</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="packageType">Package Type</Label>
+                <Select value={formData.packageType || ''} onValueChange={(value) => handleInputChange('packageType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select package type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packageTypeOptions.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="salePending"
+                  checked={formData.salePending}
+                  onCheckedChange={(checked) => handleInputChange('salePending', checked)}
+                />
+                <Label htmlFor="salePending">Sale Pending</Label>
               </div>
             </div>
           </CardContent>
@@ -611,15 +1038,15 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
           </CardContent>
         </Card>
 
-        {/* Images */}
+        {/* Images & Media Links */}
         <Card>
           <CardHeader>
-            <CardTitle>Images</CardTitle>
+            <CardTitle>Images & Media</CardTitle>
             <CardDescription>
-              Upload photos of the mobile home
+              Upload photos of the mobile home or link to external media
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
               <div className="flex flex-col items-center gap-2">
                 <Upload className="h-8 w-8 text-muted-foreground" />
@@ -631,6 +1058,33 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
                   Select Images
                 </Button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="photoURL">Photo URL</Label>
+              <Input
+                id="photoURL"
+                value={formData.photoURL}
+                onChange={(e) => handleInputChange('photoURL', e.target.value)}
+                placeholder="Enter URL for a photo of the home"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="virtualTour">Virtual Tour URL</Label>
+              <Input
+                id="virtualTour"
+                value={formData.virtualTour}
+                onChange={(e) => handleInputChange('virtualTour', e.target.value)}
+                placeholder="Enter URL for a virtual tour video"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salesPhoto">Sales Photo URL</Label>
+              <Input
+                id="salesPhoto"
+                value={formData.salesPhoto}
+                onChange={(e) => handleInputChange('salesPhoto', e.target.value)}
+                placeholder="Enter URL for sales agent/company logo photo"
+              />
             </div>
           </CardContent>
         </Card>
