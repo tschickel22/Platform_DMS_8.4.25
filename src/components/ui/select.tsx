@@ -149,3 +149,23 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
+
+// --- TEMP: compatibility re-exports so legacy imports keep working ---
+// Remove these after you’ve updated imports to '@/components/ui/dropdown-menu'.
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuShortcut,
+} from './dropdown-menu'
