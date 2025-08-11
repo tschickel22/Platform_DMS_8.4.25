@@ -463,6 +463,32 @@ export default function InventoryManagement() {
           />
         </div>
       </InventoryErrorBoundary>
+        {/* Display created inventory items */}
+        {inventory.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Recently Added Inventory</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {inventory.map((item) => (
+                <Card key={item.id}>
+                  <CardHeader>
+                    <CardTitle className="text-sm">
+                      {item.type} - {item.make} {item.model}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p>VIN: {item.vin}</p>
+                      <p>Year: {item.year}</p>
+                      <p>Status: {item.status}</p>
+                      <p>Added: {new Date(item.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
     </TooltipProvider>
   )
 }
