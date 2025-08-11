@@ -121,12 +121,14 @@ export default function PublicCatalogView() {
       // For now, we'll mock this
       const companyId = `company_${companySlug}`
       
-      const data = await apiClient.get(`/listings-crud?companyId=${companyId}`)
+      const data = await apiClient.get('listings-crud', { companyId })
+      
+      // Only show active listings
       if (data && Array.isArray(data)) {
-        // Only show active listings
         const activeListings = data.filter((listing: Listing) => listing.status === 'active')
         setListings(activeListings)
       } else {
+        // Handle case where API returns null/undefined (graceful fallback)
         setListings([])
       }
       
@@ -139,7 +141,6 @@ export default function PublicCatalogView() {
         description: "Failed to load listings",
         variant: "destructive",
       })
-      setListings([])
     } finally {
       setLoading(false)
     }
