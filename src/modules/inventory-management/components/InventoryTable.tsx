@@ -33,7 +33,6 @@ export function InventoryTable({
   onDelete, 
   onView, 
   onStatusChange,
-  onView,
   onSplit
 }: InventoryTableProps) {
   const { toast } = useToast()
