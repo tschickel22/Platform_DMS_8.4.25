@@ -307,7 +307,7 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
   </div>
 )
 
-export const VehicleDetail: React.FC<VehicleDetailProps> = ({
+const VehicleDetail: React.FC<VehicleDetailProps> = ({
   vehicle,
   open,
   onOpenChange
@@ -346,3 +346,5 @@ export const VehicleDetail: React.FC<VehicleDetailProps> = ({
     </Dialog>
   )
 }
+
+export default VehicleDetail
