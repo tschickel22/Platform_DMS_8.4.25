@@ -175,8 +175,8 @@ export function useInventoryManagement() {
         images: vehicleData.images || [],
         customFields: vehicleData.customFields || {},
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+    const rvs = vehicles.filter(v => v.type === 'RV').length
+    const homes = vehicles.filter(v => v.type === 'Manufactured Home').length
 
       const updatedVehicles = [...vehicles, newVehicle]
       setVehicles(updatedVehicles)

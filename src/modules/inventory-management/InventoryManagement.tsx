@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button' 
 import { Badge } from '@/components/ui/badge'
 import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
-import { Vehicle, VehicleStatus, VehicleType } from '@/types'
+import { Plus, Search, Filter, Download, Upload, BarChart3, Package, AlertTriangle, Home } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
@@ -24,6 +24,7 @@ function InventoryList() {
   const { toast } = useToast()
   const { createTask } = useTasks()
   const [showVehicleForm, setShowVehicleForm] = useState(false)
+  const [vehicleFormMode, setVehicleFormMode] = useState<'add' | 'edit'>('add')
   const [showVehicleDetail, setShowVehicleDetail] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
@@ -48,6 +49,7 @@ function InventoryList() {
     setShowVehicleDetail(true)
   }
   
+    setVehicleFormMode('edit')
   const handleCreateTask = async (taskData: Partial<Task>) => {
     try {
       await createTask(taskData)
@@ -184,8 +186,14 @@ function InventoryList() {
       setSelectedVehicle(existingVehicle)
       setShowVehicleDetail(true)
       toast({
+  const handleAddVehicle = () => {
+    setSelectedVehicle(null)
+    setVehicleFormMode('add')
+    setShowVehicleForm(true)
+  }
+
         title: 'Vehicle Found',
-        description: `Found existing vehicle with VIN: ${data}`,
+    if (vehicleFormMode === 'edit' && selectedVehicle) {
       })
     } else {
       // Create a new vehicle with this VIN
@@ -210,13 +218,12 @@ function InventoryList() {
     }
     
     setShowBarcodeScanner(false)
-  }
-
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
     setActiveTab('inventory')
     setStatusFilter(status)
   }
+    setVehicleFormMode('add')
 
   const tileProps = (handler: () => void) => ({
     role: 'button' as const,
@@ -379,6 +386,7 @@ function InventoryList() {
               <TrendingUp className="h-3 w-3 mr-1" />
               Inventory value
             </p>
+        mode={vehicleFormMode}
           </CardContent>
         </Card>
       </div>
@@ -388,9 +396,9 @@ function InventoryList() {
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary">
             Filtered by: {statusFilter}
-          </Badge>
+          <Button onClick={handleAddVehicle}>
           <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-            Clear Filter
+            Add New Vehicle
           </Button>
         </div>
       )}
@@ -415,3 +423,4 @@ export default function InventoryManagement() {
     </Routes>
   )
 }
+            <Home className="h-4 w-4 text-muted-foreground" />
