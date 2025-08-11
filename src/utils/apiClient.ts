@@ -73,13 +73,7 @@ class ApiClient {
 
       return { 
         error: error instanceof Error ? error.message : 'Unknown error',
-        console.warn(`Expected JSON response but got ${contentType || 'unknown content type'}`)
-        this.toast({
-          title: "Service Error",
-          description: "The service returned an unexpected response format.",
-          variant: "default",
-        })
-        return null
+        success: false
       }
     }
   }
@@ -107,6 +101,8 @@ class ApiClient {
   }
 
   // Health check function
+  async healthCheck(): Promise<boolean> {
+    try {
       // Only show toast for unexpected errors (network issues, etc.)
       if (error instanceof TypeError && error.message.includes('fetch')) {
         this.toast({
@@ -117,6 +113,9 @@ class ApiClient {
       }
       console.error('Health check failed:', error)
       console.error(`API Error (${endpoint}):`, error)
+      return false
+    } catch (error) {
+      return false
     }
   }
 }
