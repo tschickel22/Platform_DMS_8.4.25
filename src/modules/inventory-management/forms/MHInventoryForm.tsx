@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { X, Plus, Upload, Camera } from 'lucide-react'
+import { X, Plus, Upload, Camera, Star } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 
 interface MHInventoryFormProps {
   onSubmit: (data: any) => void
@@ -15,7 +16,17 @@ interface MHInventoryFormProps {
   initialData?: any
 }
 
+// Define the type for an image object
+type ImageFile = {
+  id: string; // Unique ID for react-beautiful-dnd
+  url: string; // URL for preview (blob URL for files, or actual URL for existing)
+  isCover: boolean;
+  file?: File; // The actual File object if it's a newly uploaded file
+};
+
 export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHInventoryFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     // Basic Information
     vin: initialData?.vin || '',
@@ -98,7 +109,12 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
     photoURL: initialData?.photoURL || 'http://www.seller.com/photo.php?key=13432', // New field, Sample Data
     virtualTour: initialData?.virtualTour || 'https://www.youtube.com/watch?v=wTPR4f8QLEQ', // New field, Sample Data
     salesPhoto: initialData?.salesPhoto || 'http://www.seller.com/photo.php?key=13432', // New field, Sample Data
-    images: initialData?.images || [] // Existing image array for uploads
+    images: initialData?.images?.map((img: string, index: number) => ({
+      id: `image-${index}`,
+      url: img,
+      isCover: index === 0, // First image is cover by default
+      file: undefined,
+    })) || [] // Existing image array for uploads
   })
 
   const [newFeature, setNewFeature] = useState('')
@@ -140,6 +156,68 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
     onSubmit(formData)
   }
 
+  // Image handling functions
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const newImages: ImageFile[] = Array.from(files).map((file, index) => ({
+        id: `file-${Date.now()}-${index}`, // Unique ID for dnd
+        url: URL.createObjectURL(file),
+        isCover: false, // Will be set to cover if it's the first image
+        file: file,
+      }));
+
+      setFormData(prev => {
+        const updatedImages = [...prev.images, ...newImages];
+        // If no cover image exists, set the first image as cover
+        if (!updatedImages.some(img => img.isCover) && updatedImages.length > 0) {
+          updatedImages[0].isCover = true;
+        }
+        return { ...prev, images: updatedImages };
+      });
+    }
+  };
+
+  const handleRemoveImage = (id: string) => {
+    setFormData(prev => {
+      const updatedImages = prev.images.filter(img => img.id !== id);
+      // If the removed image was the cover, set the first remaining image as cover
+      if (prev.images.find(img => img.id === id)?.isCover && updatedImages.length > 0) {
+        updatedImages[0].isCover = true;
+      }
+      return { ...prev, images: updatedImages };
+    });
+  };
+
+  const handleSetCoverImage = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.map(img => ({
+        ...img,
+        isCover: img.id === id,
+      })),
+    }));
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const reorderedImages = Array.from(formData.images);
+    const [movedImage] = reorderedImages.splice(result.source.index, 1);
+    reorderedImages.splice(result.destination.index, 0, movedImage);
+
+    setFormData(prev => ({
+      ...prev,
+      images: reorderedImages,
+    }));
+  };
+
   // Dropdown options
   const makeOptions = [
     'Clayton', 'Champion', 'Fleetwood', 'Skyline', 'Palm Harbor', 'Cavco', 'Deer Valley',
@@ -151,9 +229,6 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
     'Single Wide', 'Double Wide', 'Triple Wide', 'Modular Home', 'Park Model', 
     'Tiny Home', 'Manufactured Home', 'Mobile Home'
   ]
-
-  // widthOptions removed as width is now a number input
-  // length is also a number input
 
   const bedroomOptions = [
     '1', '2', '3', '4', '5', '6+'
@@ -1048,18 +1123,93 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
               <div className="flex flex-col items-center gap-2">
                 <Upload className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   Drag and drop images here, or click to select files
                 </p>
-                <Button type="button" variant="outline" size="sm">
+                <Button type="button" variant="outline" size="sm" onClick={handleFileSelect}>
                   <Camera className="h-4 w-4 mr-2" />
                   Select Images
                 </Button>
               </div>
             </div>
-            <div className="space-y-2">
+
+            {formData.images.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">Uploaded Images</h3>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <Droppable droppableId="images">
+                    {(provided) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                      >
+                        {formData.images.map((image, index) => (
+                          <Draggable key={image.id} draggableId={image.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`relative group border rounded-lg overflow-hidden ${
+                                  image.isCover ? 'border-2 border-primary' : 'border-gray-200'
+                                } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                              >
+                                <img
+                                  src={image.url}
+                                  alt={`Mobile Home Image ${index + 1}`}
+                                  className="w-full h-32 object-cover"
+                                />
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                  {image.isCover && (
+                                    <Badge className="bg-primary text-primary-foreground">Cover</Badge>
+                                  )}
+                                  {!image.isCover && (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="icon"
+                                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => handleSetCoverImage(image.id)}
+                                      title="Set as cover image"
+                                    >
+                                      <Star className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleRemoveImage(image.id)}
+                                    title="Remove image"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              </div>
+            )}
+
+            <div className="space-y-2 mt-4">
               <Label htmlFor="photoURL">Photo URL</Label>
               <Input
                 id="photoURL"
@@ -1088,6 +1238,16 @@ export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHI
             </div>
           </CardContent>
         </Card>
+
+        {/* Action buttons at the bottom */}
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            {initialData ? 'Update Home' : 'Add Home'}
+          </Button>
+        </div>
       </form>
     </div>
   )
