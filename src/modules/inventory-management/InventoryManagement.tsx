@@ -27,6 +27,23 @@ import { mockInventory } from '@/mocks/inventoryMock'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import RVInventoryForm from './forms/RVInventoryForm'
 import MHInventoryForm from './forms/MHInventoryForm'
+// Helper function to calculate inventory stats
+const getInventoryStats = (inventory: any[]) => {
+  const totalUnits = inventory.length
+  const availableUnits = inventory.filter(item => item.status === 'Available').length
+  const reservedUnits = inventory.filter(item => item.status === 'Reserved').length
+  const soldUnits = inventory.filter(item => item.status === 'Sold').length
+  const totalValue = inventory.reduce((sum, item) => sum + (item.price || 0), 0)
+  
+  return {
+    totalUnits,
+    availableUnits,
+    reservedUnits,
+    soldUnits,
+    totalValue
+  }
+}
+
 import { VehicleDetail } from './components/VehicleDetail'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
