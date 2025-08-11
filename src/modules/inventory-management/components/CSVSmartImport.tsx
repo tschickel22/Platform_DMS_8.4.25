@@ -33,7 +33,7 @@ interface ColumnMapping {
 
 const STEP_TITLES = ['Upload CSV', 'Map Columns', 'Preview & Validate']
 
-export const CSVSmartImport: React.FC<CSVSmartImportProps> = ({
+const CSVSmartImport: React.FC<CSVSmartImportProps> = ({
   open,
   onOpenChange,
   onComplete
@@ -542,3 +542,5 @@ export const CSVSmartImport: React.FC<CSVSmartImportProps> = ({
     </Dialog>
   )
 }
+
+export default CSVSmartImport
