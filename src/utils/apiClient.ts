@@ -85,6 +85,52 @@ class ApiClient {
       return false
     }
   }
+
+  // Listings CRUD
+  listingsCrud: {
+    getListings: async (companyId: string) => {
+      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    },
+    
+    getListing: async (companyId: string, listingId: string) => {
+      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    },
+    
+    createListing: async (companyId: string, listingData: any) => {
+      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingData)
+      })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    },
+    
+    updateListing: async (companyId: string, listingId: string, updates: any) => {
+      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    },
+    
+    deleteListing: async (companyId: string, listingId: string) => {
+      const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
+      const response = await fetch(url, { method: 'DELETE' })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    }
+  }
 }
 
 export const apiClient = new ApiClient()

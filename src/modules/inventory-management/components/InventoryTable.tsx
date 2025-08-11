@@ -1,10 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Vehicle, RVVehicle, MHVehicle } from '../state/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Eye, Edit, Trash2, MoreHorizontal, Package } from 'lucide-react'
+import { Eye, Edit, Trash2, MoreHorizontal, Package, Send } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/select'
+import { useToast } from '@/components/ui/use-toast'
+import ListingHandoffModal from './ListingHandoffModal'
 
 interface InventoryItem {
   id: string
@@ -88,6 +90,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   onStatusChange,
   inventory = []
 }) => {
+  const [sortField, setSortField] = useState<string>('updatedAt')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [handoffItem, setHandoffItem] = useState<any>(null)
+  const { toast } = useToast()
+
   // Combine vehicles with inventory
   const allInventory = [...vehicles, ...inventory]
 
@@ -175,20 +183,30 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(vehicle as Vehicle)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(vehicle as Vehicle)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEdit(vehicle as Vehicle)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setHandoffItem(vehicle)}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Create Listing
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => onDelete(vehicle as Vehicle)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -197,6 +215,19 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
           </Table>
         </div>
       </CardContent>
+      
+      <ListingHandoffModal
+        isOpen={!!handoffItem}
+        onClose={() => setHandoffItem(null)}
+        inventoryItem={handoffItem}
+        onSuccess={(listingId) => {
+          toast({
+            title: "Listing Created",
+            description: `Successfully created listing ${listingId} from inventory item.`,
+          })
+          setHandoffItem(null)
+        }}
+      />
     </Card>
   )
 }
