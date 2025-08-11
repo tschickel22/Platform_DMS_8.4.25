@@ -9,11 +9,6 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, Camera } from 'lucide-react'
 
-// Debug logging function
-const debugLog = (message: string, data?: any) => {
-  console.log(`[RV Form Debug] ${message}`, data || '')
-}
-
 interface RVInventoryFormProps {
   onSubmit: (data: any) => void
   onCancel: () => void
@@ -22,8 +17,6 @@ interface RVInventoryFormProps {
 
 function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormProps) {
   const [formData, setFormData] = useState({
-    // Debug: Log initial form data
-    ...(() => { debugLog('Form initialized with data:', formData); return {}; })(),
     // Basic Information
     vin: initialData?.vin || '',
     make: initialData?.make || '',
@@ -66,16 +59,10 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
   const [newFeature, setNewFeature] = useState('')
 
   const handleInputChange = (field: string, value: any) => {
-    debugLog(`Input change - Field: ${field}, Value: ${value}`)
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
-  }
-
-  const handleSelectChange = (field: string, value: string) => {
-    debugLog(`Select change - Field: ${field}, Value: ${value}`)
-    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const addFeature = () => {
@@ -85,7 +72,6 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
         features: [...prev.features, newFeature.trim()]
       }))
       setNewFeature('')
-      debugLog('Added feature:', newFeature.trim())
     }
   }
 
@@ -94,12 +80,10 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
       ...prev,
       features: prev.features.filter((_: any, i: number) => i !== index)
     }))
-    debugLog('Removed feature at index:', index)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    debugLog('Form submitted with data:', formData)
     onSubmit(formData)
   }
 
@@ -188,24 +172,13 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="make">Make *</Label>
-                <Select 
-                  value={formData.make} 
-                  onValueChange={(value) => {
-                    debugLog('Make dropdown changed:', value)
-                    handleSelectChange('make', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Make dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Make dropdown trigger clicked')}>
+                <Select value={formData.make} onValueChange={(value) => handleInputChange('make', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
-                  <SelectContent onCloseAutoFocus={() => debugLog('Make dropdown closed')}>
+                  <SelectContent>
                     {makeOptions.map((make) => (
-                      <SelectItem 
-                        key={make} 
-                        value={make}
-                        onClick={() => debugLog('Make item clicked:', make)}
-                      >
+                      <SelectItem key={make} value={make}>
                         {make}
                       </SelectItem>
                     ))}
@@ -247,15 +220,8 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bodyStyle">Body Style *</Label>
-                <Select 
-                  value={formData.bodyStyle} 
-                  onValueChange={(value) => {
-                    debugLog('Body Style dropdown changed:', value)
-                    handleSelectChange('bodyStyle', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Body Style dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Body Style dropdown trigger clicked')}>
+                <Select value={formData.bodyStyle} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select body style" />
                   </SelectTrigger>
                   <SelectContent>
@@ -280,15 +246,8 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Fuel Type</Label>
-                <Select 
-                  value={formData.fuelType} 
-                  onValueChange={(value) => {
-                    debugLog('Fuel Type dropdown changed:', value)
-                    handleSelectChange('fuelType', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Fuel Type dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Fuel Type dropdown trigger clicked')}>
+                <Select value={formData.fuelType} onValueChange={(value) => handleInputChange('fuelType', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,15 +261,8 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="transmission">Transmission</Label>
-                <Select 
-                  value={formData.transmission} 
-                  onValueChange={(value) => {
-                    debugLog('Transmission dropdown changed:', value)
-                    handleSelectChange('transmission', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Transmission dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Transmission dropdown trigger clicked')}>
+                <Select value={formData.transmission} onValueChange={(value) => handleInputChange('transmission', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select transmission" />
                   </SelectTrigger>
                   <SelectContent>
@@ -342,15 +294,8 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="condition">Condition</Label>
-                <Select 
-                  value={formData.condition} 
-                  onValueChange={(value) => {
-                    debugLog('Condition dropdown changed:', value)
-                    handleSelectChange('condition', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Condition dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Condition dropdown trigger clicked')}>
+                <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
                   <SelectContent>
@@ -364,15 +309,8 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Select 
-                  value={formData.availability} 
-                  onValueChange={(value) => {
-                    debugLog('Availability dropdown changed:', value)
-                    handleSelectChange('availability', value)
-                  }}
-                  onOpenChange={(open) => debugLog('Availability dropdown open state:', open)}
-                >
-                  <SelectTrigger onClick={() => debugLog('Availability dropdown trigger clicked')}>
+                <Select value={formData.availability} onValueChange={(value) => handleInputChange('availability', value)}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select availability" />
                   </SelectTrigger>
                   <SelectContent>
