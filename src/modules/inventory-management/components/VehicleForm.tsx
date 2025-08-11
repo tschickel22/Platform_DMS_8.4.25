@@ -12,11 +12,12 @@ interface VehicleFormProps {
   vehicle?: any
   onSubmit: (data: any) => void
   onCancel: () => void
+  defaultType?: 'RV' | 'Manufactured Home'
 }
 
-function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleFormProps) {
+function VehicleForm({ vehicle, onSubmit, onCancel, defaultType }: VehicleFormProps) {
   // Primary vehicle type state
-  const [vehicleType, setVehicleType] = useState<string>(vehicle?.type || '')
+  const [vehicleType, setVehicleType] = useState<string>(vehicle?.type || defaultType || '')
   const [vehicleSubType, setVehicleSubType] = useState<string>(vehicle?.subType || '')
   
   // Define sub-type options for each primary type
@@ -360,7 +361,7 @@ function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleFormProps) {
               type="submit" 
               disabled={!vehicleType || !vehicleSubType || !formData.vin || !formData.year || !formData.make || !formData.model || !formData.retailPrice}
             >
-              {vehicle ? 'Update Vehicle' : 'Add Vehicle'}
+              {vehicle ? 'Update' : 'Add'} {vehicleType || 'Vehicle'}
             </Button>
           </div>
         </form>
