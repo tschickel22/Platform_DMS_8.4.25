@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button' 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus, VehicleType } from '@/types'
@@ -300,10 +301,27 @@ function InventoryList() {
             <Button variant="outline" onClick={() => setShowCSVImport(true)}>
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
-            </Button>
-            <Button onClick={handleCreateVehicle}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Home
+              <Dialog open={isAddHomeModalOpen} onOpenChange={setIsAddHomeModalOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Home
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add New Home</DialogTitle>
+                  </DialogHeader>
+                  <VehicleForm 
+                    onSubmit={(data) => {
+                      console.log('New home data:', data)
+                      setIsAddHomeModalOpen(false)
+                      // Handle form submission here
+                    }}
+                    onCancel={() => setIsAddHomeModalOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </Button>
           </div>
         </div>
@@ -410,6 +428,7 @@ function InventoryList() {
 export default function InventoryManagement() {
   return (
     <Routes>
+  const [isAddHomeModalOpen, setIsAddHomeModalOpen] = useState(false)
       <Route path="/" element={<InventoryList />} />
       <Route path="/*" element={<InventoryList />} />
     </Routes>
