@@ -1,169 +1,120 @@
-import { RVFormData, MHFormData, CSVRow } from '../state/types'
+import { RVVehicle, MHVehicle } from '../state/types'
 
-// RV validation
-export const validateRVForm = (data: Partial<RVFormData>): string[] => {
-  const errors: string[] = []
-  
-  if (!data.vehicleIdentificationNumber?.trim()) {
-    errors.push('VIN is required')
-  }
-  
-  if (!data.brand?.trim()) {
-    errors.push('Make/Brand is required')
-  }
-  
-  if (!data.model?.trim()) {
-    errors.push('Model is required')
-  }
-  
-  if (!data.modelDate || data.modelDate < 1900 || data.modelDate > new Date().getFullYear() + 1) {
-    errors.push('Valid year is required')
-  }
-  
-  if (!data.price || data.price <= 0) {
-    errors.push('Price must be greater than 0')
-  }
-  
-  if (!data.priceCurrency?.trim()) {
-    errors.push('Price currency is required')
-  }
-  
-  return errors
-}
-
-// MH validation
-export const validateMHForm = (data: Partial<MHFormData>): string[] => {
-  const errors: string[] = []
-  
-  // Required fields validation
-  if (!data.askingPrice || data.askingPrice <= 0) {
-    errors.push('Asking Price is required and must be greater than 0')
-  }
-  
-  if (!data.homeType?.trim()) {
-    errors.push('Home Type is required')
-  }
-  
-  if (!data.make?.trim()) {
-    errors.push('Make is required')
-  }
-  
-  if (!data.year || data.year < 1900 || data.year > new Date().getFullYear() + 1) {
-    errors.push('Valid year is required')
-  }
-  
-  if (!data.bedrooms || data.bedrooms < 0) {
-    errors.push('Number of bedrooms is required')
-  }
-  
-  if (!data.bathrooms || data.bathrooms < 0) {
-    errors.push('Number of bathrooms is required')
-  }
-  
-  if (!data.address1?.trim()) {
-    errors.push('Address is required')
-  }
-  
-  if (!data.city?.trim()) {
-    errors.push('City is required')
-  }
-  
-  if (!data.state?.trim() || data.state.length !== 2) {
-    errors.push('Valid 2-letter state code is required')
-  }
-  
-  if (!data.zip9?.trim() || !/^\d{5}(-\d{4})?$/.test(data.zip9)) {
-    errors.push('Valid ZIP code is required (12345 or 12345-6789)')
-  }
-  
-  return errors
-}
-
-// CSV row validation
-export const validateCSVRow = (row: CSVRow, rowIndex: number, vehicleType: 'RV' | 'MH'): Array<{
-  row: number
+export interface ValidationError {
   field: string
   message: string
-}> => {
-  const errors: Array<{ row: number; field: string; message: string }> = []
-  
-  if (vehicleType === 'RV') {
-    if (!row.vin && !row.VIN && !row.vehicleIdentificationNumber) {
-      errors.push({
-        row: rowIndex,
-        field: 'VIN',
-        message: 'VIN is required for RV'
-      })
-    }
-    
-    if (!row.make && !row.brand && !row.Make && !row.Brand) {
-      errors.push({
-        row: rowIndex,
-        field: 'Make',
-        message: 'Make/Brand is required for RV'
-      })
-    }
-    
-    if (!row.price && !row.Price && !row.askingPrice && !row.AskingPrice) {
-      errors.push({
-        row: rowIndex,
-        field: 'Price',
-        message: 'Price is required for RV'
-      })
-    }
-  } else if (vehicleType === 'MH') {
-    if (!row.askingPrice && !row.AskingPrice && !row.price && !row.Price) {
-      errors.push({
-        row: rowIndex,
-        field: 'AskingPrice',
-        message: 'Asking Price is required for MH'
-      })
-    }
-    
-    if (!row.homeType && !row.HomeType) {
-      errors.push({
-        row: rowIndex,
-        field: 'HomeType',
-        message: 'Home Type is required for MH'
-      })
-    }
-    
-    if (!row.make && !row.Make) {
-      errors.push({
-        row: rowIndex,
-        field: 'Make',
-        message: 'Make is required for MH'
-      })
-    }
-    
-    if (!row.address1 && !row.Address1 && !row.address && !row.Address) {
-      errors.push({
-        row: rowIndex,
-        field: 'Address',
-        message: 'Address is required for MH'
-      })
-    }
+}
+
+export function validateRVForRequiredFields(formData: Partial<RVVehicle>): ValidationError[] {
+  const errors: ValidationError[] = []
+
+  // Required fields for RV based on Google Vehicle Listing standards
+  if (!formData.vin?.trim()) {
+    errors.push({ field: 'vin', message: 'VIN is required' })
   }
-  
+
+  if (!formData.make?.trim()) {
+    errors.push({ field: 'make', message: 'Make is required' })
+  }
+
+  if (!formData.model?.trim()) {
+    errors.push({ field: 'model', message: 'Model is required' })
+  }
+
+  if (!formData.year || formData.year < 1900 || formData.year > new Date().getFullYear() + 1) {
+    errors.push({ field: 'year', message: 'Valid year is required' })
+  }
+
+  if (!formData.price || formData.price <= 0) {
+    errors.push({ field: 'price', message: 'Valid price is required' })
+  }
+
+  if (!formData.bodyStyle?.trim()) {
+    errors.push({ field: 'bodyStyle', message: 'Body style is required' })
+  }
+
+  if (!formData.fuelType?.trim()) {
+    errors.push({ field: 'fuelType', message: 'Fuel type is required' })
+  }
+
+  if (!formData.transmission?.trim()) {
+    errors.push({ field: 'transmission', message: 'Transmission is required' })
+  }
+
+  if (!formData.availability?.trim()) {
+    errors.push({ field: 'availability', message: 'Availability status is required' })
+  }
+
   return errors
 }
 
-// Field length validation
-export const validateFieldLength = (value: string, maxLength: number, fieldName: string): string | null => {
-  if (value && value.length > maxLength) {
-    return `${fieldName} must be ${maxLength} characters or less`
+export function validateMHForRequiredFields(formData: Partial<MHVehicle>): ValidationError[] {
+  const errors: ValidationError[] = []
+
+  // Required fields for MH based on the specification
+  if (!formData.askingPrice || formData.askingPrice <= 0) {
+    errors.push({ field: 'askingPrice', message: 'Valid asking price is required' })
   }
-  return null
+
+  if (!formData.homeType?.trim()) {
+    errors.push({ field: 'homeType', message: 'Home type is required' })
+  }
+
+  if (!formData.make?.trim()) {
+    errors.push({ field: 'make', message: 'Make is required' })
+  }
+
+  if (!formData.year || formData.year < 1900 || formData.year > new Date().getFullYear() + 1) {
+    errors.push({ field: 'year', message: 'Valid year is required' })
+  }
+
+  if (!formData.bedrooms || formData.bedrooms < 0) {
+    errors.push({ field: 'bedrooms', message: 'Number of bedrooms is required' })
+  }
+
+  if (!formData.bathrooms || formData.bathrooms < 0) {
+    errors.push({ field: 'bathrooms', message: 'Number of bathrooms is required' })
+  }
+
+  if (!formData.address1?.trim()) {
+    errors.push({ field: 'address1', message: 'Address is required' })
+  }
+
+  if (!formData.city?.trim()) {
+    errors.push({ field: 'city', message: 'City is required' })
+  }
+
+  if (!formData.state?.trim()) {
+    errors.push({ field: 'state', message: 'State is required' })
+  }
+
+  if (!formData.zip9?.trim()) {
+    errors.push({ field: 'zip9', message: 'ZIP code is required' })
+  }
+
+  return errors
 }
 
-// Email validation
-export const validateEmail = (email: string): boolean => {
+// Additional validation helpers
+export function validateVIN(vin: string): boolean {
+  // Basic VIN validation - 17 characters, alphanumeric except I, O, Q
+  const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/
+  return vinRegex.test(vin)
+}
+
+export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
-// Phone validation (10 digits)
-export const validatePhone = (phone: string): boolean => {
-  const phoneRegex = /^\d{10}$/
-  return phoneRegex.test(phone.replace(/\D/g, ''))
+export function validatePhone(phone: string): boolean {
+  // Basic phone validation - allows various formats
+  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/
+  return phoneRegex.test(phone.replace(/[\s\-\(\)\.]/g, ''))
+}
+
+export function validateZipCode(zip: string): boolean {
+  // US ZIP code validation (5 digits or 5+4 format)
+  const zipRegex = /^\d{5}(-\d{4})?$/
+  return zipRegex.test(zip)
 }
