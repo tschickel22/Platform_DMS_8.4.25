@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, Car, Home, AlertTriangle } from 'lucide-react'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
@@ -57,12 +57,6 @@ export default function InventoryManagement() {
   const reservedUnits  = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'PreOrder').length
   const soldUnits      = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'SoldOut').length
   const totalValue = safeVehicles.reduce((s, v) => s + (v.type === 'RV' ? (v as RVVehicle).price || 0 : (v as MHVehicle).askingPrice || 0), 0)
-
-  // Calculate stats for colored tiles
-  const availableVehicles = safeVehicles.filter(v => v.status === 'Available')
-  const reservedVehicles = safeVehicles.filter(v => v.status === 'Reserved')
-  const soldVehicles = safeVehicles.filter(v => v.status === 'Sold')
-  const pendingVehicles = safeVehicles.filter(v => v.status === 'Pending')
 
   // header buttons
   const handleAddRV = () => { setEditingItem(null); setShowAddRVModal(true) }
@@ -118,61 +112,6 @@ export default function InventoryManagement() {
           </div>
 
           {/* Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-700">Available</CardTitle>
-                <Car className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-900">{availableVehicles.length}</div>
-                <p className="text-xs text-blue-600">
-                  Ready for sale
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-yellow-200 bg-yellow-50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-yellow-700">Reserved</CardTitle>
-                <Package className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-900">{reservedVehicles.length}</div>
-                <p className="text-xs text-yellow-600">
-                  Pending completion
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-green-200 bg-green-50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-green-700">Sold</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-900">{soldVehicles.length}</div>
-                <p className="text-xs text-green-600">
-                  Completed sales
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-700">Pending</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-900">{pendingVehicles.length}</div>
-                <p className="text-xs text-orange-600">
-                  Needs attention
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Original Stats Cards - keeping for additional metrics */}
           <div className="grid gap-4 md:grid-cols-5">
             <Card className="cursor-pointer hover:bg-accent/50" onClick={() => handleStatClick('total')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
