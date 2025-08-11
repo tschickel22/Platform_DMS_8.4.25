@@ -5,6 +5,71 @@ export interface ValidationError {
   message: string
 }
 
+export interface ValidationResult {
+  isValid: boolean
+  errors: string[]
+}
+
+export function validateCSVRow(row: any, vehicleType: 'RV' | 'MH'): ValidationResult {
+  const errors: string[] = []
+
+  if (vehicleType === 'RV') {
+    // RV validation
+    if (!row.vin || typeof row.vin !== 'string' || row.vin.trim().length === 0) {
+      errors.push('VIN is required')
+    }
+    if (!row.make || typeof row.make !== 'string' || row.make.trim().length === 0) {
+      errors.push('Make is required')
+    }
+    if (!row.model || typeof row.model !== 'string' || row.model.trim().length === 0) {
+      errors.push('Model is required')
+    }
+    if (!row.year || isNaN(Number(row.year)) || Number(row.year) < 1900 || Number(row.year) > new Date().getFullYear() + 1) {
+      errors.push('Valid year is required')
+    }
+    if (row.price && (isNaN(Number(row.price)) || Number(row.price) < 0)) {
+      errors.push('Price must be a valid positive number')
+    }
+  } else {
+    // MH validation
+    if (!row.askingPrice || isNaN(Number(row.askingPrice)) || Number(row.askingPrice) <= 0) {
+      errors.push('Asking Price is required and must be greater than 0')
+    }
+    if (!row.homeType || typeof row.homeType !== 'string' || row.homeType.trim().length === 0) {
+      errors.push('Home Type is required')
+    }
+    if (!row.make || typeof row.make !== 'string' || row.make.trim().length === 0) {
+      errors.push('Make is required')
+    }
+    if (!row.year || isNaN(Number(row.year)) || Number(row.year) < 1900 || Number(row.year) > new Date().getFullYear() + 1) {
+      errors.push('Valid year is required')
+    }
+    if (!row.bedrooms || isNaN(Number(row.bedrooms)) || Number(row.bedrooms) < 0) {
+      errors.push('Bedrooms must be a valid number')
+    }
+    if (!row.bathrooms || isNaN(Number(row.bathrooms)) || Number(row.bathrooms) < 0) {
+      errors.push('Bathrooms must be a valid number')
+    }
+    if (!row.address1 || typeof row.address1 !== 'string' || row.address1.trim().length === 0) {
+      errors.push('Address is required')
+    }
+    if (!row.city || typeof row.city !== 'string' || row.city.trim().length === 0) {
+      errors.push('City is required')
+    }
+    if (!row.state || typeof row.state !== 'string' || row.state.trim().length === 0) {
+      errors.push('State is required')
+    }
+    if (!row.zip9 || typeof row.zip9 !== 'string' || row.zip9.trim().length === 0) {
+      errors.push('ZIP code is required')
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
 export function validateRVForRequiredFields(formData: Partial<RVVehicle>): ValidationError[] {
   const errors: ValidationError[] = []
 
