@@ -28,6 +28,12 @@ class ApiClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      }
+
       const data = await response.json()
       return { data, success: true }
     } catch (error) {
