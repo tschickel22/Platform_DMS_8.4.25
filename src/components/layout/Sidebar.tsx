@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   FileCheck,
   Building,
+  Building2,
   Shield
 } from 'lucide-react'
 import { isColorLight } from '@/lib/utils'
@@ -49,6 +50,17 @@ const navigationItems = [
     ]
   },
   {
+  {
+    name: 'Marketing',
+    items: [
+      {
+        name: 'Property Listings',
+        href: '/marketing/listings',
+        icon: Building2,
+        current: location.pathname.startsWith('/marketing/listings'),
+      },
+    ],
+  },
     id: 'finance-agreements',
     title: 'Finance & Agreements',
     icon: DollarSign,
