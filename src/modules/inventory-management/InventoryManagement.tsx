@@ -359,6 +359,7 @@ export default function InventoryManagement() {
                   console.log('RV Inventory submitted:', data)
                   setShowAddRVModal(false)
                 }}
+                onCancel={() => setShowAddRVModal(false)}
               />
             </DialogContent>
           </Dialog>
@@ -374,6 +375,7 @@ export default function InventoryManagement() {
                   console.log('MH Inventory submitted:', data)
                   setShowAddMHModal(false)
                 }}
+                onCancel={() => setShowAddMHModal(false)}
               />
             </DialogContent>
           </Dialog>
