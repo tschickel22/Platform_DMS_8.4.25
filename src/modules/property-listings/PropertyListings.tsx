@@ -1,7 +1,6 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import ListingsWorkspace from './components/ListingsWorkspace'
-import { Routes, Route } from 'react-router-dom'
 import ListingOverview from './components/ListingOverview'
 
 export default function PropertyListings() {
