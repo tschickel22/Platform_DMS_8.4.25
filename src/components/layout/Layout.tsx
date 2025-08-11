@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { 
+import {
   Menu,
   LayoutDashboard,
   Users,
@@ -27,9 +27,9 @@ import {
   ListTodo,
   Calendar,
   HardHat,
-  MapPin
+  MapPin,
+  Tag
 } from 'lucide-react'
-import { Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavigationItem {
@@ -81,6 +81,16 @@ export default function Layout({ children }: LayoutProps) {
         { name: 'Warranty Mgmt', path: '/inventory/warranty', icon: ShieldCheck }
       ]
     },
+
+    // ✅ NEW: Marketing group with Property Listings
+    {
+      name: 'Marketing',
+      icon: Globe,
+      children: [
+        { name: 'Property Listings', path: '/marketing/listings', icon: Globe }
+      ]
+    },
+
     {
       name: 'Finance & Agreements',
       icon: DollarSign,
@@ -124,18 +134,19 @@ export default function Layout({ children }: LayoutProps) {
   // Auto-expand menu containing current page
   useEffect(() => {
     const currentPath = location.pathname
-    const parentMenu = navigationItems.find(item => 
+    const parentMenu = navigationItems.find(item =>
       item.children?.some(child => currentPath.startsWith(child.path))
     )
-    
+
     if (parentMenu && !expandedMenus.includes(parentMenu.name)) {
       setExpandedMenus(prev => [...prev, parentMenu.name])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
 
   const toggleMenu = (menuName: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(menuName) 
+    setExpandedMenus(prev =>
+      prev.includes(menuName)
         ? prev.filter(name => name !== menuName)
         : [...prev, menuName]
     )
@@ -169,16 +180,15 @@ export default function Layout({ children }: LayoutProps) {
         <nav className="flex-1 px-4 space-y-1">
           {navigationItems.map((item) => {
             if (item.children) {
-              // Parent menu with children
               const isExpanded = expandedMenus.includes(item.name)
               const hasActiveChild = item.children.some(child => isActive(child.path))
-              
+
               return (
                 <div key={item.name}>
                   <button
                     onClick={() => toggleMenu(item.name)}
                     className={cn(
-                      "w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                      'w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
                       hasActiveChild
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -187,7 +197,7 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="flex items-center">
                       <item.icon
                         className={cn(
-                          "mr-3 flex-shrink-0 h-5 w-5",
+                          'mr-3 flex-shrink-0 h-5 w-5',
                           hasActiveChild ? 'text-primary' : 'text-muted-foreground'
                         )}
                       />
@@ -195,14 +205,13 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 transition-transform",
+                        'h-4 w-4 transition-transform',
                         isExpanded ? 'transform rotate-180' : '',
                         hasActiveChild ? 'text-primary' : 'text-muted-foreground'
                       )}
                     />
                   </button>
-                  
-                  {/* Sub-menu items */}
+
                   {isExpanded && (
                     <div className="mt-1 space-y-1">
                       {item.children.map((child) => {
@@ -213,7 +222,7 @@ export default function Layout({ children }: LayoutProps) {
                             to={child.path}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className={cn(
-                              "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors",
+                              'group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors',
                               childActive
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -221,7 +230,7 @@ export default function Layout({ children }: LayoutProps) {
                           >
                             <child.icon
                               className={cn(
-                                "mr-3 flex-shrink-0 h-4 w-4",
+                                'mr-3 flex-shrink-0 h-4 w-4',
                                 childActive ? 'text-primary-foreground' : 'text-muted-foreground'
                               )}
                             />
@@ -234,7 +243,6 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
               )
             } else {
-              // Single menu item
               const active = isActive(item.path!)
               return (
                 <Link
@@ -242,7 +250,7 @@ export default function Layout({ children }: LayoutProps) {
                   to={item.path!}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
                     active
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -250,7 +258,7 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <item.icon
                     className={cn(
-                      "mr-3 flex-shrink-0 h-5 w-5",
+                      'mr-3 flex-shrink-0 h-5 w-5',
                       active ? 'text-primary-foreground' : 'text-muted-foreground'
                     )}
                   />
