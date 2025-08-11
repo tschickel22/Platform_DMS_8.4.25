@@ -17,6 +17,7 @@ import {
   List
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { apiClient } from '@/utils/apiClient'
 
 interface Listing {
   id: string
@@ -120,21 +121,21 @@ export default function PublicCatalogView() {
       // For now, we'll mock this
       const companyId = `company_${companySlug}`
       
-      const response = await fetch(`/.netlify/functions/listings-crud?companyId=${companyId}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch listings')
-      }
-      
-      const data = await response.json()
+      const data = await apiClient.get('listings-crud', { companyId })
       
       // Only show active listings
-      const activeListings = data.filter((listing: Listing) => listing.status === 'active')
-      setListings(activeListings)
+      if (data && Array.isArray(data)) {
+        const activeListings = data.filter((listing: Listing) => listing.status === 'active')
+        setListings(activeListings)
+      } else {
+        // Handle case where API returns null/undefined (graceful fallback)
+        setListings([])
+      }
       
     } catch (error) {
       console.error('Error fetching listings:', error)
-      setError('Failed to load listings')
+      setError('Failed to load listings. Please try again later.')
+      setListings([]) // Ensure we have an empty array instead of undefined
       toast({
         title: "Error",
         description: "Failed to load listings",
