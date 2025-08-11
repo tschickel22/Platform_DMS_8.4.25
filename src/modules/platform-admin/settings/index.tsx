@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import SyndicationSettings from '@/modules/platform-admin/components/SyndicationSettings'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,16 +40,20 @@ export default function PlatformAdminSettings() {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="syndication">Syndication</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="sms">SMS</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
+          <TabsTrigger value="sms">SMS</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
-          <TabsTrigger value="warranty">Warranty</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
           <Card>
             <CardHeader>
+        
+        <TabsContent value="syndication">
+          <SyndicationSettings />
+        </TabsContent>
               <CardTitle>General Settings</CardTitle>
               <CardDescription>
                 Configure basic platform settings
@@ -353,10 +356,6 @@ export default function PlatformAdminSettings() {
 
         <TabsContent value="warranty">
           <WarrantyIntegrationSettings
-            settings={settings}
-            onSettingsChange={handleSettingsChange}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   )

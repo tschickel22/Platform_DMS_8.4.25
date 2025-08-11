@@ -1,258 +1,537 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import { 
+  Settings, 
   Globe, 
-  Home, 
-  Car, 
   Mail, 
-  ExternalLink, 
-  Settings,
-  Info,
-  AlertCircle
+  Phone, 
+  ExternalLink,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import { useTenant } from '@/contexts/TenantContext'
 
-interface Partner {
+interface PartnerOverride {
+  partnerId: string
+  partnerName: string
+  enabled: boolean
+  leadEmail?: string
+  alternatePhone?: string
+  customAccountId?: string
+  specialInstructions?: string
+  priorityLevel: 'normal' | 'high' | 'premium'
+  autoSync: boolean
+  includeListingTypes: ('manufactured_home' | 'rv')[]
+  priceOverrides: {
+    minimumPrice?: number
+    maximumPrice?: number
+    hidePrice?: boolean
+  }
+  customFields: Record<string, any>
+}
+
+interface PartnerTemplate {
   id: string
   name: string
   description: string
-  listingTypes: ('manufactured_home' | 'rv')[]
-  isGloballyActive: boolean
-  isCompanyActive: boolean
-  companyLeadEmail?: string
-  exportUrl: string
+  logoUrl?: string
+  supportedTypes: ('manufactured_home' | 'rv')[]
+  requiresAccount: boolean
+  defaultFields: string[]
 }
 
 export default function ListingPartnersSettings() {
+  const { toast } = useToast()
   const { tenant } = useTenant()
-  const [companyId, setCompanyId] = useState(tenant?.id || '')
-  const [partners, setPartners] = useState<Partner[]>([
+  const [overrides, setOverrides] = useState<PartnerOverride[]>([])
+  const [availablePartners, setAvailablePartners] = useState<PartnerTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [addingPartner, setAddingPartner] = useState(false)
+
+  const defaultPartnerTemplates: PartnerTemplate[] = [
     {
       id: 'mhvillage',
-      name: 'MHVillage',
+      name: 'MH Village',
       description: 'Leading manufactured home marketplace',
-      listingTypes: ['manufactured_home'],
-      isGloballyActive: true,
-      isCompanyActive: true,
-      companyLeadEmail: 'leads@ourcompany.com',
-      exportUrl: 'https://api.listings.com/feed/mhvillage?companyId=company123'
+      logoUrl: '/partners/mhvillage-logo.png',
+      supportedTypes: ['manufactured_home'],
+      requiresAccount: true,
+      defaultFields: ['accountKey', 'companyName', 'phone', 'email']
     },
     {
       id: 'rvtrader',
       name: 'RV Trader',
-      description: 'Premier RV marketplace platform',
-      listingTypes: ['rv'],
-      isGloballyActive: true,
-      isCompanyActive: false,
-      exportUrl: 'https://api.listings.com/feed/rvtrader?companyId=company123'
+      description: 'Premier RV marketplace',
+      logoUrl: '/partners/rvtrader-logo.png', 
+      supportedTypes: ['rv'],
+      requiresAccount: true,
+      defaultFields: ['dealerCode', 'companyName', 'phone', 'email']
     },
     {
       id: 'zillow',
       name: 'Zillow',
-      description: 'Real estate marketplace integration',
-      listingTypes: ['manufactured_home', 'rv'],
-      isGloballyActive: false,
-      isCompanyActive: false,
-      exportUrl: 'https://api.listings.com/feed/zillow?companyId=company123'
+      description: 'Real estate platform',
+      logoUrl: '/partners/zillow-logo.png',
+      supportedTypes: ['manufactured_home'],
+      requiresAccount: true,
+      defaultFields: ['mlsId', 'agentId', 'phone', 'email']
     }
-  ])
+  ]
 
-  const handlePartnerToggle = (partnerId: string) => {
-    setPartners(prev => prev.map(partner => 
-      partner.id === partnerId 
-        ? { ...partner, isCompanyActive: !partner.isCompanyActive }
-        : partner
+  useEffect(() => {
+    loadPartnerSettings()
+  }, [])
+
+  const loadPartnerSettings = async () => {
+    try {
+      setLoading(true)
+      setAvailablePartners(defaultPartnerTemplates)
+      
+      // Mock existing overrides - in production, fetch from backend
+      const mockOverrides: PartnerOverride[] = [
+        {
+          partnerId: 'mhvillage',
+          partnerName: 'MH Village',
+          enabled: true,
+          leadEmail: 'mh-leads@company.com',
+          customAccountId: 'MHV123456',
+          priorityLevel: 'premium',
+          autoSync: true,
+          includeListingTypes: ['manufactured_home'],
+          priceOverrides: {
+            minimumPrice: 5000,
+            hidePrice: false
+          },
+          customFields: {}
+        }
+      ]
+      
+      setOverrides(mockOverrides)
+      
+    } catch (error) {
+      console.error('Error loading partner settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load partner settings",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true)
+      
+      // Mock save - in production, save to backend
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      toast({
+        title: "Settings Saved",
+        description: "Partner listing settings have been updated",
+      })
+      
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save partner settings",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addPartnerOverride = (partnerId: string) => {
+    const partner = availablePartners.find(p => p.id === partnerId)
+    if (!partner) return
+
+    const newOverride: PartnerOverride = {
+      partnerId,
+      partnerName: partner.name,
+      enabled: false,
+      priorityLevel: 'normal',
+      autoSync: false,
+      includeListingTypes: partner.supportedTypes,
+      priceOverrides: {},
+      customFields: {}
+    }
+
+    setOverrides(prev => [...prev, newOverride])
+    setAddingPartner(false)
+  }
+
+  const removePartnerOverride = (partnerId: string) => {
+    setOverrides(prev => prev.filter(o => o.partnerId !== partnerId))
+  }
+
+  const updateOverride = (partnerId: string, updates: Partial<PartnerOverride>) => {
+    setOverrides(prev => prev.map(o => 
+      o.partnerId === partnerId ? { ...o, ...updates } : o
     ))
   }
 
-  const handleLeadEmailChange = (partnerId: string, email: string) => {
-    setPartners(prev => prev.map(partner => 
-      partner.id === partnerId 
-        ? { ...partner, companyLeadEmail: email }
-        : partner
-    ))
-  }
+  const availableToAdd = availablePartners.filter(
+    partner => !overrides.find(override => override.partnerId === partner.id)
+  )
 
-  const activePartnersCount = partners.filter(p => p.isCompanyActive).length
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="h-48 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Listing Partners</h2>
-        <p className="text-gray-600">Manage your syndication partners and lead routing</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Listing Partner Settings</h2>
+          <p className="text-muted-foreground">
+            Configure partner-specific settings and overrides for listing syndication
+          </p>
+        </div>
+        <div className="flex space-x-2">
+          {availableToAdd.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setAddingPartner(!addingPartner)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Partner
+            </Button>
+          )}
+          <Button onClick={saveSettings} disabled={saving}>
+            {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}
+            Save Settings
+          </Button>
+        </div>
       </div>
 
-      {/* Company ID Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Company Configuration
-          </CardTitle>
-          <CardDescription>
-            Your unique company identifier for syndication feeds
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="companyId">Company ID</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                id="companyId"
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                placeholder="your-company-id"
-                className="font-mono"
-              />
-              <Button variant="outline">Update</Button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              This ID is used in feed URLs and must be unique across the platform
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Partners Status Overview */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-green-600">{activePartnersCount}</p>
-              <p className="text-sm text-gray-600">Active Partners</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">
-                {partners.filter(p => p.isGloballyActive).length}
-              </p>
-              <p className="text-sm text-gray-600">Available Partners</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-orange-600">
-                {partners.filter(p => p.companyLeadEmail).length}
-              </p>
-              <p className="text-sm text-gray-600">Custom Lead Emails</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Partners List */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Available Partners</h3>
-        
-        {partners.map((partner) => (
-          <Card key={partner.id} className={`${!partner.isGloballyActive ? 'opacity-60' : ''}`}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-blue-600" />
-                      <h4 className="text-lg font-semibold">{partner.name}</h4>
-                    </div>
-                    
-                    <div className="flex gap-1">
-                      {partner.listingTypes.map((type) => (
-                        <Badge key={type} variant="secondary" className="text-xs">
-                          {type === 'manufactured_home' ? (
-                            <>
-                              <Home className="h-3 w-3 mr-1" />
-                              MH
-                            </>
-                          ) : (
-                            <>
-                              <Car className="h-3 w-3 mr-1" />
-                              RV
-                            </>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {!partner.isGloballyActive && (
-                      <Badge variant="outline" className="text-xs">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Inactive
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <p className="text-gray-600 mb-4">{partner.description}</p>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">EXPORT URL</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <ExternalLink className="h-4 w-4 text-gray-400" />
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                          {partner.exportUrl}
-                        </code>
+      {addingPartner && availableToAdd.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Partner Integration</CardTitle>
+            <CardDescription>
+              Select a partner to configure custom settings for
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableToAdd.map(partner => (
+                <div
+                  key={partner.id}
+                  className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => addPartnerOverride(partner.id)}
+                >
+                  <div className="flex items-start space-x-3">
+                    <Globe className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium">{partner.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {partner.description}
+                      </p>
+                      <div className="flex space-x-1">
+                        {partner.supportedTypes.map(type => (
+                          <Badge key={type} variant="secondary" className="text-xs">
+                            {type === 'manufactured_home' ? 'MH' : 'RV'}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
-                    
-                    {partner.isCompanyActive && (
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {overrides.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Partners Configured</h3>
+            <p className="text-muted-foreground mb-4">
+              Add partner integrations to customize how your listings are syndicated
+            </p>
+            <Button onClick={() => setAddingPartner(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Partner
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {overrides.map(override => {
+            const partner = availablePartners.find(p => p.id === override.partnerId)
+            
+            return (
+              <Card key={override.partnerId}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Globe className="h-6 w-6 text-primary" />
                       <div>
-                        <Label htmlFor={`leadEmail-${partner.id}`}>
-                          Lead Email Override (optional)
-                        </Label>
-                        <div className="flex gap-2 mt-1">
-                          <div className="relative flex-1">
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                            <Input
-                              id={`leadEmail-${partner.id}`}
-                              type="email"
-                              value={partner.companyLeadEmail || ''}
-                              onChange={(e) => handleLeadEmailChange(partner.id, e.target.value)}
-                              placeholder="leads@yourcompany.com"
-                              className="pl-10"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Override the default lead email for this partner
+                        <CardTitle>{override.partnerName}</CardTitle>
+                        <CardDescription>
+                          {partner?.description || 'Custom partner integration'}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2">
+                        {override.enabled ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                        )}
+                        <Switch
+                          checked={override.enabled}
+                          onCheckedChange={(checked) => updateOverride(override.partnerId, { enabled: checked })}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePartnerOverride(override.partnerId)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Contact Overrides */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium flex items-center">
+                        <Mail className="h-4 w-4 mr-2" />
+                        Contact Overrides
+                      </h4>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`lead-email-${override.partnerId}`}>Lead Email</Label>
+                        <Input
+                          id={`lead-email-${override.partnerId}`}
+                          type="email"
+                          placeholder="leads@company.com"
+                          value={override.leadEmail || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { leadEmail: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Override default email for leads from this partner
                         </p>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      {partner.isCompanyActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <Switch
-                      checked={partner.isCompanyActive}
-                      onCheckedChange={() => handlePartnerToggle(partner.id)}
-                      disabled={!partner.isGloballyActive}
-                    />
-                  </div>
-                  
-                  {!partner.isGloballyActive && (
-                    <div className="text-xs text-gray-500 text-right">
-                      <Info className="h-3 w-3 inline mr-1" />
-                      Contact admin to enable
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`alt-phone-${override.partnerId}`}>Alternate Phone</Label>
+                        <Input
+                          id={`alt-phone-${override.partnerId}`}
+                          type="tel"
+                          placeholder="(555) 123-4567"
+                          value={override.alternatePhone || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { alternatePhone: e.target.value })}
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end pt-6 border-t">
-        <Button size="lg">
-          Save Partner Settings
-        </Button>
-      </div>
+                    {/* Account Settings */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium flex items-center">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Account Settings
+                      </h4>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`account-id-${override.partnerId}`}>Account ID</Label>
+                        <Input
+                          id={`account-id-${override.partnerId}`}
+                          placeholder="Partner account identifier"
+                          value={override.customAccountId || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { customAccountId: e.target.value })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`priority-${override.partnerId}`}>Priority Level</Label>
+                        <select
+                          id={`priority-${override.partnerId}`}
+                          className="w-full p-2 border rounded-md"
+                          value={override.priorityLevel}
+                          onChange={(e) => updateOverride(override.partnerId, { 
+                            priorityLevel: e.target.value as 'normal' | 'high' | 'premium' 
+                          })}
+                        >
+                          <option value="normal">Normal</option>
+                          <option value="high">High Priority</option>
+                          <option value="premium">Premium</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Sync Settings */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Sync Settings</h4>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor={`auto-sync-${override.partnerId}`}>Auto Sync</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Automatically sync new/updated listings
+                          </p>
+                        </div>
+                        <Switch
+                          id={`auto-sync-${override.partnerId}`}
+                          checked={override.autoSync}
+                          onCheckedChange={(checked) => updateOverride(override.partnerId, { autoSync: checked })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Include Listing Types</Label>
+                        <div className="space-y-2">
+                          {partner?.supportedTypes.includes('manufactured_home') && (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`mh-${override.partnerId}`}
+                                checked={override.includeListingTypes.includes('manufactured_home')}
+                                onChange={(e) => {
+                                  const types = e.target.checked
+                                    ? [...override.includeListingTypes, 'manufactured_home' as const]
+                                    : override.includeListingTypes.filter(t => t !== 'manufactured_home')
+                                  updateOverride(override.partnerId, { includeListingTypes: types })
+                                }}
+                              />
+                              <Label htmlFor={`mh-${override.partnerId}`}>Manufactured Homes</Label>
+                            </div>
+                          )}
+                          
+                          {partner?.supportedTypes.includes('rv') && (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`rv-${override.partnerId}`}
+                                checked={override.includeListingTypes.includes('rv')}
+                                onChange={(e) => {
+                                  const types = e.target.checked
+                                    ? [...override.includeListingTypes, 'rv' as const]
+                                    : override.includeListingTypes.filter(t => t !== 'rv')
+                                  updateOverride(override.partnerId, { includeListingTypes: types })
+                                }}
+                              />
+                              <Label htmlFor={`rv-${override.partnerId}`}>RVs</Label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Price Overrides */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Price Settings</h4>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`min-price-${override.partnerId}`}>Minimum Price</Label>
+                        <Input
+                          id={`min-price-${override.partnerId}`}
+                          type="number"
+                          placeholder="0"
+                          value={override.priceOverrides.minimumPrice || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { 
+                            priceOverrides: { 
+                              ...override.priceOverrides, 
+                              minimumPrice: parseInt(e.target.value) || undefined 
+                            } 
+                          })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`max-price-${override.partnerId}`}>Maximum Price</Label>
+                        <Input
+                          id={`max-price-${override.partnerId}`}
+                          type="number"
+                          placeholder="No limit"
+                          value={override.priceOverrides.maximumPrice || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { 
+                            priceOverrides: { 
+                              ...override.priceOverrides, 
+                              maximumPrice: parseInt(e.target.value) || undefined 
+                            } 
+                          })}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor={`hide-price-${override.partnerId}`}>Hide Prices</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Don't include pricing in feeds
+                          </p>
+                        </div>
+                        <Switch
+                          id={`hide-price-${override.partnerId}`}
+                          checked={override.priceOverrides.hidePrice || false}
+                          onCheckedChange={(checked) => updateOverride(override.partnerId, { 
+                            priceOverrides: { 
+                              ...override.priceOverrides, 
+                              hidePrice: checked 
+                            } 
+                          })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {override.specialInstructions && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label htmlFor={`instructions-${override.partnerId}`}>Special Instructions</Label>
+                        <textarea
+                          id={`instructions-${override.partnerId}`}
+                          className="w-full p-2 border rounded-md"
+                          rows={3}
+                          placeholder="Special handling instructions for this partner..."
+                          value={override.specialInstructions || ''}
+                          onChange={(e) => updateOverride(override.partnerId, { specialInstructions: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
