@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { mockCompanySettings } from '@/mocks/companySettingsMock'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
