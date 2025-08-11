@@ -38,7 +38,6 @@ export default function InventoryManagement() {
   const [showAddRVModal, setShowAddRVModal] = useState(false)
   const [showAddMHModal, setShowAddMHModal] = useState(false)
   const [inventory, setInventory] = useState<any[]>([])
-  const [inventory, setInventory] = useState<any[]>([])
   const [showImport, setShowImport] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
@@ -138,6 +137,7 @@ export default function InventoryManagement() {
     console.log('MH inventory item created:', newMHItem)
   }
 
+  const handleSaveRVForm = (formData: any) => {
     const newRV = {
       id: `rv-${Date.now()}`,
       type: 'RV',
@@ -149,6 +149,7 @@ export default function InventoryManagement() {
     setShowAddRVModal(false)
   }
 
+  const handleSaveMHForm = (formData: any) => {
     const newMH = {
       id: `mh-${Date.now()}`,
       type: 'MH',
@@ -173,7 +174,7 @@ export default function InventoryManagement() {
     setSelectedItem(vehicle)
   }
 
-  const handleSaveRV = (vehicle: RVVehicle) => {
+  const handleSaveRVVehicle = (vehicle: RVVehicle) => {
     if (editingItem) {
       updateVehicle(vehicle)
     } else {
@@ -182,7 +183,7 @@ export default function InventoryManagement() {
     setEditingItem(null)
   }
 
-  const handleSaveMH = (vehicle: MHVehicle) => {
+  const handleSaveMHVehicle = (vehicle: MHVehicle) => {
     if (editingItem) {
       updateVehicle(vehicle)
     } else {
@@ -444,7 +445,7 @@ export default function InventoryManagement() {
               if (!open) setEditingItem(null)
             }}
             editingItem={editingItem?.type === 'RV' ? editingItem as RVVehicle : null}
-            onSave={handleSaveRV}
+            onSave={handleSaveRVVehicle}
           />
 
           <MHInventoryForm
@@ -454,7 +455,7 @@ export default function InventoryManagement() {
               if (!open) setEditingItem(null)
             }}
             editingItem={editingItem?.type === 'MH' ? editingItem as MHVehicle : null}
-            onSave={handleSaveMH}
+            onSave={handleSaveMHVehicle}
           />
 
           <CSVSmartImport
@@ -477,35 +478,35 @@ export default function InventoryManagement() {
             onDelete={deleteVehicle}
           />
         </div>
-      </InventoryErrorBoundary>
 
-      {/* Display Created Inventory */}
-      {inventory.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Created Inventory ({inventory.length})</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {inventory.map((item) => (
-              <Card key={item.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{item.type} - {item.make} {item.model}</span>
-                    <Badge variant="secondary">{item.status}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <p><strong>VIN:</strong> {item.vin}</p>
-                    <p><strong>Year:</strong> {item.year}</p>
-                    {item.mileage && <p><strong>Mileage:</strong> {item.mileage}</p>}
-                    {item.price && <p><strong>Price:</strong> ${item.price}</p>}
-                    <p><strong>Created:</strong> {new Date(item.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Display Created Inventory */}
+        {inventory.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Created Inventory ({inventory.length})</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {inventory.map((item) => (
+                <Card key={item.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{item.type} - {item.make} {item.model}</span>
+                      <Badge variant="secondary">{item.status}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>VIN:</strong> {item.vin}</p>
+                      <p><strong>Year:</strong> {item.year}</p>
+                      {item.mileage && <p><strong>Mileage:</strong> {item.mileage}</p>}
+                      {item.price && <p><strong>Price:</strong> ${item.price}</p>}
+                      <p><strong>Created:</strong> {new Date(item.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
         {/* Display created inventory items */}
         {inventory.length > 0 && (
           <div className="space-y-4">
@@ -531,7 +532,7 @@ export default function InventoryManagement() {
             </div>
           </div>
         )}
-
+      </InventoryErrorBoundary>
     </TooltipProvider>
   )
 }
