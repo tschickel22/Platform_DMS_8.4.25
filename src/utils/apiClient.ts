@@ -39,6 +39,31 @@ class ApiClient {
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error)
       
+      // Handle non-200 status codes
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`Netlify function not found: ${endpoint}`)
+          this.toast({
+            title: "Service Unavailable",
+            description: "This feature is not yet available. Please try again later.",
+            variant: "default",
+          })
+          return null
+        }
+        
+        if (response.status === 403) {
+          console.warn(`Access denied to function: ${endpoint}`)
+          this.toast({
+            title: "Access Denied",
+            description: "You don't have permission to access this resource.",
+            variant: "destructive",
+          })
+          return null
+        }
+        
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       // Show user-friendly toast notification
       toast({
         title: 'Connection Error',
@@ -48,7 +73,13 @@ class ApiClient {
 
       return { 
         error: error instanceof Error ? error.message : 'Unknown error',
-        success: false 
+        console.warn(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+        this.toast({
+          title: "Service Error",
+          description: "The service returned an unexpected response format.",
+          variant: "default",
+        })
+        return null
       }
     }
   }
@@ -76,13 +107,16 @@ class ApiClient {
   }
 
   // Health check function
-  async ping(): Promise<boolean> {
-    try {
-      const response = await fetch(`${API_BASE}/ping`)
-      return response.ok
-    } catch (error) {
+      // Only show toast for unexpected errors (network issues, etc.)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        this.toast({
+          title: "Connection Error",
+          description: "Unable to connect to server. Please check your connection.",
+          variant: "destructive",
+        })
+      }
       console.error('Health check failed:', error)
-      return false
+      console.error(`API Error (${endpoint}):`, error)
     }
   }
 }
