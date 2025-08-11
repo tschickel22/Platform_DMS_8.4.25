@@ -4,8 +4,11 @@ import ListingOverview from './components/ListingOverview'
 
 export default function PropertyListings() {
   return (
-    <Routes>
-      <Route path="/" element={<ListingOverview />} />
-    </Routes>
+    <div className="flex flex-col h-full">
+      <Routes>
+        <Route path="/" element={<ListingOverview />} />
+        <Route path="*" element={<ListingOverview />} />
+      </Routes>
+    </div>
   )
 }
