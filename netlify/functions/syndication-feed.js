@@ -1,6 +1,6 @@
 const { getStore } = require('@netlify/blobs');
 
-// Partner mappings for different feed formats
+// Enhanced partner mappings with full data contracts
 const partnerMappings = {
   'mhvillage': {
     format: 'json',
@@ -11,6 +11,7 @@ const partnerMappings = {
         companyName: listing.seller?.companyName || 'Company Name',
         phone: listing.seller?.phone || '',
         emails: listing.seller?.emails || [],
+        fax: listing.seller?.fax || '',
         website: listing.seller?.website || ''
       },
       serialNumber: listing.serialNumber || '',
@@ -53,9 +54,39 @@ const partnerMappings = {
       width_ft: listing.dimensions?.width_ft || 0,
       length_ft: listing.dimensions?.length_ft || 0,
       sections: listing.dimensions?.sections || 1,
-      // Add all boolean features
+      // MH-specific features
+      roofType: listing.features?.roofType || '',
+      sidingType: listing.features?.sidingType || '',
+      ceilingType: listing.features?.ceilingType || '',
+      lotRent: listing.features?.lotRent || 0,
+      taxes: listing.features?.taxes || 0,
+      utilities: listing.features?.utilities || '',
+      // RV-specific features (if applicable)
+      ...(listing.listingType === 'rv' && {
+        vin: listing.vin || '',
+        condition: listing.condition || 'used',
+        odometerMiles: listing.odometerMiles || 0,
+        vehicleType: listing.vehicleType || '',
+        gvwr_lbs: listing.gvwr_lbs || 0,
+        towRating_lbs: listing.towRating_lbs || 0,
+        sleeps: listing.sleeps || 0,
+        slides: listing.slides || 0,
+        fuelType: listing.fuelType || '',
+        engine: listing.engine || '',
+        transmission: listing.transmission || '',
+        drive: listing.drive || '4x2',
+        freshWaterTank: listing.tanks?.freshWater || 0,
+        grayWaterTank: listing.tanks?.grayWater || 0,
+        blackWaterTank: listing.tanks?.blackWater || 0,
+        generator: listing.features?.generator || false,
+        solar: listing.features?.solar || false,
+        inverter: listing.features?.inverter || false,
+        hitchType: listing.hitchType || ''
+      }),
       ...Object.keys(listing.features || {}).reduce((acc, key) => {
-        acc[key] = listing.features[key] || false;
+        if (typeof listing.features[key] === 'boolean') {
+          acc[key] = listing.features[key] || false;
+        }
         return acc;
       }, {})
     })
@@ -82,12 +113,67 @@ const partnerMappings = {
       YearBuilt: listing.year || 0,
       BedroomsTotal: listing.bedrooms || 0,
       BathroomsTotalInteger: Math.floor(listing.bathrooms || 0),
+      LivingArea: listing.dimensions?.width_ft && listing.dimensions?.length_ft ? 
+        (listing.dimensions.width_ft * listing.dimensions.length_ft) : null,
       PublicRemarks: listing.description || '',
+      ...(listing.listingType === 'rv' && {
+        VIN: listing.vin || '',
+        BodyStyle: listing.vehicleType || '',
+        FuelType: listing.fuelType || '',
+        Odometer: listing.odometerMiles || 0,
+        Engine: listing.engine || '',
+        Transmission: listing.transmission || ''
+      }),
       Media: (listing.media?.photos || []).map((photo, index) => ({
         Order: index + 1,
         MediaURL: photo,
         MediaType: 'Photo'
       }))
+    })
+  },
+
+  // Add RV Trader mapping
+  'rvtrader': {
+    format: 'json',
+    mapListing: (listing) => ({
+      id: listing.id,
+      companyId: listing.companyId,
+      vin: listing.vin || '',
+      year: listing.year || 0,
+      make: listing.make || '',
+      model: listing.model || '',
+      category: listing.vehicleType || '',
+      condition: listing.condition || 'used',
+      price: listing.salePrice || 0,
+      currency: listing.currency || 'USD',
+      mileage: listing.odometerMiles || 0,
+      length: listing.dimensions?.length_ft || 0,
+      sleeps: listing.sleeps || 0,
+      slideouts: listing.slides || 0,
+      fuelType: listing.fuelType || '',
+      engine: listing.engine || '',
+      transmission: listing.transmission || '',
+      freshWater: listing.tanks?.freshWater || 0,
+      grayWater: listing.tanks?.grayWater || 0,
+      blackWater: listing.tanks?.blackWater || 0,
+      generator: listing.features?.generator || false,
+      solar: listing.features?.solar || false,
+      description: listing.description || '',
+      photos: listing.media?.photos || [],
+      primaryPhoto: listing.media?.primaryPhoto || '',
+      location: {
+        city: listing.location?.city || '',
+        state: listing.location?.state || '',
+        postalCode: listing.location?.postalCode || '',
+        latitude: listing.location?.latitude || 0,
+        longitude: listing.location?.longitude || 0
+      },
+      seller: {
+        name: listing.seller?.companyName || '',
+        phone: listing.seller?.phone || '',
+        email: listing.seller?.emails?.[0] || '',
+        website: listing.seller?.website || ''
+      }
     })
   }
 };
