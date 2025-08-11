@@ -88,7 +88,7 @@ class ApiClient {
 
   // Listings CRUD
   listingsCrud: {
-    getListings: async (companyId: string) => {
+    async getListings(companyId: string) {
       const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
       const response = await fetch(url)
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
@@ -102,7 +102,7 @@ class ApiClient {
       return response.json()
     },
     
-    createListing: async (companyId: string, listingData: any) => {
+    async createListing(companyId: string, listing: any) {
       const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}`
       const response = await fetch(url, {
         method: 'POST',
@@ -113,7 +113,7 @@ class ApiClient {
       return response.json()
     },
     
-    updateListing: async (companyId: string, listingId: string, updates: any) => {
+    async updateListing(companyId: string, listingId: string, updates: any) {
       const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
       const response = await fetch(url, {
         method: 'PUT',
@@ -124,7 +124,7 @@ class ApiClient {
       return response.json()
     },
     
-    deleteListing: async (companyId: string, listingId: string) => {
+    async deleteListing(companyId: string, listingId: string) {
       const url = `${NETLIFY_BASE}/.netlify/functions/listings-crud?companyId=${companyId}&listingId=${listingId}`
       const response = await fetch(url, { method: 'DELETE' })
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
