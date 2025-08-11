@@ -1,5 +1,4 @@
-[media pointer="file-service://file-YBKYxfyRV72tE88RtCRB38"]
-none of the drop downs work, the modal is slightly too small.  is it this form?  if so, rewrite. import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -273,7 +272,7 @@ export default function VehicleForm({ isOpen, onClose, onSubmit, vehicle, mode =
                       onValueChange={(value) => handleInputChange('subType', value)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={`Select ${isRV ? 'RV' : 'home'} type`} />
+                        <SelectValue placeholder={Select ${isRV ? 'RV' : 'home'} type} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableSubTypes.map((subType) => (
