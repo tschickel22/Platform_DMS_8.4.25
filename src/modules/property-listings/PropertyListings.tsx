@@ -7,7 +7,7 @@ export default function PropertyListings() {
     <div className="flex flex-col h-full">
       <Routes>
         <Route path="/" element={<ListingOverview />} />
-        <Route path="*" element={<ListingOverview />} />
+        <Route path="/*" element={<ListingOverview />} />
       </Routes>
     </div>
   )
