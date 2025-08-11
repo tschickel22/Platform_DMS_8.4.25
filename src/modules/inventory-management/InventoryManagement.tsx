@@ -20,7 +20,7 @@ import { TagType } from '@/modules/tagging-engine/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
-import { mockInventory } from '@/data/mockInventory'
+import { mockInventory } from "@/mocks/inventoryMock";
 
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle } = useInventoryManagement()
