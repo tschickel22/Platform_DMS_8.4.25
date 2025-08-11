@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -20,12 +16,8 @@ import {
   Ruler,
   Bed,
   Bath,
-  FileImage,
-  MessageCircle,
-  Send,
-  X
+  FileImage
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
 
 interface Listing {
   id: string
@@ -69,18 +61,9 @@ interface Listing {
 
 export function PublicListingView() {
   const { companySlug, listingId } = useParams()
-  const { toast } = useToast()
   const [listing, setListing] = useState<Listing | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showLeadForm, setShowLeadForm] = useState(false)
-  const [leadForm, setLeadForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  })
-  const [submittingLead, setSubmittingLead] = useState(false)
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -136,65 +119,6 @@ export function PublicListingView() {
     const model = listing.model || 'Model'
     
     return `${year} ${make} ${model}`
-  }
-
-  const handleLeadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!leadForm.name || (!leadForm.email && !leadForm.phone)) {
-      toast({
-        title: "Error",
-        description: "Please provide your name and either email or phone number",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    try {
-      setSubmittingLead(true)
-      
-      const leadData = {
-        name: leadForm.name,
-        email: leadForm.email || null,
-        phone: leadForm.phone || null,
-        message: leadForm.message || `I'm interested in the ${listing?.year} ${listing?.make} ${listing?.model} listed at ${formatPrice(listing?.salePrice || listing?.rentPrice)}.`,
-        listingId: listing?.id,
-        companyId: listing?.companyId,
-        source: 'website',
-        referrer: window.location.href,
-        userAgent: navigator.userAgent
-      }
-      
-      const response = await fetch('/.netlify/functions/lead-ingest', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(leadData),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to submit inquiry')
-      }
-      
-      toast({
-        title: "Message Sent!",
-        description: "Your inquiry has been sent. We'll get back to you soon.",
-      })
-      
-      setShowLeadForm(false)
-      setLeadForm({ name: '', email: '', phone: '', message: '' })
-      
-    } catch (error) {
-      console.error('Error submitting lead:', error)
-      toast({
-        title: "Error",
-        description: "Failed to send your inquiry. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setSubmittingLead(false)
-    }
   }
 
   if (loading) {
@@ -454,14 +378,13 @@ export function PublicListingView() {
 
                 <Separator className="my-4" />
 
-                {/* Lead Form */}
+                {/* Lead Form Placeholder */}
                 <div className="space-y-3">
                   <h4 className="font-medium">Interested in this listing?</h4>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => setShowLeadForm(true)}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Lead form will be implemented in Phase 2
+                  </p>
+                  <Button className="w-full" disabled>
                     Contact Seller
                   </Button>
                 </div>
@@ -470,104 +393,8 @@ export function PublicListingView() {
           </div>
         </div>
       </div>
-
-      {/* Lead Form Modal */}
-      <Dialog open={showLeadForm} onOpenChange={setShowLeadForm}>
-        <DialogContent className="max-w-md">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Contact About This Property</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLeadForm(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              <p className="font-medium">{listing.year} {listing.make} {listing.model}</p>
-              <p>{formatPrice(listing.salePrice || listing.rentPrice)}</p>
-            </div>
-            
-            <form onSubmit={handleLeadSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={leadForm.name}
-                  onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={leadForm.email}
-                    onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={leadForm.phone}
-                    onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="message">Message (Optional)</Label>
-                <Textarea
-                  id="message"
-                  value={leadForm.message}
-                  onChange={(e) => setLeadForm({ ...leadForm, message: e.target.value })}
-                  placeholder="I'm interested in learning more about this property..."
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex space-x-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowLeadForm(false)}
-                  disabled={submittingLead}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submittingLead}
-                  className="flex-1"
-                >
-                  {submittingLead ? (
-                    'Sending...'
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Inquiry
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-            
-            <div className="text-xs text-gray-500 text-center">
-              * Either email or phone number is required
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
+
+export default PublicListingView
