@@ -14,7 +14,8 @@ interface VehicleFormProps {
   onCancel: () => void
 }
 
-export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleFormProps) {
+export { VehicleForm }
+export default VehicleForm
   // Primary vehicle type state
   const [vehicleType, setVehicleType] = useState<string>(vehicle?.type || '')
   const [vehicleSubType, setVehicleSubType] = useState<string>(vehicle?.subType || '')
