@@ -13,10 +13,11 @@ interface VehicleFormProps {
   onSubmit: (data: any) => void
   onCancel: () => void
   defaultType?: 'RV' | 'Manufactured Home'
+  isModal?: boolean
 }
 
-function VehicleForm({ vehicle, onSubmit, onCancel, defaultType }: VehicleFormProps) {
-  // Primary vehicle type state
+export default function VehicleForm({ onSubmit, onCancel, initialData, defaultType, isModal = false }: VehicleFormProps) {
+  const [vehicleType, setVehicleType] = useState<string>('')
   const [vehicleType, setVehicleType] = useState<string>(vehicle?.type || defaultType || '')
   const [vehicleSubType, setVehicleSubType] = useState<string>(vehicle?.subType || '')
   
@@ -40,6 +41,17 @@ function VehicleForm({ vehicle, onSubmit, onCancel, defaultType }: VehicleFormPr
       'Park Model'
     ]
   }
+
+  // Initialize vehicle type when component mounts or defaultType changes
+  useEffect(() => {
+    if (defaultType) {
+      setVehicleType(defaultType)
+      // Reset sub-type when default type changes
+      setVehicleSubType('')
+    } else if (initialData?.type) {
+      setVehicleType(initialData.type)
+    }
+  }, [defaultType, initialData?.type])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -116,7 +128,7 @@ function VehicleForm({ vehicle, onSubmit, onCancel, defaultType }: VehicleFormPr
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Vehicle Type Selection */}
+    <div className={`space-y-6 ${isModal ? 'max-h-[80vh] overflow-y-auto' : ''}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vehicleType">Vehicle Type *</Label>
