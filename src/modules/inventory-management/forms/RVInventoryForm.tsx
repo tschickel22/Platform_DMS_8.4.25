@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Upload, Camera } from 'lucide-react'
 
@@ -454,15 +453,15 @@ function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormPro
               </Button>
             </div>
             {formData.features.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              value={String(formData.availability ?? '')}
                 {formData.features.map((feature: string, index: number) => (
                   <Badge key={index} variant="secondary" className="flex items-center gap-1">
                     {feature}
                     <X
                       className="h-3 w-3 cursor-pointer"
-                      onClick={() => removeFeature(index)}
+              <SelectContent position="popper" sideOffset={6} className="z-[80]">
                     />
-                  </Badge>
+                  <SelectItem key={status} value={String(status)}>{status}</SelectItem>
                 ))}
               </div>
             )}
