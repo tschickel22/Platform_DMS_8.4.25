@@ -49,7 +49,6 @@ function InventoryList() {
     setShowVehicleDetail(true)
   }
   
-    setVehicleFormMode('edit')
   const handleCreateTask = async (taskData: Partial<Task>) => {
     try {
       await createTask(taskData)
@@ -186,14 +185,8 @@ function InventoryList() {
       setSelectedVehicle(existingVehicle)
       setShowVehicleDetail(true)
       toast({
-  const handleAddVehicle = () => {
-    setSelectedVehicle(null)
-    setVehicleFormMode('add')
-    setShowVehicleForm(true)
-  }
-
         title: 'Vehicle Found',
-    if (vehicleFormMode === 'edit' && selectedVehicle) {
+        description: `Found existing vehicle with VIN: ${data}`,
       })
     } else {
       // Create a new vehicle with this VIN
@@ -218,12 +211,19 @@ function InventoryList() {
     }
     
     setShowBarcodeScanner(false)
+  }
+
+  const handleAddVehicle = () => {
+    setSelectedVehicle(null)
+    setVehicleFormMode('add')
+    setShowVehicleForm(true)
+  }
+
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
     setActiveTab('inventory')
     setStatusFilter(status)
   }
-    setVehicleFormMode('add')
 
   const tileProps = (handler: () => void) => ({
     role: 'button' as const,
@@ -256,6 +256,7 @@ function InventoryList() {
       {showVehicleForm && (
         <VehicleForm
           vehicle={selectedVehicle || undefined}
+          mode={vehicleFormMode}
           onSave={handleSaveVehicle}
           onCancel={() => {
             setShowVehicleForm(false)
@@ -386,7 +387,6 @@ function InventoryList() {
               <TrendingUp className="h-3 w-3 mr-1" />
               Inventory value
             </p>
-        mode={vehicleFormMode}
           </CardContent>
         </Card>
       </div>
@@ -396,9 +396,10 @@ function InventoryList() {
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary">
             Filtered by: {statusFilter}
-          <Button onClick={handleAddVehicle}>
+          </Badge>
           <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-            Add New Vehicle
+            <Home className="h-4 w-4 text-muted-foreground" />
+            Clear Filter
           </Button>
         </div>
       )}
@@ -423,4 +424,3 @@ export default function InventoryManagement() {
     </Routes>
   )
 }
-            <Home className="h-4 w-4 text-muted-foreground" />
