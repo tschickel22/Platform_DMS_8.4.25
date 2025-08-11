@@ -359,3 +359,5 @@ export default function PlatformAdminSettings() {
           <WarrantyIntegrationSettings />
         </TabsContent>
     </div>
+  )
+}
