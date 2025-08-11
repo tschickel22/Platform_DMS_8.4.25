@@ -354,7 +354,12 @@ export default function InventoryManagement() {
               <DialogHeader>
                 <DialogTitle>Add RV</DialogTitle>
               </DialogHeader>
-              <RVInventoryForm onClose={handleCloseRVModal} />
+              <RVInventoryForm 
+                onSubmit={(data) => {
+                  console.log('RV Inventory submitted:', data)
+                  setShowAddRVModal(false)
+                }}
+              />
             </DialogContent>
           </Dialog>
 
@@ -364,7 +369,12 @@ export default function InventoryManagement() {
               <DialogHeader>
                 <DialogTitle>Add MH</DialogTitle>
               </DialogHeader>
-              <MHInventoryForm onClose={handleCloseMHModal} />
+              <MHInventoryForm 
+                onSubmit={(data) => {
+                  console.log('MH Inventory submitted:', data)
+                  setShowAddMHModal(false)
+                }}
+              />
             </DialogContent>
           </Dialog>
 
