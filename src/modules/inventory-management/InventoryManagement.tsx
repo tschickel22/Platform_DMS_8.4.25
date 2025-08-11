@@ -30,7 +30,7 @@ import MHInventoryForm from './forms/MHInventoryForm'
 import VehicleDetail from './components/VehicleDetail'
 import InventoryTable from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
-import CSVSmartImport from './components/CSVSmartImport'
+import { CSVSmartImport } from './components/CSVSmartImport'
 
 export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('')
