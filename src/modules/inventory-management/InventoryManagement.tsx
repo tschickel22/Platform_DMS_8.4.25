@@ -127,10 +127,10 @@ export default function InventoryManagement() {
             <Card className="cursor-pointer hover:bg-accent/50" onClick={() => handleStatClick('available')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Available</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{availableUnits}</div>
+                <div className="text-2xl font-bold text-emerald-600">{availableUnits}</div>
                 <p className="text-xs text-muted-foreground">Ready for sale</p>
               </CardContent>
             </Card>
@@ -138,10 +138,10 @@ export default function InventoryManagement() {
             <Card className="cursor-pointer hover:bg-accent/50" onClick={() => handleStatClick('reserved')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Reserved</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
+                <Clock className="h-4 w-4 text-amber-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{reservedUnits}</div>
+                <div className="text-2xl font-bold text-amber-600">{reservedUnits}</div>
                 <p className="text-xs text-muted-foreground">Pre-orders & holds</p>
               </CardContent>
             </Card>
@@ -149,10 +149,10 @@ export default function InventoryManagement() {
             <Card className="cursor-pointer hover:bg-accent/50" onClick={() => handleStatClick('sold')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Sold</CardTitle>
-                <XCircle className="h-4 w-4 text-red-600" />
+                <XCircle className="h-4 w-4 text-rose-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{soldUnits}</div>
+                <div className="text-2xl font-bold text-rose-600">{soldUnits}</div>
                 <p className="text-xs text-muted-foreground">Completed sales</p>
               </CardContent>
             </Card>
@@ -163,7 +163,7 @@ export default function InventoryManagement() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-blue-600">${totalValue.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">Inventory worth</p>
               </CardContent>
             </Card>

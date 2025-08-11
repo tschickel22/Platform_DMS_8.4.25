@@ -1,0 +1,72 @@
+/* Shared Color System for Consistent UI */
+
+/* Stat Card Colors - Use these classes for consistent coloring across modules */
+.stat-primary {
+  @apply text-blue-600;
+}
+
+.stat-success {
+  @apply text-emerald-600;
+}
+
+.stat-warning {
+  @apply text-amber-600;
+}
+
+.stat-danger {
+  @apply text-rose-600;
+}
+
+.stat-info {
+  @apply text-blue-600;
+}
+
+/* Icon Colors */
+.icon-primary {
+  @apply text-blue-600;
+}
+
+.icon-success {
+  @apply text-emerald-600;
+}
+
+.icon-warning {
+  @apply text-amber-600;
+}
+
+.icon-danger {
+  @apply text-rose-600;
+}
+
+.icon-info {
+  @apply text-blue-600;
+}
+
+/* Background variants for cards/badges */
+.bg-stat-primary {
+  @apply bg-blue-50 text-blue-700 border-blue-200;
+}
+
+.bg-stat-success {
+  @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+}
+
+.bg-stat-warning {
+  @apply bg-amber-50 text-amber-700 border-amber-200;
+}
+
+.bg-stat-danger {
+  @apply bg-rose-50 text-rose-700 border-rose-200;
+}
+
+.bg-stat-info {
+  @apply bg-blue-50 text-blue-700 border-blue-200;
+}
+
+/* Usage Guidelines:
+ * - Use stat-primary for main metrics (totals, counts)
+ * - Use stat-success for positive states (available, completed, active)
+ * - Use stat-warning for pending/in-progress states
+ * - Use stat-danger for negative states (errors, defects, overdue)
+ * - Use stat-info for informational metrics
+ */
