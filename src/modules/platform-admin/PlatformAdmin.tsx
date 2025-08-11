@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Users, Settings, Activity, TrendingUp, Building2 } from 'lucide-react'
 import { Shield, Plus, Search, Filter, Users, Building, Activity, AlertTriangle, TrendingUp, BarChart3, LogIn as Logs, Cog, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserRole } from '@/types'
