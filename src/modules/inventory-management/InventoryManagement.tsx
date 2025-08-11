@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button' 
 import { Badge } from '@/components/ui/badge'
 import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus, VehicleType } from '@/types'
@@ -33,8 +32,6 @@ function InventoryList() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
-  const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false)
-  const [isAddHomeOpen, setIsAddHomeOpen] = useState(false)
   
   const handleCreateVehicle = () => {
     setSelectedVehicle(null)
@@ -304,59 +301,10 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            <Dialog open={isAddHomeOpen} onOpenChange={setIsAddHomeOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Home
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle>Add New Manufactured Home</DialogTitle>
-                  <DialogDescription>
-                    Enter details for the new manufactured home
-                  </DialogDescription>
-                </DialogHeader>
-                <VehicleForm
-                  defaultType="Manufactured Home"
-                  isModal={true}
-                  onSubmit={(data) => {
-                    console.log('Adding manufactured home:', data)
-                    // Handle form submission
-                    setIsAddHomeOpen(false)
-                  }}
-                  onCancel={() => setIsAddHomeOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isAddVehicleOpen} onOpenChange={setIsAddVehicleOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Vehicle
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle>Add New RV</DialogTitle>
-                  <DialogDescription>
-                    Enter details for the new RV
-                  </DialogDescription>
-                </DialogHeader>
-                <VehicleForm
-                  defaultType="RV"
-                  isModal={true}
-                  onSubmit={(data) => {
-                    console.log('Adding RV:', data)
-                    // Handle form submission
-                    setIsAddVehicleOpen(false)
-                  }}
-                  onCancel={() => setIsAddVehicleOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+            <Button onClick={handleCreateVehicle}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Home
+            </Button>
           </div>
         </div>
       </div>
