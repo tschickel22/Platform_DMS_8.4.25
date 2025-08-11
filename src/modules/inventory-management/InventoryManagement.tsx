@@ -38,7 +38,6 @@ export default function InventoryManagement() {
   const [showAddRVModal, setShowAddRVModal] = useState(false)
   const [showAddMHModal, setShowAddMHModal] = useState(false)
   const [inventory, setInventory] = useState<any[]>([])
-  const [refreshKey, setRefreshKey] = useState(0)
   const [showImport, setShowImport] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
@@ -110,7 +109,6 @@ export default function InventoryManagement() {
     
     // Add to inventory state
     setInventory(prev => [...prev, newRVItem])
-    setRefreshKey(prev => prev + 1)
     
     // Close modal
     setShowAddRVModal(false)
@@ -131,7 +129,6 @@ export default function InventoryManagement() {
     
     // Add to inventory state
     setInventory(prev => [...prev, newMHItem])
-    setRefreshKey(prev => prev + 1)
     
     // Close modal
     setShowAddMHModal(false)
@@ -511,10 +508,6 @@ export default function InventoryManagement() {
           />
         </div>
 
-      <InventoryTable 
-        inventory={inventory} 
-        key={refreshKey}
-      />
 
       {/* Display Created Inventory */}
       {inventory.length > 0 && (
