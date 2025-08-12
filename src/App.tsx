@@ -41,6 +41,7 @@ import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
+import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
 import LandManagement from '@/modules/land-management/LandManagement'
@@ -134,6 +135,7 @@ function App() {
                             </ErrorBoundary>
                           </Layout>
                         </ProtectedRoute>
+                        <Route path="/listings/:listingId" element={<PublicListingView />} />
                       } />
                     </Routes>
                   </ErrorBoundary>

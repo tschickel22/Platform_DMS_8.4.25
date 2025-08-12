@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -282,7 +283,8 @@ const PropertyListings = () => {
                         </span>
                       </div>
                     </div>
-
+                <Link key={listing.id} to={`/listings/${listing.id}`}>
+                  <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                     {/* Pricing */}
                     <div className="flex-shrink-0 text-right">
                       {listing.salePrice && (
@@ -305,7 +307,8 @@ const PropertyListings = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleShareListing(listing)}
-                      >
+                <Link key={listing.id} to={`/listings/${listing.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                         <Share2 className="h-4 w-4 mr-1" />
                         Share
                       </Button>
@@ -319,7 +322,8 @@ const PropertyListings = () => {
                       </Button>
                     </div>
                   </div>
-                )
+                  </Card>
+                </Link>
               })}
             </div>
 
@@ -334,7 +338,8 @@ const PropertyListings = () => {
         </Card>
 
         {/* Share Modal */}
-        <ShareListingModal
+                  </Card>
+                </Link>
           open={shareModalOpen}
           onOpenChange={setShareModalOpen}
           listing={selectedListing}
