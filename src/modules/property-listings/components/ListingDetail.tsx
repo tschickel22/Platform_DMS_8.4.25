@@ -100,13 +100,6 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
           </div>
         </div>
       </div>
-
-      {/* Share Modal */}
-      <ShareListingModal
-        open={shareModalOpen}
-        onOpenChange={setShareModalOpen}
-        listing={listing}
-      />
     )
   }
 
@@ -151,6 +144,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
   const primaryImage = listing.media?.photos?.[0] || listing.media?.primaryPhoto || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
 
   return (
+    <>
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-6">
@@ -443,14 +437,6 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
           )}
         </div>
       </div>
-
-      {/* Share Modal */}
-      <ShareListingModal
-        isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
-        listing={listing}
-        companyId="demo-company"
-      />
     </div>
 
     {/* Share Modal */}
@@ -460,8 +446,5 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
       listing={listing}
     />
   </>
-)
-
-export default ListingDetail
   )
 }
