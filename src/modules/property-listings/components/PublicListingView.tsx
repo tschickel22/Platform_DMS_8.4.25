@@ -24,7 +24,6 @@ import {
   Star
 } from 'lucide-react'
 
-import { mockListings } from '@/mocks/listingsMock'
 
 export const PublicListingView = () => {
   const { companySlug, listingId } = useParams()
