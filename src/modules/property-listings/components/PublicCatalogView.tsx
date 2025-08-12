@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Grid, List, MapPin, Bed, Bath, Users, Ruler } from 'lucide-react'
+import { Grid, List, MapPin, Bed, Bath, Users, Ruler, Search, Home, Car } from 'lucide-react'
 
 // Turn any plausible mock module shape into an array
 const asArray = (val: any) => {
@@ -17,15 +17,6 @@ const asArray = (val: any) => {
   if (Array.isArray(val?.default)) return val.default
   return []
 }
-  Home,
-  Car,
-  Bed,
-  Bath,
-  Ruler,
-  Users,
-  Grid,
-  List,
-} from 'lucide-react'
 
 type Listing = {
   id: string
@@ -47,14 +38,6 @@ type Listing = {
     primaryPhoto?: string | null
     photos?: string[]
   } | null
-}
-
-const asArray = (val: unknown): Listing[] => {
-  if (Array.isArray(val)) return val as Listing[]
-  // support common mock shape: { listings: [...] }
-  // @ts-expect-error — best-effort normalization
-  if (Array.isArray(val?.listings)) return val.listings as Listing[]
-  return []
 }
 
 const numOrUndefined = (v: string | number | undefined | null) => {
@@ -102,6 +85,11 @@ const PublicCatalogView: React.FC = () => {
       setListings([])
       setLoading(false)
     }
+  }, [])
+
+  const filteredListings = useMemo(() => {
+    let filtered = [...listings]
+
     const q = (searchQuery || '').toLowerCase().trim()
     if (q) {
       filtered = filtered.filter((l) => {
