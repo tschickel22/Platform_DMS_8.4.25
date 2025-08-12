@@ -45,7 +45,6 @@ const PublicListingView = () => {
       </div>
     )
   }
-  const navigate = useNavigate()
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
