@@ -27,8 +27,9 @@ export default function ListingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   
+  const [loading, setLoading] = useState(false)
   const [listings, setListings] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [filteredListings, setFilteredListings] = useState([])
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
   const [filterType, setFilterType] = useState(searchParams.get('type') || 'all')
   const [filterOfferType, setFilterOfferType] = useState(searchParams.get('offer') || 'all')
@@ -38,66 +39,57 @@ export default function ListingsPage() {
   })
   const [viewMode, setViewMode] = useState('grid')
 
-  // Get token from URL params for shared listings
-  const token = searchParams.get('token')
+  useEffect(() => {
+    setListings(mockListings)
+    setFilteredListings(mockListings)
+  }, [])
 
   useEffect(() => {
-    // In production, fetch listings data from API
-    // Handle both regular catalog and token-based sharing
-    setTimeout(() => {
-      let listingsData = mockListings.sampleListings || []
-      
-      // If there's a token, filter listings based on token data
-      if (token) {
-        // In production, decode token and filter listings
-        // For now, just use all listings
-        listingsData = mockListings.sampleListings || []
-      }
-      
-      setListings(listingsData)
-      setLoading(false)
-    }, 1000)
-  }, [companySlug, token])
+    let filtered = listings
+
+    if (searchQuery) {
+      filtered = filtered.filter(listing =>
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.location.state.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    if (filterType !== 'all') {
+      filtered = filtered.filter(listing => listing.listingType === filterType)
+    }
+
+    if (filterOfferType !== 'all') {
+      filtered = filtered.filter(listing => {
+        if (filterOfferType === 'for_sale') return listing.salePrice
+        if (filterOfferType === 'for_rent') return listing.rentPrice
+        return true
+      })
+    }
+
+    if (priceRange.min || priceRange.max) {
+      filtered = filtered.filter(listing => {
+        const price = listing.salePrice || listing.rentPrice || 0
+        const min = priceRange.min ? parseInt(priceRange.min) : 0
+        const max = priceRange.max ? parseInt(priceRange.max) : Infinity
+        return price >= min && price <= max
+      })
+    }
+
+    setFilteredListings(filtered)
+  }, [listings, searchQuery, filterType, filterOfferType, priceRange])
 
   const updateUrlParams = (key, value) => {
     const newParams = new URLSearchParams(searchParams)
-    if (value && value !== 'all' && value !== '') {
+    if (value) {
       newParams.set(key, value)
     } else {
       newParams.delete(key)
     }
     setSearchParams(newParams)
   }
-
-  const filteredListings = listings.filter(listing => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const searchableText = `${listing.title} ${listing.make} ${listing.model} ${listing.location.city} ${listing.location.state}`.toLowerCase()
-      if (!searchableText.includes(query)) return false
-    }
-
-    // Type filter
-    if (filterType !== 'all' && listing.listingType !== filterType) return false
-
-    // Offer type filter
-    if (filterOfferType !== 'all') {
-      if (filterOfferType === 'for_sale' && !listing.salePrice) return false
-      if (filterOfferType === 'for_rent' && !listing.rentPrice) return false
-    }
-
-    // Price range filter
-    if (priceRange.min || priceRange.max) {
-      const price = listing.salePrice || listing.rentPrice
-      if (!price) return false
-      
-      const numPrice = parseFloat(price)
-      if (priceRange.min && numPrice < parseFloat(priceRange.min)) return false
-      if (priceRange.max && numPrice > parseFloat(priceRange.max)) return false
-    }
-
-    return true
-  })
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {

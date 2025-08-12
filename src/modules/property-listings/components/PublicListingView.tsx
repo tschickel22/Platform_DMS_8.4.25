@@ -38,7 +38,6 @@ export const PublicListingView = () => {
     // For now, find the listing from mock data
     setTimeout(() => {
       const foundListing = mockListings.sampleListings.find(l => l.id === listingId)
-      const foundListing = mockListings.sampleListings?.find(l => l.id === listingId)
       setListing(foundListing || null)
       setLoading(false)
     }, 500)
@@ -392,58 +391,6 @@ export const PublicListingView = () => {
                       <div className="text-sm text-muted-foreground">Monthly Rent</div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contact Seller */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Seller</CardTitle>
-                <CardDescription>
-                  {listing.seller?.companyName}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {listing.seller?.phone && (
-                  <Button className="w-full" size="lg">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Call {listing.seller.phone}
-                  </Button>
-                )}
-                {listing.seller?.emails?.[0] && (
-                  <Button variant="outline" className="w-full" size="lg">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Email
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setShowContactForm(true)}
-                >
-                  Request Information
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Location */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {listing.location.city}, {listing.location.state} {listing.location.postalCode}
-                    </span>
-                  </div>
-                  {/* Map placeholder */}
-                  <div className="w-full h-32 bg-muted rounded flex items-center justify-center">
-                    <span className="text-muted-foreground text-sm">Map View</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
