@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { useToast } from '@/hooks/use-toast'
 import { 
   Copy, 
   Mail, 
@@ -12,331 +12,215 @@ import {
   Facebook, 
   Twitter, 
   Linkedin,
-  X,
   Share2,
-  Building2,
-  DollarSign,
-  Eye,
-  TrendingUp
+  ExternalLink,
+  BarChart3
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
 
 interface ShareAllListingsModalProps {
-  isOpen: boolean
-  onClose: () => void
-  companyId: string
-  companyName: string
-  totalListings: number
-  activeListings: number
-  averagePrice: number
-  totalValue: number
-  featuredListings: string[]
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  listings: any[]
+  summaryStats: { totalListings: number; activeListings: number; averagePrice: number }
+  company?: { id?: string; name?: string; slug?: string }
 }
 
-export function ShareAllListingsModal({
-  isOpen,
-  onClose,
-  companyId,
-  companyName,
-  totalListings,
-  activeListings,
-  averagePrice,
-  totalValue,
-  featuredListings
-}: ShareAllListingsModalProps) {
-  const [shareableLink, setShareableLink] = useState('')
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false)
-  const [socialPreviewUrl, setSocialPreviewUrl] = useState('')
+export function ShareAllListingsModal(props: ShareAllListingsModalProps) {
   const { toast } = useToast()
-
-  // Generate shareable link when modal opens
-  useEffect(() => {
-    if (isOpen && !shareableLink) {
-      generateShareableLink()
-      generateSocialPreview()
-    }
-  }, [isOpen])
-
-  const generateShareableLink = async () => {
-    setIsGeneratingLink(true)
-    try {
-      // In production, this would call your Netlify function
-      // For now, we'll generate a mock link
-      const mockToken = `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      const mockLink = `${window.location.origin}/${companyId}/l/${mockToken}`
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setShareableLink(mockLink)
-      
-      // In production, you would make this call:
-      /*
-      const response = await fetch('/.netlify/functions/share-link-crud', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId,
-          type: 'catalog',
-          title: `${companyName} - ${activeListings} Available Properties`,
-          listingIds: [], // Empty for catalog view
-          filters: {},
-          watermark: false
-        })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setShareableLink(data.urls.shortUrl)
-      }
-      */
-    } catch (error) {
-      console.error('Error generating shareable link:', error)
-      toast({
-        title: "Error",
-        description: "Failed to generate shareable link. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsGeneratingLink(false)
-    }
-  }
-
-  const generateSocialPreview = async () => {
-    try {
-      // In production, this would call your OG image function
-      // For now, we'll use a placeholder
-      const mockPreviewUrl = `https://via.placeholder.com/400x200/667eea/ffffff?text=${encodeURIComponent(companyName + ' - ' + activeListings + ' Properties')}`
-      setSocialPreviewUrl(mockPreviewUrl)
-      
-      // In production, you would make this call:
-      /*
-      const response = await fetch(`/.netlify/functions/og-image?companyId=${companyId}&format=url`)
-      if (response.ok) {
-        const data = await response.json()
-        setSocialPreviewUrl(data.url)
-      }
-      */
-    } catch (error) {
-      console.error('Error generating social preview:', error)
-    }
-  }
-
-  const copyToClipboard = async () => {
+  const [customMessage, setCustomMessage] = useState('')
+  
+  // Derive display fields internally
+  const activeListings = props.summaryStats.activeListings ?? props.listings.filter(l => l?.status === 'active').length
+  const averagePrice = Number.isFinite(props.summaryStats.averagePrice) ? props.summaryStats.averagePrice : 0
+  const companyName = props.company?.name ?? 'Demo RV Dealership'
+  const companySlug = props.company?.slug ?? 'demo'
+  
+  // Guard toLocaleString calls
+  const formatMoney = (n?: number) => Number.isFinite(n) ? n!.toLocaleString() : '0'
+  
+  // Generate shareable link (mock for now)
+  const token = `catalog_${Date.now()}_${Math.random().toString(36).slice(2,9)}`
+  const shareableLink = `${window.location.origin}/${companySlug}/l/${token}`
+  
+  const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareableLink)
       toast({
-        title: "Copied!",
-        description: "Shareable link copied to clipboard."
+        title: "Link copied!",
+        description: "The catalog link has been copied to your clipboard.",
       })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to copy link to clipboard.",
+        title: "Copy failed",
+        description: "Please copy the link manually.",
         variant: "destructive"
       })
     }
   }
-
-  const shareViaEmail = () => {
-    const subject = encodeURIComponent(`Check out ${companyName} - ${activeListings} Available Properties`)
-    const body = encodeURIComponent(`Hi,\n\nI wanted to share our current property listings with you. We have ${activeListings} properties available with an average price of $${averagePrice.toLocaleString()}.\n\nView all listings: ${shareableLink}\n\nBest regards`)
+  
+  const handleEmailShare = () => {
+    const subject = encodeURIComponent(`${companyName} - Property Listings Catalog`)
+    const body = encodeURIComponent(
+      `${customMessage ? customMessage + '\n\n' : ''}Check out our current inventory:\n\n` +
+      `📊 ${props.summaryStats.totalListings} Total Listings\n` +
+      `✅ ${activeListings} Currently Available\n` +
+      `💰 Average Price: $${formatMoney(averagePrice)}\n\n` +
+      `Browse all listings: ${shareableLink}\n\n` +
+      `Shared from ${companyName}`
+    )
     window.open(`mailto:?subject=${subject}&body=${body}`)
   }
-
-  const shareViaSMS = () => {
-    const message = encodeURIComponent(`Check out ${companyName} - ${activeListings} available properties: ${shareableLink}`)
+  
+  const handleSMSShare = () => {
+    const message = encodeURIComponent(
+      `${customMessage ? customMessage + ' ' : ''}Check out ${companyName}'s inventory - ${activeListings} available listings, avg $${formatMoney(averagePrice)}: ${shareableLink}`
+    )
     window.open(`sms:?body=${message}`)
   }
-
-  const shareOnFacebook = () => {
+  
+  const handleSocialShare = (platform: string) => {
+    const text = encodeURIComponent(`Check out ${companyName}'s inventory - ${activeListings} available listings!`)
     const url = encodeURIComponent(shareableLink)
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank')
-  }
-
-  const shareOnTwitter = () => {
-    const text = encodeURIComponent(`Check out ${activeListings} available properties from ${companyName}`)
-    const url = encodeURIComponent(shareableLink)
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank')
-  }
-
-  const shareOnLinkedIn = () => {
-    const url = encodeURIComponent(shareableLink)
-    const title = encodeURIComponent(`${companyName} - ${activeListings} Available Properties`)
-    const summary = encodeURIComponent(`Browse ${activeListings} listings, average rent $${averagePrice.toLocaleString()}/mo`)
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}&summary=${summary}`, '_blank')
+    
+    const urls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
+    }
+    
+    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5" />
-              Share All Listings
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5" />
+            Share All Listings
+          </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Social Preview */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Social Preview</h3>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  {socialPreviewUrl && (
-                    <img 
-                      src={socialPreviewUrl} 
-                      alt="Social preview" 
-                      className="w-20 h-16 object-cover rounded-md bg-muted"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">
-                      {companyName} – {activeListings} Available
-                    </h4>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Browse {activeListings} listings, average rent ${averagePrice.toLocaleString()}/mo.
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {activeListings} properties
-                      </span>
-                      <span>Avg. ${averagePrice.toLocaleString()}/mo</span>
-                    </div>
-                  </div>
+        
+        <div className="space-y-4">
+          {/* Catalog Preview */}
+          <div className="p-4 bg-muted rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <h4 className="font-medium">{companyName} Catalog</h4>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-primary">
+                  {props.summaryStats.totalListings}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-xs text-muted-foreground">Total</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {activeListings}
+                </div>
+                <div className="text-xs text-muted-foreground">Available</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  ${formatMoney(averagePrice)}
+                </div>
+                <div className="text-xs text-muted-foreground">Avg Price</div>
+              </div>
+            </div>
+            
+            <div className="flex gap-1 mt-3 justify-center">
+              <Badge variant="secondary" className="text-xs">
+                RVs & Manufactured Homes
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Updated Daily
+              </Badge>
+            </div>
           </div>
-
-          {/* Shareable Link */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Shareable Link</h3>
+          
+          {/* Share Link */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Catalog Share Link</label>
             <div className="flex gap-2">
               <Input 
                 value={shareableLink} 
                 readOnly 
                 className="flex-1"
-                placeholder={isGeneratingLink ? "Generating link..." : ""}
               />
-              <Button 
-                variant="outline" 
-                onClick={copyToClipboard}
-                disabled={!shareableLink || isGeneratingLink}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy
+              <Button onClick={handleCopyLink} size="sm">
+                <Copy className="h-4 w-4" />
               </Button>
             </div>
           </div>
-
-          {/* Quick Share */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Share</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                onClick={shareViaEmail}
-                disabled={!shareableLink}
-                className="justify-start"
-              >
+          
+          {/* Custom Message */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Custom Message (Optional)</label>
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Add a personal message about your inventory..."
+              className="w-full p-2 border rounded-md resize-none h-20 text-sm"
+            />
+          </div>
+          
+          <Separator />
+          
+          {/* Quick Share Options */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Quick Share</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={handleEmailShare} variant="outline" size="sm">
                 <Mail className="h-4 w-4 mr-2" />
                 Email
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={shareViaSMS}
-                disabled={!shareableLink}
-                className="justify-start"
-              >
+              <Button onClick={handleSMSShare} variant="outline" size="sm">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 SMS
               </Button>
             </div>
           </div>
-
-          {/* Social Platforms */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Social Platforms</h3>
-            <div className="grid grid-cols-3 gap-3">
+          
+          {/* Social Media */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Social Media</h4>
+            <div className="grid grid-cols-3 gap-2">
               <Button 
+                onClick={() => handleSocialShare('facebook')} 
                 variant="outline" 
-                onClick={shareOnFacebook}
-                disabled={!shareableLink}
-                className="justify-start"
+                size="sm"
               >
-                <Facebook className="h-4 w-4 mr-2" />
+                <Facebook className="h-4 w-4 mr-1" />
                 Facebook
               </Button>
               <Button 
+                onClick={() => handleSocialShare('twitter')} 
                 variant="outline" 
-                onClick={shareOnTwitter}
-                disabled={!shareableLink}
-                className="justify-start"
+                size="sm"
               >
-                <Twitter className="h-4 w-4 mr-2" />
+                <Twitter className="h-4 w-4 mr-1" />
                 Twitter
               </Button>
               <Button 
+                onClick={() => handleSocialShare('linkedin')} 
                 variant="outline" 
-                onClick={shareOnLinkedIn}
-                disabled={!shareableLink}
-                className="justify-start"
+                size="sm"
               >
-                <Linkedin className="h-4 w-4 mr-2" />
+                <Linkedin className="h-4 w-4 mr-1" />
                 LinkedIn
               </Button>
             </div>
           </div>
-
-          <Separator />
-
-          {/* What's Shared */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">What's Shared</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Total Listings: <strong>{totalListings}</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Active: <strong>{activeListings}</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Avg. Rent: <strong>${averagePrice.toLocaleString()}/mo</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Total Value: <strong>${totalValue.toLocaleString()}</strong></span>
-              </div>
+          
+          {/* Analytics Preview */}
+          <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+            <div className="flex items-center gap-1 mb-1">
+              <ExternalLink className="h-3 w-3" />
+              Link Analytics
             </div>
-
-            {featuredListings.length > 0 && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Featured:</p>
-                <div className="flex flex-wrap gap-2">
-                  {featuredListings.slice(0, 3).map((listing, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {listing}
-                    </Badge>
-                  ))}
-                  {featuredListings.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{featuredListings.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
+            <p>Track catalog views, clicks, and lead generation from shared links.</p>
           </div>
         </div>
       </DialogContent>
