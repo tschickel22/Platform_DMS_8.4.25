@@ -17,7 +17,6 @@ const asArray = (val: any) => {
   return []
 }
 
-export default function PublicListingView() {
   const { listingId } = useParams()
   const navigate = useNavigate()
   const [listing, setListing] = useState<any>(null)
@@ -435,3 +434,5 @@ export default function PublicListingView() {
     </div>
   )
 }
+export { PublicListingView }
+export default PublicListingView
