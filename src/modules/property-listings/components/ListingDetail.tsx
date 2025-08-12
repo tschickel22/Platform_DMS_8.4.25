@@ -34,7 +34,6 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const listingId = propListingId || paramListingId
 
