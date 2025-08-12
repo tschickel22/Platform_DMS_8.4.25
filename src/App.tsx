@@ -130,11 +130,11 @@ function App() {
                                 <Route path="/reports/*" element={<ReportingSuite />} />
                                 <Route path="/client-applications/*" element={<FinanceApplication />} />
                                 <Route path="/listings/*" element={<PropertyListings />} />
+                                <Route path="/listings/:listingId" element={<PublicListingView />} />
                               </Routes>
                             </ErrorBoundary>
                           </Layout>
                         </ProtectedRoute>
-                        <Route path="/listings/:listingId" element={<PublicListingView />} />
                       } />
                     </Routes>
                   </ErrorBoundary>
