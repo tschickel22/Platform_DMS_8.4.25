@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { mockListings } from '@/mocks/listingsMock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Search, 
-  Filter, 
+import {
+  Search,
   MapPin,
   Home,
   Car,
@@ -18,91 +17,135 @@ import {
   Users,
   Grid,
   List,
-  SlidersHorizontal
 } from 'lucide-react'
 
-const PublicCatalogView = () => {
+type Listing = {
+  id: string
+  title?: string
+  make?: string
+  model?: string
+  year?: number | string
+  listingType?: 'manufactured_home' | 'rv' | string
+  salePrice?: number
+  rentPrice?: number
+  length?: number | string
+  slides?: number | string
+  bedrooms?: number | string
+  bathrooms?: number | string
+  sleeps?: number | string
+  dimensions?: { sqft?: number | string } | null
+  location?: { city?: string; state?: string } | null
+  media?: {
+    primaryPhoto?: string | null
+    photos?: string[]
+  } | null
+}
+
+const asArray = (val: unknown): Listing[] => {
+  if (Array.isArray(val)) return val as Listing[]
+  // support common mock shape: { listings: [...] }
+  // @ts-expect-error — best-effort normalization
+  if (Array.isArray(val?.listings)) return val.listings as Listing[]
+  return []
+}
+
+const numOrUndefined = (v: string | number | undefined | null) => {
+  if (v === '' || v === undefined || v === null) return undefined
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) ? n : undefined
+}
+
+const PublicCatalogView: React.FC = () => {
   const { companySlug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  
-  const [loading, setLoading] = useState(false)
-  const [listings, setListings] = useState([])
-  const [filteredListings, setFilteredListings] = useState([])
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
-  const [filterType, setFilterType] = useState(searchParams.get('type') || 'all')
-  const [filterOfferType, setFilterOfferType] = useState(searchParams.get('offer') || 'all')
-  const [priceRange, setPriceRange] = useState({
-    min: searchParams.get('minPrice') || '',
-    max: searchParams.get('maxPrice') || ''
-  })
-  const [viewMode, setViewMode] = useState('grid')
 
+  const [loading, setLoading] = useState(false)
+  const [listings, setListings] = useState<Listing[]>([])
+  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get('q') || '')
+  const [filterType, setFilterType] = useState<string>(searchParams.get('type') || 'all')
+  const [filterOfferType, setFilterOfferType] = useState<string>(searchParams.get('offer') || 'all')
+  const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({
+    min: searchParams.get('minPrice') || '',
+    max: searchParams.get('maxPrice') || '',
+  })
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Load mock data safely
   useEffect(() => {
-    setListings(mockListings)
-    setFilteredListings(mockListings)
+    setLoading(true)
+    const data = asArray(mockListings)
+    setListings(data)
+    setLoading(false)
   }, [])
 
-  useEffect(() => {
-    let filtered = listings
+  // Derived filtered list (always an array)
+  const filteredListings = useMemo(() => {
+    let filtered = [...listings]
 
-    if (searchQuery) {
-      filtered = filtered.filter(listing =>
-        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.location.state.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    const q = (searchQuery || '').toLowerCase().trim()
+    if (q) {
+      filtered = filtered.filter((l) => {
+        const title = (l.title || '').toLowerCase()
+        const make = (l.make || '').toLowerCase()
+        const model = (l.model || '').toLowerCase()
+        const city = (l.location?.city || '').toLowerCase()
+        const state = (l.location?.state || '').toLowerCase()
+        return (
+          title.includes(q) ||
+          make.includes(q) ||
+          model.includes(q) ||
+          city.includes(q) ||
+          state.includes(q)
+        )
+      })
     }
 
     if (filterType !== 'all') {
-      filtered = filtered.filter(listing => listing.listingType === filterType)
+      filtered = filtered.filter((l) => l.listingType === filterType)
     }
 
     if (filterOfferType !== 'all') {
-      filtered = filtered.filter(listing => {
-        if (filterOfferType === 'for_sale') return listing.salePrice
-        if (filterOfferType === 'for_rent') return listing.rentPrice
+      filtered = filtered.filter((l) => {
+        if (filterOfferType === 'for_sale') return !!l.salePrice
+        if (filterOfferType === 'for_rent') return !!l.rentPrice
         return true
       })
     }
 
-    if (priceRange.min || priceRange.max) {
-      filtered = filtered.filter(listing => {
-        const price = listing.salePrice || listing.rentPrice || 0
-        const min = priceRange.min ? parseInt(priceRange.min) : 0
-        const max = priceRange.max ? parseInt(priceRange.max) : Infinity
-        return price >= min && price <= max
+    const min = numOrUndefined(priceRange.min)
+    const max = numOrUndefined(priceRange.max)
+    if (min != null || max != null) {
+      filtered = filtered.filter((l) => {
+        const price = l.salePrice ?? l.rentPrice ?? 0
+        if (min != null && price < min) return false
+        if (max != null && price > max) return false
+        return true
       })
     }
 
-    setFilteredListings(filtered)
+    return filtered
   }, [listings, searchQuery, filterType, filterOfferType, priceRange])
 
-  const updateUrlParams = (key, value) => {
-    const newParams = new URLSearchParams(searchParams)
-    if (value) {
-      newParams.set(key, value)
-    } else {
-      newParams.delete(key)
-    }
-    setSearchParams(newParams)
+  const updateUrlParams = (key: string, value?: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (value && value.length) next.set(key, value)
+    else next.delete(key)
+    setSearchParams(next)
   }
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(price)
-  }
+  const formatPrice = (price?: number) =>
+    typeof price === 'number'
+      ? new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0,
+        }).format(price)
+      : ''
 
-  const getListingTypeIcon = (type) => {
-    return type === 'manufactured_home' ? Home : Car
-  }
+  const getListingTypeIcon = (type?: string) => (type === 'manufactured_home' ? Home : Car)
 
-  const handleListingClick = (listingId) => {
+  const handleListingClick = (listingId: string) => {
     navigate(`/${companySlug}/listing/${listingId}`)
   }
 
@@ -111,11 +154,11 @@ const PublicCatalogView = () => {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-1/4"></div>
-            <div className="h-16 bg-muted rounded"></div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-80 bg-muted rounded"></div>
+            <div className="h-8 bg-muted rounded w-1/4" />
+            <div className="h-16 bg-muted rounded" />
+            <div className="grid gap-6 md:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-80 rounded bg-muted" />
               ))}
             </div>
           </div>
@@ -127,14 +170,12 @@ const PublicCatalogView = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-card">
+      <div className="bg-card border-b">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Property Listings</h1>
-              <p className="text-muted-foreground">
-                Browse available manufactured homes and RVs
-              </p>
+              <p className="text-muted-foreground">Browse available manufactured homes and RVs</p>
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -156,9 +197,8 @@ const PublicCatalogView = () => {
 
           {/* Search and Filters */}
           <div className="space-y-4">
-            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" />
               <Input
                 placeholder="Search by make, model, location..."
                 value={searchQuery}
@@ -170,10 +210,9 @@ const PublicCatalogView = () => {
               />
             </div>
 
-            {/* Filters */}
             <div className="flex flex-wrap gap-4">
-              <Select 
-                value={filterType} 
+              <Select
+                value={filterType}
                 onValueChange={(value) => {
                   setFilterType(value)
                   updateUrlParams('type', value)
@@ -189,8 +228,8 @@ const PublicCatalogView = () => {
                 </SelectContent>
               </Select>
 
-              <Select 
-                value={filterOfferType} 
+              <Select
+                value={filterOfferType}
                 onValueChange={(value) => {
                   setFilterOfferType(value)
                   updateUrlParams('offer', value)
@@ -211,9 +250,9 @@ const PublicCatalogView = () => {
                   placeholder="Min Price"
                   value={priceRange.min}
                   onChange={(e) => {
-                    const newRange = { ...priceRange, min: e.target.value }
-                    setPriceRange(newRange)
-                    updateUrlParams('minPrice', e.target.value)
+                    const v = e.target.value
+                    setPriceRange((r) => ({ ...r, min: v }))
+                    updateUrlParams('minPrice', v)
                   }}
                   className="w-[120px]"
                 />
@@ -221,9 +260,9 @@ const PublicCatalogView = () => {
                   placeholder="Max Price"
                   value={priceRange.max}
                   onChange={(e) => {
-                    const newRange = { ...priceRange, max: e.target.value }
-                    setPriceRange(newRange)
-                    updateUrlParams('maxPrice', e.target.value)
+                    const v = e.target.value
+                    setPriceRange((r) => ({ ...r, max: v }))
+                    updateUrlParams('maxPrice', v)
                   }}
                   className="w-[120px]"
                 />
@@ -243,66 +282,54 @@ const PublicCatalogView = () => {
       {/* Listings */}
       <div className="container mx-auto px-4 py-8">
         {filteredListings.length === 0 ? (
-          <div className="text-center py-12">
-            <Home className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="text-lg font-semibold mb-2">No listings found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search criteria or browse all listings
-            </p>
+          <div className="py-12 text-center">
+            <Home className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
+            <h3 className="mb-2 text-lg font-semibold">No listings found</h3>
+            <p className="text-muted-foreground">Try adjusting your search criteria or browse all listings</p>
           </div>
         ) : (
-          <div className={
-            viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-              : 'space-y-4'
-          }>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
             {filteredListings.map((listing) => {
               const TypeIcon = getListingTypeIcon(listing.listingType)
-              
+
               if (viewMode === 'list') {
                 return (
-                  <Card 
-                    key={listing.id} 
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                  <Card
+                    key={listing.id}
+                    className="cursor-pointer transition-shadow hover:shadow-md"
                     onClick={() => handleListingClick(listing.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-4">
-                        <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
                           {listing.media?.primaryPhoto ? (
                             <img
                               src={listing.media.primaryPhoto}
-                              alt={listing.title}
-                              className="w-full h-full object-cover"
+                              alt={listing.title || 'Listing'}
+                              className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="flex h-full w-full items-center justify-center">
                               <TypeIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
                           )}
                         </div>
-                        
                         <div className="flex-1">
-                          <h3 className="font-semibold mb-1">{listing.title}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <h3 className="mb-1 font-semibold">{listing.title}</h3>
+                          <p className="mb-2 text-sm text-muted-foreground">
                             {listing.year} {listing.make} {listing.model}
                           </p>
                           <div className="flex items-center text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {listing.location.city}, {listing.location.state}
+                            <MapPin className="mr-1 h-3 w-3" />
+                            {listing.location?.city}, {listing.location?.state}
                           </div>
                         </div>
-                        
                         <div className="text-right">
-                          {listing.salePrice && (
-                            <div className="font-bold text-green-600">
-                              {formatPrice(listing.salePrice)}
-                            </div>
+                          {typeof listing.salePrice === 'number' && (
+                            <div className="font-bold text-green-600">{formatPrice(listing.salePrice)}</div>
                           )}
-                          {listing.rentPrice && (
-                            <div className="font-bold text-blue-600">
-                              {formatPrice(listing.rentPrice)}/mo
-                            </div>
+                          {typeof listing.rentPrice === 'number' && (
+                            <div className="font-bold text-blue-600">{formatPrice(listing.rentPrice)}/mo</div>
                           )}
                         </div>
                       </div>
@@ -312,84 +339,80 @@ const PublicCatalogView = () => {
               }
 
               return (
-                <Card 
-                  key={listing.id} 
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                <Card
+                  key={listing.id}
+                  className="cursor-pointer transition-shadow hover:shadow-lg"
                   onClick={() => handleListingClick(listing.id)}
                 >
-                  <div className="aspect-video relative overflow-hidden rounded-t-lg bg-muted">
+                  <div className="relative aspect-video overflow-hidden rounded-t-lg bg-muted">
                     {listing.media?.primaryPhoto ? (
                       <img
                         src={listing.media.primaryPhoto}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
+                        alt={listing.title || 'Listing'}
+                        className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="flex h-full w-full items-center justify-center">
                         <TypeIcon className="h-12 w-12 text-muted-foreground" />
                       </div>
                     )}
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute left-3 top-3">
                       <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
                         {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
                       </Badge>
                     </div>
                     {listing.media?.photos && listing.media.photos.length > 1 && (
-                      <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                      <div className="absolute right-3 top-3 rounded bg-black/50 px-2 py-1 text-xs text-white">
                         +{listing.media.photos.length - 1} photos
                       </div>
                     )}
                   </div>
-                  
+
                   <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2 line-clamp-1">{listing.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <h3 className="mb-2 line-clamp-1 font-semibold">{listing.title}</h3>
+                    <p className="mb-3 text-sm text-muted-foreground">
                       {listing.year} {listing.make} {listing.model}
                     </p>
-                    
+
                     {listing.listingType === 'manufactured_home' && (
-                      <div className="flex items-center space-x-4 mb-3 text-sm text-muted-foreground">
+                      <div className="mb-3 flex items-center space-x-4 text-sm text-muted-foreground">
                         <span className="flex items-center">
-                          <Bed className="h-3 w-3 mr-1" />
+                          <Bed className="mr-1 h-3 w-3" />
                           {listing.bedrooms}
                         </span>
                         <span className="flex items-center">
-                          <Bath className="h-3 w-3 mr-1" />
+                          <Bath className="mr-1 h-3 w-3" />
                           {listing.bathrooms}
                         </span>
                         <span className="flex items-center">
-                          <Ruler className="h-3 w-3 mr-1" />
+                          <Ruler className="mr-1 h-3 w-3" />
                           {listing.dimensions?.sqft} sqft
                         </span>
                       </div>
                     )}
-                    
+
                     {listing.listingType === 'rv' && (
-                      <div className="flex items-center space-x-4 mb-3 text-sm text-muted-foreground">
+                      <div className="mb-3 flex items-center space-x-4 text-sm text-muted-foreground">
                         <span className="flex items-center">
-                          <Users className="h-3 w-3 mr-1" />
+                          <Users className="mr-1 h-3 w-3" />
                           Sleeps {listing.sleeps}
                         </span>
                         <span>{listing.length}ft</span>
                         <span>{listing.slides} slides</span>
                       </div>
                     )}
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {listing.location.city}, {listing.location.state}
+                        <MapPin className="mr-1 h-3 w-3" />
+                        {listing.location?.city}, {listing.location?.state}
                       </div>
                       <div className="text-right">
-                        {listing.salePrice && (
-                          <div className="font-bold text-green-600">
-                            {formatPrice(listing.salePrice)}
-                          </div>
+                        {typeof listing.salePrice === 'number' && (
+                          <div className="font-bold text-green-600">{formatPrice(listing.salePrice)}</div>
                         )}
-                        {listing.rentPrice && (
-                          <div className="font-bold text-blue-600 text-sm">
-                            {formatPrice(listing.rentPrice)}/mo
-                          </div>
+                        {typeof listing.rentPrice === 'number' && (
+                          <div className="text-sm font-bold text-blue-600">{formatPrice(listing.rentPrice)}/mo</div>
                         )}
                       </div>
                     </div>
