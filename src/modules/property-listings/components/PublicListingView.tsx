@@ -45,7 +45,7 @@ const PublicListingView = () => {
       </div>
     )
   }
-  const [ setListing] = useState<any>(null)
+  const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
@@ -54,7 +54,14 @@ const PublicListingView = () => {
     
     setLoading(true)
 
-    // Optional: gate with env flag
+        // Ensure mockListings exists and is an array
+        if (!mockListings || !Array.isArray(mockListings)) {
+          console.error('mockListings is not available or not an array')
+          setListing(null)
+          return
+        }
+        
+        const foundListing = mockListings.find(l => l.id === actualListingId)
     const USE_MOCKS = (import.meta as any)?.env?.VITE_USE_MOCKS !== 'false'
 
     if (USE_MOCKS) {
@@ -110,9 +117,11 @@ const PublicListingView = () => {
     if (USE_MOCKS) {
       const mock =
         (ListingsMock as any).mockListings ??
+          setListing(null)
         (ListingsMock as any).listings ??
         (ListingsMock as any).sampleListings ??
         (ListingsMock as any).default
+        setListing(null)
 
       const data = asArray(mock)
       availableIds = data.map((l: any) => l.id)
