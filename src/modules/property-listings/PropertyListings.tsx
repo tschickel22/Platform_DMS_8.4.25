@@ -22,7 +22,8 @@ import {
   Calendar,
   DollarSign,
   Car,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
 import { Home } from 'lucide-react'

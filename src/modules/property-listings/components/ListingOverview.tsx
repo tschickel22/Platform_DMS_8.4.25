@@ -27,6 +27,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import ListingForm from './ListingForm'
 import ShareListingModal from './ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
+import { mockListings } from '@/mocks/listingsMock'
 
 interface Listing {
   id: string
@@ -78,69 +79,9 @@ export default function ListingOverview() {
   const fetchListings = async () => {
     try {
       setLoading(true)
-      // Use mock data - replace with actual API call in production
-      setListings(mockListings.sampleListings)
-    } catch (error) {
-      console.error('Error fetching listings:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const filterListings = () => {
-    let filtered = listings
-
-    if (searchQuery) {
-      filtered = filtered.filter(listing => 
-        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.model.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(listing => listing.status === selectedStatus)
-    }
-
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(listing => listing.listingType === selectedType)
-    }
-
-    setFilteredListings(filtered)
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'draft': return 'bg-gray-100 text-gray-800'
-      case 'paused': return 'bg-yellow-100 text-yellow-800'
-      case 'removed': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getTypeIcon = (type: string) => {
-    return type === 'manufactured_home' ? <Home className="h-4 w-4" /> : <Car className="h-4 w-4" />
-  }
-
-  const formatPrice = (listing: Listing) => {
-    if (listing.offerType === 'for_sale' && listing.salePrice) {
-      return `$${listing.salePrice.toLocaleString()}`
-    }
-    if (listing.offerType === 'for_rent' && listing.rentPrice) {
-      return `$${listing.rentPrice.toLocaleString()}/mo`
-    }
-    if (listing.offerType === 'both' && listing.salePrice && listing.rentPrice) {
-      return `$${listing.salePrice.toLocaleString()} / $${listing.rentPrice.toLocaleString()}/mo`
-    }
-    return 'Price not set'
-  }
-
-  const handleStatusToggle = async (listing: Listing) => {
-    const newStatus = listing.status === 'active' ? 'paused' : 'active'
-    // API call would go here
-    console.log(`Toggle status for ${listing.id} to ${newStatus}`)
-    
+      // Use mock data from centralized mock file
+      const listingsData = mockListings.sampleListings || []
+      setListings(listingsData)
     setListings(prev => prev.map(l => 
       l.id === listing.id ? { ...l, status: newStatus } : l
     ))

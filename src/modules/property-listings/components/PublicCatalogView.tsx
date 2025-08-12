@@ -22,17 +22,13 @@ import {
 
 import { mockListings } from '@/mocks/listingsMock'
 
-export const PublicCatalogView = () => {
-  const { companySlug, token } = useParams()
+export default function ListingsPage() {
+  const { companySlug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   
   const [listings, setListings] = useState([])
-  const [filteredListings, setFilteredListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
-  
-  // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
   const [filterType, setFilterType] = useState(searchParams.get('type') || 'all')
   const [filterOfferType, setFilterOfferType] = useState(searchParams.get('offer') || 'all')
@@ -40,32 +36,29 @@ export const PublicCatalogView = () => {
     min: searchParams.get('minPrice') || '',
     max: searchParams.get('maxPrice') || ''
   })
+  const [viewMode, setViewMode] = useState('grid')
+
+  // Get token from URL params for shared listings
+  const token = searchParams.get('token')
 
   useEffect(() => {
     // In production, fetch listings data from API
     // Handle both regular catalog and token-based sharing
     setTimeout(() => {
-      let listingsData = mockListings.sampleListings
+      let listingsData = mockListings.sampleListings || []
       
       // If there's a token, filter listings based on token data
       if (token) {
-        // In production, decode token and filter listings accordingly
-        // For now, show all listings
-      }
-      
-      // Apply URL parameter filters
-      const ids = searchParams.get('ids')
-      if (ids) {
-        const idList = ids.split(',')
-        listingsData = listingsData.filter(listing => idList.includes(listing.id))
+        // In production, decode token and filter listings
+        // For now, just use all listings
+        listingsData = mockListings.sampleListings || []
       }
       
       setListings(listingsData)
       setLoading(false)
-    }, 500)
-  }, [companySlug, token, searchParams])
+    }, 1000)
+  }, [companySlug, token])
 
-  // Update URL params when filters change
   const updateUrlParams = (key, value) => {
     const newParams = new URLSearchParams(searchParams)
     if (value && value !== 'all' && value !== '') {
@@ -76,50 +69,40 @@ export const PublicCatalogView = () => {
     setSearchParams(newParams)
   }
 
-  // Filter listings based on current filters
-  useEffect(() => {
-    let filtered = [...listings]
-
-    // Apply search
+  const filteredListings = listings.filter(listing => {
+    // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(listing =>
-        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.location.city.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      const query = searchQuery.toLowerCase()
+      const searchableText = `${listing.title} ${listing.make} ${listing.model} ${listing.location.city} ${listing.location.state}`.toLowerCase()
+      if (!searchableText.includes(query)) return false
     }
 
-    // Apply type filter
-    if (filterType !== 'all') {
-      filtered = filtered.filter(listing => listing.listingType === filterType)
-    }
+    // Type filter
+    if (filterType !== 'all' && listing.listingType !== filterType) return false
 
-    // Apply offer type filter
+    // Offer type filter
     if (filterOfferType !== 'all') {
-      filtered = filtered.filter(listing => 
-        listing.offerType === filterOfferType || listing.offerType === 'both'
-      )
+      if (filterOfferType === 'for_sale' && !listing.salePrice) return false
+      if (filterOfferType === 'for_rent' && !listing.rentPrice) return false
     }
 
-    // Apply price range filter
+    // Price range filter
     if (priceRange.min || priceRange.max) {
-      filtered = filtered.filter(listing => {
-        const price = listing.salePrice || listing.rentPrice || 0
-        const min = parseInt(priceRange.min) || 0
-        const max = parseInt(priceRange.max) || Infinity
-        return price >= min && price <= max
-      })
+      const price = listing.salePrice || listing.rentPrice
+      if (!price) return false
+      
+      const numPrice = parseFloat(price)
+      if (priceRange.min && numPrice < parseFloat(priceRange.min)) return false
+      if (priceRange.max && numPrice > parseFloat(priceRange.max)) return false
     }
 
-    setFilteredListings(filtered)
-  }, [listings, searchQuery, filterType, filterOfferType, priceRange])
+    return true
+  })
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price)
   }

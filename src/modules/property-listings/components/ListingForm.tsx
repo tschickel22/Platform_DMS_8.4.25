@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Home, Car, DollarSign, MapPin, Camera, User, AlertCircle } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { mockInventory } from '@/mocks/inventoryMock'
+import { mockInventory } from '@/mocks/inventoryMock'
 
 interface ListingFormProps {
   listing?: any
@@ -235,31 +236,34 @@ export default function ListingForm({ listing, open, onOpenChange, onSave }: Lis
             <h4 className="font-medium mb-3">Available Inventory</h4>
             <div className="space-y-2">
               {mockInventory.sampleInventory
-                .filter(item => item.status === 'available')
-                .slice(0, 5)
-                .map((item) => (
-                  <div 
-                    key={item.id}
-                    className={`p-3 border rounded cursor-pointer transition-all ${formData.inventoryId === item.id ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() => updateFormData('inventoryId', item.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{item.year} {item.make} {item.model}</p>
-                        <p className="text-sm text-gray-600">
-                          {item.vin ? `VIN: ${item.vin}` : `Serial: ${item.serialNumber || 'N/A'}`} | 
-                          {item.location?.lot ? ` Lot ${item.location.lot}` : ' Location TBD'}
-                        </p>
-                        <Badge variant="secondary" className="mt-1">{item.status}</Badge>
-                      </div>
-                      <p className="text-lg font-semibold">
-                        ${(item.salePrice || item.cost || 0).toLocaleString()}
+                ?.filter(item => item.status === 'available')
+                ?.map((item) => (
+                <div 
+                  key={item.id}
+                  className={`p-3 border rounded cursor-pointer transition-all ${formData.inventoryId === item.id ? 'ring-2 ring-primary' : ''}`}
+                  onClick={() => updateFormData('inventoryId', item.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{item.year} {item.make} {item.model}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.vin ? `VIN: ${item.vin}` : `Serial: ${item.serialNumber || 'N/A'}`} | 
+                        {item.location?.lot ? ` Lot ${item.location.lot}` : ' Location TBD'}
                       </p>
+                      <Badge variant="secondary" className="mt-1">{item.status}</Badge>
                     </div>
+                    <p className="text-lg font-semibold">
+                      ${(item.salePrice || item.cost || 0).toLocaleString()}
+                    </p>
                   </div>
-                ))}
-            </div>
-          </div>
+                </div>
+              ))}
+              {(!mockInventory.sampleInventory || mockInventory.sampleInventory.filter(item => item.status === 'available').length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No available inventory items found</p>
+                  <p className="text-sm">Please add inventory items first</p>
+                </div>
+              )}
         </div>
         {errors.inventoryId && (
           <p className="text-red-600 text-sm mt-2 flex items-center gap-1">

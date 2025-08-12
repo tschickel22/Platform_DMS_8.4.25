@@ -32,7 +32,8 @@ import {
   Upload,
   Settings,
   MoreHorizontal,
-  ExternalLink
+  ExternalLink,
+  Home
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'

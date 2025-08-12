@@ -38,6 +38,7 @@ export const PublicListingView = () => {
     // For now, find the listing from mock data
     setTimeout(() => {
       const foundListing = mockListings.sampleListings.find(l => l.id === listingId)
+      const foundListing = mockListings.sampleListings?.find(l => l.id === listingId)
       setListing(foundListing || null)
       setLoading(false)
     }, 500)
