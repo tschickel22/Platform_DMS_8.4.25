@@ -452,5 +452,16 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
         companyId="demo-company"
       />
     </div>
+
+    {/* Share Modal */}
+    <ShareListingModal
+      open={shareModalOpen}
+      onOpenChange={setShareModalOpen}
+      listing={listing}
+    />
+  </>
+)
+
+export default ListingDetail
   )
 }
