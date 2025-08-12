@@ -26,6 +26,7 @@ import {
 import { useTenant } from '@/contexts/TenantContext'
 import ListingForm from './ListingForm'
 import ShareListingModal from './ShareListingModal'
+import { mockListings } from '@/mocks/listingsMock'
 
 interface Listing {
   id: string
@@ -77,69 +78,8 @@ export default function ListingOverview() {
   const fetchListings = async () => {
     try {
       setLoading(true)
-      // Mock data for now - replace with actual API call
-      const mockListings: Listing[] = [
-        {
-          id: 'listing_1',
-          companyId: tenant?.id || 'company_1',
-          title: '2020 Clayton Homes Patriot',
-          listingType: 'manufactured_home',
-          offerType: 'for_sale',
-          status: 'active',
-          salePrice: 89900,
-          make: 'Clayton Homes',
-          model: 'Patriot',
-          year: 2020,
-          location: { city: 'Austin', state: 'TX' },
-          media: {
-            primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
-            photos: ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg']
-          },
-          activePartners: ['mhvillage', 'zillow'],
-          lastExported: '2024-01-15T10:30:00Z',
-          updatedAt: '2024-01-15T14:22:00Z',
-          createdAt: '2024-01-10T09:15:00Z'
-        },
-        {
-          id: 'listing_2',
-          companyId: tenant?.id || 'company_1',
-          title: '2019 Forest River Cherokee',
-          listingType: 'rv',
-          offerType: 'for_rent',
-          status: 'active',
-          rentPrice: 1200,
-          make: 'Forest River',
-          model: 'Cherokee',
-          year: 2019,
-          location: { city: 'Dallas', state: 'TX' },
-          media: {
-            primaryPhoto: 'https://images.pexels.com/photos/2476632/pexels-photo-2476632.jpeg',
-            photos: ['https://images.pexels.com/photos/2476632/pexels-photo-2476632.jpeg']
-          },
-          activePartners: ['rvtrader'],
-          lastExported: '2024-01-14T16:45:00Z',
-          updatedAt: '2024-01-14T18:10:00Z',
-          createdAt: '2024-01-08T11:30:00Z'
-        },
-        {
-          id: 'listing_3',
-          companyId: tenant?.id || 'company_1',
-          title: '2021 Champion Homes Revolution',
-          listingType: 'manufactured_home',
-          offerType: 'both',
-          status: 'draft',
-          salePrice: 125000,
-          rentPrice: 1800,
-          make: 'Champion Homes',
-          model: 'Revolution',
-          year: 2021,
-          location: { city: 'Houston', state: 'TX' },
-          activePartners: [],
-          updatedAt: '2024-01-12T09:45:00Z',
-          createdAt: '2024-01-12T09:45:00Z'
-        }
-      ]
-      setListings(mockListings)
+      // Use mock data - replace with actual API call in production
+      setListings(mockListings.sampleListings)
     } catch (error) {
       console.error('Error fetching listings:', error)
     } finally {

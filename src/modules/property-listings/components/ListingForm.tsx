@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Home, Car, DollarSign, MapPin, Camera, User, AlertCircle } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
+import { mockInventory } from '@/mocks/inventoryMock'
 
 interface ListingFormProps {
   listing?: any
@@ -233,32 +234,30 @@ export default function ListingForm({ listing, open, onOpenChange, onSave }: Lis
           <div className="border rounded-lg p-4">
             <h4 className="font-medium mb-3">Available Inventory</h4>
             <div className="space-y-2">
-              <div 
-                className={`p-3 border rounded cursor-pointer transition-all ${formData.inventoryId === 'inv_1' ? 'ring-2 ring-primary' : ''}`}
-                onClick={() => updateFormData('inventoryId', 'inv_1')}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">2020 Clayton Homes Patriot</p>
-                    <p className="text-sm text-gray-600">Serial: CH2020001 | Lot A-15</p>
-                    <Badge variant="secondary" className="mt-1">Available</Badge>
+              {mockInventory.sampleInventory
+                .filter(item => item.status === 'available')
+                .slice(0, 5)
+                .map((item) => (
+                  <div 
+                    key={item.id}
+                    className={`p-3 border rounded cursor-pointer transition-all ${formData.inventoryId === item.id ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => updateFormData('inventoryId', item.id)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{item.year} {item.make} {item.model}</p>
+                        <p className="text-sm text-gray-600">
+                          {item.vin ? `VIN: ${item.vin}` : `Serial: ${item.serialNumber || 'N/A'}`} | 
+                          {item.location?.lot ? ` Lot ${item.location.lot}` : ' Location TBD'}
+                        </p>
+                        <Badge variant="secondary" className="mt-1">{item.status}</Badge>
+                      </div>
+                      <p className="text-lg font-semibold">
+                        ${(item.salePrice || item.cost || 0).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-lg font-semibold">$89,900</p>
-                </div>
-              </div>
-              <div 
-                className={`p-3 border rounded cursor-pointer transition-all ${formData.inventoryId === 'inv_2' ? 'ring-2 ring-primary' : ''}`}
-                onClick={() => updateFormData('inventoryId', 'inv_2')}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">2019 Forest River Cherokee</p>
-                    <p className="text-sm text-gray-600">VIN: 1FR5RV281K1234567 | Lot B-8</p>
-                    <Badge variant="secondary" className="mt-1">Available</Badge>
-                  </div>
-                  <p className="text-lg font-semibold">$45,000</p>
-                </div>
-              </div>
+                ))}
             </div>
           </div>
         </div>

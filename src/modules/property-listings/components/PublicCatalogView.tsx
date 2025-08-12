@@ -20,106 +20,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react'
 
-// Mock listings data
-const mockListings = [
-  {
-    id: 'listing_001',
-    listingType: 'manufactured_home',
-    year: 2023,
-    make: 'Clayton',
-    model: 'The Edge',
-    title: '2023 Clayton The Edge - 3BR/2BA',
-    offerType: 'for_sale',
-    salePrice: 89000,
-    rentPrice: null,
-    status: 'active',
-    location: {
-      city: 'Austin',
-      state: 'TX',
-      postalCode: '78701'
-    },
-    bedrooms: 3,
-    bathrooms: 2,
-    dimensions: {
-      width_ft: 28,
-      length_ft: 52,
-      sqft: 1456
-    },
-    media: {
-      primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
-      photos: [
-        'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
-        'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg'
-      ]
-    },
-    description: 'Beautiful 3 bedroom, 2 bathroom manufactured home with modern finishes.',
-    searchResultsText: '2023 Clayton The Edge 3BR/2BA - Move-in Ready!',
-    createdAt: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 'listing_002',
-    listingType: 'rv',
-    year: 2022,
-    make: 'Forest River',
-    model: 'Cherokee',
-    title: '2022 Forest River Cherokee - Travel Trailer',
-    offerType: 'both',
-    salePrice: 45000,
-    rentPrice: 350,
-    status: 'active',
-    location: {
-      city: 'Dallas',
-      state: 'TX',
-      postalCode: '75201'
-    },
-    sleeps: 6,
-    slides: 2,
-    length: 28.5,
-    media: {
-      primaryPhoto: 'https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg',
-      photos: [
-        'https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg',
-        'https://images.pexels.com/photos/2886937/pexels-photo-2886937.jpeg'
-      ]
-    },
-    description: 'Spacious travel trailer perfect for family adventures.',
-    searchResultsText: '2022 Forest River Cherokee 28.5ft - Sleeps 6',
-    createdAt: '2024-01-10T14:20:00Z'
-  },
-  {
-    id: 'listing_003',
-    listingType: 'manufactured_home',
-    year: 2024,
-    make: 'Skyline',
-    model: 'Arrow',
-    title: '2024 Skyline Arrow - 4BR/3BA',
-    offerType: 'for_rent',
-    salePrice: null,
-    rentPrice: 1200,
-    status: 'active',
-    location: {
-      city: 'Houston',
-      state: 'TX',
-      postalCode: '77001'
-    },
-    bedrooms: 4,
-    bathrooms: 3,
-    dimensions: {
-      width_ft: 32,
-      length_ft: 60,
-      sqft: 1920
-    },
-    media: {
-      primaryPhoto: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
-      photos: [
-        'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg'
-      ]
-    },
-    description: 'Spacious 4 bedroom home with master suite and open concept living.',
-    searchResultsText: '2024 Skyline Arrow 4BR/3BA - Available Now',
-    createdAt: '2024-01-05T09:15:00Z'
-  }
-]
+import { mockListings } from '@/mocks/listingsMock'
 
 export const PublicCatalogView = () => {
   const { companySlug, token } = useParams()
@@ -144,7 +45,7 @@ export const PublicCatalogView = () => {
     // In production, fetch listings data from API
     // Handle both regular catalog and token-based sharing
     setTimeout(() => {
-      let listingsData = mockListings
+      let listingsData = mockListings.sampleListings
       
       // If there's a token, filter listings based on token data
       if (token) {

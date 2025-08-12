@@ -37,6 +37,7 @@ import {
 import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
 import { apiClient } from '@/utils/apiClient'
+import { Home } from 'lucide-react'
 
 interface Listing {
   id: string

@@ -23,64 +23,7 @@ import {
   Star
 } from 'lucide-react'
 
-// Mock listing data
-const mockListing = {
-  id: 'listing_001',
-  listingType: 'manufactured_home',
-  year: 2023,
-  make: 'Clayton',
-  model: 'The Edge',
-  title: '2023 Clayton The Edge - 3BR/2BA',
-  offerType: 'for_sale',
-  salePrice: 89000,
-  rentPrice: null,
-  status: 'active',
-  location: {
-    city: 'Austin',
-    state: 'TX',
-    postalCode: '78701',
-    address1: '1234 Community Drive',
-    latitude: 30.2672,
-    longitude: -97.7431
-  },
-  bedrooms: 3,
-  bathrooms: 2,
-  dimensions: {
-    width_ft: 28,
-    length_ft: 52,
-    sqft: 1456
-  },
-  features: {
-    airConditioning: true,
-    heating: true,
-    dishwasher: true,
-    refrigerator: true,
-    washerDryer: true,
-    deck: true,
-    shed: true,
-    fireplace: false
-  },
-  media: {
-    primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
-    photos: [
-      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
-      'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
-      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
-      'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg',
-      'https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg'
-    ]
-  },
-  description: 'Beautiful 3 bedroom, 2 bathroom manufactured home with modern finishes and open floor plan. This home features brand new appliances, updated flooring throughout, and a spacious master suite. The kitchen boasts granite countertops and stainless steel appliances. Located in a well-maintained community with easy access to shopping and schools.',
-  searchResultsText: '2023 Clayton The Edge 3BR/2BA - Move-in Ready!',
-  seller: {
-    companyName: 'Austin Mobile Homes',
-    phone: '(512) 555-0123',
-    emails: ['sales@austinmh.com'],
-    website: 'https://austinmh.com'
-  },
-  createdAt: '2024-01-15T10:30:00Z',
-  updatedAt: '2024-01-15T10:30:00Z'
-}
+import { mockListings } from '@/mocks/listingsMock'
 
 export const PublicListingView = () => {
   const { companySlug, listingId } = useParams()
@@ -91,10 +34,11 @@ export const PublicListingView = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In production, fetch listing data from API
-    // For now, use mock data
+    // In production, fetch listing data from API based on listingId
+    // For now, find the listing from mock data
     setTimeout(() => {
-      setListing(mockListing)
+      const foundListing = mockListings.sampleListings.find(l => l.id === listingId)
+      setListing(foundListing || null)
       setLoading(false)
     }, 500)
   }, [companySlug, listingId])

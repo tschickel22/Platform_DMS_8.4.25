@@ -25,6 +25,7 @@ import {
   Settings
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
+import { Home } from 'lucide-react'
 
 const PropertyListings = () => {
   const [isLoading, setIsLoading] = useState(true)
