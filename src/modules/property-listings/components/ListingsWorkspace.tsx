@@ -25,6 +25,7 @@ import {
   Search,
   RefreshCw,
   Download,
+import { mockListings } from '@/mocks/listingsMock'
   Upload,
   Settings,
   MoreHorizontal,
@@ -118,81 +119,13 @@ const ListingsWorkspace: React.FC = () => {
           if (!listing.rentPrice || listing.rentPrice <= 0) {
             return { isValid: false, message: 'Rent price is required for rental listings' }
           }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'marketing_content',
-      name: 'Marketing Content',
-      description: 'Description and search text',
-      required: true,
-      validator: (listing) => {
-        if (!listing.description || listing.description.length < 50) {
-          return { isValid: false, message: 'Description must be at least 50 characters' }
-        }
-        if (!listing.searchResultsText || listing.searchResultsText.length > 80) {
-          return { isValid: false, message: 'Search text is required (max 80 characters)' }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'media',
-      name: 'Photos & Media',
-      description: 'At least one photo required',
-      required: true,
-      validator: (listing) => {
-        if (!listing.media?.photos || listing.media.photos.length === 0) {
-          return { isValid: false, message: 'At least one photo is required' }
-        }
-        if (!listing.media.primaryPhoto) {
-          return { isValid: false, message: 'Primary photo must be selected' }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'location',
-      name: 'Location Details',
-      description: 'City and state information',
-      required: true,
-      validator: (listing) => {
-        if (!listing.location.city || !listing.location.state) {
-          return { isValid: false, message: 'City and state are required' }
-        }
-        if (listing.location.state.length !== 2) {
-          return { isValid: false, message: 'State must be 2-letter code (e.g., CA, TX)' }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'contact_info',
-      name: 'Contact Information',
-      description: 'Phone or email for inquiries',
-      required: true,
-      validator: (listing) => {
-        const hasPhone = listing.seller.phone && listing.seller.phone.length > 0
-        const hasEmail = listing.seller.emails.some(email => email && email.includes('@'))
-        
-        if (!hasPhone && !hasEmail) {
-          return { isValid: false, message: 'Phone number or email is required' }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'property_details',
-      name: 'Property Specifications',
-      description: 'Type-specific details',
       required: false,
       validator: (listing) => {
         if (listing.listingType === 'manufactured_home') {
           if (!listing.bedrooms || !listing.bathrooms) {
             return { isValid: false, message: 'Bedrooms and bathrooms help buyers find your listing' }
-          }
-        }
+  const [listings, setListings] = useState(mockListings.sampleListings)
+  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
         if (listing.listingType === 'rv') {
           if (!listing.sleeps && !listing.length) {
             return { isValid: false, message: 'Sleep capacity or length helps buyers find your RV' }
@@ -249,7 +182,7 @@ const ListingsWorkspace: React.FC = () => {
     }
   }
 
-  const validateListing = (listing: Listing) => {
+        setListings(mockListings.sampleListings);
     const results = validationGates.map(gate => ({
       gate,
       result: gate.validator(listing)
