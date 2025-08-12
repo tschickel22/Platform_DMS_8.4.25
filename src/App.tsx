@@ -134,7 +134,6 @@ function App() {
                             </ErrorBoundary>
                           </Layout>
                         </ProtectedRoute>
-                        <Route path="/listings/:listingId" element={<PublicListingView />} />
                       } />
                     </Routes>
                   </ErrorBoundary>

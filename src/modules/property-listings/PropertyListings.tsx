@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
