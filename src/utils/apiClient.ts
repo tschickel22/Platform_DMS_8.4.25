@@ -1,23 +1,65 @@
 // src/utils/apiClient.ts
-// API Client utility for handling Netlify Functions with graceful fallbacks
+// Robust API client for Netlify Functions (with env override + graceful parsing)
 import { toast } from '@/hooks/use-toast'
 
-const API_BASE = '/.netlify/functions'
+// Allow override via env for local/prod differences.
+// e.g. VITE_FUNCTIONS_BASE="http://localhost:8888/.netlify/functions"
+const API_BASE: string =
+  (import.meta as any)?.env?.VITE_FUNCTIONS_BASE ||
+  '/.netlify/functions'
 
 interface ApiResponse<T = any> {
   data?: T
   error?: string
   success: boolean
+  status?: number
 }
 
-class ApiClient {
+function isAbsolute(url: string) {
+  return /^https?:\/\//i.test(url)
+}
+
+export class ApiClient {
+  private buildUrl(endpoint: string) {
+    if (isAbsolute(endpoint)) return endpoint
+    return `${API_BASE}${endpoint}`
+  }
+
+  private async parseResponse(res: Response) {
+    const contentType = res.headers.get('content-type') || ''
+
+    // Prefer JSON
+    if (contentType.includes('application/json')) {
+      try {
+        return { ok: true, body: await res.json(), contentType }
+      } catch {
+        // fall through to text
+      }
+    }
+
+    // Fallback to text (commonly HTML when route is wrong)
+    const text = await res.text()
+
+    // If it *looks* like JSON, try to parse once more
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      try {
+        return { ok: true, body: JSON.parse(text), contentType: 'application/json' }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return { ok: false, body: text, contentType: contentType || 'text/plain' }
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const url = this.buildUrl(endpoint)
+
     try {
-      const url = `${API_BASE}${endpoint}`
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -25,78 +67,97 @@ class ApiClient {
         },
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      const { ok, body, contentType } = await this.parseResponse(res)
+
+      if (!res.ok) {
+        // Server responded with an error status
+        const message =
+          (ok && (body?.error || body?.message)) ||
+          `HTTP ${res.status} ${res.statusText}`
+        return { success: false, error: message, status: res.status }
       }
 
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      if (!ok) {
+        // Likely hitting index.html (HTML) due to a bad route / missing functions
+        const preview =
+          typeof body === 'string' ? body.slice(0, 180) : '[non-text body]'
+        return {
+          success: false,
+          error: `Expected JSON but got ${contentType}. Check your functions base/route. Body preview: ${preview}`,
+          status: res.status,
+        }
       }
 
-      const data = await response.json()
-      return { data, success: true }
-    } catch (error) {
-      console.error(`API Error (${endpoint}):`, error)
-
-      // User-friendly toast
+      return { data: body as T, success: true, status: res.status }
+    } catch (err) {
+      console.error(`API Error (${endpoint}):`, err)
+      // Network-level failure
       toast({
         title: 'Connection Error',
-        description: 'Unable to connect to server. Please try again.',
+        description:
+          'Unable to connect to server. Please verify your functions server is running.',
         variant: 'destructive',
       })
-
       return {
-        error: error instanceof Error ? error.message : 'Unknown error',
         success: false,
+        error: err instanceof Error ? err.message : 'Unknown network error',
       }
     }
   }
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+  get<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'GET' })
   }
 
-  async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+  post<T>(endpoint: string, body?: any) {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     })
   }
 
-  async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+  put<T>(endpoint: string, body?: any) {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
     })
   }
 
-  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+  delete<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' })
   }
 
   // Health check
   async ping(): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE}/ping`)
-      return response.ok
-    } catch (error) {
-      console.error('Health check failed:', error)
+      const res = await fetch(this.buildUrl('/ping'))
+      return res.ok
+    } catch (e) {
+      console.error('Health check failed:', e)
       return false
     }
   }
 
-  // Listings CRUD (fixed: valid class field, uses API_BASE, and common request helper)
+  // Listings CRUD
   listingsCrud = {
     getListings: async (companyId: string) => {
-      const res = await this.get<any>(`/listings-crud?companyId=${encodeURIComponent(companyId)}`)
-      if (!res.success) throw new Error(res.error || 'Failed to fetch listings')
+      const res = await this.get<any>(
+        `/listings-crud?companyId=${encodeURIComponent(companyId)}`
+      )
+      if (!res.success) {
+        throw new Error(
+          res.error ||
+            'Failed to fetch listings (is your Netlify Functions server running and returning JSON?)'
+        )
+      }
       return res.data
     },
 
     getListing: async (companyId: string, listingId: string) => {
       const res = await this.get<any>(
-        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`
+        `/listings-crud?companyId=${encodeURIComponent(
+          companyId
+        )}&listingId=${encodeURIComponent(listingId)}`
       )
       if (!res.success) throw new Error(res.error || 'Failed to fetch listing')
       return res.data
@@ -111,9 +172,15 @@ class ApiClient {
       return res.data
     },
 
-    updateListing: async (companyId: string, listingId: string, updates: any) => {
+    updateListing: async (
+      companyId: string,
+      listingId: string,
+      updates: any
+    ) => {
       const res = await this.put<any>(
-        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`,
+        `/listings-crud?companyId=${encodeURIComponent(
+          companyId
+        )}&listingId=${encodeURIComponent(listingId)}`,
         updates
       )
       if (!res.success) throw new Error(res.error || 'Failed to update listing')
@@ -122,7 +189,9 @@ class ApiClient {
 
     deleteListing: async (companyId: string, listingId: string) => {
       const res = await this.delete<any>(
-        `/listings-crud?companyId=${encodeURIComponent(companyId)}&listingId=${encodeURIComponent(listingId)}`
+        `/listings-crud?companyId=${encodeURIComponent(
+          companyId
+        )}&listingId=${encodeURIComponent(listingId)}`
       )
       if (!res.success) throw new Error(res.error || 'Failed to delete listing')
       return res.data
