@@ -27,7 +27,6 @@ import { useTenant } from '@/contexts/TenantContext'
 import ListingForm from './ListingForm'
 import ShareListingModal from './ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
-import { mockListings } from '@/mocks/listingsMock'
 
 interface Listing {
   id: string
@@ -82,6 +81,81 @@ export default function ListingOverview() {
       // Use mock data from centralized mock file
       const listingsData = mockListings.sampleListings || []
       setListings(listingsData)
+    } catch (error) {
+      console.error('Error fetching listings:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filterListings = () => {
+    let filtered = listings
+
+    if (searchQuery) {
+      filtered = filtered.filter(listing =>
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.location.state.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(listing => listing.status === selectedStatus)
+    }
+
+    if (selectedType !== 'all') {
+      filtered = filtered.filter(listing => listing.listingType === selectedType)
+    }
+
+    setFilteredListings(filtered)
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'manufactured_home':
+        return <Home className="h-4 w-4" />
+      case 'rv':
+        return <Car className="h-4 w-4" />
+      default:
+        return <Home className="h-4 w-4" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800'
+      case 'draft':
+        return 'bg-gray-100 text-gray-800'
+      case 'paused':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'removed':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatPrice = (listing: Listing) => {
+    if (listing.offerType === 'for_sale' && listing.salePrice) {
+      return listing.salePrice.toLocaleString()
+    }
+    if (listing.offerType === 'for_rent' && listing.rentPrice) {
+      return `${listing.rentPrice.toLocaleString()}/mo`
+    }
+    if (listing.offerType === 'both') {
+      const parts = []
+      if (listing.salePrice) parts.push(`$${listing.salePrice.toLocaleString()}`)
+      if (listing.rentPrice) parts.push(`$${listing.rentPrice.toLocaleString()}/mo`)
+      return parts.join(' / ')
+    }
+    return 'Contact for price'
+  }
+
+  const handleStatusToggle = (listing: Listing) => {
+    const newStatus = listing.status === 'active' ? 'paused' : 'active'
     setListings(prev => prev.map(l => 
       l.id === listing.id ? { ...l, status: newStatus } : l
     ))
