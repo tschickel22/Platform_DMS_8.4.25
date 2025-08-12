@@ -1,108 +1,105 @@
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import {
-  MapPin,
-  Phone,
-  Mail,
-  Globe,
+import { 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Share2, 
+  Heart, 
+  Calendar,
   Home,
   Car,
-  DollarSign,
-  Calendar,
-  Ruler,
   Bed,
   Bath,
-  FileImage
+  Ruler,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  Star
 } from 'lucide-react'
 
-interface Listing {
-  id: string
-  companyId: string
-  inventoryId: string
-  listingType: 'manufactured_home' | 'rv'
-  offerType: 'for_sale' | 'for_rent' | 'both'
-  status: string
-  title?: string
-  salePrice?: number
-  rentPrice?: number
-  description?: string
-  media?: {
-    photos: string[]
-    primaryPhoto?: string
-  }
-  location?: {
-    city?: string
-    state?: string
-    postalCode?: string
-  }
-  seller?: {
-    companyName?: string
-    phone?: string
-    emails?: string[]
-    website?: string
-  }
-  make?: string
-  model?: string
-  year?: number
-  bedrooms?: number
-  bathrooms?: number
-  dimensions?: {
-    width_ft?: number
-    length_ft?: number
-    sections?: number
-  }
-  createdAt: string
-  updatedAt: string
+// Mock listing data
+const mockListing = {
+  id: 'listing_001',
+  listingType: 'manufactured_home',
+  year: 2023,
+  make: 'Clayton',
+  model: 'The Edge',
+  title: '2023 Clayton The Edge - 3BR/2BA',
+  offerType: 'for_sale',
+  salePrice: 89000,
+  rentPrice: null,
+  status: 'active',
+  location: {
+    city: 'Austin',
+    state: 'TX',
+    postalCode: '78701',
+    address1: '1234 Community Drive',
+    latitude: 30.2672,
+    longitude: -97.7431
+  },
+  bedrooms: 3,
+  bathrooms: 2,
+  dimensions: {
+    width_ft: 28,
+    length_ft: 52,
+    sqft: 1456
+  },
+  features: {
+    airConditioning: true,
+    heating: true,
+    dishwasher: true,
+    refrigerator: true,
+    washerDryer: true,
+    deck: true,
+    shed: true,
+    fireplace: false
+  },
+  media: {
+    primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+    photos: [
+      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+      'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
+      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
+      'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg',
+      'https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg'
+    ]
+  },
+  description: 'Beautiful 3 bedroom, 2 bathroom manufactured home with modern finishes and open floor plan. This home features brand new appliances, updated flooring throughout, and a spacious master suite. The kitchen boasts granite countertops and stainless steel appliances. Located in a well-maintained community with easy access to shopping and schools.',
+  searchResultsText: '2023 Clayton The Edge 3BR/2BA - Move-in Ready!',
+  seller: {
+    companyName: 'Austin Mobile Homes',
+    phone: '(512) 555-0123',
+    emails: ['sales@austinmh.com'],
+    website: 'https://austinmh.com'
+  },
+  createdAt: '2024-01-15T10:30:00Z',
+  updatedAt: '2024-01-15T10:30:00Z'
 }
 
-export function PublicListingView() {
+export const PublicListingView = () => {
   const { companySlug, listingId } = useParams()
-  const [listing, setListing] = useState<Listing | null>(null)
+  const navigate = useNavigate()
+  const [listing, setListing] = useState(null)
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+  const [showContactForm, setShowContactForm] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchListing = async () => {
-      if (!companySlug || !listingId) return
-
-      try {
-        setLoading(true)
-        // In a real implementation, we would need to resolve the company slug to company ID
-        // For now, we'll use a placeholder API call
-        const response = await fetch(`/.netlify/functions/listings-crud?companyId=${companySlug}&listingId=${listingId}`)
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Listing not found')
-          }
-          throw new Error('Failed to load listing')
-        }
-        
-        const data = await response.json()
-        
-        // Only show active listings on public view
-        if (data.status !== 'active') {
-          throw new Error('Listing not available')
-        }
-        
-        setListing(data)
-      } catch (error) {
-        console.error('Error fetching listing:', error)
-        setError(error instanceof Error ? error.message : 'Failed to load listing')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchListing()
+    // In production, fetch listing data from API
+    // For now, use mock data
+    setTimeout(() => {
+      setListing(mockListing)
+      setLoading(false)
+    }, 500)
   }, [companySlug, listingId])
 
-  const formatPrice = (price?: number) => {
-    if (!price) return 'Contact for price'
+  const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -111,33 +108,50 @@ export function PublicListingView() {
     }).format(price)
   }
 
-  const getListingTitle = (listing: Listing) => {
-    if (listing.title) return listing.title
-    
-    const year = listing.year || 'Unknown'
-    const make = listing.make || 'Unknown'
-    const model = listing.model || 'Model'
-    
-    return `${year} ${make} ${model}`
+  const nextPhoto = () => {
+    if (listing?.media?.photos) {
+      setCurrentPhotoIndex((prev) => 
+        prev === listing.media.photos.length - 1 ? 0 : prev + 1
+      )
+    }
+  }
+
+  const prevPhoto = () => {
+    if (listing?.media?.photos) {
+      setCurrentPhotoIndex((prev) => 
+        prev === 0 ? listing.media.photos.length - 1 : prev - 1
+      )
+    }
+  }
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: listing.title,
+        text: listing.searchResultsText,
+        url: window.location.href
+      })
+    } else {
+      // Fallback - copy to clipboard
+      navigator.clipboard.writeText(window.location.href)
+    }
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-3/4"></div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded w-1/3"></div>
             <div className="h-96 bg-muted rounded"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-4">
-                <div className="h-6 bg-muted rounded w-1/2"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-muted rounded"></div>
-                  <div className="h-4 bg-muted rounded"></div>
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                </div>
+                <div className="h-32 bg-muted rounded"></div>
+                <div className="h-48 bg-muted rounded"></div>
               </div>
-              <div className="h-96 bg-muted rounded"></div>
+              <div className="space-y-4">
+                <div className="h-64 bg-muted rounded"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -145,248 +159,313 @@ export function PublicListingView() {
     )
   }
 
-  if (error || !listing) {
+  if (!listing) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-            <FileImage className="h-12 w-12 text-muted-foreground" />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold mb-4">Listing Not Found</h1>
+            <p className="text-muted-foreground mb-6">
+              The listing you're looking for doesn't exist or has been removed.
+            </p>
+            <Button onClick={() => navigate(`/${companySlug}/listings`)}>
+              View All Listings
+            </Button>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Listing Not Found</h1>
-          <p className="text-muted-foreground mb-4">
-            {error || 'The listing you are looking for does not exist or is no longer available.'}
-          </p>
-          <Button onClick={() => window.history.back()}>
-            Go Back
-          </Button>
         </div>
       </div>
     )
   }
 
+  const TypeIcon = listing.listingType === 'manufactured_home' ? Home : Car
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            {listing.listingType === 'manufactured_home' ? (
-              <Home className="h-5 w-5 text-primary" />
-            ) : (
-              <Car className="h-5 w-5 text-primary" />
-            )}
-            <Badge variant="secondary">
-              {listing.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
-            </Badge>
-            {listing.location?.city && listing.location?.state && (
-              <>
-                <Separator orientation="vertical" className="h-4" />
-                <div className="flex items-center text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {listing.location.city}, {listing.location.state}
-                </div>
-              </>
-            )}
-          </div>
-          
-          <h1 className="text-3xl font-bold mb-2">
-            {getListingTitle(listing)}
-          </h1>
-          
-          <div className="flex flex-wrap items-center gap-4 text-lg">
-            {(listing.offerType === 'for_sale' || listing.offerType === 'both') && listing.salePrice && (
-              <div className="flex items-center font-semibold text-primary">
-                <DollarSign className="h-5 w-5 mr-1" />
-                {formatPrice(listing.salePrice)}
-                {listing.offerType === 'both' && <span className="text-muted-foreground ml-1">to buy</span>}
+      {/* Header */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate(`/${companySlug}/listings`)}
+              >
+                ← Back to Listings
+              </Button>
+              <div className="flex items-center space-x-2">
+                <TypeIcon className="h-5 w-5" />
+                <span className="font-semibold">{listing.seller?.companyName}</span>
               </div>
-            )}
-            {(listing.offerType === 'for_rent' || listing.offerType === 'both') && listing.rentPrice && (
-              <div className="flex items-center font-semibold text-primary">
-                <DollarSign className="h-5 w-5 mr-1" />
-                {formatPrice(listing.rentPrice)}/month
-                {listing.offerType === 'both' && <span className="text-muted-foreground ml-1">to rent</span>}
-              </div>
-            )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Button variant="outline" size="sm">
+                <Heart className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Photos and Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Photo Gallery */}
-            <Card>
-              <CardContent className="p-0">
-                <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                  {listing.media?.primaryPhoto ? (
-                    <img
-                      src={listing.media.primaryPhoto}
-                      alt={getListingTitle(listing)}
-                      className="w-full h-full object-cover rounded-t-lg"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.style.display = 'none'
-                        target.nextElementSibling?.classList.remove('hidden')
-                      }}
-                    />
-                  ) : null}
-                  <div className="text-center text-muted-foreground">
-                    <FileImage className="h-16 w-16 mx-auto mb-4" />
-                    <p>No photos available</p>
-                  </div>
+      <div className="container mx-auto px-4 py-8">
+        {/* Property Photos */}
+        <div className="relative mb-8">
+          <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+            {listing.media?.photos?.[currentPhotoIndex] ? (
+              <img
+                src={listing.media.photos[currentPhotoIndex]}
+                alt={listing.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <TypeIcon className="h-24 w-24 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          
+          {listing.media?.photos && listing.media.photos.length > 1 && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/20 text-white hover:bg-black/40"
+                onClick={prevPhoto}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/20 text-white hover:bg-black/40"
+                onClick={nextPhoto}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+              
+              {/* Photo thumbnails */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <div className="flex space-x-2 bg-black/50 p-2 rounded-lg">
+                  {listing.media.photos.map((photo, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPhotoIndex(index)}
+                      className={`w-12 h-8 rounded overflow-hidden ${
+                        index === currentPhotoIndex ? 'ring-2 ring-white' : 'opacity-60'
+                      }`}
+                    >
+                      <img
+                        src={photo}
+                        alt={`Photo ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
                 </div>
-                
-                {listing.media?.photos && listing.media.photos.length > 1 && (
-                  <div className="p-4">
-                    <div className="grid grid-cols-4 gap-2">
-                      {listing.media.photos.slice(1, 5).map((photo, index) => (
-                        <div key={index} className="aspect-video bg-muted rounded overflow-hidden">
-                          <img
-                            src={photo}
-                            alt={`${getListingTitle(listing)} - Photo ${index + 2}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Property Header */}
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <h1 className="text-3xl font-bold">{listing.title}</h1>
+                <Badge className="bg-green-100 text-green-800">
+                  {listing.status}
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-4 text-muted-foreground">
+                <span className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {listing.location.address1}, {listing.location.city}, {listing.location.state} {listing.location.postalCode}
+                </span>
+                <span className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Listed {new Date(listing.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Key Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Features</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{listing.year}</div>
+                    <div className="text-sm text-muted-foreground">Year</div>
                   </div>
-                )}
+                  {listing.listingType === 'manufactured_home' && (
+                    <>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold flex items-center justify-center">
+                          <Bed className="h-6 w-6 mr-1" />
+                          {listing.bedrooms}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Bedrooms</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold flex items-center justify-center">
+                          <Bath className="h-6 w-6 mr-1" />
+                          {listing.bathrooms}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Bathrooms</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold flex items-center justify-center">
+                          <Ruler className="h-6 w-6 mr-1" />
+                          {listing.dimensions?.sqft || (listing.dimensions?.width_ft * listing.dimensions?.length_ft)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Sq Ft</div>
+                      </div>
+                    </>
+                  )}
+                  {listing.listingType === 'rv' && (
+                    <>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold flex items-center justify-center">
+                          <Users className="h-6 w-6 mr-1" />
+                          {listing.sleeps}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Sleeps</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{listing.slides}</div>
+                        <div className="text-sm text-muted-foreground">Slide-outs</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{listing.length}ft</div>
+                        <div className="text-sm text-muted-foreground">Length</div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
             {/* Description */}
-            {listing.description && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Description</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  {listing.description}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Features & Amenities */}
+            {listing.features && (
               <Card>
-                <CardContent className="pt-6">
-                  <h2 className="text-xl font-semibold mb-4">Description</h2>
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap">{listing.description}</p>
+                <CardHeader>
+                  <CardTitle>Features & Amenities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(listing.features).map(([feature, hasFeature]) => {
+                      if (!hasFeature) return null
+                      const featureName = feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+                      return (
+                        <div key={feature} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-sm">{featureName}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
+          </div>
 
-            {/* Specifications */}
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Pricing */}
             <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Specifications</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {listing.year && (
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Year</div>
-                        <div className="font-medium">{listing.year}</div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {listing.make && (
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {listing.salePrice && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Make</div>
-                      <div className="font-medium">{listing.make}</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        {formatPrice(listing.salePrice)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Sale Price</div>
                     </div>
                   )}
-                  
-                  {listing.model && (
+                  {listing.rentPrice && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Model</div>
-                      <div className="font-medium">{listing.model}</div>
-                    </div>
-                  )}
-                  
-                  {listing.listingType === 'manufactured_home' && listing.bedrooms !== undefined && (
-                    <div className="flex items-center">
-                      <Bed className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bedrooms</div>
-                        <div className="font-medium">{listing.bedrooms}</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {formatPrice(listing.rentPrice)}/mo
                       </div>
-                    </div>
-                  )}
-                  
-                  {listing.listingType === 'manufactured_home' && listing.bathrooms !== undefined && (
-                    <div className="flex items-center">
-                      <Bath className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bathrooms</div>
-                        <div className="font-medium">{listing.bathrooms}</div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {listing.dimensions?.length_ft && (
-                    <div className="flex items-center">
-                      <Ruler className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Length</div>
-                        <div className="font-medium">{listing.dimensions.length_ft} ft</div>
-                      </div>
+                      <div className="text-sm text-muted-foreground">Monthly Rent</div>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column - Contact Info */}
-          <div className="space-y-6">
-            <Card className="sticky top-4">
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Contact Seller</h2>
-                
-                {listing.seller?.companyName && (
-                  <div className="mb-4">
-                    <h3 className="font-medium text-lg">{listing.seller.companyName}</h3>
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  {listing.seller?.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-3 text-muted-foreground" />
-                      <a href={`tel:${listing.seller.phone}`} className="hover:underline">
-                        {listing.seller.phone}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {listing.seller?.emails && listing.seller.emails.length > 0 && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 mr-3 text-muted-foreground" />
-                      <a href={`mailto:${listing.seller.emails[0]}`} className="hover:underline">
-                        {listing.seller.emails[0]}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {listing.seller?.website && (
-                    <div className="flex items-center">
-                      <Globe className="h-4 w-4 mr-3 text-muted-foreground" />
-                      <a 
-                        href={listing.seller.website.startsWith('http') ? listing.seller.website : `https://${listing.seller.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        Visit Website
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                <Separator className="my-4" />
-
-                {/* Lead Form Placeholder */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Interested in this listing?</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Lead form will be implemented in Phase 2
-                  </p>
-                  <Button className="w-full" disabled>
-                    Contact Seller
+            {/* Contact Seller */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Seller</CardTitle>
+                <CardDescription>
+                  {listing.seller?.companyName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {listing.seller?.phone && (
+                  <Button className="w-full" size="lg">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call {listing.seller.phone}
                   </Button>
+                )}
+                {listing.seller?.emails?.[0] && (
+                  <Button variant="outline" className="w-full" size="lg">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowContactForm(true)}
+                >
+                  Request Information
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Location */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Location</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {listing.location.city}, {listing.location.state} {listing.location.postalCode}
+                    </span>
+                  </div>
+                  {/* Map placeholder */}
+                  <div className="w-full h-32 bg-muted rounded flex items-center justify-center">
+                    <span className="text-muted-foreground text-sm">Map View</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -396,5 +475,3 @@ export function PublicListingView() {
     </div>
   )
 }
-
-export default PublicListingView

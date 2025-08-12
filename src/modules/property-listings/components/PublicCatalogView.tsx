@@ -1,271 +1,246 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Search, 
-  Filter,
+  Filter, 
   MapPin,
-  Calendar,
   Home,
   Car,
-  ChevronLeft,
-  ChevronRight,
-  Grid3X3,
-  List
+  Bed,
+  Bath,
+  Ruler,
+  Users,
+  Grid,
+  List,
+  SlidersHorizontal
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import { apiClient } from '@/utils/apiClient'
 
-interface Listing {
-  id: string
-  title: string
-  listingType: 'manufactured_home' | 'rv'
-  offerType: 'for_sale' | 'for_rent' | 'both'
-  year: number
-  make: string
-  model: string
-  salePrice?: number
-  rentPrice?: number
-  bedrooms?: number
-  bathrooms?: number
-  location: {
-    city: string
-    state: string
-    postalCode: string
+// Mock listings data
+const mockListings = [
+  {
+    id: 'listing_001',
+    listingType: 'manufactured_home',
+    year: 2023,
+    make: 'Clayton',
+    model: 'The Edge',
+    title: '2023 Clayton The Edge - 3BR/2BA',
+    offerType: 'for_sale',
+    salePrice: 89000,
+    rentPrice: null,
+    status: 'active',
+    location: {
+      city: 'Austin',
+      state: 'TX',
+      postalCode: '78701'
+    },
+    bedrooms: 3,
+    bathrooms: 2,
+    dimensions: {
+      width_ft: 28,
+      length_ft: 52,
+      sqft: 1456
+    },
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+      photos: [
+        'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+        'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg'
+      ]
+    },
+    description: 'Beautiful 3 bedroom, 2 bathroom manufactured home with modern finishes.',
+    searchResultsText: '2023 Clayton The Edge 3BR/2BA - Move-in Ready!',
+    createdAt: '2024-01-15T10:30:00Z'
+  },
+  {
+    id: 'listing_002',
+    listingType: 'rv',
+    year: 2022,
+    make: 'Forest River',
+    model: 'Cherokee',
+    title: '2022 Forest River Cherokee - Travel Trailer',
+    offerType: 'both',
+    salePrice: 45000,
+    rentPrice: 350,
+    status: 'active',
+    location: {
+      city: 'Dallas',
+      state: 'TX',
+      postalCode: '75201'
+    },
+    sleeps: 6,
+    slides: 2,
+    length: 28.5,
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg',
+      photos: [
+        'https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg',
+        'https://images.pexels.com/photos/2886937/pexels-photo-2886937.jpeg'
+      ]
+    },
+    description: 'Spacious travel trailer perfect for family adventures.',
+    searchResultsText: '2022 Forest River Cherokee 28.5ft - Sleeps 6',
+    createdAt: '2024-01-10T14:20:00Z'
+  },
+  {
+    id: 'listing_003',
+    listingType: 'manufactured_home',
+    year: 2024,
+    make: 'Skyline',
+    model: 'Arrow',
+    title: '2024 Skyline Arrow - 4BR/3BA',
+    offerType: 'for_rent',
+    salePrice: null,
+    rentPrice: 1200,
+    status: 'active',
+    location: {
+      city: 'Houston',
+      state: 'TX',
+      postalCode: '77001'
+    },
+    bedrooms: 4,
+    bathrooms: 3,
+    dimensions: {
+      width_ft: 32,
+      length_ft: 60,
+      sqft: 1920
+    },
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
+      photos: [
+        'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg'
+      ]
+    },
+    description: 'Spacious 4 bedroom home with master suite and open concept living.',
+    searchResultsText: '2024 Skyline Arrow 4BR/3BA - Available Now',
+    createdAt: '2024-01-05T09:15:00Z'
   }
-  media: {
-    primaryPhoto: string
-    photos: string[]
-  }
-  searchResultsText: string
-  status: string
-}
+]
 
-interface CompanyBranding {
-  name: string
-  logo?: string
-  primaryColor: string
-  secondaryColor: string
-  phone?: string
-  email?: string
-  website?: string
-}
-
-export default function PublicCatalogView() {
-  const { companySlug } = useParams()
+export const PublicCatalogView = () => {
+  const { companySlug, token } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { toast } = useToast()
+  const navigate = useNavigate()
   
-  const [listings, setListings] = useState<Listing[]>([])
-  const [filteredListings, setFilteredListings] = useState<Listing[]>([])
-  const [companyBranding, setCompanyBranding] = useState<CompanyBranding | null>(null)
+  const [listings, setListings] = useState([])
+  const [filteredListings, setFilteredListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
   
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [offerFilter, setOfferFilter] = useState('all')
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' })
-  const [bedroomsFilter, setBedroomsFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('newest')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 24
-  
-  useEffect(() => {
-    fetchListings()
-    fetchCompanyBranding()
-  }, [companySlug])
-  
-  useEffect(() => {
-    applyFilters()
-  }, [listings, searchQuery, typeFilter, offerFilter, priceRange, bedroomsFilter, sortBy])
-  
-  // Parse URL parameters for filtering
-  useEffect(() => {
-    const ids = searchParams.get('ids')
-    const type = searchParams.get('type')
-    const offer = searchParams.get('offer')
-    const minPrice = searchParams.get('minPrice')
-    const maxPrice = searchParams.get('maxPrice')
-    const bedrooms = searchParams.get('bedrooms')
-    const search = searchParams.get('search')
-    const sort = searchParams.get('sort')
-    
-    if (search) setSearchQuery(search)
-    if (type) setTypeFilter(type)
-    if (offer) setOfferFilter(offer)
-    if (minPrice) setPriceRange(prev => ({ ...prev, min: minPrice }))
-    if (maxPrice) setPriceRange(prev => ({ ...prev, max: maxPrice }))
-    if (bedrooms) setBedroomsFilter(bedrooms)
-    if (sort) setSortBy(sort)
-    
-    // Handle specific listing IDs (for shared selections)
-    if (ids) {
-      const listingIds = ids.split(',')
-      setFilteredListings(prev => prev.filter(listing => listingIds.includes(listing.id)))
-    }
-  }, [searchParams])
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+  const [filterType, setFilterType] = useState(searchParams.get('type') || 'all')
+  const [filterOfferType, setFilterOfferType] = useState(searchParams.get('offer') || 'all')
+  const [priceRange, setPriceRange] = useState({
+    min: searchParams.get('minPrice') || '',
+    max: searchParams.get('maxPrice') || ''
+  })
 
-  const fetchListings = async () => {
-    try {
-      setLoading(true)
+  useEffect(() => {
+    // In production, fetch listings data from API
+    // Handle both regular catalog and token-based sharing
+    setTimeout(() => {
+      let listingsData = mockListings
       
-      // In production, you'd get the actual company ID from the slug
-      // For now, we'll mock this
-      const companyId = `company_${companySlug}`
-      
-      const data = await apiClient.get('listings-crud', { companyId })
-      
-      // Only show active listings
-      if (data && Array.isArray(data)) {
-        const activeListings = data.filter((listing: Listing) => listing.status === 'active')
-        setListings(activeListings)
-      } else {
-        // Handle case where API returns null/undefined (graceful fallback)
-        setListings([])
+      // If there's a token, filter listings based on token data
+      if (token) {
+        // In production, decode token and filter listings accordingly
+        // For now, show all listings
       }
       
-    } catch (error) {
-      console.error('Error fetching listings:', error)
-      setError('Failed to load listings. Please try again later.')
-      setListings([]) // Ensure we have an empty array instead of undefined
-      toast({
-        title: "Error",
-        description: "Failed to load listings",
-        variant: "destructive",
-      })
-    } finally {
+      // Apply URL parameter filters
+      const ids = searchParams.get('ids')
+      if (ids) {
+        const idList = ids.split(',')
+        listingsData = listingsData.filter(listing => idList.includes(listing.id))
+      }
+      
+      setListings(listingsData)
       setLoading(false)
+    }, 500)
+  }, [companySlug, token, searchParams])
+
+  // Update URL params when filters change
+  const updateUrlParams = (key, value) => {
+    const newParams = new URLSearchParams(searchParams)
+    if (value && value !== 'all' && value !== '') {
+      newParams.set(key, value)
+    } else {
+      newParams.delete(key)
     }
+    setSearchParams(newParams)
   }
 
-  const fetchCompanyBranding = async () => {
-    try {
-      const companyId = `company_${companySlug}`
-      
-      // Mock company branding - in production, fetch from your API
-      const mockBranding: CompanyBranding = {
-        name: companySlug?.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property Listings',
-        primaryColor: '#667eea',
-        secondaryColor: '#764ba2',
-        phone: '(555) 123-4567',
-        email: 'info@example.com',
-        website: 'https://example.com'
-      }
-      
-      setCompanyBranding(mockBranding)
-      
-    } catch (error) {
-      console.error('Error fetching company branding:', error)
-    }
-  }
-
-  const applyFilters = () => {
+  // Filter listings based on current filters
+  useEffect(() => {
     let filtered = [...listings]
-    
-    // Search query
+
+    // Apply search
     if (searchQuery) {
       filtered = filtered.filter(listing =>
-        listing.searchResultsText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
         listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
         listing.location.city.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
-    
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.listingType === typeFilter)
+
+    // Apply type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(listing => listing.listingType === filterType)
     }
-    
-    // Offer type filter
-    if (offerFilter !== 'all') {
+
+    // Apply offer type filter
+    if (filterOfferType !== 'all') {
       filtered = filtered.filter(listing => 
-        listing.offerType === offerFilter || listing.offerType === 'both'
+        listing.offerType === filterOfferType || listing.offerType === 'both'
       )
     }
-    
-    // Price range filter
+
+    // Apply price range filter
     if (priceRange.min || priceRange.max) {
       filtered = filtered.filter(listing => {
         const price = listing.salePrice || listing.rentPrice || 0
-        const min = priceRange.min ? parseFloat(priceRange.min) : 0
-        const max = priceRange.max ? parseFloat(priceRange.max) : Infinity
+        const min = parseInt(priceRange.min) || 0
+        const max = parseInt(priceRange.max) || Infinity
         return price >= min && price <= max
       })
     }
-    
-    // Bedrooms filter (MH only)
-    if (bedroomsFilter !== 'all') {
-      filtered = filtered.filter(listing => {
-        if (listing.listingType !== 'manufactured_home') return true
-        const bedrooms = listing.bedrooms || 0
-        if (bedroomsFilter === '4+') return bedrooms >= 4
-        return bedrooms === parseInt(bedroomsFilter)
-      })
-    }
-    
-    // Sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'price_low':
-          return (a.salePrice || a.rentPrice || 0) - (b.salePrice || b.rentPrice || 0)
-        case 'price_high':
-          return (b.salePrice || b.rentPrice || 0) - (a.salePrice || a.rentPrice || 0)
-        case 'year_new':
-          return (b.year || 0) - (a.year || 0)
-        case 'year_old':
-          return (a.year || 0) - (b.year || 0)
-        case 'newest':
-        default:
-          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
-      }
-    })
-    
+
     setFilteredListings(filtered)
-    setCurrentPage(1) // Reset to first page when filters change
+  }, [listings, searchQuery, filterType, filterOfferType, priceRange])
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price)
   }
 
-  const updateFilters = (newFilters: Record<string, any>) => {
-    const newSearchParams = new URLSearchParams(searchParams)
-    
-    Object.entries(newFilters).forEach(([key, value]) => {
-      if (value && value !== 'all' && value !== '') {
-        newSearchParams.set(key, String(value))
-      } else {
-        newSearchParams.delete(key)
-      }
-    })
-    
-    setSearchParams(newSearchParams)
+  const getListingTypeIcon = (type) => {
+    return type === 'manufactured_home' ? Home : Car
   }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredListings.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentListings = filteredListings.slice(startIndex, endIndex)
+  const handleListingClick = (listingId) => {
+    navigate(`/${companySlug}/listing/${listingId}`)
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-12 bg-gray-200 rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded w-1/4"></div>
+            <div className="h-16 bg-muted rounded"></div>
+            <div className="grid md:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg p-4">
-                  <div className="h-48 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
+                <div key={i} className="h-80 bg-muted rounded"></div>
               ))}
             </div>
           </div>
@@ -274,155 +249,25 @@ export default function PublicCatalogView() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Oops!</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={fetchListings}>Try Again</Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {companyBranding?.logo && (
-                <img
-                  src={companyBranding.logo}
-                  alt={companyBranding.name}
-                  className="h-10 w-auto"
-                />
-              )}
-              <div>
-                <h1 className="text-2xl font-bold" style={{ color: companyBranding?.primaryColor }}>
-                  {companyBranding?.name}
-                </h1>
-                <p className="text-gray-600">Property Listings</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              {companyBranding?.phone && (
-                <a href={`tel:${companyBranding.phone}`} className="hover:text-primary">
-                  {companyBranding.phone}
-                </a>
-              )}
-              {companyBranding?.website && (
-                <a
-                  href={companyBranding.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-primary"
-                >
-                  Visit Website
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-6">
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search listings..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  updateFilters({ search: e.target.value })
-                }}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value)
-                updateFilters({ type: e.target.value })
-              }}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="all">All Types</option>
-              <option value="manufactured_home">Manufactured Homes</option>
-              <option value="rv">RVs</option>
-            </select>
-
-            {/* Offer Filter */}
-            <select
-              value={offerFilter}
-              onChange={(e) => {
-                setOfferFilter(e.target.value)
-                updateFilters({ offer: e.target.value })
-              }}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="all">For Sale & Rent</option>
-              <option value="for_sale">For Sale</option>
-              <option value="for_rent">For Rent</option>
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value)
-                updateFilters({ sort: e.target.value })
-              }}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="newest">Newest First</option>
-              <option value="price_low">Price: Low to High</option>
-              <option value="price_high">Price: High to Low</option>
-              <option value="year_new">Year: Newest</option>
-              <option value="year_old">Year: Oldest</option>
-            </select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <p className="text-sm text-gray-600">
-                {filteredListings.length} {filteredListings.length === 1 ? 'property' : 'properties'} found
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold">Property Listings</h1>
+              <p className="text-muted-foreground">
+                Browse available manufactured homes and RVs
               </p>
-              
-              {(typeFilter !== 'all' || typeFilter === 'manufactured_home') && (
-                <select
-                  value={bedroomsFilter}
-                  onChange={(e) => {
-                    setBedroomsFilter(e.target.value)
-                    updateFilters({ bedrooms: e.target.value })
-                  }}
-                  className="p-1 border rounded text-sm"
-                >
-                  <option value="all">Any Bedrooms</option>
-                  <option value="1">1 Bedroom</option>
-                  <option value="2">2 Bedrooms</option>
-                  <option value="3">3 Bedrooms</option>
-                  <option value="4+">4+ Bedrooms</option>
-                </select>
-              )}
             </div>
-
             <div className="flex items-center space-x-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
               >
-                <Grid3X3 className="h-4 w-4" />
+                <Grid className="h-4 w-4" />
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
@@ -433,218 +278,253 @@ export default function PublicCatalogView() {
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Listings Grid/List */}
-        {currentListings.length > 0 ? (
-          <div className={
-            viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-              : 'space-y-4'
-          }>
-            {currentListings.map((listing) => (
-              <Card key={listing.id} className="group cursor-pointer hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  {viewMode === 'grid' ? (
-                    <div onClick={() => window.location.href = `/${companySlug}/listing/${listing.id}`}>
-                      <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                        <img
-                          src={listing.media.primaryPhoto || '/placeholder-property.jpg'}
-                          alt={listing.searchResultsText}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute top-2 right-2">
-                          <Badge className="bg-white/90 text-gray-900">
-                            {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
-                          {listing.year} {listing.make} {listing.model}
-                        </h3>
-                        <p className="text-2xl font-bold mb-2" style={{ color: companyBranding?.primaryColor }}>
-                          ${(listing.salePrice || listing.rentPrice || 0).toLocaleString()}
-                          {listing.offerType === 'for_rent' && <span className="text-sm font-normal">/month</span>}
-                        </p>
-                        <div className="flex items-center text-gray-600 text-sm mb-2">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {listing.location.city}, {listing.location.state}
-                        </div>
-                        {listing.listingType === 'manufactured_home' && (listing.bedrooms || listing.bathrooms) && (
-                          <div className="flex items-center text-gray-600 text-sm">
-                            <Home className="h-4 w-4 mr-1" />
-                            {listing.bedrooms}bd {listing.bathrooms}ba
-                          </div>
-                        )}
-                        <div className="flex items-center text-gray-600 text-sm mt-2">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {listing.year}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div 
-                      className="flex p-4 space-x-4"
-                      onClick={() => window.location.href = `/${companySlug}/listing/${listing.id}`}
-                    >
-                      <div className="w-48 h-32 flex-shrink-0">
-                        <img
-                          src={listing.media.primaryPhoto || '/placeholder-property.jpg'}
-                          alt={listing.searchResultsText}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold text-xl mb-2 group-hover:text-primary transition-colors">
-                              {listing.year} {listing.make} {listing.model}
-                            </h3>
-                            <p className="text-2xl font-bold mb-2" style={{ color: companyBranding?.primaryColor }}>
-                              ${(listing.salePrice || listing.rentPrice || 0).toLocaleString()}
-                              {listing.offerType === 'for_rent' && <span className="text-sm font-normal">/month</span>}
-                            </p>
-                          </div>
-                          <Badge className="bg-gray-100 text-gray-900">
-                            {listing.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 text-gray-600 text-sm mb-2">
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {listing.location.city}, {listing.location.state}
-                          </div>
-                          {listing.listingType === 'manufactured_home' && (listing.bedrooms || listing.bathrooms) && (
-                            <div className="flex items-center">
-                              <Home className="h-4 w-4 mr-1" />
-                              {listing.bedrooms}bd {listing.bathrooms}ba
-                            </div>
-                          )}
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {listing.year}
-                          </div>
-                        </div>
-                        <p className="text-gray-600 text-sm">{listing.searchResultsText}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                <Search className="h-12 w-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">No properties found</h3>
-              <p className="text-gray-600 mb-4">Try adjusting your search filters to find more properties.</p>
-              <Button 
-                onClick={() => {
-                  setSearchQuery('')
-                  setTypeFilter('all')
-                  setOfferFilter('all')
-                  setPriceRange({ min: '', max: '' })
-                  setBedroomsFilter('all')
-                  updateFilters({})
+          {/* Search and Filters */}
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by make, model, location..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  updateUrlParams('q', e.target.value)
+                }}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4">
+              <Select 
+                value={filterType} 
+                onValueChange={(value) => {
+                  setFilterType(value)
+                  updateUrlParams('type', value)
                 }}
               >
-                Clear All Filters
-              </Button>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Property Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
+                  <SelectItem value="rv">RV/Travel Trailers</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filterOfferType} 
+                onValueChange={(value) => {
+                  setFilterOfferType(value)
+                  updateUrlParams('offer', value)
+                }}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Offer Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Offers</SelectItem>
+                  <SelectItem value="for_sale">For Sale</SelectItem>
+                  <SelectItem value="for_rent">For Rent</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Min Price"
+                  value={priceRange.min}
+                  onChange={(e) => {
+                    const newRange = { ...priceRange, min: e.target.value }
+                    setPriceRange(newRange)
+                    updateUrlParams('minPrice', e.target.value)
+                  }}
+                  className="w-[120px]"
+                />
+                <Input
+                  placeholder="Max Price"
+                  value={priceRange.max}
+                  onChange={(e) => {
+                    const newRange = { ...priceRange, max: e.target.value }
+                    setPriceRange(newRange)
+                    updateUrlParams('maxPrice', e.target.value)
+                  }}
+                  className="w-[120px]"
+                />
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-4 mt-8">
-            <Button
-              variant="outline"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-            
-            <div className="flex items-center space-x-2">
-              {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-                const pageNumber = currentPage <= 3 ? i + 1 : currentPage - 2 + i
-                if (pageNumber <= totalPages) {
-                  return (
-                    <Button
-                      key={pageNumber}
-                      variant={currentPage === pageNumber ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNumber)}
-                    >
-                      {pageNumber}
-                    </Button>
-                  )
-                }
-                return null
-              })}
-            </div>
-            
-            <Button
-              variant="outline"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
+          {/* Results count */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'} found
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Listings */}
+      <div className="container mx-auto px-4 py-8">
+        {filteredListings.length === 0 ? (
+          <div className="text-center py-12">
+            <Home className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+            <h3 className="text-lg font-semibold mb-2">No listings found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search criteria or browse all listings
+            </p>
+          </div>
+        ) : (
+          <div className={
+            viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+              : 'space-y-4'
+          }>
+            {filteredListings.map((listing) => {
+              const TypeIcon = getListingTypeIcon(listing.listingType)
+              
+              if (viewMode === 'list') {
+                return (
+                  <Card 
+                    key={listing.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleListingClick(listing.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                          {listing.media?.primaryPhoto ? (
+                            <img
+                              src={listing.media.primaryPhoto}
+                              alt={listing.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <TypeIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <h3 className="font-semibold mb-1">{listing.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {listing.year} {listing.make} {listing.model}
+                          </p>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {listing.location.city}, {listing.location.state}
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          {listing.salePrice && (
+                            <div className="font-bold text-green-600">
+                              {formatPrice(listing.salePrice)}
+                            </div>
+                          )}
+                          {listing.rentPrice && (
+                            <div className="font-bold text-blue-600">
+                              {formatPrice(listing.rentPrice)}/mo
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              }
+
+              return (
+                <Card 
+                  key={listing.id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => handleListingClick(listing.id)}
+                >
+                  <div className="aspect-video relative overflow-hidden rounded-t-lg bg-muted">
+                    {listing.media?.primaryPhoto ? (
+                      <img
+                        src={listing.media.primaryPhoto}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <TypeIcon className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3">
+                      <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
+                        {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                      </Badge>
+                    </div>
+                    {listing.media?.photos && listing.media.photos.length > 1 && (
+                      <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                        +{listing.media.photos.length - 1} photos
+                      </div>
+                    )}
+                  </div>
+                  
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-2 line-clamp-1">{listing.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {listing.year} {listing.make} {listing.model}
+                    </p>
+                    
+                    {listing.listingType === 'manufactured_home' && (
+                      <div className="flex items-center space-x-4 mb-3 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          <Bed className="h-3 w-3 mr-1" />
+                          {listing.bedrooms}
+                        </span>
+                        <span className="flex items-center">
+                          <Bath className="h-3 w-3 mr-1" />
+                          {listing.bathrooms}
+                        </span>
+                        <span className="flex items-center">
+                          <Ruler className="h-3 w-3 mr-1" />
+                          {listing.dimensions?.sqft} sqft
+                        </span>
+                      </div>
+                    )}
+                    
+                    {listing.listingType === 'rv' && (
+                      <div className="flex items-center space-x-4 mb-3 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          <Users className="h-3 w-3 mr-1" />
+                          Sleeps {listing.sleeps}
+                        </span>
+                        <span>{listing.length}ft</span>
+                        <span>{listing.slides} slides</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {listing.location.city}, {listing.location.state}
+                      </div>
+                      <div className="text-right">
+                        {listing.salePrice && (
+                          <div className="font-bold text-green-600">
+                            {formatPrice(listing.salePrice)}
+                          </div>
+                        )}
+                        {listing.rentPrice && (
+                          <div className="font-bold text-blue-600 text-sm">
+                            {formatPrice(listing.rentPrice)}/mo
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              {companyBranding?.logo && (
-                <img
-                  src={companyBranding.logo}
-                  alt={companyBranding.name}
-                  className="h-8 w-auto"
-                />
-              )}
-              <span className="font-semibold">{companyBranding?.name}</span>
-            </div>
-            
-            <div className="flex items-center space-x-6 text-sm text-gray-600">
-              {companyBranding?.phone && (
-                <a href={`tel:${companyBranding.phone}`} className="hover:text-primary">
-                  {companyBranding.phone}
-                </a>
-              )}
-              {companyBranding?.email && (
-                <a href={`mailto:${companyBranding.email}`} className="hover:text-primary">
-                  {companyBranding.email}
-                </a>
-              )}
-              {companyBranding?.website && (
-                <a
-                  href={companyBranding.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-primary"
-                >
-                  Visit Website
-                </a>
-              )}
-            </div>
-          </div>
-          
-          <div className="mt-4 pt-4 border-t text-center text-sm text-gray-500">
-            <p>© {new Date().getFullYear()} {companyBranding?.name}. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

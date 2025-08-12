@@ -25,14 +25,15 @@ import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
+import ClientPortal from '@/modules/client-portal/ClientPortal'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
+import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
-import PublicListingView from '@/modules/property-listings/components/PublicListingView'
-import PublicCatalogView from '@/modules/property-listings/components/PublicCatalogView'
 import LandManagement from '@/modules/land-management/LandManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
@@ -50,13 +51,17 @@ function App() {
               <div className="min-h-screen bg-background">
                 <Routes>
                   <Route path="/login" element={<Login />} />
-                  {/* Client Portal Routes - these will render ClientPortal directly */}
-                  <Route path="/portalclient/*" element={<ClientPortalLayout />} />
-                  {/* Public Listing Routes - no authentication required */}
-                  <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
+                  {/* Public Routes - No authentication required */}
                   <Route path="/:companySlug/listing/:listingId" element={<PublicListingView />} />
+                  <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
                   <Route path="/:companySlug/l/:token" element={<PublicCatalogView />} />
-                  <Route path="/:companySlug/p/:token" element={<PublicListingView />} />
+                  
+                  {/* Client Portal Routes - these will render ClientPortal directly */}
+                  <Route path="/portalclient/*" element={
+                    <ProtectedRoute>
+                      <ClientPortal />
+                    </ProtectedRoute>
+                  } />
                   {/* Main Application Routes - these will render the Layout */}
                   <Route path="/*" element={
                     <ProtectedRoute>
@@ -77,8 +82,8 @@ function App() {
                           <Route path="/commissions/*" element={<CommissionEngine />} />
                           <Route path="/portal/*" element={<ClientPortalAdmin />} />
                           <Route path="/invoices/*" element={<InvoicePayments />} />
-                          <Route path="/settings/*" element={<CompanySettings />} />
                           <Route path="/listings/*" element={<PropertyListings />} />
+                          <Route path="/settings/*" element={<CompanySettings />} />
                           <Route path="/admin/*" element={<PlatformAdmin />} />
                           <Route path="/admin/settings/*" element={<PlatformSettings />} />
                           <Route path="/reports/*" element={<ReportingSuite />} />
