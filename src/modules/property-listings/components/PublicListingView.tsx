@@ -125,15 +125,45 @@ export const PublicListingView = () => {
   }
 
   const handleShare = () => {
+    // Prepare share data
+    const shareData = {
+      title: `${listing.year} ${listing.make} ${listing.model}`,
+      text: `Check out this ${listing.listingType === 'manufactured_home' ? 'manufactured home' : 'RV'} - ${listing.searchResultsText || 'Great property listing'}`,
+      url: window.location.href
+    };
+
+    // Check if Web Share API is supported and available
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        // If Web Share API fails, fall back to clipboard
+        console.warn('Web Share API failed:', error);
+      }
+    }
+
+    // Fallback: Copy to clipboard
     if (navigator.share) {
-      navigator.share({
-        title: listing.title,
-        text: listing.searchResultsText,
-        url: window.location.href
       })
-    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      // Show success message (you might want to use a toast notification here)
+      alert('Link copied to clipboard!');
       // Fallback - copy to clipboard
-      navigator.clipboard.writeText(window.location.href)
+      // Final fallback: Show the URL for manual copying
+      console.error('Share and clipboard failed:', error);
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        alert('Link copied to clipboard!');
+      } catch (copyError) {
+        alert(`Please copy this link manually: ${window.location.href}`);
+      }
+      document.body.removeChild(textArea);
     }
   }
 
