@@ -26,6 +26,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
+import { ShareAllListingsModal } from './components/ShareAllListingsModal'
 import { Home } from 'lucide-react'
 
 const PropertyListings = () => {
@@ -98,6 +99,21 @@ const PropertyListings = () => {
     }
   }
 
+  // Calculate summary statistics for sharing
+  const totalListings = mockListings.sampleListings.length
+  const activeListings = filteredListings.length
+  const averagePrice = Math.round(
+    filteredListings.reduce((sum, listing) => 
+      sum + (listing.salePrice || listing.rentPrice || 0), 0
+    ) / filteredListings.length
+  )
+  const totalValue = filteredListings.reduce((sum, listing) => 
+    sum + (listing.salePrice || listing.rentPrice || 0), 0
+  )
+  const featuredListings = filteredListings
+    .slice(0, 5)
+    .map(listing => `${listing.year} ${listing.make} ${listing.model}`)
+
   // Loading state
   if (isLoading) {
     return (
@@ -136,6 +152,10 @@ const PropertyListings = () => {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={() => setShareAllModalOpen(true)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share All Listings
+            </Button>
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
               Settings
@@ -345,6 +365,19 @@ const PropertyListings = () => {
           open={shareModalOpen}
           onOpenChange={setShareModalOpen}
           listing={selectedListing}
+        />
+
+        {/* Share All Listings Modal */}
+        <ShareAllListingsModal
+          isOpen={shareAllModalOpen}
+          onClose={() => setShareAllModalOpen(false)}
+          companyId="demo-company"
+          companyName="Demo RV Dealership"
+          totalListings={totalListings}
+          activeListings={activeListings}
+          averagePrice={averagePrice}
+          totalValue={totalValue}
+          featuredListings={featuredListings}
         />
       </div>
     </ModuleErrorBoundary>
