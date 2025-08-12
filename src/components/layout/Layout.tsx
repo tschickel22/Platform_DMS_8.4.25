@@ -19,7 +19,7 @@ import {
   Receipt,
   BarChart2,
   Settings,
-  Home
+  Home,
   Shield,
   User,
   LogOut,
