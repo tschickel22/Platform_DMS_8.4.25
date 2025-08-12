@@ -14,7 +14,7 @@ import {
   Share2,
 } from 'lucide-react'
 import * as ListingsMock from '@/mocks/listingsMock'
-import ShareListingModal from './ShareListingModal'
+import { ShareListingModal } from './ShareListingModal'
 
 // Normalize any plausible mock module shape into an array
 const asArray = (val: any) => {
