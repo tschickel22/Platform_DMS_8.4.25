@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { Home, Car, DollarSign, MapPin, Camera, User, AlertCircle } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { mockInventory } from '@/mocks/inventoryMock'
-import { mockInventory } from '@/mocks/inventoryMock'
 
 interface ListingFormProps {
   listing?: any
@@ -264,6 +263,8 @@ export default function ListingForm({ listing, open, onOpenChange, onSave }: Lis
                   <p className="text-sm">Please add inventory items first</p>
                 </div>
               )}
+            </div>
+          </div>
         </div>
         {errors.inventoryId && (
           <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
