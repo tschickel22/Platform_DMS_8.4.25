@@ -124,7 +124,7 @@ export const PublicListingView = () => {
     }
   }
 
-  const handleShare = () => {
+  const handleShare = async () => {
     // Prepare share data
     const shareData = {
       title: `${listing.year} ${listing.make} ${listing.model}`,
@@ -144,26 +144,29 @@ export const PublicListingView = () => {
     }
 
     // Fallback: Copy to clipboard
-    if (navigator.share) {
-      })
-      await navigator.clipboard.writeText(window.location.href);
-      // Show success message (you might want to use a toast notification here)
-      alert('Link copied to clipboard!');
-      // Fallback - copy to clipboard
-      // Final fallback: Show the URL for manual copying
-      console.error('Share and clipboard failed:', error);
-      const textArea = document.createElement('textarea');
-      textArea.value = window.location.href;
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
+    if (navigator.clipboard) {
       try {
-        document.execCommand('copy');
+        await navigator.clipboard.writeText(window.location.href);
+        // Show success message (you might want to use a toast notification here)
         alert('Link copied to clipboard!');
-      } catch (copyError) {
-        alert(`Please copy this link manually: ${window.location.href}`);
+        return;
+      } catch (error) {
+        // Fallback - copy to clipboard
+        // Final fallback: Show the URL for manual copying
+        console.error('Share and clipboard failed:', error);
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          alert('Link copied to clipboard!');
+        } catch (copyError) {
+          alert(`Please copy this link manually: ${window.location.href}`);
+        }
+        document.body.removeChild(textArea);
       }
-      document.body.removeChild(textArea);
     }
   }
 
