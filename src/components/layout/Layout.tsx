@@ -88,7 +88,7 @@ export default function Layout({ children }: LayoutProps) {
       name: 'Marketing',
       icon: Globe,
       children: [
-        { name: 'Property Listings', path: '/marketing/listings', icon: Globe }
+        { name: 'Property Listings', path: '/property/listings', icon: Globe }
       ]
     },
 
