@@ -19,7 +19,6 @@ import {
   Receipt,
   BarChart2,
   Settings,
-  Home,
   Shield,
   User,
   LogOut,
@@ -29,9 +28,49 @@ import {
   Calendar,
   HardHat,
   MapPin,
-  Tag
+  Tag,
+  Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+/**
+ * ROUTE CONSTANTS
+ * Keep admin paths under a namespace that can't collide with public dynamic routes like "/:companySlug/listings".
+ * Your App.tsx should map these admin routes to protected components.
+ */
+const ROUTES = {
+  DASHBOARD: '/',
+  CRM: '/crm',
+  DEALS: '/deals',
+  QUOTES: '/quotes',
+
+  INVENTORY: '/inventory',
+  LAND: '/land',
+  PDI: '/pdi',
+  DELIVERY: '/delivery',
+  WARRANTY: '/inventory/warranty',
+
+  // ✅ Admin Property Listings dashboard (must exist in App.tsx)
+  PROPERTY_LISTINGS_ADMIN: '/property/listings',
+
+  FINANCE: '/finance',
+  AGREEMENTS: '/agreements',
+  CLIENT_APPS: '/client-applications',
+  INVOICES: '/invoices',
+
+  SERVICE: '/service',
+  PORTAL: '/portal',
+
+  REPORTS: '/reports',
+  COMMISSIONS: '/commissions',
+  TAGS: '/tags',
+  TASKS: '/tasks',
+  CALENDAR: '/calendar',
+  CONTRACTORS: '/contractors',
+
+  SETTINGS: '/settings',
+  PLATFORM_ADMIN: '/admin'
+}
 
 interface NavigationItem {
   name: string
@@ -55,40 +94,38 @@ export default function Layout({ children }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
 
-  // Navigation structure with sub-menus
+  // ---------- Navigation definition ----------
   const navigationItems: NavigationItem[] = [
-    {
-      name: 'Dashboard',
-      path: '/',
-      icon: LayoutDashboard
-    },
+    { name: 'Dashboard', path: ROUTES.DASHBOARD, icon: LayoutDashboard },
+
     {
       name: 'CRM & Sales',
       icon: Users,
       children: [
-        { name: 'Prospecting', path: '/crm', icon: Users },
-        { name: 'Sales Deals', path: '/deals', icon: DollarSign },
-        { name: 'Quotes', path: '/quotes', icon: FileText }
+        { name: 'Prospecting', path: ROUTES.CRM, icon: Users },
+        { name: 'Sales Deals', path: ROUTES.DEALS, icon: DollarSign },
+        { name: 'Quotes', path: ROUTES.QUOTES, icon: FileText }
       ]
     },
+
     {
       name: 'Inventory & Operations',
       icon: Package,
       children: [
-        { name: 'Inventory', path: '/inventory', icon: Package },
-        { name: 'Land Management', path: '/land', icon: MapPin },
-        { name: 'PDI Checklist', path: '/pdi', icon: CheckSquare },
-        { name: 'Delivery', path: '/delivery', icon: Truck },
-        { name: 'Warranty Mgmt', path: '/inventory/warranty', icon: ShieldCheck }
+        { name: 'Inventory', path: ROUTES.INVENTORY, icon: Package },
+        { name: 'Land Management', path: ROUTES.LAND, icon: MapPin },
+        { name: 'PDI Checklist', path: ROUTES.PDI, icon: CheckSquare },
+        { name: 'Delivery', path: ROUTES.DELIVERY, icon: Truck },
+        { name: 'Warranty Mgmt', path: ROUTES.WARRANTY, icon: ShieldCheck }
       ]
     },
 
-    // ✅ NEW: Marketing group with Property Listings
+    // ✅ Marketing with the ADMIN Property Listings dashboard
     {
       name: 'Marketing',
       icon: Globe,
       children: [
-        { name: 'Property Listings', path: '/property/listings', icon: Globe }
+        { name: 'Property Listings', path: ROUTES.PROPERTY_LISTINGS_ADMIN, icon: Home }
       ]
     },
 
@@ -96,52 +133,65 @@ export default function Layout({ children }: LayoutProps) {
       name: 'Finance & Agreements',
       icon: DollarSign,
       children: [
-        { name: 'Finance', path: '/finance', icon: DollarSign },
-        { name: 'Agreements', path: '/agreements', icon: FileText },
-        { name: 'Applications', path: '/client-applications', icon: FileText },
-        { name: 'Invoices', path: '/invoices', icon: Receipt }
+        { name: 'Finance', path: ROUTES.FINANCE, icon: DollarSign },
+        { name: 'Agreements', path: ROUTES.AGREEMENTS, icon: FileText },
+        { name: 'Applications', path: ROUTES.CLIENT_APPS, icon: FileText },
+        { name: 'Invoices', path: ROUTES.INVOICES, icon: Receipt }
       ]
     },
+
     {
       name: 'Service & Support',
       icon: Wrench,
       children: [
-        { name: 'Service Ops', path: '/service', icon: Wrench },
-        { name: 'Client Portal', path: '/portal', icon: Globe }
+        { name: 'Service Ops', path: ROUTES.SERVICE, icon: Wrench },
+        { name: 'Client Portal', path: ROUTES.PORTAL, icon: Globe }
       ]
     },
+
     {
       name: 'Management',
       icon: BarChart2,
       children: [
-        { name: 'Reports', path: '/reports', icon: BarChart2 },
-        { name: 'Commissions', path: '/commissions', icon: Percent },
-        { name: 'Tag Manager', path: '/tags', icon: Tag },
-        { name: 'Property Listings', path: '/listings', icon: Home },
-        { name: 'Task Center', path: '/tasks', icon: ListTodo },
-        { name: 'Calendar', path: '/calendar', icon: Calendar },
-        { name: 'Contractors', path: '/contractors', icon: HardHat }
+        { name: 'Reports', path: ROUTES.REPORTS, icon: BarChart2 },
+        { name: 'Commissions', path: ROUTES.COMMISSIONS, icon: Percent },
+        { name: 'Tag Manager', path: ROUTES.TAGS, icon: Tag },
+        // 🚫 Removed the duplicate "Property Listings" entry that pointed at "/listings" (public route).
+        { name: 'Task Center', path: ROUTES.TASKS, icon: ListTodo },
+        { name: 'Calendar', path: ROUTES.CALENDAR, icon: Calendar },
+        { name: 'Contractors', path: ROUTES.CONTRACTORS, icon: HardHat }
       ]
     },
+
     {
       name: 'Administration',
       icon: Settings,
       children: [
-        { name: 'Company Settings', path: '/settings', icon: Settings },
-        { name: 'Platform Admin', path: '/admin', icon: Shield }
+        { name: 'Company Settings', path: ROUTES.SETTINGS, icon: Settings },
+        { name: 'Platform Admin', path: ROUTES.PLATFORM_ADMIN, icon: Shield }
       ]
     }
   ]
 
-  // Auto-expand menu containing current page
-  useEffect(() => {
-    const currentPath = location.pathname
-    const parentMenu = navigationItems.find(item =>
-      item.children?.some(child => currentPath.startsWith(child.path))
-    )
+  // ---------- Helpers ----------
+  const normalize = (p: string) => p.replace(/\/+$/, '')
+  const isActive = (path: string) => {
+    const current = normalize(location.pathname)
+    const target = normalize(path)
+    return current === target || current.startsWith(target + '/')
+  }
 
-    if (parentMenu && !expandedMenus.includes(parentMenu.name)) {
-      setExpandedMenus(prev => [...prev, parentMenu.name])
+  // Auto-expand the group that contains the current route
+  useEffect(() => {
+    const currentPath = normalize(location.pathname)
+    const parent = navigationItems.find(item =>
+      item.children?.some(child => {
+        const target = normalize(child.path)
+        return currentPath === target || currentPath.startsWith(target + '/')
+      })
+    )
+    if (parent && !expandedMenus.includes(parent.name)) {
+      setExpandedMenus(prev => [...prev, parent.name])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
@@ -154,147 +204,139 @@ export default function Layout({ children }: LayoutProps) {
     )
   }
 
-  const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/'
-    }
-    return location.pathname.startsWith(path)
-  }
-
-  const SidebarContent = () => {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Logo */}
-        <div className="flex items-center px-4 py-6">
-          <div className="flex items-center">
-            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                {tenant?.name?.charAt(0) || 'R'}
-              </span>
-            </div>
-            <span className="ml-2 text-lg font-semibold">
-              {tenant?.name || 'Renter Insight'}
+  // ---------- Sidebar ----------
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="flex items-center px-4 py-6">
+        <div className="flex items-center">
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">
+              {tenant?.name?.charAt(0) || 'R'}
             </span>
           </div>
+          <span className="ml-2 text-lg font-semibold">
+            {tenant?.name || 'Renter Insight'}
+          </span>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-1">
-          {navigationItems.map((item) => {
-            if (item.children) {
-              const isExpanded = expandedMenus.includes(item.name)
-              const hasActiveChild = item.children.some(child => isActive(child.path))
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1">
+        {navigationItems.map((item) => {
+          if (item.children) {
+            const isExpanded = expandedMenus.includes(item.name)
+            const hasActiveChild = item.children.some(child => isActive(child.path!))
 
-              return (
-                <div key={item.name}>
-                  <button
-                    onClick={() => toggleMenu(item.name)}
-                    className={cn(
-                      'w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                      hasActiveChild
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    )}
-                  >
-                    <div className="flex items-center">
-                      <item.icon
-                        className={cn(
-                          'mr-3 flex-shrink-0 h-5 w-5',
-                          hasActiveChild ? 'text-primary' : 'text-muted-foreground'
-                        )}
-                      />
-                      {item.name}
-                    </div>
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        isExpanded ? 'transform rotate-180' : '',
-                        hasActiveChild ? 'text-primary' : 'text-muted-foreground'
-                      )}
-                    />
-                  </button>
-
-                  {isExpanded && (
-                    <div className="mt-1 space-y-1">
-                      {item.children.map((child) => {
-                        const childActive = isActive(child.path)
-                        return (
-                          <Link
-                            key={child.path}
-                            to={child.path}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className={cn(
-                              'group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors',
-                              childActive
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                            )}
-                          >
-                            <child.icon
-                              className={cn(
-                                'mr-3 flex-shrink-0 h-4 w-4',
-                                childActive ? 'text-primary-foreground' : 'text-muted-foreground'
-                              )}
-                            />
-                            {child.name}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            } else {
-              const active = isActive(item.path!)
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path!}
-                  onClick={() => setIsMobileMenuOpen(false)}
+            return (
+              <div key={item.name}>
+                <button
+                  onClick={() => toggleMenu(item.name)}
                   className={cn(
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                    active
-                      ? 'bg-primary text-primary-foreground'
+                    'w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                    hasActiveChild
+                      ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
-                  <item.icon
+                  <div className="flex items-center">
+                    <item.icon
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        hasActiveChild ? 'text-primary' : 'text-muted-foreground'
+                      )}
+                    />
+                    {item.name}
+                  </div>
+                  <ChevronDown
                     className={cn(
-                      'mr-3 flex-shrink-0 h-5 w-5',
-                      active ? 'text-primary-foreground' : 'text-muted-foreground'
+                      'h-4 w-4 transition-transform',
+                      isExpanded ? 'transform rotate-180' : '',
+                      hasActiveChild ? 'text-primary' : 'text-muted-foreground'
                     )}
                   />
-                  {item.name}
-                </Link>
-              )
-            }
-          })}
-        </nav>
+                </button>
 
-        {/* User section */}
-        <div className="border-t p-4">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
+                {isExpanded && (
+                  <div className="mt-1 space-y-1">
+                    {item.children.map((child) => {
+                      const childActive = isActive(child.path!)
+                      return (
+                        <Link
+                          key={child.path}
+                          to={child.path!}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={cn(
+                            'group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors',
+                            childActive
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                          )}
+                        >
+                          <child.icon
+                            className={cn(
+                              'mr-3 flex-shrink-0 h-4 w-4',
+                              childActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                            )}
+                          />
+                          {child.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          } else {
+            const active = isActive(item.path!)
+            return (
+              <Link
+                key={item.path}
+                to={item.path!}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                  active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    'mr-3 flex-shrink-0 h-5 w-5',
+                    active ? 'text-primary-foreground' : 'text-muted-foreground'
+                  )}
+                />
+                {item.name}
+              </Link>
+            )
+          }
+        })}
+      </nav>
+
+      {/* User section */}
+      <div className="border-t p-4">
+        <div className="flex items-center space-x-3 mb-3">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-4 w-4" />
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-            onClick={logout}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign out
-          </Button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user?.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start"
+          onClick={logout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign out
+        </Button>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
     <div className="flex h-screen bg-background">
