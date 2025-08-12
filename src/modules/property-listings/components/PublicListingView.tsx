@@ -43,9 +43,8 @@ export const PublicListingView = () => {
       const listings = mockListings?.sampleListings || []
       const foundListing = listings.find(l => l.id === listingId)
       console.log('Found listing:', foundListing)
-      );
+      setListing(foundListing)
       setLoading(false)
-    }, 500)
   }, [listingId])
 
   const formatPrice = (price) => {
@@ -315,6 +314,23 @@ export const PublicListingView = () => {
                   {listing.listingType === 'rv' && (
                     <>
                       <div className="text-center">
+                        <div className="text-2xl font-bold flex items-center justify-center">
+                          <Users className="h-6 w-6 mr-1" />
+                          {listing.sleeps}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Sleeps</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{listing.dimensions?.length_ft}'</div>
+                        <div className="text-sm text-muted-foreground">Length</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pricing */}
             <Card>
               <CardHeader>
                 <CardTitle>Pricing</CardTitle>
