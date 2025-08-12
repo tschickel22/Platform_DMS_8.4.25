@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -28,6 +29,7 @@ import { ShareListingModal } from './components/ShareListingModal'
 import { Home } from 'lucide-react'
 
 const PropertyListings = () => {
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,6 +71,10 @@ const PropertyListings = () => {
     });
     setShareAllModalOpen(true);
   };
+
+  const handleListingClick = (listingId) => {
+    navigate(`/listings/${listingId}`)
+  }
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -238,6 +244,7 @@ const PropertyListings = () => {
                   <div
                     key={listing.id}
                     className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleListingClick(listing.id)}
                   >
                     {/* Property Image */}
                     <div className="flex-shrink-0">
