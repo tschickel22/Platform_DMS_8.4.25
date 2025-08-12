@@ -130,6 +130,7 @@ function App() {
                                 <Route path="/admin/settings/*" element={<PlatformSettings />} />
                                 <Route path="/reports/*" element={<ReportingSuite />} />
                                 <Route path="/client-applications/*" element={<FinanceApplication />} />
+                                <Route path="/property/*" element={<PropertyListings />} />
                                 <Route path="/listings/*" element={<PropertyListings />} />
                                 <Route path="/listings/:listingId" element={<ListingDetail />} />
                               </Routes>
