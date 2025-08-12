@@ -3,6 +3,7 @@ import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { logger } from '@/utils/logger'
+import { mockListings } from '@/mocks/listingsMock'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,86 +22,17 @@ import {
   Calendar,
   DollarSign,
   Home,
-  Car,
+        setListings(mockListings.sampleListings);
   Settings
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
-
-
-const PropertyListings = () => {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const { handleError, handleAsyncError } = useErrorHandler()
-  const [listings, setListings] = useState(mockListings.sampleListings)
-  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState('all')
-  const [filterOfferType, setFilterOfferType] = useState('all')
-  const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [selectedListing, setSelectedListing] = useState(null)
-
-  // Log page view
-  React.useEffect(() => {
-    logger.pageView('/listings');
-    logger.userAction('property_listings_viewed');
-  }, []);
-
-  // Filter listings based on search and filters
-  useEffect(() => {
-    try {
-      let filtered = listings
-
-      // Apply search
-      if (searchQuery) {
-        filtered = filtered.filter(listing =>
-          listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.location.city.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      }
-
-      // Apply type filter
-      if (filterType !== 'all') {
-        filtered = filtered.filter(listing => listing.listingType === filterType)
-      }
-
-      // Apply offer type filter
-      if (filterOfferType !== 'all') {
-        filtered = filtered.filter(listing => 
-          listing.offerType === filterOfferType || listing.offerType === 'both'
-        )
-      }
-
-      setFilteredListings(filtered)
-    } catch (error) {
-      handleError(error, 'listing_filter');
-      setFilteredListings(listings); // Fallback to unfiltered listings
-    }
-  }, [listings, searchQuery, filterType, filterOfferType])
-
-  // Simulate data loading
-  React.useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // In real implementation, this would be an API call
-        setListings(mockListings.sampleListings);
-      } catch (error) {
-        handleError(error, 'property_listings_load');
-        setError('Failed to load listings');
-      } finally {
         setIsLoading(false);
       }
     };
     
-    loadData();
-  }, [handleError]);
+  const [listings, setListings] = useState(mockListings.sampleListings)
+  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
 
   const handleShareListing = (listing) => {
     logger.userAction('share_listing_clicked', { listingId: listing.id });
