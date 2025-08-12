@@ -14,7 +14,7 @@ import {
   Share2,
 } from 'lucide-react'
 import * as ListingsMock from '@/mocks/listingsMock'
-import { ShareListingModal } from './ShareListingModal'
+import ShareListingModal from './ShareListingModal'
 
 // Normalize any plausible mock module shape into an array
 const asArray = (val: any) => {
@@ -25,7 +25,7 @@ const asArray = (val: any) => {
   return []
 }
 
-// Ensure both listingType / propertyType exist so legacy code won’t crash
+// Ensure both listingType / propertyType exist so legacy code won't crash
 const normalize = (l: any) => ({
   ...l,
   listingType: l?.listingType ?? l?.propertyType ?? 'manufactured_home',
@@ -100,7 +100,7 @@ const PublicListingView: React.FC = () => {
             <div className="text-center py-12">
               <h2 className="text-xl font-semibold mb-2">Listing not found</h2>
               <p className="text-muted-foreground mb-4">
-                The listing you’re looking for doesn’t exist.
+                The listing you're looking for doesn't exist.
               </p>
               <Button onClick={() => navigate(-1)} variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" />
