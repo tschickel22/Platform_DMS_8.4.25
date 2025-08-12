@@ -18,6 +18,7 @@ export type PublicListing = {
   media?: { primaryPhoto?: string | null; photos?: string[] }
 }
 
+// Ensure mockListings is properly exported and available
 export const mockListings: PublicListing[] = [
   {
     id: 'listing_001',
