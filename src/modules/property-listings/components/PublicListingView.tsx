@@ -17,6 +17,7 @@ const asArray = (val: any) => {
   return []
 }
 
+const PublicListingView = () => {
   const { listingId } = useParams()
   const navigate = useNavigate()
   const [listing, setListing] = useState<any>(null)
