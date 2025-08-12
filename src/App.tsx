@@ -62,18 +62,6 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
-      <AuthProvider>
-        <MenuManagerProvider>
-          <Router>
-            <TenantProvider>
-              <div className="min-h-screen bg-background">
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  {/* Public Routes - No authentication required */}
-                  <Route path="/:companySlug/listing/:listingId" element={<PublicListingView />} />
-                  <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
-                  <Route path="/:companySlug/l/:token" element={<PublicCatalogView />} />
     <ErrorBoundary 
       showErrorDetails={import.meta.env.DEV}
       onError={(error, errorInfo) => {
@@ -82,72 +70,78 @@ function App() {
     >
       <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
         <AuthProvider>
-          <Router>
-            <TenantProvider>
-              <div className="min-h-screen bg-background">
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/login" element={<Login />} />
-                    {/* Client Portal Routes - these will render ClientPortal directly */}
-                    <Route path="/portalclient/*" element={
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <ClientPortal />
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    } />
-                    {/* Public Pages Routes */}
-                    <Route path="/:companySlug/listing/:listingId" element={
-                      <ErrorBoundary>
-                        <PublicListingView />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/:companySlug/listings" element={
-                      <ErrorBoundary>
-                        <PublicCatalogView />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/:companySlug/l/:token" element={
-                      <ErrorBoundary>
-                        <PublicCatalogView />
-                      </ErrorBoundary>
-                    } />
-                    {/* Main Application Routes - these will render the Layout */}
-                    <Route path="/*" element={
-                      <ProtectedRoute>
-                        <Layout>
+          <MenuManagerProvider>
+            <Router>
+              <TenantProvider>
+                <div className="min-h-screen bg-background">
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/login" element={<Login />} />
+                      {/* Public Routes - No authentication required */}
+                      <Route path="/:companySlug/listing/:listingId" element={<PublicListingView />} />
+                      <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
+                      <Route path="/:companySlug/l/:token" element={<PublicCatalogView />} />
+                      {/* Client Portal Routes - these will render ClientPortal directly */}
+                      <Route path="/portalclient/*" element={
+                        <ProtectedRoute>
                           <ErrorBoundary>
-                            <Routes>
-                              <Route path="/" element={<Dashboard />} />
-                              <Route path="/crm/*" element={<CRMProspecting />} />
-                              <Route path="/inventory/*" element={<InventoryManagement />} />
-                              <Route path="/deals/*" element={<CRMSalesDeal />} />
-                              <Route path="/finance/*" element={<FinanceModule />} />
-                              <Route path="/quotes/*" element={<QuoteBuilder />} />
-                              <Route path="/agreements/*" element={<AgreementVault />} />
-                              <Route path="/service/*" element={<ServiceOps />} />
-                              <Route path="/pdi/*" element={<PDIChecklist />} />
-                              <Route path="/delivery/*" element={<DeliveryTracker />} />
-                              <Route path="/commissions/*" element={<CommissionEngine />} />
-                              <Route path="/portal/*" element={<ClientPortalAdmin />} />
-                              <Route path="/invoices/*" element={<InvoicePayments />} />
-                              <Route path="/settings/*" element={<CompanySettings />} />
-                              <Route path="/admin/*" element={<PlatformAdmin />} />
-                              <Route path="/admin/settings/*" element={<PlatformSettings />} />
-                              <Route path="/reports/*" element={<ReportingSuite />} />
-                              <Route path="/client-applications/*" element={<FinanceApplication />} />
-                              <Route path="/listings/*" element={<PropertyListings />} />
-                            </Routes>
+                            <ClientPortal />
                           </ErrorBoundary>
-                        </Layout>
-                      </ProtectedRoute>
-                    } />
-                  </Routes>
-                </ErrorBoundary>
-                <Toaster />
-              </div>
-            </TenantProvider>
-          </Router>
+                        </ProtectedRoute>
+                      } />
+                      {/* Public Pages Routes */}
+                      <Route path="/:companySlug/listing/:listingId" element={
+                        <ErrorBoundary>
+                          <PublicListingView />
+                        </ErrorBoundary>
+                      } />
+                      <Route path="/:companySlug/listings" element={
+                        <ErrorBoundary>
+                          <PublicCatalogView />
+                        </ErrorBoundary>
+                      } />
+                      <Route path="/:companySlug/l/:token" element={
+                        <ErrorBoundary>
+                          <PublicCatalogView />
+                        </ErrorBoundary>
+                      } />
+                      {/* Main Application Routes - these will render the Layout */}
+                      <Route path="/*" element={
+                        <ProtectedRoute>
+                          <Layout>
+                            <ErrorBoundary>
+                              <Routes>
+                                <Route path="/" element={<Dashboard />} />
+                                <Route path="/crm/*" element={<CRMProspecting />} />
+                                <Route path="/inventory/*" element={<InventoryManagement />} />
+                                <Route path="/deals/*" element={<CRMSalesDeal />} />
+                                <Route path="/finance/*" element={<FinanceModule />} />
+                                <Route path="/quotes/*" element={<QuoteBuilder />} />
+                                <Route path="/agreements/*" element={<AgreementVault />} />
+                                <Route path="/service/*" element={<ServiceOps />} />
+                                <Route path="/pdi/*" element={<PDIChecklist />} />
+                                <Route path="/delivery/*" element={<DeliveryTracker />} />
+                                <Route path="/commissions/*" element={<CommissionEngine />} />
+                                <Route path="/portal/*" element={<ClientPortalAdmin />} />
+                                <Route path="/invoices/*" element={<InvoicePayments />} />
+                                <Route path="/settings/*" element={<CompanySettings />} />
+                                <Route path="/admin/*" element={<PlatformAdmin />} />
+                                <Route path="/admin/settings/*" element={<PlatformSettings />} />
+                                <Route path="/reports/*" element={<ReportingSuite />} />
+                                <Route path="/client-applications/*" element={<FinanceApplication />} />
+                                <Route path="/listings/*" element={<PropertyListings />} />
+                              </Routes>
+                            </ErrorBoundary>
+                          </Layout>
+                        </ProtectedRoute>
+                      } />
+                    </Routes>
+                  </ErrorBoundary>
+                  <Toaster />
+                </div>
+              </TenantProvider>
+            </Router>
+          </MenuManagerProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
