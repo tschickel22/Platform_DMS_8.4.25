@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { mockListings } from '@/mocks/listingsMock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,8 +20,6 @@ import {
   List,
   SlidersHorizontal
 } from 'lucide-react'
-
-import { mockListings } from '@/mocks/listingsMock'
 
 const PublicCatalogView = () => {
   const { companySlug } = useParams()
