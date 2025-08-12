@@ -22,14 +22,36 @@ import {
   Calendar,
   DollarSign,
   Home,
-        setListings(mockListings.sampleListings);
+  Car,
   Settings
 } from 'lucide-react'
 import { ShareListingModal } from './components/ShareListingModal'
-import { mockListings } from '@/mocks/listingsMock'
+
+const PropertyListings = () => {
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [filterOfferType, setFilterOfferType] = useState('all')
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [shareAllModalOpen, setShareAllModalOpen] = useState(false)
+  const [selectedListing, setSelectedListing] = useState(null)
+  const [selectedListings, setSelectedListings] = useState([])
+
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        setListings(mockListings.sampleListings);
+        setFilteredListings(mockListings.sampleListings);
+        setIsLoading(false);
+      } catch (err) {
+        setError('Failed to load listings');
         setIsLoading(false);
       }
     };
+    
+    loadListings();
+  }, []);
     
   const [listings, setListings] = useState(mockListings.sampleListings)
   const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
