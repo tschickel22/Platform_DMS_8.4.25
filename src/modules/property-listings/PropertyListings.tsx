@@ -33,7 +33,7 @@ function PropertyListingsDashboard() {
 
   // Filter listings based on current filters
   const filteredListings = useMemo(() => {
-    return mockPropertyListings.sampleListings.filter(listing => {
+    return (mockListings || []).filter(listing => {
       const matchesSearch = searchTerm === '' || 
         listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,9 +65,10 @@ function PropertyListingsDashboard() {
   }, [searchTerm, statusFilter, typeFilter, priceFilter])
 
   // Calculate statistics
-  const stats = useMemo(() => {
-    const total = mockPropertyListings.sampleListings.length
-    const active = mockPropertyListings.sampleListings.filter(l => l.status === 'active').length
+    const listings = mockListings || []
+    const totalListings = listings.length
+    const activeListings = listings.filter(l => l.status === 'active').length
+    const totalValue = listings.reduce((sum, listing) => {
     const totalPrices = mockPropertyListings.sampleListings
       .map(l => l.salePrice || l.rentPrice || 0)
       .filter(p => p > 0)
@@ -76,7 +77,7 @@ function PropertyListingsDashboard() {
       : 0
 
     return { total, active, avgPrice }
-  }, [])
+  }, [mockListings])
 
   const formatPrice = (listing: any) => {
     if (listing.salePrice) {
