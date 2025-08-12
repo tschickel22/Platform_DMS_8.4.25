@@ -1,331 +1,279 @@
-export const mockListings = {
-  sampleListings: [
-    // RV Listings
-    {
-      id: 'listing-rv-001',
-      companyId: 'company-001',
-      listingType: 'rv',
-      inventoryId: 'rv001',
-      year: 2023,
-      make: 'Forest River',
-      model: 'Cherokee',
-      searchResultsText: '2023 Forest River Cherokee Travel Trailer',
-      description: 'Beautiful 2023 Forest River Cherokee travel trailer with slide-out. Perfect for family camping adventures with modern amenities and comfortable sleeping for 4.',
-      salePrice: 45000,
-      rentPrice: 350,
-      offerType: 'both',
-      status: 'active',
-      condition: 'new',
-      vin: 'FR123456789',
-      sleeps: 4,
-      slides: 1,
-      length: 28.5,
-      fuelType: 'towable',
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2356086/pexels-photo-2356086.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Phoenix',
-        state: 'AZ',
-        postalCode: '85001',
-        latitude: 33.4484,
-        longitude: -112.0740
-      },
-      seller: {
-        companyName: 'Desert RV Sales',
-        phone: '(602) 555-0123',
-        emails: ['sales@desertrv.com']
-      },
-      features: {
-        generator: true,
-        solar: false,
-        awning: true,
-        slideOut: true,
-        airConditioning: true
-      },
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z'
+export const mockListings: Listing[] = [
+  {
+    id: 'listing_001',
+    inventoryId: 'vh001',
+    companyId: 'company_123',
+    listingType: 'manufactured_home',
+    year: 2023,
+    make: 'Clayton',
+    model: 'The Edge',
+    offerType: 'for_sale',
+    salePrice: 89000,
+    bedrooms: 3,
+    bathrooms: 2,
+    squareFeet: 1456,
+    description: 'Beautiful 3BR/2BA manufactured home with modern finishes and open floor plan. Features include granite countertops, stainless steel appliances, and spacious master suite.',
+    searchResultsText: '2023 Clayton The Edge - 3BR/2BA',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/280222/pexels-photo-280222.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/280222/pexels-photo-280222.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2119714/pexels-photo-2119714.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
     },
-    {
-      id: 'listing-rv-002',
-      companyId: 'company-001',
-      listingType: 'rv',
-      inventoryId: 'rv002',
-      year: 2022,
-      make: 'Thor',
-      model: 'Ace',
-      searchResultsText: '2022 Thor Ace Class A Motorhome',
-      description: 'Well-maintained 2022 Thor Ace Class A motorhome with low mileage. Features two slide-outs, diesel engine, and luxury interior appointments.',
-      salePrice: 85000,
-      offerType: 'for_sale',
-      status: 'active',
-      condition: 'used',
-      vin: 'TH987654321',
-      sleeps: 6,
-      slides: 2,
-      length: 32.0,
-      fuelType: 'diesel',
-      odometerMiles: 15000,
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/2339009/pexels-photo-2339009.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/2339009/pexels-photo-2339009.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/1428277/pexels-photo-1428277.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2339010/pexels-photo-2339010.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Denver',
-        state: 'CO',
-        postalCode: '80201',
-        latitude: 39.7392,
-        longitude: -104.9903
-      },
-      seller: {
-        companyName: 'Rocky Mountain RV',
-        phone: '(303) 555-0456',
-        emails: ['info@rmrv.com']
-      },
-      features: {
-        generator: true,
-        solar: true,
-        awning: true,
-        slideOut: true,
-        washerDryer: true
-      },
-      createdAt: '2024-01-10T14:30:00Z',
-      updatedAt: '2024-01-10T14:30:00Z'
+    location: {
+      city: 'Phoenix',
+      state: 'AZ',
+      postalCode: '85001',
+      latitude: 33.4484,
+      longitude: -112.0740
     },
-    {
-      id: 'listing-rv-003',
-      companyId: 'company-001',
-      listingType: 'rv',
-      inventoryId: 'rv003',
-      year: 2021,
-      make: 'Grand Design',
-      model: 'Momentum',
-      searchResultsText: '2021 Grand Design Momentum Toy Hauler',
-      description: 'Spacious toy hauler fifth wheel with garage space perfect for outdoor enthusiasts. Three slide-outs provide maximum living space.',
-      salePrice: 62000,
-      offerType: 'for_sale',
-      status: 'active',
-      condition: 'used',
-      vin: 'GD456789123',
-      sleeps: 8,
-      slides: 3,
-      length: 35.0,
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Austin',
-        state: 'TX',
-        postalCode: '73301',
-        latitude: 30.2672,
-        longitude: -97.7431
-      },
-      seller: {
-        companyName: 'Texas RV Depot',
-        phone: '(512) 555-0789',
-        emails: ['sales@txrvdepot.com']
-      },
-      features: {
-        generator: true,
-        solar: false,
-        awning: true,
-        slideOut: true,
-        garage: true
-      },
-      createdAt: '2024-01-08T09:15:00Z',
-      updatedAt: '2024-01-08T09:15:00Z'
+    seller: {
+      companyName: 'Desert RV Sales',
+      phone: '(602) 555-0123',
+      emails: ['sales@desertrv.com']
     },
-    // Manufactured Home Listings
-    {
-      id: 'listing-mh-001',
-      companyId: 'company-001',
-      listingType: 'manufactured_home',
-      inventoryId: 'mh001',
-      year: 2023,
-      make: 'Clayton',
-      model: 'The Edge',
-      searchResultsText: '2023 Clayton The Edge 3BR/2BA Double-wide',
-      description: 'Brand new 2023 Clayton double-wide manufactured home featuring modern finishes, energy-efficient appliances, and open floor plan.',
-      salePrice: 95000,
-      rentPrice: 1200,
-      offerType: 'both',
-      status: 'active',
-      condition: 'new',
-      serialNumber: 'CL987654321',
-      bedrooms: 3,
-      bathrooms: 2,
-      dimensions: {
-        width_ft: 28,
-        length_ft: 66,
-        sections: 2
-      },
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/1546166/pexels-photo-1546166.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2462014/pexels-photo-2462014.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Tampa',
-        state: 'FL',
-        postalCode: '33601',
-        latitude: 27.9506,
-        longitude: -82.4572,
-        communityName: 'Sunset Palms Mobile Home Community'
-      },
-      seller: {
-        companyName: 'Sunshine Mobile Homes',
-        phone: '(813) 555-0234',
-        emails: ['info@sunshinemh.com']
-      },
-      features: {
-        centralAir: true,
-        fireplace: true,
-        dishwasher: true,
-        washerDryer: true,
-        vaultedCeilings: true
-      },
-      createdAt: '2024-01-12T11:00:00Z',
-      updatedAt: '2024-01-12T11:00:00Z'
+    features: {
+      generator: true,
+      solar: false,
+      awning: true,
+      slideOut: true,
+      airConditioning: true
     },
-    {
-      id: 'listing-mh-002',
-      companyId: 'company-001',
-      listingType: 'manufactured_home',
-      inventoryId: 'mh002',
-      year: 2022,
-      make: 'Champion',
-      model: 'Titan',
-      searchResultsText: '2022 Champion Titan 4BR/2BA Double-wide',
-      description: 'Spacious 4-bedroom Champion Titan in excellent condition with recently updated kitchen and bathrooms. Located in established community.',
-      salePrice: 75000,
-      offerType: 'for_sale',
-      status: 'active',
-      condition: 'used',
-      serialNumber: 'CH123456789',
-      bedrooms: 4,
-      bathrooms: 2,
-      dimensions: {
-        width_ft: 28,
-        length_ft: 76,
-        sections: 2
-      },
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2462014/pexels-photo-2462014.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Nashville',
-        state: 'TN',
-        postalCode: '37201',
-        latitude: 36.1627,
-        longitude: -86.7816,
-        communityName: 'Country Creek Mobile Home Park'
-      },
-      seller: {
-        companyName: 'Music City Mobile Homes',
-        phone: '(615) 555-0567',
-        emails: ['sales@musiccitymh.com']
-      },
-      features: {
-        centralAir: true,
-        fireplace: false,
-        dishwasher: true,
-        washerDryer: true,
-        vaultedCeilings: true,
-        deck: true
-      },
-      createdAt: '2024-01-09T16:45:00Z',
-      updatedAt: '2024-01-09T16:45:00Z'
-    },
-    {
-      id: 'listing-mh-003',
-      companyId: 'company-001',
-      listingType: 'manufactured_home',
-      inventoryId: 'mh003',
-      year: 2020,
-      make: 'Fleetwood',
-      model: 'Berkshire',
-      searchResultsText: '2020 Fleetwood Berkshire 2BR/1BA Single-wide',
-      description: 'Cozy single-wide manufactured home perfect for downsizing or first-time buyers. Well-maintained with recent updates throughout.',
-      salePrice: 58000,
-      offerType: 'for_sale',
-      status: 'active',
-      condition: 'used',
-      serialNumber: 'FL456789012',
-      bedrooms: 2,
-      bathrooms: 1,
-      dimensions: {
-        width_ft: 14,
-        length_ft: 70,
-        sections: 1
-      },
-      media: {
-        primaryPhoto: 'https://images.pexels.com/photos/1546166/pexels-photo-1546166.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        photos: [
-          'https://images.pexels.com/photos/1546166/pexels-photo-1546166.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        ]
-      },
-      location: {
-        city: 'Charlotte',
-        state: 'NC',
-        postalCode: '28201',
-        latitude: 35.2271,
-        longitude: -80.8431,
-        communityName: 'Pine Valley Mobile Home Community'
-      },
-      seller: {
-        companyName: 'Carolina Mobile Home Sales',
-        phone: '(704) 555-0890',
-        emails: ['info@carolinamhs.com']
-      },
-      features: {
-        centralAir: true,
-        fireplace: false,
-        dishwasher: false,
-        washerDryer: false,
-        vaultedCeilings: false
-      },
-      createdAt: '2024-01-05T13:20:00Z',
-      updatedAt: '2024-01-05T13:20:00Z'
-    }
-  ],
-  
-  // Helper functions
-  getListingsByType: function(type) {
-    return this.sampleListings.filter(listing => listing.listingType === type);
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
   },
-  
-  getActiveListings: function() {
-    return this.sampleListings.filter(listing => listing.status === 'active');
+  {
+    id: 'listing_002', 
+    inventoryId: 'vh002',
+    companyId: 'company_123',
+    listingType: 'rv',
+    year: 2022,
+    make: 'Forest River',
+    model: 'Cherokee',
+    offerType: 'both',
+    salePrice: 45000,
+    rentPrice: 350,
+    sleeps: 6,
+    length: 28.5,
+    slides: 2,
+    description: 'Spacious travel trailer perfect for family adventures. Features two slide-outs, full kitchen, and comfortable sleeping for 6.',
+    searchResultsText: '2022 Forest River Cherokee - Travel Trailer',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/2506990/pexels-photo-2506990.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/2506990/pexels-photo-2506990.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2682452/pexels-photo-2682452.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/6249526/pexels-photo-6249526.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
+    },
+    location: {
+      city: 'Denver',
+      state: 'CO',
+      postalCode: '80201',
+      latitude: 39.7392,
+      longitude: -104.9903
+    },
+    seller: {
+      companyName: 'Rocky Mountain RV',
+      phone: '(303) 555-0456',
+      emails: ['info@rmrv.com']
+    },
+    features: {
+      generator: true,
+      solar: true,
+      awning: true,
+      slideOut: true,
+      washerDryer: true
+    },
+    createdAt: '2024-01-10T14:30:00Z',
+    updatedAt: '2024-01-10T14:30:00Z'
   },
-  
-  getListingsByOfferType: function(offerType) {
-    return this.sampleListings.filter(listing => 
-      listing.offerType === offerType || listing.offerType === 'both'
-    );
+  {
+    id: 'listing_003',
+    inventoryId: 'vh003', 
+    companyId: 'company_123',
+    listingType: 'manufactured_home',
+    year: 2024,
+    make: 'Skyline',
+    model: 'Arrow',
+    offerType: 'for_rent',
+    rentPrice: 1200,
+    bedrooms: 4,
+    bathrooms: 3,
+    squareFeet: 1920,
+    description: 'Luxury 4BR/3BA manufactured home with premium upgrades throughout. Island kitchen, walk-in closets, and beautiful landscaping.',
+    searchResultsText: '2024 Skyline Arrow - 4BR/3BA',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/2119714/pexels-photo-2119714.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/2119714/pexels-photo-2119714.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/280222/pexels-photo-280222.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
+    },
+    location: {
+      city: 'Austin',
+      state: 'TX',
+      postalCode: '73301',
+      latitude: 30.2672,
+      longitude: -97.7431
+    },
+    seller: {
+      companyName: 'Texas RV Depot',
+      phone: '(512) 555-0789',
+      emails: ['sales@txrvdepot.com']
+    },
+    features: {
+      generator: true,
+      solar: false,
+      awning: true,
+      slideOut: true,
+      garage: true
+    },
+    createdAt: '2024-01-08T09:15:00Z',
+    updatedAt: '2024-01-08T09:15:00Z'
+  },
+  {
+    id: 'listing_004',
+    inventoryId: 'vh004',
+    companyId: 'company_123', 
+    listingType: 'rv',
+    year: 2021,
+    make: 'Winnebago',
+    model: 'Minnie Winnie',
+    offerType: 'for_sale',
+    salePrice: 95000,
+    sleeps: 4,
+    length: 31,
+    slides: 1,
+    description: 'Class C motorhome with low miles. Perfect for couples or small families. Features slide-out, full kitchen, and rear bedroom.',
+    searchResultsText: '2021 Winnebago Minnie Winnie - Class C',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/6249526/pexels-photo-6249526.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/6249526/pexels-photo-6249526.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2682452/pexels-photo-2682452.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2506990/pexels-photo-2506990.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
+    },
+    location: {
+      city: 'Tampa',
+      state: 'FL',
+      postalCode: '33601',
+      latitude: 27.9506,
+      longitude: -82.4572,
+      communityName: 'Sunset Palms Mobile Home Community'
+    },
+    seller: {
+      companyName: 'Sunshine Mobile Homes',
+      phone: '(813) 555-0234',
+      emails: ['info@sunshinemh.com']
+    },
+    features: {
+      centralAir: true,
+      fireplace: true,
+      dishwasher: true,
+      washerDryer: true,
+      vaultedCeilings: true
+    },
+    createdAt: '2024-01-12T11:00:00Z',
+    updatedAt: '2024-01-12T11:00:00Z'
+  },
+  {
+    id: 'listing_005',
+    inventoryId: 'vh005',
+    companyId: 'company_123',
+    listingType: 'manufactured_home', 
+    year: 2020,
+    make: 'Champion',
+    model: 'Homes Redman',
+    offerType: 'for_sale',
+    salePrice: 65000,
+    bedrooms: 2,
+    bathrooms: 2,
+    squareFeet: 1100,
+    description: 'Cozy 2BR/2BA manufactured home in established community. Move-in ready with recent updates and maintenance.',
+    searchResultsText: '2020 Champion Redman - 2BR/2BA',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/280222/pexels-photo-280222.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2119714/pexels-photo-2119714.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
+    },
+    location: {
+      city: 'Nashville',
+      state: 'TN',
+      postalCode: '37201',
+      latitude: 36.1627,
+      longitude: -86.7816,
+      communityName: 'Country Creek Mobile Home Park'
+    },
+    seller: {
+      companyName: 'Music City Mobile Homes',
+      phone: '(615) 555-0567',
+      emails: ['sales@musiccitymh.com']
+    },
+    features: {
+      centralAir: true,
+      fireplace: false,
+      dishwasher: true,
+      washerDryer: true,
+      vaultedCeilings: true,
+      deck: true
+    },
+    createdAt: '2024-01-09T16:45:00Z',
+    updatedAt: '2024-01-09T16:45:00Z'
+  },
+  {
+    id: 'listing_006',
+    inventoryId: 'vh006',
+    companyId: 'company_123',
+    listingType: 'rv',
+    year: 2023,
+    make: 'Jayco',
+    model: 'Jay Flight',
+    offerType: 'for_sale', 
+    salePrice: 38000,
+    sleeps: 8,
+    length: 32,
+    slides: 1,
+    description: 'Family-friendly travel trailer with bunk beds. Great for camping with kids. Features outdoor kitchen and entertainment center.',
+    searchResultsText: '2023 Jayco Jay Flight - Bunkhouse',
+    media: {
+      primaryPhoto: 'https://images.pexels.com/photos/2682452/pexels-photo-2682452.jpeg?auto=compress&cs=tinysrgb&w=800',
+      photos: [
+        'https://images.pexels.com/photos/2682452/pexels-photo-2682452.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/2506990/pexels-photo-2506990.jpeg?auto=compress&cs=tinysrgb&w=800',
+        'https://images.pexels.com/photos/6249526/pexels-photo-6249526.jpeg?auto=compress&cs=tinysrgb&w=800'
+      ]
+    },
+    location: {
+      city: 'Charlotte',
+      state: 'NC',
+      postalCode: '28201',
+      latitude: 35.2271,
+      longitude: -80.8431,
+      communityName: 'Pine Valley Mobile Home Community'
+    },
+    seller: {
+      companyName: 'Carolina Mobile Home Sales',
+      phone: '(704) 555-0890',
+      emails: ['info@carolinamhs.com']
+    },
+    features: {
+      centralAir: true,
+      fireplace: false,
+      dishwasher: false,
+      washerDryer: false,
+      vaultedCeilings: false
+    },
+    createdAt: '2024-01-05T13:20:00Z',
+    updatedAt: '2024-01-05T13:20:00Z'
   }
-};
+];
 
 export default mockListings;
