@@ -43,7 +43,7 @@ export const PublicListingView = () => {
       const listings = mockListings?.sampleListings || []
       const foundListing = listings.find(l => l.id === listingId)
       console.log('Found listing:', foundListing)
-      setListing(foundListing || null)
+      );
       setLoading(false)
     }, 500)
   }, [listingId])
