@@ -25,12 +25,12 @@ import {
   Search,
   RefreshCw,
   Download,
-import { mockListings } from '@/mocks/listingsMock'
   Upload,
   Settings,
   MoreHorizontal,
   ExternalLink
 } from 'lucide-react'
+import { mockListings } from '@/mocks/listingsMock'
 import { apiClient } from '@/utils/apiClient'
 
 interface Listing {
@@ -119,13 +119,21 @@ const ListingsWorkspace: React.FC = () => {
           if (!listing.rentPrice || listing.rentPrice <= 0) {
             return { isValid: false, message: 'Rent price is required for rental listings' }
           }
+        }
+        return { isValid: true }
+      }
+    },
+    {
+      id: 'property_details',
+      name: 'Property Details',
+      description: 'Bedrooms, bathrooms, and other key features',
       required: false,
       validator: (listing) => {
         if (listing.listingType === 'manufactured_home') {
           if (!listing.bedrooms || !listing.bathrooms) {
             return { isValid: false, message: 'Bedrooms and bathrooms help buyers find your listing' }
-  const [listings, setListings] = useState(mockListings.sampleListings)
-  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
+          }
+        }
         if (listing.listingType === 'rv') {
           if (!listing.sleeps && !listing.length) {
             return { isValid: false, message: 'Sleep capacity or length helps buyers find your RV' }
@@ -177,12 +185,13 @@ const ListingsWorkspace: React.FC = () => {
         description: "Failed to load listings. Please try again.",
         variant: "destructive",
       })
+      setListings(mockListings.sampleListings)
     } finally {
       setIsLoading(false)
     }
   }
 
-        setListings(mockListings.sampleListings);
+  const validateListing = (listing: Listing) => {
     const results = validationGates.map(gate => ({
       gate,
       result: gate.validator(listing)
