@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { mockListings } from '@/mocks/listingsMock'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,18 +35,19 @@ export const PublicListingView = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In production, fetch listing data from API based on listingId
-    // For now, find the listing from mock data
     console.log('Looking for listing with ID:', listingId)
-    console.log('Available listings:', mockListings.sampleListings?.map(l => l.id))
+    console.log('Available listings:', mockListings?.sampleListings)
+    console.log('Mock listings structure:', mockListings)
     
-    setTimeout(() => {
-      const foundListing = (mockListings.sampleListings || []).find(l => l.id === listingId)
+    console.log('Looking for listing with ID:', listingId)
+      // Ensure we have the mock data structure
+      const listings = mockListings?.sampleListings || []
+      const foundListing = listings.find(l => l.id === listingId)
       console.log('Found listing:', foundListing)
       setListing(foundListing || null)
       setLoading(false)
     }, 500)
-  }, [companySlug, listingId])
+  }, [listingId])
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -314,65 +316,6 @@ export const PublicListingView = () => {
                   {listing.listingType === 'rv' && (
                     <>
                       <div className="text-center">
-                        <div className="text-2xl font-bold flex items-center justify-center">
-                          <Users className="h-6 w-6 mr-1" />
-                          {listing.sleeps}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Sleeps</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{listing.slides}</div>
-                        <div className="text-sm text-muted-foreground">Slide-outs</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{listing.length}ft</div>
-                        <div className="text-sm text-muted-foreground">Length</div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {listing.description}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Features & Amenities */}
-            {listing.features && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Features & Amenities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {Object.entries(listing.features).map(([feature, hasFeature]) => {
-                      if (!hasFeature) return null
-                      const featureName = feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-                      return (
-                        <div key={feature} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm">{featureName}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Pricing */}
             <Card>
               <CardHeader>
                 <CardTitle>Pricing</CardTitle>
