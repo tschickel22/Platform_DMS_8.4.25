@@ -40,6 +40,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import ListingDetail from '@/modules/property-listings/components/ListingDetail'
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
 import PropertyListings from '@/modules/property-listings/PropertyListings'
@@ -130,6 +131,7 @@ function App() {
                                 <Route path="/reports/*" element={<ReportingSuite />} />
                                 <Route path="/client-applications/*" element={<FinanceApplication />} />
                                 <Route path="/listings/*" element={<PropertyListings />} />
+                                <Route path="/listings/:listingId" element={<ListingDetail />} />
                               </Routes>
                             </ErrorBoundary>
                           </Layout>
