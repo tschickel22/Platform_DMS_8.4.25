@@ -21,6 +21,13 @@ import {
   Eye,
   Edit,
   Trash2,
+  Copy,
+  Mail,
+  MessageSquare,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Printer
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -80,10 +87,86 @@ const typeBadge = (type?: string) => {
   }
 }
 
-// ---- Share dialog (self-contained) ----
+// ---- Print helper ----
+function printShareSheet(opts: {
+  companyName: string
+  shareUrl: string
+  total: number
+  active: number
+  avg: number
+  totalValue: number
+  featured: Listing[]
+}) {
+  const { companyName, shareUrl, total, active, avg, totalValue, featured } = opts
+  const previewImg =
+    featured?.[0]?.media?.primaryPhoto ||
+    featured?.[0]?.imageUrl ||
+    'https://picsum.photos/600/340'
+
+  const win = window.open('', '_blank', 'noopener,noreferrer')
+  if (!win) return
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${companyName} – Listings Share</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    body{margin:0;background:#f6f7f9;color:#0f172a}
+    .sheet{max-width:900px;margin:0 auto;padding:32px}
+    .hero{display:flex;gap:24px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+    .hero img{width:280px;height:180px;object-fit:cover;border-radius:12px}
+    .title{font-size:22px;font-weight:700;margin:0 0 4px}
+    .muted{color:#64748b}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+    .label{font-size:12px;color:#64748b;margin-bottom:6px}
+    .pill{display:inline-block;background:#0f172a;color:white;border-radius:999px;padding:6px 12px;text-decoration:none}
+    @media print {.noprint{display:none}}
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="hero">
+      <img src="${previewImg}" alt="Preview"/>
+      <div>
+        <div class="title">${companyName} — ${active} Available</div>
+        <div class="muted">Browse ${total} listings • Avg $${avg.toLocaleString()}</div>
+        <div style="margin-top:12px">
+          <a class="pill" href="${shareUrl}">${shareUrl}</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">What's Shared</div>
+        <div>Total Listings: <b>${total}</b></div>
+        <div>Active: <b>${active}</b></div>
+        <div>Average Price: <b>$${avg.toLocaleString()}</b></div>
+        <div>Total Value: <b>$${totalValue.toLocaleString()}</b></div>
+      </div>
+      <div class="card">
+        <div class="label">Featured</div>
+        <div>${featured.slice(0, 5).map((l:any) => (l?.title || l?.model || 'Listing')).join(' • ')}</div>
+      </div>
+    </div>
+  </div>
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`
+  win.document.open()
+  win.document.write(html)
+  win.document.close()
+}
+
+// ---- Share dialog (with Social + Print) ----
 function ShareAllListingsDialog({
   open,
   onOpenChange,
+  companyName = 'Demo RV Dealership',
+  companySlug = 'demo',
   total,
   active,
   avg,
@@ -91,69 +174,128 @@ function ShareAllListingsDialog({
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
+  companyName?: string
+  companySlug?: string
   total: number
   active: number
   avg: number
   listings: Listing[]
 }) {
-  const companySlug = 'demo' // swap to tenant slug when available
   const shareUrl = `${window.location.origin}/public/${companySlug}/listings`
+  const totalValue = listings.reduce((s, l) => s + priceOf(l), 0)
+
+  const openShare = (url: string) => window.open(url, '_blank', 'noopener,noreferrer,width=700,height=600')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Share All Listings</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="text-sm text-muted-foreground">
+
+        {/* Social Preview */}
+        <div className="flex items-center gap-4 border rounded-xl p-3">
+          <img
+            src={
+              listings?.[0]?.media?.primaryPhoto ||
+              listings?.[0]?.imageUrl ||
+              'https://picsum.photos/200/120'
+            }
+            alt="Preview"
+            className="w-28 h-20 rounded-lg object-cover"
+          />
+          <div className="min-w-0">
+            <div className="font-medium truncate">{companyName} — {active} Available</div>
+            <div className="text-xs text-muted-foreground truncate">Browse {total} listings • Avg ${avg.toLocaleString()}</div>
+          </div>
+        </div>
+
+        {/* Shareable Link + Quick Share */}
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Shareable Link</div>
+          <div className="flex gap-2">
+            <Input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} />
+            <Button
+              onClick={() => navigator.clipboard?.writeText(shareUrl)}
+              variant="secondary"
+              className="shrink-0"
+              title="Copy link"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => openShare(`mailto:?subject=${encodeURIComponent(companyName + ' Listings')}&body=${encodeURIComponent(shareUrl)}`)}
+              className="justify-start"
+            >
+              <Mail className="h-4 w-4 mr-2" /> Email
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openShare(`sms:&body=${encodeURIComponent(shareUrl)}`)}
+              className="justify-start"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" /> SMS
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => printShareSheet({
+                companyName,
+                shareUrl,
+                total,
+                active,
+                avg,
+                totalValue,
+                featured: listings
+              })}
+              className="justify-start"
+            >
+              <Printer className="h-4 w-4 mr-2" /> Print
+            </Button>
+          </div>
+        </div>
+
+        {/* Social Platforms */}
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Social Platforms</div>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`)}
+              className="justify-start"
+            >
+              <Facebook className="h-4 w-4 mr-2" /> Facebook
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openShare(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(companyName + ' listings')}`)}
+              className="justify-start"
+            >
+              <Twitter className="h-4 w-4 mr-2" /> Twitter
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`)}
+              className="justify-start"
+            >
+              <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
+            </Button>
+          </div>
+        </div>
+
+        {/* What's Shared */}
+        <div className="rounded-xl border p-3 text-sm">
+          <div className="grid grid-cols-2 gap-2">
             <div>Total Listings: <span className="font-medium text-foreground">{total}</span></div>
             <div>Active: <span className="font-medium text-foreground">{active}</span></div>
             <div>Average Price: <span className="font-medium text-foreground">${avg.toLocaleString()}</span></div>
+            <div>Total Value: <span className="font-medium text-foreground">${totalValue.toLocaleString()}</span></div>
           </div>
-
-          <div>
-            <label className="block text-sm mb-1">Shareable Link</label>
-            <Input
-              readOnly
-              value={shareUrl}
-              onFocus={(e) => e.currentTarget.select()}
-            />
-            <div className="mt-2 flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  navigator.clipboard?.writeText(shareUrl)
-                }}
-              >
-                Copy
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  window.open(`mailto:?subject=Our listings&body=${encodeURIComponent(shareUrl)}`)
-                }}
-              >
-                Email
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  window.open(`sms:&body=${encodeURIComponent(shareUrl)}`)
-                }}
-              >
-                SMS
-              </Button>
-            </div>
-          </div>
-
-          <div className="text-xs text-muted-foreground">
-            Featured:{' '}
-            {listings.slice(0, 3).map((l, i) => (
-              <span key={l?.id ?? i} className="mr-2">
-                {l?.title || l?.model || l?.make || 'Listing'}
-              </span>
-            ))}
+          <div className="mt-2 text-xs text-muted-foreground">
+            Featured: {listings.slice(0, 3).map((l, i) => <span key={l?.id ?? i} className="mr-2">{l?.title || l?.model || l?.make || 'Listing'}</span>)}
             {listings.length > 3 && <span>+{listings.length - 3} more</span>}
           </div>
         </div>
@@ -339,7 +481,6 @@ function PropertyListingsDashboard() {
           {filtered.map((listing) => (
             <Card key={listing?.id ?? `${listing?.make}-${listing?.model}`} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative">
-                {/* image */}
                 <img
                   src={listing?.media?.primaryPhoto || listing?.imageUrl || 'https://picsum.photos/800/450'}
                   alt={listing?.title || listing?.model || 'Listing photo'}
@@ -455,6 +596,8 @@ function PropertyListingsDashboard() {
       <ShareAllListingsDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
+        companyName="Demo RV Dealership"
+        companySlug="demo"
         total={stats.total}
         active={stats.active}
         avg={stats.avgPrice}
