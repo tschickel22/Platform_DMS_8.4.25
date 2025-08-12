@@ -22,7 +22,7 @@ import {
 
 import { mockListings } from '@/mocks/listingsMock'
 
-export default function ListingsPage() {
+const PublicCatalogView = () => {
   const { companySlug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -404,3 +404,5 @@ export default function ListingsPage() {
     </div>
   )
 }
+
+export { PublicCatalogView }
