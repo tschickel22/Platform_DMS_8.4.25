@@ -1,37 +1,26 @@
 import React, { useMemo, useState } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Building,
+import { Badge } from '@/components/ui/badge'
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Grid3X3, 
+  List, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  DollarSign, 
   Home,
-  DollarSign,
-  Search,
-  MapPin,
-  Bed,
-  Bath,
-  Square,
-  Users,
-  Ruler,
-  Share as ShareIcon,
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Copy,
-  Mail,
-  MessageSquare,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Printer
+  Building
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-// ---- Robust mock import (works with several export shapes) ----
+// robust mock fallback
 import * as ListingsMock from '@/mocks/listingsMock'
 
 type Listing = any
@@ -49,278 +38,35 @@ const asArray = (val: any): Listing[] =>
     ? val.default
     : []
 
+/**
+ * If a shared hook exists, use it:
+ *   import { usePropertyListings } from '@/hooks/usePropertyListings' (or '@/modules/property-listings/hooks/usePropertyListings')
+ *   const { listings } = usePropertyListings()
+ * Otherwise, keep the fallback below.
+ */
 const ALL_LISTINGS: Listing[] = asArray(ListingsMock)
 
-// ---- helpers ----
-const priceOf = (l: Listing): number =>
-  Number(l?.salePrice ?? l?.rentPrice ?? 0) || 0
-
-const formatPrice = (l: Listing) => {
-  const sale = Number(l?.salePrice)
-  const rent = Number(l?.rentPrice)
-  if (Number.isFinite(sale) && sale > 0) return `$${sale.toLocaleString()}`
-  if (Number.isFinite(rent) && rent > 0) return `$${rent.toLocaleString()}/mo`
-  return 'Price on request'
-}
-
-const statusBadge = (status?: string) => {
-  switch ((status || '').toLowerCase()) {
-    case 'active':
-      return 'bg-green-500'
-    case 'draft':
-      return 'bg-yellow-500'
-    case 'inactive':
-      return 'bg-gray-500'
-    default:
-      return 'bg-gray-500'
-  }
-}
-
-const typeBadge = (type?: string) => {
-  switch ((type || '').toLowerCase()) {
-    case 'manufactured_home':
-      return 'bg-blue-500'
-    case 'rv':
-      return 'bg-purple-500'
-    default:
-      return 'bg-gray-500'
-  }
-}
-
-// ---- Print helper ----
-function printShareSheet(opts: {
-  companyName: string
-  shareUrl: string
-  total: number
-  active: number
-  avg: number
-  totalValue: number
-  featured: Listing[]
-}) {
-  const { companyName, shareUrl, total, active, avg, totalValue, featured } = opts
-  const previewImg =
-    featured?.[0]?.media?.primaryPhoto ||
-    featured?.[0]?.imageUrl ||
-    'https://picsum.photos/600/340'
-
-  const win = window.open('', '_blank', 'noopener,noreferrer')
-  if (!win) return
-  const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${companyName} – Listings Share</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    body{margin:0;background:#f6f7f9;color:#0f172a}
-    .sheet{max-width:900px;margin:0 auto;padding:32px}
-    .hero{display:flex;gap:24px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
-    .hero img{width:280px;height:180px;object-fit:cover;border-radius:12px}
-    .title{font-size:22px;font-weight:700;margin:0 0 4px}
-    .muted{color:#64748b}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
-    .label{font-size:12px;color:#64748b;margin-bottom:6px}
-    .pill{display:inline-block;background:#0f172a;color:white;border-radius:999px;padding:6px 12px;text-decoration:none}
-    @media print {.noprint{display:none}}
-  </style>
-</head>
-<body>
-  <div class="sheet">
-    <div class="hero">
-      <img src="${previewImg}" alt="Preview"/>
-      <div>
-        <div class="title">${companyName} — ${active} Available</div>
-        <div class="muted">Browse ${total} listings • Avg $${avg.toLocaleString()}</div>
-        <div style="margin-top:12px">
-          <a class="pill" href="${shareUrl}">${shareUrl}</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="label">What's Shared</div>
-        <div>Total Listings: <b>${total}</b></div>
-        <div>Active: <b>${active}</b></div>
-        <div>Average Price: <b>$${avg.toLocaleString()}</b></div>
-        <div>Total Value: <b>$${totalValue.toLocaleString()}</b></div>
-      </div>
-      <div class="card">
-        <div class="label">Featured</div>
-        <div>${featured.slice(0, 5).map((l:any) => (l?.title || l?.model || 'Listing')).join(' • ')}</div>
-      </div>
-    </div>
-  </div>
-  <script>window.onload = () => { window.print(); }</script>
-</body>
-</html>`
-  win.document.open()
-  win.document.write(html)
-  win.document.close()
-}
-
-// ---- Share dialog (with Social + Print) ----
-function ShareAllListingsDialog({
-  open,
-  onOpenChange,
-  companyName = 'Demo RV Dealership',
-  companySlug = 'demo',
-  total,
-  active,
-  avg,
-  listings,
-}: {
-  open: boolean
-  onOpenChange: (v: boolean) => void
-  companyName?: string
-  companySlug?: string
-  total: number
-  active: number
-  avg: number
-  listings: Listing[]
-}) {
-  const shareUrl = `${window.location.origin}/public/${companySlug}/listings`
-  const totalValue = listings.reduce((s, l) => s + priceOf(l), 0)
-
-  const openShare = (url: string) => window.open(url, '_blank', 'noopener,noreferrer,width=700,height=600')
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Share All Listings</DialogTitle>
-        </DialogHeader>
-
-        {/* Social Preview */}
-        <div className="flex items-center gap-4 border rounded-xl p-3">
-          <img
-            src={
-              listings?.[0]?.media?.primaryPhoto ||
-              listings?.[0]?.imageUrl ||
-              'https://picsum.photos/200/120'
-            }
-            alt="Preview"
-            className="w-28 h-20 rounded-lg object-cover"
-          />
-          <div className="min-w-0">
-            <div className="font-medium truncate">{companyName} — {active} Available</div>
-            <div className="text-xs text-muted-foreground truncate">Browse {total} listings • Avg ${avg.toLocaleString()}</div>
-          </div>
-        </div>
-
-        {/* Shareable Link + Quick Share */}
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Shareable Link</div>
-          <div className="flex gap-2">
-            <Input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} />
-            <Button
-              onClick={() => navigator.clipboard?.writeText(shareUrl)}
-              variant="secondary"
-              className="shrink-0"
-              title="Copy link"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => openShare(`mailto:?subject=${encodeURIComponent(companyName + ' Listings')}&body=${encodeURIComponent(shareUrl)}`)}
-              className="justify-start"
-            >
-              <Mail className="h-4 w-4 mr-2" /> Email
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => openShare(`sms:&body=${encodeURIComponent(shareUrl)}`)}
-              className="justify-start"
-            >
-              <MessageSquare className="h-4 w-4 mr-2" /> SMS
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => printShareSheet({
-                companyName,
-                shareUrl,
-                total,
-                active,
-                avg,
-                totalValue,
-                featured: listings
-              })}
-              className="justify-start"
-            >
-              <Printer className="h-4 w-4 mr-2" /> Print
-            </Button>
-          </div>
-        </div>
-
-        {/* Social Platforms */}
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Social Platforms</div>
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`)}
-              className="justify-start"
-            >
-              <Facebook className="h-4 w-4 mr-2" /> Facebook
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => openShare(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(companyName + ' listings')}`)}
-              className="justify-start"
-            >
-              <Twitter className="h-4 w-4 mr-2" /> Twitter
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`)}
-              className="justify-start"
-            >
-              <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
-            </Button>
-          </div>
-        </div>
-
-        {/* What's Shared */}
-        <div className="rounded-xl border p-3 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <div>Total Listings: <span className="font-medium text-foreground">{total}</span></div>
-            <div>Active: <span className="font-medium text-foreground">{active}</span></div>
-            <div>Average Price: <span className="font-medium text-foreground">${avg.toLocaleString()}</span></div>
-            <div>Total Value: <span className="font-medium text-foreground">${totalValue.toLocaleString()}</span></div>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Featured: {listings.slice(0, 3).map((l, i) => <span key={l?.id ?? i} className="mr-2">{l?.title || l?.model || l?.make || 'Listing'}</span>)}
-            {listings.length > 3 && <span>+{listings.length - 3} more</span>}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// ---- Dashboard view ----
 function PropertyListingsDashboard() {
   const navigate = useNavigate()
-
+  
   // filters
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft' | 'inactive'>('all')
   const [typeFilter, setTypeFilter] = useState<'all' | 'manufactured_home' | 'rv'>('all')
   const [priceFilter, setPriceFilter] = useState<'all' | 'under100k' | '100k-300k' | 'over300k'>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
-  // share dialog
-  const [shareOpen, setShareOpen] = useState(false)
+  // which summary tile is active (for highlight)
+  const [activeTile, setActiveTile] = useState<'all' | 'active' | 'premium'>('all')
 
-  // stable source
+  // source of truth for data
   const listings = ALL_LISTINGS ?? []
 
-  // stats
+  // price helper
+  const priceOf = (l: Listing): number =>
+    Number(l?.salePrice ?? l?.rentPrice ?? 0) || 0
+
+  // Safe stats (fixes NaN and recomputes correctly)
   const stats = useMemo(() => {
     const total = listings.length
     const active = listings.filter((l) => (l?.status || '').toLowerCase() === 'active').length
@@ -329,7 +75,25 @@ function PropertyListingsDashboard() {
     return { total, active, avgPrice }
   }, [listings])
 
-  // filtered results
+  // Wire the summary tiles → filters (add handlers)
+  const activateAll = () => {
+    setActiveTile('all')
+    setStatusFilter('all')
+    setPriceFilter('all')
+  }
+  const activateActive = () => {
+    setActiveTile('active')
+    setStatusFilter('active')
+    setPriceFilter('all')
+  }
+  // Use "Average Price" tile as a quick premium filter (> $300k)
+  const activatePremium = () => {
+    setActiveTile('premium')
+    setPriceFilter('over300k')
+    setStatusFilter('all')
+  }
+
+  // Use listings (not mockListings) for filtering results
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase()
     const withinPrice = (n: number) => {
@@ -339,7 +103,7 @@ function PropertyListingsDashboard() {
       return true
     }
 
-    return listings.filter((l) => {
+    return (listings ?? []).filter((l) => {
       const title = (l?.title || '').toLowerCase()
       const desc = (l?.description || '').toLowerCase()
       const city = (l?.location?.city || '').toLowerCase()
@@ -358,261 +122,349 @@ function PropertyListingsDashboard() {
     })
   }, [listings, searchTerm, statusFilter, typeFilter, priceFilter])
 
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'draft': return 'bg-yellow-100 text-yellow-800'
+      case 'inactive': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatPrice = (listing: any) => {
+    const price = priceOf(listing)
+    if (price === 0) return 'Contact for Price'
+    return `$${price.toLocaleString()}`
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Property Listings Dashboard</h1>
-          <p className="text-muted-foreground">Manage and track all your property listings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Property Listings Dashboard</h1>
+          <p className="text-gray-600">Manage your property listings and inventory</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => setShareOpen(true)}>
-            <ShareIcon className="h-4 w-4" />
-            Share All Listings
-          </Button>
-          <Button className="flex items-center gap-2" onClick={() => navigate('/property/listings/new')}>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate('/property/listings/new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add New Listing
+            Add Listing
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats (clickable, PDI-style colors) */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        {/* Total Listings */}
+        <Card
+          onClick={activateAll}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && activateAll()}
+          className={cn(
+            'shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 cursor-pointer',
+            activeTile === 'all' && 'ring-2 ring-blue-300'
+          )}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-900">Total Listings</CardTitle>
+            <Building className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">{stats.active} active listings</p>
+            <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
+            <p className="text-xs text-blue-600">All property listings</p>
           </CardContent>
         </Card>
-        <Card>
+
+        {/* Active Listings */}
+        <Card
+          onClick={activateActive}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && activateActive()}
+          className={cn(
+            'shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50 cursor-pointer',
+            activeTile === 'active' && 'ring-2 ring-green-300'
+          )}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-900">Active Listings</CardTitle>
+            <Home className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">Available for rent/sale</p>
+            <div className="text-2xl font-bold text-green-900">{stats.active}</div>
+            <p className="text-xs text-green-600">Available for rent/sale</p>
           </CardContent>
         </Card>
-        <Card>
+
+        {/* Average Price → Premium shortcut */}
+        <Card
+          onClick={activatePremium}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && activatePremium()}
+          className={cn(
+            'shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 cursor-pointer',
+            activeTile === 'premium' && 'ring-2 ring-yellow-300'
+          )}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Price</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-yellow-900">Average Price</CardTitle>
+            <DollarSign className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.avgPrice.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all listings</p>
+            <div className="text-2xl font-bold text-yellow-900">${stats.avgPrice.toLocaleString()}</div>
+            <p className="text-xs text-yellow-600">Click to view premium (&gt;$300k)</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters & Search</CardTitle>
-          <CardDescription>Find listings fast</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search listings..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <CardContent className="pt-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by title, description, location, make, model..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            {/* Filter Dropdowns */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select value={statusFilter} onValueChange={(v: any) => { setStatusFilter(v); setActiveTile('all') }}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={typeFilter} onValueChange={(v: any) => { setTypeFilter(v); setActiveTile('all') }}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
+                  <SelectItem value="rv">RV</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
-                <SelectItem value="rv">RV</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={priceFilter} onValueChange={(v: any) => { setPriceFilter(v); setActiveTile('all') }}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Price" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Prices</SelectItem>
+                  <SelectItem value="under100k">Under $100k</SelectItem>
+                  <SelectItem value="100k-300k">$100k - $300k</SelectItem>
+                  <SelectItem value="over300k">Over $300k</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={priceFilter} onValueChange={(v: any) => setPriceFilter(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Prices" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="under100k">Under $100K</SelectItem>
-                <SelectItem value="100k-300k">$100K – $300K</SelectItem>
-                <SelectItem value="over300k">Over $300K</SelectItem>
-              </SelectContent>
-            </Select>
+              {/* View Toggle */}
+              <div className="flex border rounded-md">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="rounded-r-none"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Count */}
+      {/* Results */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600">
           {filtered.length} listing{filtered.length !== 1 ? 's' : ''} found
         </p>
       </div>
 
-      {/* Grid */}
-      {filtered.length > 0 ? (
+      {/* Listings Grid */}
+      {viewMode === 'grid' ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((listing) => (
-            <Card key={listing?.id ?? `${listing?.make}-${listing?.model}`} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative">
-                <img
-                  src={listing?.media?.primaryPhoto || listing?.imageUrl || 'https://picsum.photos/800/450'}
-                  alt={listing?.title || listing?.model || 'Listing photo'}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="absolute top-2 left-2 flex gap-2">
-                  <Badge className={`${statusBadge(listing?.status)} text-white`}>{listing?.status ?? '—'}</Badge>
-                  <Badge className={`${typeBadge(listing?.listingType)} text-white`}>
-                    {(listing?.listingType || '').toLowerCase() === 'manufactured_home' ? 'MH' : 'RV'}
+            <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <div className="aspect-video bg-gray-100 relative">
+                {listing.media?.primaryPhoto ? (
+                  <img
+                    src={listing.media.primaryPhoto}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Home className="h-12 w-12" />
+                  </div>
+                )}
+                <div className="absolute top-2 right-2">
+                  <Badge className={getStatusColor(listing.status)}>
+                    {listing.status || 'Draft'}
                   </Badge>
                 </div>
-                <div className="absolute top-2 right-2">
-                  <Badge variant="secondary" className="bg-black/70 text-white">{formatPrice(listing)}</Badge>
-                </div>
               </div>
-
+              
               <CardContent className="p-4">
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">{listing?.title || `${listing?.year ?? ''} ${listing?.make ?? ''} ${listing?.model ?? ''}`}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {listing?.year ? `${listing.year} ` : ''}{listing?.make} {listing?.model}
-                  </p>
-
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {(listing?.location?.city || '—')}, {(listing?.location?.state || '')}
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {(listing?.listingType || '').toLowerCase() === 'manufactured_home' ? (
-                      <>
-                        {Number.isFinite(Number(listing?.bedrooms)) && (
-                          <div className="flex items-center">
-                            <Bed className="h-4 w-4 mr-1" />
-                            {listing.bedrooms}
-                          </div>
-                        )}
-                        {Number.isFinite(Number(listing?.bathrooms)) && (
-                          <div className="flex items-center">
-                            <Bath className="h-4 w-4 mr-1" />
-                            {listing.bathrooms}
-                          </div>
-                        )}
-                        {Number.isFinite(Number(listing?.dimensions?.squareFeet)) && (
-                          <div className="flex items-center">
-                            <Square className="h-4 w-4 mr-1" />
-                            {listing.dimensions.squareFeet} sq ft
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {Number.isFinite(Number(listing?.sleeps)) && (
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-1" />
-                            Sleeps {listing.sleeps}
-                          </div>
-                        )}
-                        {Number.isFinite(Number(listing?.dimensions?.length)) && (
-                          <div className="flex items-center">
-                            <Ruler className="h-4 w-4 mr-1" />
-                            {listing.dimensions.length} ft
-                          </div>
-                        )}
-                        {Number.isFinite(Number(listing?.slides)) && (
-                          <div className="flex items-center">
-                            <span className="text-xs mr-1">📐</span>
-                            {listing.slides} slides
-                          </div>
-                        )}
-                      </>
+                  <h3 className="font-semibold text-lg line-clamp-1">
+                    {listing.title || `${listing.year} ${listing.make} ${listing.model}`}
+                  </h3>
+                  
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>{listing.year} {listing.make} {listing.model}</p>
+                    {listing.location?.city && (
+                      <p>{listing.location.city}, {listing.location.state}</p>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/property/listings/${listing?.id ?? ''}`)}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/property/listings/${listing?.id ?? ''}?edit=1`)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Delete not implemented in mock')}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
+                  
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-lg font-bold text-green-600">
+                      {formatPrice(listing)}
+                    </span>
+                    <Badge variant="outline">
+                      {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                    </Badge>
                   </div>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
+        /* List View */
         <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <Building className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No listings found</h3>
-              <p className="text-muted-foreground mb-4">Try adjusting your search or filters</p>
-              <Button onClick={() => navigate('/property/listings/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Listing
-              </Button>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {filtered.map((listing) => (
+                <div key={listing.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0">
+                      {listing.media?.primaryPhoto ? (
+                        <img
+                          src={listing.media.primaryPhoto}
+                          alt={listing.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <Home className="h-6 w-6" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {listing.title || `${listing.year} ${listing.make} ${listing.model}`}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {listing.year} {listing.make} {listing.model}
+                          </p>
+                          {listing.location?.city && (
+                            <p className="text-sm text-gray-500">
+                              {listing.location.city}, {listing.location.state}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600 mb-1">
+                            {formatPrice(listing)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getStatusColor(listing.status)}>
+                              {listing.status || 'Draft'}
+                            </Badge>
+                            <Badge variant="outline">
+                              {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Share dialog */}
-      <ShareAllListingsDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        companyName="Demo RV Dealership"
-        companySlug="demo"
-        total={stats.total}
-        active={stats.active}
-        avg={stats.avgPrice}
-        listings={listings}
-      />
+      {/* Empty State */}
+      {filtered.length === 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || priceFilter !== 'all'
+                  ? 'Try adjusting your search criteria or filters.'
+                  : 'Get started by creating your first property listing.'}
+              </p>
+              <Button onClick={() => navigate('/property/listings/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Listing
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
 
-// ---- Routed wrapper ----
 export default function PropertyListings() {
-  return (
-    <Routes>
-      <Route path="/" element={<PropertyListingsDashboard />} />
-      <Route path="*" element={<PropertyListingsDashboard />} />
-    </Routes>
-  )
+  return <PropertyListingsDashboard />
 }
