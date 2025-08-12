@@ -122,7 +122,7 @@ const PublicListingView = () => {
             
             <Button onClick={() => navigate('/marketing')} className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              View All Listings
+              Back to Listings
             </Button>
           </div>
         </div>
