@@ -5,70 +5,62 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { logger } from '@/utils/logger'
 import { MenuManagerProvider } from '@/contexts/MenuManagerContext'
-import Layout from '@/components/layout/Layout'
-import Dashboard from '@/pages/Dashboard'
-import Login from '@/pages/Login'
-import ProtectedRoute from '@/components/auth/ProtectedRoute'
-import PlatformSettings from '@/modules/platform-admin/settings'
-import ClientPortalLayout from '@/components/layout/ClientPortalLayout'
-import WarrantyManagement from './modules/warranty-mgmt'
+import { logger } from '@/utils/logger'
 
-// Module imports
+import Layout from '@/components/layout/Layout'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
+
+// Pages & Modules
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+
 import CRMProspecting from '@/modules/crm-prospecting/CRMProspecting'
+import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
+import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
 import { FinanceModule } from '@/modules/finance/FinanceModule'
-import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
-
-// Log app initialization
-logger.info('Application initializing', {
-  userAgent: navigator.userAgent,
-  url: window.location.href,
-  timestamp: Date.now()
-});
 import AgreementVault from '@/modules/agreement-vault/AgreementVault'
 import ServiceOps from '@/modules/service-ops/ServiceOps'
-import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
+import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
 import ClientPortal from '@/modules/client-portal/ClientPortal'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
-import PropertyListings from '@/modules/property-listings/PropertyListings'
-import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
-import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
+import PlatformSettings from '@/modules/platform-admin/settings'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
-import ListingDetail from '@/modules/property-listings/components/ListingDetail'
-import LandManagement from '@/modules/land-management/LandManagement'
-import WarrantyMgmt from '@/modules/warranty-mgmt'
 import TaggingEngine from '@/modules/tagging-engine'
 import TaskCenter from '@/modules/task-center/TaskCenter'
 import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
 import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
 
+// Property Listings (Admin + Public)
+import PropertyListings from '@/modules/property-listings/PropertyListings'
+import ListingDetail from '@/modules/property-listings/components/ListingDetail'
+import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
+import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
+
+logger.info('Application initializing', {
+  userAgent: navigator.userAgent,
+  url: window.location.href,
+  timestamp: Date.now()
+})
+
 function App() {
-  // Log page views
+  // simple pageview logger on navigation
   React.useEffect(() => {
-    const handlePopState = () => {
-      logger.pageView(window.location.pathname + window.location.search);
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    const handle = () => logger.pageView(window.location.pathname + window.location.search)
+    window.addEventListener('popstate', handle)
+    return () => window.removeEventListener('popstate', handle)
+  }, [])
 
   return (
-    <ErrorBoundary 
-      showErrorDetails={import.meta.env.DEV}
-      onError={(error, errorInfo) => {
-        logger.error('Global error boundary triggered', error, errorInfo);
-      }}
-    >
+    <ErrorBoundary showErrorDetails={import.meta.env.DEV} onError={(e, info) => logger.error('Global error boundary', e, info)}>
       <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
         <AuthProvider>
           <MenuManagerProvider>
@@ -77,68 +69,86 @@ function App() {
                 <div className="min-h-screen bg-background">
                   <ErrorBoundary>
                     <Routes>
+                      {/* -------- PUBLIC (namespaced) -------- */}
+                      <Route path="/public/:companySlug/listings" element={<PublicCatalogView />} />
+                      <Route path="/public/:companySlug/l/:token" element={<PublicCatalogView />} />
+                      <Route path="/public/:companySlug/listing/:listingId" element={<PublicListingView />} />
+
+                      {/* -------- LOGIN -------- */}
                       <Route path="/login" element={<Login />} />
-                      {/* Public Routes - No authentication required */}
-                      <Route path="/:companySlug/listing/:listingId" element={<PublicListingView />} />
-                      <Route path="/:companySlug/listings" element={<PublicCatalogView />} />
-                      <Route path="/:companySlug/l/:token" element={<PublicCatalogView />} />
-                      {/* Client Portal Routes - these will render ClientPortal directly */}
-                      <Route path="/portalclient/*" element={
-                        <ProtectedRoute>
-                          <ErrorBoundary>
-                            <ClientPortal />
-                          </ErrorBoundary>
-                        </ProtectedRoute>
-                      } />
-                      {/* Public Pages Routes */}
-                      <Route path="/:companySlug/listing/:listingId" element={
-                        <ErrorBoundary>
-                          <PublicListingView />
-                        </ErrorBoundary>
-                      } />
-                      <Route path="/:companySlug/listings" element={
-                        <ErrorBoundary>
-                          <PublicCatalogView />
-                        </ErrorBoundary>
-                      } />
-                      <Route path="/:companySlug/l/:token" element={
-                        <ErrorBoundary>
-                          <PublicCatalogView />
-                        </ErrorBoundary>
-                      } />
-                      {/* Main Application Routes - these will render the Layout */}
-                      <Route path="/*" element={
-                        <ProtectedRoute>
-                          <Layout>
+
+                      {/* -------- CLIENT PORTAL (separate app shell) -------- */}
+                      <Route
+                        path="/portalclient/*"
+                        element={
+                          <ProtectedRoute>
                             <ErrorBoundary>
-                              <Routes>
-                                <Route path="/" element={<Dashboard />} />
-                                <Route path="/crm/*" element={<CRMProspecting />} />
-                                <Route path="/inventory/*" element={<InventoryManagement />} />
-                                <Route path="/deals/*" element={<CRMSalesDeal />} />
-                                <Route path="/finance/*" element={<FinanceModule />} />
-                                <Route path="/quotes/*" element={<QuoteBuilder />} />
-                                <Route path="/agreements/*" element={<AgreementVault />} />
-                                <Route path="/service/*" element={<ServiceOps />} />
-                                <Route path="/pdi/*" element={<PDIChecklist />} />
-                                <Route path="/delivery/*" element={<DeliveryTracker />} />
-                                <Route path="/commissions/*" element={<CommissionEngine />} />
-                                <Route path="/portal/*" element={<ClientPortalAdmin />} />
-                                <Route path="/invoices/*" element={<InvoicePayments />} />
-                                <Route path="/settings/*" element={<CompanySettings />} />
-                                <Route path="/listings/*" element={<PropertyListings />} />
-                                <Route path="/admin/*" element={<PlatformAdmin />} />
-                                <Route path="/admin/settings/*" element={<PlatformSettings />} />
-                                <Route path="/reports/*" element={<ReportingSuite />} />
-                                <Route path="/client-applications/*" element={<FinanceApplication />} />
-                                <Route path="/property/*" element={<PropertyListings />} />
-                                <Route path="/listings/*" element={<PropertyListings />} />
-                                <Route path="/listings/:listingId" element={<ListingDetail />} />
-                              </Routes>
+                              <ClientPortal />
                             </ErrorBoundary>
-                          </Layout>
-                        </ProtectedRoute>
-                      } />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      {/* -------- MAIN APP (protected, uses Layout) -------- */}
+                      <Route
+                        path="/*"
+                        element={
+                          <ProtectedRoute>
+                            <Layout>
+                              <ErrorBoundary>
+                                <Routes>
+                                  {/* Home */}
+                                  <Route path="/" element={<Dashboard />} />
+
+                                  {/* CRM & Sales */}
+                                  <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/deals/*" element={<CRMSalesDeal />} />
+                                  <Route path="/quotes/*" element={<QuoteBuilder />} />
+
+                                  {/* Inventory & Ops */}
+                                  <Route path="/inventory/*" element={<InventoryManagement />} />
+                                  <Route path="/land/*" element={<LandManagement />} />
+                                  <Route path="/pdi/*" element={<PDIChecklist />} />
+                                  <Route path="/delivery/*" element={<DeliveryTracker />} />
+
+                                  {/* Marketing → Property Listings (ADMIN) */}
+                                  <Route path="/property/listings" element={<PropertyListings />} />
+                                  <Route path="/property/listings/:listingId" element={<ListingDetail />} />
+
+                                  {/* Finance & Agreements */}
+                                  <Route path="/finance/*" element={<FinanceModule />} />
+                                  <Route path="/agreements/*" element={<AgreementVault />} />
+                                  <Route path="/invoices/*" element={<InvoicePayments />} />
+                                  <Route path="/client-applications/*" element={<FinanceApplication />} />
+
+                                  {/* Service & Support */}
+                                  <Route path="/service/*" element={<ServiceOps />} />
+                                  <Route path="/portal/*" element={<ClientPortalAdmin />} />
+
+                                  {/* Management */}
+                                  <Route path="/reports/*" element={<ReportingSuite />} />
+                                  <Route path="/commissions/*" element={<CommissionEngine />} />
+                                  <Route path="/tags/*" element={<TaggingEngine />} />
+                                  <Route path="/tasks/*" element={<TaskCenter />} />
+                                  <Route path="/calendar/*" element={<CalendarScheduling />} />
+                                  <Route path="/contractors/*" element={<ContractorManagement />} />
+
+                                  {/* Admin / Settings */}
+                                  <Route path="/settings/*" element={<CompanySettings />} />
+                                  <Route path="/admin/*" element={<PlatformAdmin />} />
+                                  <Route path="/admin/settings/*" element={<PlatformSettings />} />
+
+                                  {/* Fallback inside app */}
+                                  <Route path="*" element={<Navigate to="/" replace />} />
+                                </Routes>
+                              </ErrorBoundary>
+                            </Layout>
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      {/* -------- GLOBAL FALLBACK -------- */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </ErrorBoundary>
                   <Toaster />
@@ -149,7 +159,7 @@ function App() {
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
-  );
+  )
 }
 
 export default App
