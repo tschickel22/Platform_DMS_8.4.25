@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, MapPin, Bed, Bath, Users, Ruler, Calendar, DollarSign, Phone, Mail, Globe } from 'lucide-react'
-
-  ArrowLeft, 
-  Share2,
+import { useState, useEffect } from 'react'
+import { Share2, MessageSquare } from 'lucide-react'
+import { CardHeader, CardTitle } from '@/components/ui/card'
 import * as ListingsMock from '@/mocks/listingsMock'
 
 // Turn any plausible mock module shape into an array
@@ -194,159 +194,41 @@ const PublicListingView = () => {
           <div className="flex items-center justify-between h-16">
             <Button
               variant="ghost"
-          {/* Title and Price */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {listing.listingType === 'manufactured_home' 
-                ? `${listing.bedrooms}BR Manufactured Home in ${listing.location?.city}`
-                : `${listing.year} ${listing.make} ${listing.model}`
-              }
-            </h1>
-            <div className="flex items-center gap-2 text-muted-foreground mb-4">
-              <MapPin className="h-4 w-4" />
-              {listing.location?.city}, {listing.location?.state}
-            </div>
-            <div className="text-2xl font-bold text-green-600">
-              {listing.salePrice && `$${listing.salePrice.toLocaleString()}`}
-              {listing.rentPrice && `$${listing.rentPrice.toLocaleString()}/mo`}
-              {!listing.salePrice && !listing.rentPrice && 'Price on request'}
-            </div>
-          </div>
-
               onClick={() => navigate('/marketing/listings')}
               className="flex items-center"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-                src={listing.media?.primaryPhoto || '/api/placeholder/800/400'}
-                alt={`${listing.year} ${listing.make} ${listing.model}`}
+              Back to Listings
+            </Button>
             <div className="text-sm text-gray-500">
               {listing.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
             </div>
           </div>
         </div>
-          {/* Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Year</span>
-                  <span className="font-medium">{listing.year}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Make</span>
-                  <span className="font-medium">{listing.make}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Model</span>
-                  <span className="font-medium">{listing.model}</span>
-                </div>
-                {listing.listingType === 'manufactured_home' ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Bedrooms</span>
-                      <span className="font-medium">{listing.bedrooms}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Bathrooms</span>
-                      <span className="font-medium">{listing.bathrooms}</span>
-                    </div>
-                    {listing.dimensions?.width_ft && listing.dimensions?.length_ft && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Dimensions</span>
-                        <span className="font-medium">{listing.dimensions.width_ft} x {listing.dimensions.length_ft} ft</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Sleeps</span>
-                      <span className="font-medium">{listing.sleeps}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Length</span>
-                      <span className="font-medium">{listing.dimensions?.length_ft} ft</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Slide Outs</span>
-                      <span className="font-medium">{listing.slides}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Images */}
           <div className="lg:col-span-2">
-              <p className="text-muted-foreground whitespace-pre-wrap">
-                {listing.description || 'No description available.'}
-              </p>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+              <div className="aspect-video bg-gray-100">
                 {allImages.length > 0 ? (
                   <img
                     src={allImages[selectedImageIndex]}
                     alt={listing.title}
                     className="w-full h-full object-cover"
                   />
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {listing.seller?.phone && (
-                <Button className="w-full" variant="default">
-                  <Phone className="mr-2 h-4 w-4" />
-                  Call {listing.seller.phone}
-                </Button>
-              )}
-              {listing.seller?.emails?.[0] && (
-                <Button className="w-full" variant="outline">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email Dealer
-                </Button>
-              )}
-              <Button className="w-full" variant="outline">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Send Message
-              </Button>
-            </CardContent>
-          </Card>
-
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-              <CardTitle>Property Information</CardTitle>
+                      <img
+                        src={listing.media?.primaryPhoto || '/api/placeholder/800/400'}
+                        alt={`${listing.year} ${listing.make} ${listing.model}`}
+                        className="w-full h-full object-cover"
+                      />
                       <p className="text-gray-500">No photos available</p>
                     </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
-                    {listing.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Offer Type</span>
-                  <span className="text-sm font-medium">
-                    {listing.offerType === 'for_sale' ? 'For Sale' : 
-                     listing.offerType === 'for_rent' ? 'For Rent' : 'Sale or Rent'}
-                  </span>
-                </div>
-                {listing.location?.address1 && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-muted-foreground">Address</span>
-                    <span className="text-sm font-medium text-right">
-                      {listing.location.address1}<br />
-                      {listing.location.city}, {listing.location.state} {listing.location.postalCode}
-                    </span>
                   </div>
                 )}
               </div>
@@ -532,6 +414,39 @@ const PublicListingView = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Square Feet</span>
                       <span className="font-medium">{listing.dimensions.sqft} sq ft</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Property Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+                      {listing.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Offer Type</span>
+                    <span className="text-sm font-medium">
+                      {listing.offerType === 'for_sale' ? 'For Sale' : 
+                       listing.offerType === 'for_rent' ? 'For Rent' : 'Sale or Rent'}
+                    </span>
+                  </div>
+                  {listing.location?.address1 && (
+                    <div className="flex items-start justify-between">
+                      <span className="text-sm text-muted-foreground">Address</span>
+                      <span className="text-sm font-medium text-right">
+                        {listing.location.address1}<br />
+                        {listing.location.city}, {listing.location.state} {listing.location.postalCode}
+                      </span>
                     </div>
                   )}
                 </div>
