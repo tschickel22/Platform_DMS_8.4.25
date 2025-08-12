@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  Building2, 
+  Building, 
   Home, 
   DollarSign, 
   Search, 
@@ -13,12 +13,13 @@ import {
   Share2, 
   Plus,
   MapPin,
+  Eye,
+  Edit,
+  Trash2,
   Bed,
   Bath,
   Square,
-  Eye,
-  Edit,
-  Trash2
+  Users
 } from 'lucide-react'
 import { mockPropertyListings } from '@/mocks/propertyListingsMock'
 
@@ -34,19 +35,20 @@ interface PropertyListing {
   year: number
   make: string
   model: string
-  bedrooms?: number
-  bathrooms?: number
-  sleeps?: number
-  slides?: number
-  squareFootage?: number
-  length?: number
   location: {
+    address1?: string
     city: string
     state: string
-    address?: string
+    postalCode: string
   }
+  bedrooms?: number
+  bathrooms?: number
+  squareFootage?: number
+  sleeps?: number
+  slides?: number
+  length?: number
   media: {
-    primaryPhoto: string
+    primaryPhoto?: string
     photos: string[]
   }
   createdAt: string
@@ -72,7 +74,7 @@ export default function PropertyListings() {
     const averagePrice = activePrices.length > 0 
       ? Math.round(activePrices.reduce((sum, price) => sum + price, 0) / activePrices.length)
       : 0
-    
+
     const totalValue = activePrices.reduce((sum, price) => sum + price, 0)
 
     return {
@@ -87,46 +89,42 @@ export default function PropertyListings() {
   const filteredListings = useMemo(() => {
     return mockPropertyListings.filter(listing => {
       // Search filter
-      const matchesSearch = searchTerm === '' || 
+      const searchMatch = searchTerm === '' || 
         listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        `${listing.make} ${listing.model}`.toLowerCase().includes(searchTerm.toLowerCase())
+        listing.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.model.toLowerCase().includes(searchTerm.toLowerCase())
 
       // Status filter
-      const matchesStatus = statusFilter === 'all' || listing.status === statusFilter
+      const statusMatch = statusFilter === 'all' || listing.status === statusFilter
 
       // Type filter
-      const matchesType = typeFilter === 'all' || listing.listingType === typeFilter
+      const typeMatch = typeFilter === 'all' || listing.listingType === typeFilter
 
       // Price filter
-      let matchesPrice = true
+      let priceMatch = true
       if (priceFilter !== 'all') {
         const price = listing.salePrice || listing.rentPrice || 0
         switch (priceFilter) {
           case 'under_100k':
-            matchesPrice = price < 100000
+            priceMatch = price < 100000
             break
           case '100k_300k':
-            matchesPrice = price >= 100000 && price <= 300000
+            priceMatch = price >= 100000 && price <= 300000
             break
           case 'over_300k':
-            matchesPrice = price > 300000
+            priceMatch = price > 300000
             break
         }
       }
 
-      return matchesSearch && matchesStatus && matchesType && matchesPrice
+      return searchMatch && statusMatch && typeMatch && priceMatch
     })
   }, [searchTerm, statusFilter, typeFilter, priceFilter])
 
   const formatPrice = (price: number, isRent: boolean = false) => {
-    if (price >= 1000000) {
-      return `$${(price / 1000000).toFixed(1)}M${isRent ? '/mo' : ''}`
-    } else if (price >= 1000) {
-      return `$${(price / 1000).toFixed(0)}K${isRent ? '/mo' : ''}`
-    }
-    return `$${price.toLocaleString()}${isRent ? '/mo' : ''}`
+    return `$${price.toLocaleString()}${isRent ? '/month' : ''}`
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -142,14 +140,14 @@ export default function PropertyListings() {
     }
   }
 
-  const getListingTypeLabel = (type: string) => {
+  const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case 'manufactured_home':
-        return 'Manufactured Home'
+        return 'bg-blue-500 text-white'
       case 'rv':
-        return 'RV'
+        return 'bg-purple-500 text-white'
       default:
-        return type
+        return 'bg-gray-500 text-white'
     }
   }
 
@@ -178,7 +176,7 @@ export default function PropertyListings() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalListings}</div>
@@ -205,9 +203,9 @@ export default function PropertyListings() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(stats.averagePrice)}</div>
+            <div className="text-2xl font-bold">${stats.averagePrice.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              Total value: {formatPrice(stats.totalValue)}
+              Total value: ${stats.totalValue.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -271,8 +269,8 @@ export default function PropertyListings() {
       </Card>
 
       {/* Listings Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">
             All Listings ({filteredListings.length})
           </h2>
@@ -281,14 +279,32 @@ export default function PropertyListings() {
           </p>
         </div>
 
-        {/* Listings Grid */}
-        {filteredListings.length > 0 ? (
+        {filteredListings.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-12">
+                <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium mb-2">No listings found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || priceFilter !== 'all'
+                    ? 'Try adjusting your search or filters'
+                    : 'Get started by adding your first property listing'
+                  }
+                </p>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Listing
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredListings.map((listing) => (
               <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative">
                   <img
-                    src={listing.media.primaryPhoto}
+                    src={listing.media.primaryPhoto || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800'}
                     alt={listing.title}
                     className="w-full h-48 object-cover"
                   />
@@ -297,11 +313,10 @@ export default function PropertyListings() {
                       {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
                     </Badge>
                   </div>
-                  <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-sm font-semibold">
-                    {listing.salePrice && formatPrice(listing.salePrice)}
-                    {listing.rentPrice && formatPrice(listing.rentPrice, true)}
-                    {listing.offerType === 'both' && listing.salePrice && listing.rentPrice && 
-                      ` / ${formatPrice(listing.rentPrice, true)}`
+                  <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
+                    {listing.offerType === 'for_rent' 
+                      ? formatPrice(listing.rentPrice || 0, true)
+                      : formatPrice(listing.salePrice || 0)
                     }
                   </div>
                 </div>
@@ -310,48 +325,66 @@ export default function PropertyListings() {
                     <h3 className="font-semibold text-lg leading-tight">{listing.title}</h3>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 mr-1" />
-                      {listing.location.address && `${listing.location.address}, `}
                       {listing.location.city}, {listing.location.state}
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm">
-                      {listing.bedrooms && (
-                        <div className="flex items-center gap-1">
-                          <Bed className="h-4 w-4" />
-                          <span>{listing.bedrooms} bed</span>
-                        </div>
-                      )}
-                      {listing.bathrooms && (
-                        <div className="flex items-center gap-1">
-                          <Bath className="h-4 w-4" />
-                          <span>{listing.bathrooms} bath</span>
-                        </div>
-                      )}
-                      {listing.squareFootage && (
-                        <div className="flex items-center gap-1">
-                          <Square className="h-4 w-4" />
-                          <span>{listing.squareFootage} sq ft</span>
-                        </div>
-                      )}
-                      {listing.sleeps && (
-                        <div className="flex items-center gap-1">
-                          <span>Sleeps {listing.sleeps}</span>
-                        </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {listing.listingType === 'manufactured_home' ? (
+                        <>
+                          {listing.bedrooms && (
+                            <div className="flex items-center">
+                              <Bed className="h-4 w-4 mr-1" />
+                              {listing.bedrooms} bed
+                            </div>
+                          )}
+                          {listing.bathrooms && (
+                            <div className="flex items-center">
+                              <Bath className="h-4 w-4 mr-1" />
+                              {listing.bathrooms} bath
+                            </div>
+                          )}
+                          {listing.squareFootage && (
+                            <div className="flex items-center">
+                              <Square className="h-4 w-4 mr-1" />
+                              {listing.squareFootage} sq ft
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {listing.sleeps && (
+                            <div className="flex items-center">
+                              <Users className="h-4 w-4 mr-1" />
+                              Sleeps {listing.sleeps}
+                            </div>
+                          )}
+                          {listing.length && (
+                            <div className="flex items-center">
+                              <Square className="h-4 w-4 mr-1" />
+                              {listing.length}ft
+                            </div>
+                          )}
+                          {listing.slides && (
+                            <div className="text-sm">
+                              {listing.slides} slides
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                      <Badge variant="secondary">
-                        {getListingTypeLabel(listing.listingType)}
+                      <Badge className={getTypeBadgeColor(listing.listingType)}>
+                        {listing.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
                       </Badge>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Button size="sm" variant="ghost">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Button size="sm" variant="ghost">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                        <Button size="sm" variant="ghost">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -361,25 +394,6 @@ export default function PropertyListings() {
               </Card>
             ))}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No listings found</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || priceFilter !== 'all'
-                  ? 'Try adjusting your search or filter criteria.'
-                  : 'Get started by adding your first property listing.'
-                }
-              </p>
-              {(!searchTerm && statusFilter === 'all' && typeFilter === 'all' && priceFilter === 'all') && (
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add New Listing
-                </Button>
-              )}
-            </CardContent>
-          </Card>
         )}
       </div>
     </div>
