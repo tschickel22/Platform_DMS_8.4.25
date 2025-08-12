@@ -22,7 +22,6 @@ import {
   Globe
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
-import { ShareListingModal } from './ShareListingModal'
 
 interface ListingDetailProps {
   listingId?: string
