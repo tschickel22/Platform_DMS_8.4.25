@@ -43,7 +43,6 @@ import { PublicListingView } from '@/modules/property-listings/components/Public
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
-import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ListingDetail from '@/modules/property-listings/components/ListingDetail'
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
