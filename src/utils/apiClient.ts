@@ -1,6 +1,7 @@
 // src/utils/apiClient.ts
 // Robust API client for Netlify Functions (with env override + graceful parsing)
 import { toast } from '@/hooks/use-toast'
+import { logger, measurePerformance } from '@/utils/logger';
 
 // Allow override via env for local/prod differences.
 // e.g. VITE_FUNCTIONS_BASE="http://localhost:8888/.netlify/functions"
