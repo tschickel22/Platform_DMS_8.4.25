@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { ShareListingModal } from './ShareListingModal'
 import { 
   ArrowLeft, 
   MapPin, 
@@ -31,6 +32,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const listingId = propListingId || paramListingId
 
@@ -157,7 +159,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
             <Heart className="h-4 w-4 mr-2" />
             Save
           </Button>
-          <Button variant="outline" size="sm" onClick={handleShare}>
+          <Button variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
@@ -425,6 +427,14 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareListingModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        listing={listing}
+        companyId="demo-company"
+      />
     </div>
   )
 }
