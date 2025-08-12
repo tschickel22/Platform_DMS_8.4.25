@@ -21,7 +21,6 @@ import {
   MapPin,
   Calendar,
   DollarSign,
-  Home,
   Car,
   Settings
 } from 'lucide-react'
