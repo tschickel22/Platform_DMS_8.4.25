@@ -127,6 +127,7 @@ function App() {
                                 <Route path="/portal/*" element={<ClientPortalAdmin />} />
                                 <Route path="/invoices/*" element={<InvoicePayments />} />
                                 <Route path="/settings/*" element={<CompanySettings />} />
+                                <Route path="/listings/*" element={<PropertyListings />} />
                                 <Route path="/admin/*" element={<PlatformAdmin />} />
                                 <Route path="/admin/settings/*" element={<PlatformSettings />} />
                                 <Route path="/reports/*" element={<ReportingSuite />} />
