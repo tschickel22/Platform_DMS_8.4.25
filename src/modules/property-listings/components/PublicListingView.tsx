@@ -530,4 +530,3 @@ const PublicListingView = () => {
   )
 }
 export { PublicListingView }
-export default PublicListingView
