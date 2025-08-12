@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { X, AlertTriangle, CheckCircle, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const ToastProvider = ToastPrimitives.Provider
@@ -39,15 +39,39 @@ const toastVariants = cva(
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
+  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> & {
+    showIcon?: boolean
+  } &
     VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => (
-  <ToastPrimitives.Root
-    ref={ref}
-    className={cn(toastVariants({ variant }), className)}
-    {...props}
-  />
-))
+>(({ className, variant, showIcon = true, ...props }, ref) => {
+  const getIcon = () => {
+    if (!showIcon) return null;
+    
+    switch (variant) {
+      case 'destructive':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'default':
+        return <CheckCircle className="h-4 w-4" />;
+      default:
+        return <Info className="h-4 w-4" />;
+    }
+  };
+
+  return (
+    <ToastPrimitives.Root
+      ref={ref}
+      className={cn(toastVariants({ variant }), className)}
+      {...props}
+    >
+      <div className="flex items-start gap-3">
+        {getIcon()}
+        <div className="flex-1">
+          {props.children}
+        </div>
+      </div>
+    </ToastPrimitives.Root>
+  )
+})
 Toast.displayName = ToastPrimitives.Root.displayName
 
 const ToastAction = React.forwardRef<

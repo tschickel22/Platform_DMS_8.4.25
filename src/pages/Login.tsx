@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useNavigate } from 'react-router-dom'
+import { logger } from '@/utils/logger'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Login() {
@@ -12,13 +14,22 @@ export default function Login() {
   const { login, isLoading } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { handleError } = useErrorHandler()
+
+  React.useEffect(() => {
+    logger.pageView('/login');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      logger.userAction('login_attempt', { email });
       await login(email, password)
+      logger.userAction('login_success', { email });
       navigate('/')
     } catch (error) {
+      logger.userAction('login_failed', { email, reason: 'invalid_credentials' });
+      handleError(error, 'login');
       toast({
         title: 'Login Failed',
         description: 'Invalid email or password',
