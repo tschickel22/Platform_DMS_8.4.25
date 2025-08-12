@@ -43,8 +43,17 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
         setLoading(true)
         setError(null)
 
+        // Handle new listing case
+        if (listingId === 'new') {
+          setListing(null) // Will trigger form to show empty state
+          return
+        }
+        
+        // Ensure we have an array to search in
+        const listings = mockListings?.sampleListings || []
+        
         // First try to find in mock data
-        const mockListing = mockListings.sampleListings.find(l => l.id === listingId)
+        const mockListing = listings.find(l => l.id === listingId)
         
         if (mockListing) {
           setListing(mockListing)
