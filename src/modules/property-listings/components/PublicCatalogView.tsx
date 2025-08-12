@@ -1,14 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { mockListings } from '@/mocks/listingsMock'
+// ✅ robust import: works for named, default, or alternate keys
+import * as ListingsMock from '@/mocks/listingsMock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Search,
-  MapPin,
+import { Grid, List, MapPin, Bed, Bath, Users, Ruler } from 'lucide-react'
+
+// Turn any plausible mock module shape into an array
+const asArray = (val: any) => {
+  if (Array.isArray(val)) return val
+  if (Array.isArray(val?.listings)) return val.listings
+  if (Array.isArray(val?.sampleListings)) return val.sampleListings
+  if (Array.isArray(val?.default)) return val.default
+  return []
+}
   Home,
   Car,
   Bed,
@@ -74,15 +82,26 @@ const PublicCatalogView: React.FC = () => {
   // Load mock data safely
   useEffect(() => {
     setLoading(true)
-    const data = asArray(mockListings)
-    setListings(data)
-    setLoading(false)
-  }, [])
 
-  // Derived filtered list (always an array)
-  const filteredListings = useMemo(() => {
-    let filtered = [...listings]
+    // Optional: gate with env flag
+    const USE_MOCKS = (import.meta as any)?.env?.VITE_USE_MOCKS !== 'false'
 
+    if (USE_MOCKS) {
+      const mock =
+        (ListingsMock as any).mockListings ??
+        (ListingsMock as any).listings ??
+        (ListingsMock as any).sampleListings ??
+        (ListingsMock as any).default
+
+      const data = asArray(mock)
+      console.log('Mock data found:', data)
+      setListings(data)
+      setLoading(false)
+    } else {
+      // TODO: real API call when ready
+      setListings([])
+      setLoading(false)
+    }
     const q = (searchQuery || '').toLowerCase().trim()
     if (q) {
       filtered = filtered.filter((l) => {
