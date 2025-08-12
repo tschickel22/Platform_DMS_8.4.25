@@ -142,7 +142,7 @@ const PublicListingView = () => {
           <div className="flex items-center justify-between h-16">
             <Button
               variant="ghost"
-              onClick={() => navigate('/marketing')}
+              onClick={() => navigate('/')}
               className="flex items-center"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
