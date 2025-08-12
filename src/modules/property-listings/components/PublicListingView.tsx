@@ -36,8 +36,12 @@ export const PublicListingView = () => {
   useEffect(() => {
     // In production, fetch listing data from API based on listingId
     // For now, find the listing from mock data
+    console.log('Looking for listing with ID:', listingId)
+    console.log('Available listings:', mockListings.sampleListings?.map(l => l.id))
+    
     setTimeout(() => {
       const foundListing = (mockListings.sampleListings || []).find(l => l.id === listingId)
+      console.log('Found listing:', foundListing)
       setListing(foundListing || null)
       setLoading(false)
     }, 500)
