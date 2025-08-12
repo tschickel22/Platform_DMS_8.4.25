@@ -1,74 +1,63 @@
-import React, { useState, useMemo } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Plus, 
   Search, 
   Filter, 
-  Grid, 
+  Grid3X3, 
   List, 
-  MapPin, 
-  Calendar,
   Share2,
-  Home,
-  DollarSign,
-  Eye
+  Eye,
+  Edit,
+  MoreHorizontal,
+  MapPin,
+  Calendar,
+  DollarSign
 } from 'lucide-react'
-import { mockListings } from '@/mocks/listingsMock'
 import { ShareAllListingsModal } from './components/ShareAllListingsModal'
-import { PublicListingView } from './components/PublicListingView'
+import { ShareListingModal } from './components/ShareListingModal'
+import PublicListingView from './components/PublicListingView'
+import ListingForm from './components/ListingForm'
+
+// Import mock data robustly
+import * as ListingsMock from '@/mocks/listingsMock'
+const asArray = (val: any) => Array.isArray(val) ? val
+  : Array.isArray(val?.listings) ? val.listings
+  : Array.isArray(val?.sampleListings) ? val.sampleListings
+  : Array.isArray(val?.default) ? val.default
+  : []
+const listings = asArray((ListingsMock as any))
 
 function PropertyListingsDashboard() {
   const navigate = useNavigate()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [offerFilter, setOfferFilter] = useState('all')
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [searchTerm, setSearchTerm] = useState('')
   const [shareAllModalOpen, setShareAllModalOpen] = useState(false)
-
-  // Filter listings based on search and filters
-  const filteredListings = useMemo(() => {
-    return mockListings.sampleListings.filter(listing => {
-      const matchesSearch = !searchTerm || 
-        listing.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.location?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.location?.state?.toLowerCase().includes(searchTerm.toLowerCase())
-
-      const matchesType = typeFilter === 'all' || listing.listingType === typeFilter
-      const matchesOffer = offerFilter === 'all' || listing.offerType === offerFilter
-
-      const price = listing.salePrice || listing.rentPrice || 0
-      const matchesMinPrice = !minPrice || price >= parseInt(minPrice)
-      const matchesMaxPrice = !maxPrice || price <= parseInt(maxPrice)
-
-      return matchesSearch && matchesType && matchesOffer && matchesMinPrice && matchesMaxPrice
-    })
-  }, [searchTerm, typeFilter, offerFilter, minPrice, maxPrice])
-
+  const [shareListingOpen, setShareListingOpen] = useState(false)
+  const [selectedListing, setSelectedListing] = useState<any>(null)
+  
   // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalListings = filteredListings.length
-    const activeListings = filteredListings.filter(l => l.status === 'active').length
-    const totalValue = filteredListings.reduce((sum, l) => sum + (l.salePrice || l.rentPrice || 0), 0)
-    const averagePrice = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
+  const totalListings = listings.length
+  const activeListings = listings.filter((l: any) => l.status === 'active').length
+  const totalValue = listings.reduce((sum: number, l: any) => sum + (l.salePrice || l.rentPrice || 0), 0)
+  const averagePrice = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
 
-    return {
-      totalListings,
-      activeListings,
-      averagePrice
-    }
-  }, [filteredListings])
-
-  const handleListingClick = (listingId: string) => {
-    navigate(`/property/listing/${listingId}`)
-  }
+  // Filter listings based on search
+  const filteredListings = listings.filter((listing: any) => {
+    if (!searchTerm) return true
+    
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      listing.make?.toLowerCase().includes(searchLower) ||
+      listing.model?.toLowerCase().includes(searchLower) ||
+      listing.location?.city?.toLowerCase().includes(searchLower) ||
+      listing.location?.state?.toLowerCase().includes(searchLower)
+    )
+  })
 
   const formatPrice = (listing: any) => {
     if (listing.salePrice) {
@@ -80,13 +69,196 @@ function PropertyListingsDashboard() {
     return 'Price on request'
   }
 
+  const formatLocation = (listing: any) => {
+    if (listing.location?.city && listing.location?.state) {
+      return `${listing.location.city}, ${listing.location.state}`
+    }
+    return 'Location TBD'
+  }
+
+  if (viewMode === 'list') {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Property Listings</h1>
+            <p className="text-muted-foreground">Manage your property inventory</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShareAllModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              Share All
+            </Button>
+            <Button onClick={() => navigate('/property/new')} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Listing
+            </Button>
+          </div>
+        </div>
+
+        {/* Summary Statistics */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalListings}</div>
+              <p className="text-xs text-muted-foreground">
+                {activeListings} active
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{activeListings}</div>
+              <p className="text-xs text-muted-foreground">
+                Currently available
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Price</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${averagePrice.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Across all listings
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and View Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search listings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-r-none"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* List View */}
+        <div className="space-y-4">
+          {filteredListings.map((listing: any) => (
+            <Card key={listing.id}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <img
+                      src={listing.media?.primaryPhoto || '/api/placeholder/100/100'}
+                      alt={`${listing.year} ${listing.make} ${listing.model}`}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                    <div>
+                      <h3 className="font-semibold">
+                        {listing.year} {listing.make} {listing.model}
+                      </h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          {formatLocation(listing)}
+                        </span>
+                        <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+                          {listing.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-semibold text-lg">
+                        {formatPrice(listing)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/property/listing/${listing.id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedListing(listing)
+                          setShareListingOpen(true)
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Modals */}
+        <ShareAllListingsModal
+          open={shareAllModalOpen}
+          onOpenChange={setShareAllModalOpen}
+          listings={listings}
+          summaryStats={{ totalListings, activeListings, averagePrice }}
+        />
+        
+        <ShareListingModal
+          open={shareListingOpen}
+          onOpenChange={setShareListingOpen}
+          listing={selectedListing}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Property Listings</h1>
-          <p className="text-muted-foreground">Browse available manufactured homes and RVs</p>
+          <p className="text-muted-foreground">Manage your property inventory</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -95,11 +267,11 @@ function PropertyListingsDashboard() {
             className="flex items-center gap-2"
           >
             <Share2 className="h-4 w-4" />
-            Share All Listings
+            Share All
           </Button>
           <Button onClick={() => navigate('/property/new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add New Listing
+            Add Listing
           </Button>
         </div>
       </div>
@@ -109,12 +281,12 @@ function PropertyListingsDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.totalListings}</div>
+            <div className="text-2xl font-bold">{totalListings}</div>
             <p className="text-xs text-muted-foreground">
-              {summaryStats.activeListings} active listings
+              {activeListings} active
             </p>
           </CardContent>
         </Card>
@@ -124,7 +296,7 @@ function PropertyListingsDashboard() {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summaryStats.activeListings}</div>
+            <div className="text-2xl font-bold">{activeListings}</div>
             <p className="text-xs text-muted-foreground">
               Currently available
             </p>
@@ -136,7 +308,7 @@ function PropertyListingsDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${summaryStats.averagePrice.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${averagePrice.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               Across all listings
             </p>
@@ -144,79 +316,36 @@ function PropertyListingsDashboard() {
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search by make, model, location..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
-                  <SelectItem value="rv">RV</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={offerFilter} onValueChange={setOfferFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Offers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Offers</SelectItem>
-                  <SelectItem value="for_sale">For Sale</SelectItem>
-                  <SelectItem value="for_rent">For Rent</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Min Price"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className="w-[100px]"
-                type="number"
-              />
-              <Input
-                placeholder="Max Price"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-[100px]"
-                type="number"
-              />
-              <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search and View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search listings..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex border rounded-md">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="rounded-r-none"
+          >
+            <Grid3X3 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="rounded-l-none"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       {/* Results Count */}
       <div className="flex justify-between items-center">
@@ -225,19 +354,15 @@ function PropertyListingsDashboard() {
         </p>
       </div>
 
-      {/* Listings Grid */}
-      <div className={viewMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
-        {filteredListings.map((listing) => (
-          <Card 
-            key={listing.id} 
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleListingClick(listing.id)}
-          >
+      {/* Grid View */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredListings.map((listing: any) => (
+          <Card key={listing.id} className="overflow-hidden">
             <div className="relative">
               <img
                 src={listing.media?.primaryPhoto || '/api/placeholder/400/250'}
                 alt={`${listing.year} ${listing.make} ${listing.model}`}
-                className="w-full h-48 object-cover rounded-t-lg"
+                className="w-full h-48 object-cover"
               />
               <Badge 
                 className="absolute top-2 left-2"
@@ -245,68 +370,52 @@ function PropertyListingsDashboard() {
               >
                 {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
               </Badge>
-              {listing.status === 'pending' && (
-                <Badge className="absolute top-2 right-2" variant="outline">
-                  Pending
-                </Badge>
-              )}
+              <Badge 
+                className="absolute top-2 right-2"
+                variant={listing.status === 'active' ? 'default' : 'secondary'}
+              >
+                {listing.status}
+              </Badge>
             </div>
             <CardContent className="p-4">
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">
-                  {listing.listingType === 'manufactured_home' 
-                    ? `${listing.bedrooms}BR Manufactured Home in ${listing.location?.city}`
-                    : `${listing.year} ${listing.make} ${listing.model}`
-                  }
+                  {listing.year} {listing.make} {listing.model}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {listing.listingType === 'manufactured_home' 
-                    ? `${listing.year} ${listing.make} ${listing.model}`
-                    : `${listing.year} ${listing.make} ${listing.model}`
-                  }
-                </p>
                 
-                {/* Property Details */}
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {listing.listingType === 'manufactured_home' ? (
-                    <>
-                      <span className="flex items-center gap-1">
-                        🛏️ {listing.bedrooms}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        🚿 {listing.bathrooms}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        📐 {listing.dimensions?.width_ft && listing.dimensions?.length_ft 
-                          ? `${listing.dimensions.width_ft}x${listing.dimensions.length_ft} ft`
-                          : 'N/A'
-                        }
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex items-center gap-1">
-                        🛏️ Sleeps {listing.sleeps}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        📏 {listing.dimensions?.length_ft}ft
-                      </span>
-                      <span className="flex items-center gap-1">
-                        🔄 {listing.slides} slides
-                      </span>
-                    </>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {formatLocation(listing)}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    {listing.location?.city}, {listing.location?.state}
+                  <div className="text-lg font-bold text-green-600">
+                    {formatPrice(listing)}
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">
-                      {formatPrice(listing)}
-                    </div>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`/property/listing/${listing.id}`)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedListing(listing)
+                        setShareListingOpen(true)
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -321,18 +430,24 @@ function PropertyListingsDashboard() {
             <div className="text-center py-12 text-muted-foreground">
               <Filter className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-lg font-medium">No listings found</p>
-              <p>Try adjusting your search criteria or filters</p>
+              <p>Try adjusting your search criteria</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Share All Listings Modal */}
+      {/* Modals */}
       <ShareAllListingsModal
         open={shareAllModalOpen}
         onOpenChange={setShareAllModalOpen}
-        listings={filteredListings}
-        summaryStats={summaryStats}
+        listings={listings}
+        summaryStats={{ totalListings, activeListings, averagePrice }}
+      />
+      
+      <ShareListingModal
+        open={shareListingOpen}
+        onOpenChange={setShareListingOpen}
+        listing={selectedListing}
       />
     </div>
   )
@@ -343,7 +458,7 @@ export default function PropertyListings() {
     <Routes>
       <Route path="/" element={<PropertyListingsDashboard />} />
       <Route path="/listing/:listingId" element={<PublicListingView />} />
-      <Route path="/new" element={<div>Add New Listing Form</div>} />
+      <Route path="/new" element={<ListingForm />} />
     </Routes>
   )
 }
