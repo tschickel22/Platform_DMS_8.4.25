@@ -1,387 +1,336 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
-import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
-import { useErrorHandler } from '@/hooks/useErrorHandler'
-import { logger } from '@/utils/logger'
-import { mockListings } from '@/mocks/listingsMock'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Search, 
-  Filter, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Share2, 
-  MoreVertical, 
-  MapPin,
-  Calendar,
+  Grid, 
+  List, 
+  MapPin, 
+  Bed, 
+  Bath, 
+  Square, 
+  Users, 
+  Ruler,
+  Share,
+  Plus,
+  Home,
   DollarSign,
-  Car,
-  Settings,
+  Eye
 } from 'lucide-react'
-import { ShareListingModal } from './components/ShareListingModal'
+import { mockListings } from '@/mocks/listingsMock'
 import { ShareAllListingsModal } from './components/ShareAllListingsModal'
-import { Home } from 'lucide-react'
 
-const PropertyListings = () => {
+export default function PropertyListings() {
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState('all')
-  const [filterOfferType, setFilterOfferType] = useState('all')
-  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [offerFilter, setOfferFilter] = useState('all')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [shareAllModalOpen, setShareAllModalOpen] = useState(false)
-  const [selectedListing, setSelectedListing] = useState(null)
-  const [selectedListings, setSelectedListings] = useState([])
 
-  useEffect(() => {
-    const loadListings = async () => {
-      try {
-        setListings(mockListings.sampleListings);
-        setFilteredListings(mockListings.sampleListings);
-        setIsLoading(false);
-      } catch (err) {
-        setError('Failed to load listings');
-        setIsLoading(false);
-      }
-    };
-    
-    loadListings();
-  }, []);
-    
-  const [listings, setListings] = useState(mockListings.sampleListings)
-  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
+  // Filter listings based on search and filters
+  const filteredListings = useMemo(() => {
+    return mockListings.sampleListings.filter(listing => {
+      const matchesSearch = !searchTerm || 
+        listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.location.state.toLowerCase().includes(searchTerm.toLowerCase())
 
-  const handleShareListing = (listing) => {
-    logger.userAction('share_listing_clicked', { listingId: listing.id });
-    setSelectedListing(listing)
-    setShareModalOpen(true)
-  }
+      const matchesType = typeFilter === 'all' || listing.listingType === typeFilter
+      
+      const matchesOffer = offerFilter === 'all' || listing.offerType === offerFilter
 
-  const handleBulkShare = () => {
-    logger.userAction('bulk_share_clicked', { 
-      selectedCount: selectedListings.length,
-      listingIds: selectedListings 
-    });
-    setShareAllModalOpen(true);
-  };
+      const price = listing.salePrice || listing.rentPrice || 0
+      const matchesMinPrice = !minPrice || price >= parseInt(minPrice)
+      const matchesMaxPrice = !maxPrice || price <= parseInt(maxPrice)
 
-  const handleListingClick = (listingId) => {
+      return matchesSearch && matchesType && matchesOffer && matchesMinPrice && matchesMaxPrice
+    })
+  }, [searchTerm, typeFilter, offerFilter, minPrice, maxPrice])
+
+  // Calculate summary statistics
+  const summaryStats = useMemo(() => {
+    const totalListings = filteredListings.length
+    const activeListings = filteredListings.filter(l => l.status === 'active').length
+    const totalValue = filteredListings.reduce((sum, listing) => {
+      return sum + (listing.salePrice || listing.rentPrice || 0)
+    }, 0)
+    const averagePrice = totalListings > 0 ? Math.round(totalValue / totalListings) : 0
+
+    return {
+      totalListings,
+      activeListings,
+      averagePrice,
+      totalValue
+    }
+  }, [filteredListings])
+
+  const handleListingClick = (listingId: string) => {
     navigate(`/listings/${listingId}`)
   }
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price)
-  }
-
-  const getListingTypeIcon = (type) => {
-    return type === 'manufactured_home' ? Home : Car
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'draft': return 'bg-yellow-100 text-yellow-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+  const formatPrice = (listing: any) => {
+    if (listing.salePrice) {
+      return `$${listing.salePrice.toLocaleString()}`
+    } else if (listing.rentPrice) {
+      return `$${listing.rentPrice.toLocaleString()}/mo`
     }
+    return 'Price on request'
   }
 
-  // Calculate summary statistics for sharing
-  const totalListings = mockListings.sampleListings.length
-  const activeListings = filteredListings.length
-  const averagePrice = Math.round(
-    filteredListings.reduce((sum, listing) => 
-      sum + (listing.salePrice || listing.rentPrice || 0), 0
-    ) / filteredListings.length
-  )
-  const totalValue = filteredListings.reduce((sum, listing) => 
-    sum + (listing.salePrice || listing.rentPrice || 0), 0
-  )
-  const featuredListings = filteredListings
-    .slice(0, 5)
-    .map(listing => `${listing.year} ${listing.make} ${listing.model}`)
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeaderSkeleton />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <ListingCardSkeleton key={i} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>
-          Try Again
-        </Button>
-      </div>
-    );
+  const getListingSpecs = (listing: any) => {
+    const specs = []
+    if (listing.bedrooms) specs.push(`${listing.bedrooms} bed`)
+    if (listing.bathrooms) specs.push(`${listing.bathrooms} bath`)
+    if (listing.sleeps) specs.push(`Sleeps ${listing.sleeps}`)
+    if (listing.length) specs.push(`${listing.length} ft`)
+    if (listing.slides) specs.push(`${listing.slides} slides`)
+    return specs
   }
 
   return (
-    <ModuleErrorBoundary moduleName="Property Listings">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Property Listings</h1>
-            <p className="text-muted-foreground">
-              Manage your property listings and sharing options
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => setShareAllModalOpen(true)}>
-              <Share2 className="h-4 w-4 mr-2" />
-              Share All Listings
-            </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Listing
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header with Title and Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Property Listings Dashboard</h1>
+          <p className="text-muted-foreground">Manage and track all your property listings</p>
         </div>
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search listings..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Property Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
-                    <SelectItem value="rv">RV/Travel Trailers</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterOfferType} onValueChange={setFilterOfferType}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Offer Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Offers</SelectItem>
-                    <SelectItem value="for_sale">For Sale</SelectItem>
-                    <SelectItem value="for_rent">For Rent</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button variant="outline" size="icon">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Summary Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{listings.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {listings.filter(l => l.status === 'active').length} active
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Sale Price</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatPrice(listings.reduce((acc, l) => acc + (l.salePrice || 0), 0) / listings.length)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2</div>
-              <p className="text-xs text-muted-foreground">New listings added</p>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShareAllModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Share className="h-4 w-4" />
+            Share All Listings
+          </Button>
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Listing
+          </Button>
         </div>
+      </div>
 
-        {/* Listings Table */}
+      {/* Summary Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle>Listings ({filteredListings.length})</CardTitle>
-            <CardDescription>
-              View and manage all your property listings
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
+            <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredListings.map((listing) => {
-                const TypeIcon = getListingTypeIcon(listing.listingType)
-                
-                return (
-                  <div
-                    key={listing.id}
-                    className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => handleListingClick(listing.id)}
-                  >
-                    {/* Property Image */}
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                        {listing.media?.primaryPhoto ? (
-                          <img
-                            src={listing.media.primaryPhoto}
-                            alt={listing.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <TypeIcon className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Property Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-semibold truncate">{listing.title}</h3>
-                        <Badge className={getStatusColor(listing.status)}>
-                          {listing.status}
-                        </Badge>
-                        {listing.listingType === 'manufactured_home' ? (
-                          <Badge variant="outline">MH</Badge>
-                        ) : (
-                          <Badge variant="outline">RV</Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <span>{listing.year} {listing.make} {listing.model}</span>
-                        <span className="flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {listing.location.city}, {listing.location.state}
-                        </span>
-                        <span className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {new Date(listing.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Pricing */}
-                    <div className="flex-shrink-0 text-right">
-                      {listing.salePrice && (
-                        <div className="font-semibold text-green-600">
-                          {formatPrice(listing.salePrice)}
-                          {listing.offerType === 'both' && <span className="text-xs text-muted-foreground"> sale</span>}
-                        </div>
-                      )}
-                      {listing.rentPrice && (
-                        <div className="font-semibold text-blue-600">
-                          {formatPrice(listing.rentPrice)}/mo
-                          {listing.offerType === 'both' && <span className="text-xs text-muted-foreground"> rent</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShareListing(listing)}
-                      >
-                        <Share2 className="h-4 w-4 mr-1" />
-                        Share
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
-                        Preview
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {filteredListings.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Home className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No listings found matching your criteria</p>
-                <p className="text-sm">Try adjusting your search or filters</p>
-              </div>
-            )}
+            <div className="text-2xl font-bold">{summaryStats.totalListings}</div>
+            <p className="text-xs text-muted-foreground">
+              {summaryStats.activeListings} active listings
+            </p>
           </CardContent>
         </Card>
-
-        {/* Share Modal */}
-        <ShareListingModal
-          open={shareModalOpen}
-          onOpenChange={setShareModalOpen}
-          listing={selectedListing}
-        />
-
-        {/* Share All Listings Modal */}
-        <ShareAllListingsModal
-          isOpen={shareAllModalOpen}
-          onClose={() => setShareAllModalOpen(false)}
-          companyId="demo-company"
-          companyName="Demo RV Dealership"
-          totalListings={totalListings}
-          activeListings={activeListings}
-          averagePrice={averagePrice}
-          totalValue={totalValue}
-          featuredListings={featuredListings}
-        />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summaryStats.activeListings}</div>
+            <p className="text-xs text-muted-foreground">
+              Available for rent/sale
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Price</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${summaryStats.averagePrice.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Total value: ${summaryStats.totalValue.toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
       </div>
-    </ModuleErrorBoundary>
+
+      {/* Filters & Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Filters & Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search listings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Filter Row */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
+                <SelectItem value="rv">RV</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={offerFilter} onValueChange={setOfferFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Offers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Offers</SelectItem>
+                <SelectItem value="for_sale">For Sale</SelectItem>
+                <SelectItem value="for_rent">For Rent</SelectItem>
+                <SelectItem value="both">Both</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              placeholder="Min Price"
+              type="number"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+            />
+
+            <Input
+              placeholder="Max Price"
+              type="number"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+            />
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Listings Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">
+            All Listings ({filteredListings.length})
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            All property listings in the system
+          </p>
+        </div>
+
+        {/* Listings Grid */}
+        <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+          {filteredListings.map((listing) => (
+            <Card 
+              key={listing.id} 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleListingClick(listing.id)}
+            >
+              <div className="relative">
+                <img
+                  src={listing.images[0] || '/placeholder-property.jpg'}
+                  alt={listing.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
+                <div className="absolute top-2 left-2">
+                  <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
+                    {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                  </Badge>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <Badge variant="outline" className="bg-white/90">
+                    {listing.status === 'active' ? 'Active' : listing.status}
+                  </Badge>
+                </div>
+                {(listing.salePrice || listing.rentPrice) && (
+                  <div className="absolute bottom-2 right-2">
+                    <Badge className="bg-black/80 text-white">
+                      {formatPrice(listing)}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+              
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-lg">{listing.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {listing.year} {listing.make} {listing.model}
+                  </p>
+                  
+                  {/* Specs */}
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                    {getListingSpecs(listing).map((spec, index) => (
+                      <span key={index} className="flex items-center gap-1">
+                        {spec.includes('bed') && <Bed className="h-3 w-3" />}
+                        {spec.includes('bath') && <Bath className="h-3 w-3" />}
+                        {spec.includes('Sleeps') && <Users className="h-3 w-3" />}
+                        {spec.includes('ft') && <Ruler className="h-3 w-3" />}
+                        {spec.includes('slides') && <Square className="h-3 w-3" />}
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Location */}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {listing.location.city}, {listing.location.state}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredListings.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No listings found matching your criteria.</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Share All Listings Modal */}
+      <ShareAllListingsModal
+        open={shareAllModalOpen}
+        onOpenChange={setShareAllModalOpen}
+        listings={filteredListings}
+        summaryStats={summaryStats}
+      />
+    </div>
   )
 }
-
-export default PropertyListings

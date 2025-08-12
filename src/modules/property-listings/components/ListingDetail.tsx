@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ShareListingModal } from './ShareListingModal'
 import { 
-  ArrowLeft, 
+  ArrowLeft,
+  Share, 
   MapPin, 
   Calendar, 
   Home, 
@@ -21,6 +22,7 @@ import {
   Globe
 } from 'lucide-react'
 import { mockListings } from '@/mocks/listingsMock'
+import { ShareListingModal } from './ShareListingModal'
 
 interface ListingDetailProps {
   listingId?: string
@@ -32,6 +34,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const listingId = propListingId || paramListingId
@@ -99,6 +102,13 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareListingModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        listing={listing}
+      />
     )
   }
 
@@ -317,6 +327,14 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
               </div>
             </CardContent>
           </Card>
+          <Button 
+            variant="outline"
+            onClick={() => setShareModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Share className="h-4 w-4" />
+            Share
+          </Button>
         </div>
 
         {/* Sidebar */}
