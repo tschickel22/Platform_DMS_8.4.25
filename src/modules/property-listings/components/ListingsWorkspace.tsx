@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
+import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
+import { logger } from '@/utils/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +34,7 @@ import {
   MoreHorizontal,
   ExternalLink
 } from 'lucide-react'
+import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
 import { apiClient } from '@/utils/apiClient'
 
@@ -88,272 +93,149 @@ interface ValidationGate {
   validator: (listing: Listing) => { isValid: boolean; message?: string }
 }
 
-const ListingsWorkspace: React.FC = () => {
-  const { toast } = useToast()
-  const [listings, setListings] = useState<Listing[]>([])
-  const [filteredListings, setFilteredListings] = useState<Listing[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
+const PropertyListings = () => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const { handleError, handleAsyncError } = useErrorHandler()
+  const [listings, setListings] = useState(mockListings.sampleListings)
+  const [filteredListings, setFilteredListings] = useState(mockListings.sampleListings)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [filterOfferType, setFilterOfferType] = useState('all')
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [selectedListing, setSelectedListing] = useState(null)
 
-  // Validation gates for publishing listings
-  const validationGates: ValidationGate[] = [
-    {
-      id: 'basic_info',
-      name: 'Basic Information',
-      description: 'Year, make, model, and pricing',
-      required: true,
-      validator: (listing) => {
-        if (!listing.year || !listing.make || !listing.model) {
-          return { isValid: false, message: 'Year, make, and model are required' }
-        }
-        if (listing.offerType === 'for_sale' || listing.offerType === 'both') {
-          if (!listing.salePrice || listing.salePrice <= 0) {
-            return { isValid: false, message: 'Sale price is required for sale listings' }
-          }
-        }
-        if (listing.offerType === 'for_rent' || listing.offerType === 'both') {
-          if (!listing.rentPrice || listing.rentPrice <= 0) {
-            return { isValid: false, message: 'Rent price is required for rental listings' }
-          }
-        }
-        return { isValid: true }
-      }
-    },
-    {
-      id: 'property_details',
-      name: 'Property Details',
-      description: 'Bedrooms, bathrooms, and other key features',
-      required: false,
-      validator: (listing) => {
-        if (listing.listingType === 'manufactured_home') {
-          if (!listing.bedrooms || !listing.bathrooms) {
-            return { isValid: false, message: 'Bedrooms and bathrooms help buyers find your listing' }
-          }
-        }
-        if (listing.listingType === 'rv') {
-          if (!listing.sleeps && !listing.length) {
-            return { isValid: false, message: 'Sleep capacity or length helps buyers find your RV' }
-          }
-        }
-        return { isValid: true }
-      }
-    }
-  ]
-
-  // Load listings
+  // Load listings on component mount
   useEffect(() => {
-    loadListings()
-  }, [])
-
-  // Filter listings
-  useEffect(() => {
-    let filtered = listings
-
-    if (searchTerm) {
-      filtered = filtered.filter(listing => 
-        listing.searchResultsText.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.id.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.status === statusFilter)
-    }
-
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.listingType === typeFilter)
-    }
-
-    setFilteredListings(filtered)
-  }, [listings, searchTerm, statusFilter, typeFilter])
-
-  const loadListings = async () => {
-    setIsLoading(true)
-    try {
-      const data = await apiClient.listingsCrud.getListings('company_test')
-      setListings(data)
-    } catch (error) {
-      console.error('Error loading listings:', error)
-      toast({
-        title: "Error Loading Listings",
-        description: "Failed to load listings. Please try again.",
-        variant: "destructive",
-      })
-      setListings(mockListings.sampleListings)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const validateListing = (listing: Listing) => {
-    const results = validationGates.map(gate => ({
-      gate,
-      result: gate.validator(listing)
-    }))
-
-    const requiredGates = results.filter(r => r.gate.required)
-    const failedRequired = requiredGates.filter(r => !r.result.isValid)
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // In real implementation, this would be an API call
+        setListings(mockListings.sampleListings);
+      } catch (error) {
+        handleError(error, 'property_listings_load');
+        setError('Failed to load listings');
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return {
-      canPublish: failedRequired.length === 0,
-      requiredIssues: failedRequired.map(r => ({ gate: r.gate, result: r.result })),
-      allResults: results
-    }
-  }
+    loadData();
+  }, [handleError]);
 
-  const handleStatusChange = async (listingId: string, newStatus: string) => {
-    const listing = listings.find(l => l.id === listingId)
-    if (!listing) return
+  // Filter listings based on search and filters
+  useEffect(() => {
+    let filtered = listings;
 
-    // Validate before allowing to go active
-    if (newStatus === 'active') {
-      const validation = validateListing(listing)
-      if (!validation.canPublish) {
-        toast({
-          title: "Cannot Publish Listing",
-          description: `Fix ${validation.requiredIssues.length} validation issue(s) before publishing.`,
-          variant: "destructive",
-        })
-        return
-      }
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(listing => 
+        listing.searchResultsText?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.make?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
-    try {
-      await apiClient.listingsCrud.updateListing('company_test', listingId, { status: newStatus })
-      await loadListings()
-      toast({
-        title: "Status Updated",
-        description: `Listing status changed to ${newStatus}.`,
-      })
-    } catch (error) {
-      console.error('Error updating status:', error)
-      toast({
-        title: "Error Updating Status",
-        description: "Failed to update listing status. Please try again.",
-        variant: "destructive",
-      })
+    // Apply type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(listing => listing.listingType === filterType);
     }
-  }
 
-  const handleDeleteListing = async (listingId: string) => {
-    if (!confirm('Are you sure you want to delete this listing?')) return
-
-    try {
-      await apiClient.listingsCrud.deleteListing('company_test', listingId)
-      await loadListings()
-      toast({
-        title: "Listing Deleted",
-        description: "Listing has been permanently deleted.",
-      })
-    } catch (error) {
-      console.error('Error deleting listing:', error)
-      toast({
-        title: "Error Deleting Listing",
-        description: "Failed to delete listing. Please try again.",
-        variant: "destructive",
-      })
+    // Apply offer type filter
+    if (filterOfferType !== 'all') {
+      filtered = filtered.filter(listing => listing.offerType === filterOfferType);
     }
-  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'draft': return 'bg-gray-100 text-gray-800'
-      case 'sold': return 'bg-blue-100 text-blue-800'
-      case 'rented': return 'bg-purple-100 text-purple-800'
-      case 'inactive': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+    setFilteredListings(filtered);
+  }, [listings, searchQuery, filterType, filterOfferType]);
 
-  const formatPrice = (price: number | undefined, currency = 'USD') => {
-    if (!price) return 'N/A'
+  const handleShare = (listing) => {
+    setSelectedListing(listing);
+    setShareModalOpen(true);
+  };
+
+  const formatPrice = (price) => {
+    if (!price) return 'N/A';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency,
+      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(price)
-  }
+    }).format(price);
+  };
 
-  if (isLoading) {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'sold': return 'bg-blue-100 text-blue-800';
+      case 'rented': return 'bg-purple-100 text-purple-800';
+      case 'inactive': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-600">Loading listings...</span>
+        <div className="text-center">
+          <div className="text-red-500 mb-2">Error loading listings</div>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Listings Workspace</h1>
-          <p className="text-muted-foreground">
-            Manage your property listings and publish to marketing channels
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={loadListings}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Listing
-          </Button>
-        </div>
-      </div>
+    <ModuleErrorBoundary moduleName="PropertyListings">
+      <div className="space-y-6">
+        {/* Header */}
+        {isLoading ? (
+          <PageHeaderSkeleton />
+        ) : (
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Property Listings</h1>
+              <p className="text-muted-foreground">
+                Manage and share your property listings across channels
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Listing
+              </Button>
+            </div>
+          </div>
+        )}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filter & Search</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="search">Search Listings</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search by title, make, model, or ID..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search listings..."
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="sold">Sold</SelectItem>
-                  <SelectItem value="rented">Rented</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Property Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
@@ -361,215 +243,198 @@ const ListingsWorkspace: React.FC = () => {
                   <SelectItem value="rv">RVs</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={filterOfferType} onValueChange={setFilterOfferType}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Offer Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Offers</SelectItem>
+                  <SelectItem value="for_sale">For Sale</SelectItem>
+                  <SelectItem value="for_rent">For Rent</SelectItem>
+                  <SelectItem value="both">Both</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Listings</p>
-                <p className="text-2xl font-bold">{listings.length}</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Listings</p>
+                  <p className="text-2xl font-bold">{listings.length}</p>
+                </div>
+                <Home className="h-8 w-8 text-blue-600" />
               </div>
-              <FileImage className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {listings.filter(l => l.status === 'active').length}
-                </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {listings.filter(l => l.status === 'active').length}
+                  </p>
+                </div>
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Drafts</p>
-                <p className="text-2xl font-bold text-gray-600">
-                  {listings.filter(l => l.status === 'draft').length}
-                </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">For Sale</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {listings.filter(l => ['for_sale', 'both'].includes(l.offerType)).length}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-blue-600" />
               </div>
-              <Edit className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Sold/Rented</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {listings.filter(l => ['sold', 'rented'].includes(l.status)).length}
-                </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">For Rent</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {listings.filter(l => ['for_rent', 'both'].includes(l.offerType)).length}
+                  </p>
+                </div>
+                <Calendar className="h-8 w-8 text-purple-600" />
               </div>
-              <DollarSign className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Listings Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Listings ({filteredListings.length})</CardTitle>
-          <CardDescription>
-            Manage your property listings and track their status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Listing</th>
-                  <th className="text-left p-2">Type</th>
-                  <th className="text-left p-2">Pricing</th>
-                  <th className="text-left p-2">Location</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Validation</th>
-                  <th className="text-left p-2">Updated</th>
-                  <th className="text-left p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredListings.map((listing) => {
-                  const validation = validateListing(listing)
-                  
-                  return (
-                    <tr key={listing.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <div>
-                          <div className="font-medium">
-                            {listing.searchResultsText || `${listing.year} ${listing.make} ${listing.model}`}
-                          </div>
-                          <div className="text-sm text-gray-500">ID: {listing.id}</div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="outline">
-                          {listing.listingType.replace('_', ' ').toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <div className="text-sm">
-                          {listing.offerType === 'for_sale' && (
-                            <div>Sale: {formatPrice(listing.salePrice)}</div>
-                          )}
-                          {listing.offerType === 'for_rent' && (
-                            <div>Rent: {formatPrice(listing.rentPrice)}/mo</div>
-                          )}
-                          {listing.offerType === 'both' && (
-                            <div>
-                              <div>Sale: {formatPrice(listing.salePrice)}</div>
-                              <div>Rent: {formatPrice(listing.rentPrice)}/mo</div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center text-sm">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {listing.location.city}, {listing.location.state}
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <Select 
-                          value={listing.status} 
-                          onValueChange={(value) => handleStatusChange(listing.id, value)}
-                        >
-                          <SelectTrigger className="w-24 h-8">
-                            <Badge className={getStatusColor(listing.status)}>
-                              {listing.status.toUpperCase()}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="sold">Sold</SelectItem>
-                            <SelectItem value="rented">Rented</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center">
-                          {validation.canPublish ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                          )}
-                          <span className="text-xs ml-1">
-                            {validation.requiredIssues.length === 0 
-                              ? 'Ready' 
-                              : `${validation.requiredIssues.length} issues`
-                            }
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-2 text-sm text-gray-500">
-                        {new Date(listing.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="ghost">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => handleDeleteListing(listing.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredListings.length === 0 && (
-            <div className="text-center py-12">
+        {/* Listings Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isLoading ? (
+            // Loading skeletons
+            Array.from({ length: 6 }).map((_, i) => (
+              <ListingCardSkeleton key={i} />
+            ))
+          ) : filteredListings.length === 0 ? (
+            <div className="col-span-full text-center py-12">
               <FileImage className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No listings found</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? 'Try adjusting your filters or search terms.'
-                  : 'Get started by creating your first listing from inventory.'}
+                {searchQuery || filterType !== 'all' || filterOfferType !== 'all'
+                  ? 'Try adjusting your search or filters.'
+                  : 'Get started by creating your first listing.'}
               </p>
-              {(!searchTerm && statusFilter === 'all' && typeFilter === 'all') && (
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Listing
-                </Button>
-              )}
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Listing
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+          ) : (
+            filteredListings.map((listing) => (
+              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="aspect-video relative">
+                  <img
+                    src={listing.media?.primaryPhoto || '/placeholder-property.jpg'}
+                    alt={listing.searchResultsText || listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Badge className={getStatusColor(listing.status)}>
+                      {listing.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="absolute top-2 left-2">
+                    <Badge variant="secondary">
+                      {listing.listingType === 'manufactured_home' ? 'Home' : 'RV'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-lg line-clamp-2">
+                      {listing.searchResultsText || listing.title || `${listing.year} ${listing.make} ${listing.model}`}
+                    </h3>
+                    
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {listing.location?.city}, {listing.location?.state}
+                    </div>
 
-export default ListingsWorkspace
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        {listing.offerType === 'for_sale' && (
+                          <div className="font-semibold text-green-600">
+                            {formatPrice(listing.salePrice)}
+                          </div>
+                        )}
+                        {listing.offerType === 'for_rent' && (
+                          <div className="font-semibold text-blue-600">
+                            {formatPrice(listing.rentPrice)}/mo
+                          </div>
+                        )}
+                        {listing.offerType === 'both' && (
+                          <div className="space-y-1">
+                            <div className="font-semibold text-green-600 text-sm">
+                              Sale: {formatPrice(listing.salePrice)}
+                            </div>
+                            <div className="font-semibold text-blue-600 text-sm">
+                              Rent: {formatPrice(listing.rentPrice)}/mo
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        {listing.listingType === 'manufactured_home' && listing.bedrooms && (
+                          <span>{listing.bedrooms}BR/{listing.bathrooms}BA</span>
+                        )}
+                        {listing.listingType === 'rv' && listing.sleeps && (
+                          <span>Sleeps {listing.sleeps}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleShare(listing)}
+                      >
+                        <Share2 className="h-4 w-4 mr-1" />
+                        Share
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Share Modal */}
+        <ShareListingModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          listing={selectedListing}
+        />
+      </div>
+    </ModuleErrorBoundary>
+  );
+};
+
+export default PropertyListings;
