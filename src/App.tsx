@@ -145,6 +145,7 @@ function App() {
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
+  );
 }
 
 export default App
