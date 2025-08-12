@@ -354,4 +354,6 @@ const PublicListingView: React.FC = () => {
   )
 }
 
+export default PublicListingView
+
 export { PublicListingView }
