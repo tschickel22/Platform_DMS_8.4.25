@@ -35,3 +35,4 @@ src/
 !src/modules/property-listings/components/ListingForm.tsx
 !src/modules/property-listings/components/ListingTypeDialog.tsx
 !src/modules/property-listings/lib/exportMeta.ts
+!src/modules/brochures/
