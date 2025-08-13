@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -25,6 +26,7 @@ import {
   DollarSign,
   MapPin,
   FileImage,
+  const navigate = useNavigate()
   Filter,
   Search,
   RefreshCw,
@@ -193,6 +195,10 @@ const PropertyListings = () => {
     );
   }
 
+  const handleViewEditListing = (listing: any) => {
+    // Navigate to the listing detail/edit page
+    navigate(`/property/listings/${listing.id}`)
+  }
   return (
     <ModuleErrorBoundary moduleName="PropertyListings">
       <div className="space-y-6">
@@ -240,7 +246,11 @@ const PropertyListings = () => {
                   <SelectValue placeholder="Property Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => handleViewEditListing(listing)}
+              >
                   <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
                   <SelectItem value="rv">RVs</SelectItem>
                 </SelectContent>
@@ -414,7 +424,11 @@ const PropertyListings = () => {
                       </div>
                       <Button 
                         size="sm" 
-                        variant="outline"
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewEditListing(listing)}
+                    >
                         onClick={() => handleShare(listing)}
                       >
                         <Share2 className="h-4 w-4 mr-1" />

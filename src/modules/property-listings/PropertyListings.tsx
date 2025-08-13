@@ -368,13 +368,14 @@ function PropertyListingsDashboard() {
       <ShareAllListingsModal open={shareOpen} onOpenChange={setShareOpen} listings={filtered} summaryStats={summaryStats} />
     </div>
   );
-}
+import { Routes, Route, Navigate } from 'react-router-dom'
 
 export default function PropertyListings() {
   return (
     <Routes>
-      <Route path="/" element={<PropertyListingsDashboard />} />
-      <Route path="*" element={<PropertyListingsDashboard />} />
+      <Route path="" element={<ListingsWorkspace />} />
+      <Route path="/" element={<Navigate to="" replace />} />
+      <Route path="/:listingId" element={<ListingDetail />} />
     </Routes>
   );
 }
