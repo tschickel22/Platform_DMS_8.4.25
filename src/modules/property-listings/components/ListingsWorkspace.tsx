@@ -26,7 +26,6 @@ import {
   DollarSign,
   MapPin,
   FileImage,
-  const navigate = useNavigate()
   Filter,
   Search,
   RefreshCw,
@@ -40,7 +39,6 @@ import {
 import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
 import { apiClient } from '@/utils/apiClient'
-import { Home } from 'lucide-react'
 
 interface Listing {
   id: string
@@ -98,6 +96,7 @@ interface ValidationGate {
 }
 
 const PropertyListings = () => {
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const { handleError, handleAsyncError } = useErrorHandler()
@@ -246,11 +245,7 @@ const PropertyListings = () => {
                   <SelectValue placeholder="Property Type" />
                 </SelectTrigger>
                 <SelectContent>
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => handleViewEditListing(listing)}
-              >
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
                   <SelectItem value="rv">RVs</SelectItem>
                 </SelectContent>
@@ -413,22 +408,26 @@ const PropertyListings = () => {
 
                     <div className="flex items-center justify-between pt-2 border-t">
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleViewEditListing(listing)}
+                        >
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleViewEditListing(listing)}
+                        >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
                       </div>
                       <Button 
                         size="sm" 
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewEditListing(listing)}
-                    >
+                        variant="outline"
                         onClick={() => handleShare(listing)}
                       >
                         <Share2 className="h-4 w-4 mr-1" />
