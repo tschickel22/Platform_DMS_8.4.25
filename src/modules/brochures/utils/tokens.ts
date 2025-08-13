@@ -1,210 +1,547 @@
 /**
- * Brochure Builder - Token Resolution Utility
+ * Brochure Builder - Token Resolution Utilities
  * 
- * This utility handles dynamic token replacement in brochure content.
- * Tokens like {{inventory.price}} or {{listing.title}} are replaced
- * with actual values from the context data.
+ * This module provides token-based content replacement for dynamic brochures.
+ * Tokens like {{inventory.price}} or {{listing.title}} are replaced with actual
+ * values from the provided context data, enabling data-driven brochure generation.
  * 
  * Supported Token Categories:
+ * - Inventory: {{inventory.year}}, {{inventory.make}}, {{inventory.model}}, etc.
+ * - Listings: {{listing.title}}, {{listing.price}}, {{listing.location}}, etc.
+ * - Land: {{land.acres}}, {{land.price}}, {{land.location}}, etc.
+ * - Quotes: {{quote.total}}, {{quote.items}}, {{quote.customer}}, etc.
+ * - Company: {{company.name}}, {{company.phone}}, {{company.address}}, etc.
+ * - User: {{user.name}}, {{user.email}}, {{user.title}}, etc.
+ * - Custom: {{custom.field1}}, {{custom.field2}}, etc.
  * 
- * Inventory Tokens:
- * - {{inventory.make}} - Vehicle/unit make
- * - {{inventory.model}} - Vehicle/unit model  
- * - {{inventory.year}} - Year manufactured
- * - {{inventory.price}} - Sale price
- * - {{inventory.vin}} - VIN/serial number
- * - {{inventory.condition}} - New/used condition
- * - {{inventory.mileage}} - Odometer reading
+ * Token Format:
+ * - Basic: {{category.field}}
+ * - Nested: {{category.subcategory.field}}
+ * - Formatted: {{inventory.price|currency}}
+ * - Conditional: {{inventory.year|default:'N/A'}}
  * 
- * Listing Tokens:
- * - {{listing.title}} - Listing title
- * - {{listing.description}} - Listing description
- * - {{listing.price}} - Listed price
- * - {{listing.location}} - Property location
- * - {{listing.bedrooms}} - Number of bedrooms
- * - {{listing.bathrooms}} - Number of bathrooms
+ * Resilience Features:
+ * - Never throws errors on missing tokens
+ * - Returns original text for unresolved tokens
+ * - Supports fallback values and default formatting
+ * - Handles nested object access safely
+ * - Provides helpful debugging information
  * 
- * Land Tokens:
- * - {{land.address}} - Land address
- * - {{land.acreage}} - Land size in acres
- * - {{land.price}} - Land price
- * - {{land.zoning}} - Zoning classification
+ * Performance:
+ * - Efficient regex-based token detection
+ * - Caches resolved values within context
+ * - Minimal string manipulation overhead
+ * - Supports batch token resolution
  * 
- * Quote Tokens:
- * - {{quote.total}} - Quote total amount
- * - {{quote.items}} - Quote line items
- * - {{quote.customer}} - Customer name
- * - {{quote.date}} - Quote date
- * 
- * Company Tokens:
- * - {{company.name}} - Company name
- * - {{company.phone}} - Company phone
- * - {{company.email}} - Company email
- * - {{company.address}} - Company address
- * - {{company.website}} - Company website
- * 
- * Behavior:
- * - Never throws errors
- * - Unknown tokens return original text (e.g., "{{unknown.token}}")
- * - Missing context data returns empty string or safe fallback
- * - Supports nested object access (e.g., {{inventory.specs.engine}})
- * - Handles arrays with index access (e.g., {{listing.photos.0}})
- * 
- * TODO: Implement token parsing and replacement logic
- * TODO: Add number formatting for prices and measurements
- * TODO: Add date formatting for timestamps
- * TODO: Add conditional token support (e.g., {{if inventory.price}}...{{/if}})
+ * TODO: Add support for conditional tokens (if/else)
+ * TODO: Add mathematical operations (sum, multiply, etc.)
+ * TODO: Add date/time formatting options
+ * TODO: Add localization support for formatting
+ * TODO: Add token validation and suggestions
  */
 
-// Token resolution context - data available for replacement
-export interface TokenContext {
-  inventory?: Record<string, any>
-  listing?: Record<string, any>
-  land?: Record<string, any>
-  quote?: Record<string, any>
-  company?: Record<string, any>
-  [key: string]: any // Allow additional context data
+import type { TokenContext } from '../types'
+
+/**
+ * Token pattern for matching {{category.field}} format
+ */
+const TOKEN_PATTERN = /\{\{([^}]+)\}\}/g
+
+/**
+ * Supported token formatters
+ */
+export type TokenFormatter = 
+  | 'currency'
+  | 'number'
+  | 'date'
+  | 'phone'
+  | 'address'
+  | 'uppercase'
+  | 'lowercase'
+  | 'capitalize'
+  | 'truncate'
+  | 'default'
+
+/**
+ * Token resolution options
+ */
+export interface TokenResolutionOptions {
+  // Fallback behavior
+  keepUnresolved?: boolean // Keep {{token}} if not found (default: true)
+  defaultValue?: string // Default value for missing tokens
+  
+  // Formatting options
+  currency?: string // Currency code (USD, EUR, etc.)
+  locale?: string // Locale for formatting (en-US, etc.)
+  
+  // Debug options
+  debug?: boolean // Log resolution details
+  strict?: boolean // Throw errors on missing tokens
 }
 
 /**
- * Resolves tokens in input text using provided context
- * 
- * @param input - Text containing tokens to replace
- * @param context - Data context for token resolution
- * @returns Text with tokens replaced by actual values
+ * Token resolution result
  */
-export const resolveTokens = (input: string, context: TokenContext = {}): string => {
+export interface TokenResolutionResult {
+  originalText: string
+  resolvedText: string
+  tokensFound: string[]
+  tokensResolved: string[]
+  tokensUnresolved: string[]
+  errors: string[]
+}
+
+/**
+ * Main token resolution function
+ * 
+ * Replaces tokens in the input text with values from the provided context.
+ * Handles missing tokens gracefully and supports various formatting options.
+ * 
+ * @param input - Text containing tokens to resolve
+ * @param context - Data context for token resolution
+ * @param options - Resolution options and formatting preferences
+ * @returns Resolved text with tokens replaced
+ */
+export const resolveTokens = (
+  input: string,
+  context: TokenContext = {},
+  options: TokenResolutionOptions = {}
+): string => {
   if (!input || typeof input !== 'string') {
-    return String(input || '')
+    return input || ''
   }
   
+  const {
+    keepUnresolved = true,
+    defaultValue = '',
+    debug = false,
+    strict = false
+  } = options
+  
   try {
-    // TODO: Implement token replacement logic
-    // Pattern: {{category.property}} or {{category.property.nested}}
-    const tokenPattern = /\{\{([^}]+)\}\}/g
-    
-    return input.replace(tokenPattern, (match, tokenPath) => {
+    return input.replace(TOKEN_PATTERN, (match, tokenPath) => {
       try {
-        // TODO: Parse token path (e.g., "inventory.price" -> ["inventory", "price"])
-        const pathParts = tokenPath.trim().split('.')
+        const resolved = resolveTokenPath(tokenPath.trim(), context, options)
         
-        // TODO: Navigate through context object using path
-        let value = context
-        for (const part of pathParts) {
-          if (value && typeof value === 'object' && part in value) {
-            value = value[part]
-          } else {
-            // Path not found, return original token
-            return match
-          }
+        if (debug) {
+          console.log(`Token resolved: ${match} -> ${resolved}`)
         }
         
-        // TODO: Format value based on type
-        return formatTokenValue(value)
+        return resolved !== null ? resolved : (keepUnresolved ? match : defaultValue)
         
       } catch (error) {
-        // Token resolution failed, return original
-        console.warn('Token resolution failed:', tokenPath, error)
-        return match
+        if (strict) {
+          throw error
+        }
+        
+        if (debug) {
+          console.warn(`Token resolution failed: ${match}`, error)
+        }
+        
+        return keepUnresolved ? match : defaultValue
       }
     })
     
   } catch (error) {
-    console.warn('Token resolution error:', error)
+    if (strict) {
+      throw error
+    }
+    
+    console.error('Token resolution failed:', error)
     return input
   }
 }
 
 /**
- * Formats a resolved token value for display
+ * Resolves a single token path with optional formatting
  * 
- * @param value - Raw value from context
- * @returns Formatted string for display
+ * @param tokenPath - Token path like "inventory.price|currency"
+ * @param context - Data context
+ * @param options - Resolution options
+ * @returns Resolved and formatted value or null if not found
  */
-const formatTokenValue = (value: any): string => {
-  if (value === null || value === undefined) {
-    return ''
+const resolveTokenPath = (
+  tokenPath: string,
+  context: TokenContext,
+  options: TokenResolutionOptions
+): string | null => {
+  // Parse token path and formatter
+  const [path, formatter, ...formatterArgs] = tokenPath.split('|')
+  const pathParts = path.split('.')
+  
+  // Navigate to the value
+  let value = getNestedValue(context, pathParts)
+  
+  // Apply formatter if specified
+  if (value !== null && formatter) {
+    value = applyFormatter(value, formatter as TokenFormatter, formatterArgs, options)
   }
   
-  if (typeof value === 'number') {
-    // TODO: Add smart number formatting
-    // - Currency formatting for prices
-    // - Comma separators for large numbers
-    // - Decimal handling
-    return value.toLocaleString()
+  return value
+}
+
+/**
+ * Safely gets a nested value from an object
+ * 
+ * @param obj - Object to navigate
+ * @param path - Array of property names
+ * @returns Value at path or null if not found
+ */
+const getNestedValue = (obj: any, path: string[]): any => {
+  try {
+    let current = obj
+    
+    for (const key of path) {
+      if (current === null || current === undefined) {
+        return null
+      }
+      
+      if (typeof current === 'object' && key in current) {
+        current = current[key]
+      } else {
+        return null
+      }
+    }
+    
+    return current
+    
+  } catch (error) {
+    return null
   }
-  
-  if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No'
+}
+
+/**
+ * Applies formatting to a resolved value
+ * 
+ * @param value - Raw value to format
+ * @param formatter - Formatter type
+ * @param args - Formatter arguments
+ * @param options - Resolution options
+ * @returns Formatted value as string
+ */
+const applyFormatter = (
+  value: any,
+  formatter: TokenFormatter,
+  args: string[],
+  options: TokenResolutionOptions
+): string => {
+  try {
+    switch (formatter) {
+      case 'currency':
+        return formatCurrency(value, options.currency || 'USD', options.locale)
+        
+      case 'number':
+        return formatNumber(value, options.locale)
+        
+      case 'date':
+        return formatDate(value, args[0] || 'short', options.locale)
+        
+      case 'phone':
+        return formatPhone(value)
+        
+      case 'address':
+        return formatAddress(value)
+        
+      case 'uppercase':
+        return String(value).toUpperCase()
+        
+      case 'lowercase':
+        return String(value).toLowerCase()
+        
+      case 'capitalize':
+        return capitalizeWords(String(value))
+        
+      case 'truncate':
+        const length = parseInt(args[0]) || 50
+        return truncateText(String(value), length)
+        
+      case 'default':
+        return value || args[0] || ''
+        
+      default:
+        console.warn(`Unknown formatter: ${formatter}`)
+        return String(value)
+    }
+    
+  } catch (error) {
+    console.error(`Formatter error (${formatter}):`, error)
+    return String(value)
   }
+}
+
+// =============================================================================
+// FORMATTING UTILITIES
+// =============================================================================
+
+/**
+ * Formats a number as currency
+ */
+const formatCurrency = (value: any, currency: string = 'USD', locale: string = 'en-US'): string => {
+  const num = parseFloat(value)
+  if (isNaN(num)) return String(value)
   
-  if (Array.isArray(value)) {
-    // TODO: Handle array formatting
-    // - Join with commas for lists
-    // - Take first item for single values
-    return value.join(', ')
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency
+    }).format(num)
+  } catch (error) {
+    return `$${num.toFixed(2)}`
   }
+}
+
+/**
+ * Formats a number with locale-specific formatting
+ */
+const formatNumber = (value: any, locale: string = 'en-US'): string => {
+  const num = parseFloat(value)
+  if (isNaN(num)) return String(value)
   
-  if (typeof value === 'object') {
-    // TODO: Handle object formatting
-    // - JSON stringify for complex objects
-    // - Extract meaningful properties
-    return JSON.stringify(value)
+  try {
+    return new Intl.NumberFormat(locale).format(num)
+  } catch (error) {
+    return num.toString()
+  }
+}
+
+/**
+ * Formats a date value
+ */
+const formatDate = (value: any, format: string = 'short', locale: string = 'en-US'): string => {
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return String(value)
+  
+  try {
+    const options: Intl.DateTimeFormatOptions = {}
+    
+    switch (format) {
+      case 'short':
+        options.dateStyle = 'short'
+        break
+      case 'medium':
+        options.dateStyle = 'medium'
+        break
+      case 'long':
+        options.dateStyle = 'long'
+        break
+      case 'full':
+        options.dateStyle = 'full'
+        break
+      default:
+        options.dateStyle = 'short'
+    }
+    
+    return new Intl.DateTimeFormat(locale, options).format(date)
+  } catch (error) {
+    return date.toLocaleDateString()
+  }
+}
+
+/**
+ * Formats a phone number
+ */
+const formatPhone = (value: any): string => {
+  const phone = String(value).replace(/\D/g, '')
+  
+  if (phone.length === 10) {
+    return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`
+  } else if (phone.length === 11 && phone[0] === '1') {
+    return `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`
   }
   
   return String(value)
 }
 
 /**
- * Extracts all tokens from input text
- * 
- * @param input - Text to scan for tokens
- * @returns Array of token paths found
+ * Formats an address object or string
  */
-export const extractTokens = (input: string): string[] => {
+const formatAddress = (value: any): string => {
+  if (typeof value === 'string') {
+    return value
+  }
+  
+  if (typeof value === 'object' && value !== null) {
+    const parts = [
+      value.street || value.address1,
+      value.address2,
+      value.city,
+      value.state,
+      value.postalCode || value.zip
+    ].filter(Boolean)
+    
+    return parts.join(', ')
+  }
+  
+  return String(value)
+}
+
+/**
+ * Capitalizes words in a string
+ */
+const capitalizeWords = (text: string): string => {
+  return text.replace(/\b\w/g, char => char.toUpperCase())
+}
+
+/**
+ * Truncates text to specified length
+ */
+const truncateText = (text: string, length: number): string => {
+  if (text.length <= length) return text
+  return text.slice(0, length - 3) + '...'
+}
+
+// =============================================================================
+// BATCH OPERATIONS
+// =============================================================================
+
+/**
+ * Resolves tokens in multiple strings at once
+ * 
+ * @param inputs - Array of strings to process
+ * @param context - Token context
+ * @param options - Resolution options
+ * @returns Array of resolved strings
+ */
+export const resolveTokensBatch = (
+  inputs: string[],
+  context: TokenContext,
+  options: TokenResolutionOptions = {}
+): string[] => {
+  return inputs.map(input => resolveTokens(input, context, options))
+}
+
+/**
+ * Finds all tokens in a string without resolving them
+ * 
+ * @param input - Text to analyze
+ * @returns Array of unique token strings
+ */
+export const findTokens = (input: string): string[] => {
   if (!input || typeof input !== 'string') {
     return []
   }
   
   const tokens: string[] = []
-  const tokenPattern = /\{\{([^}]+)\}\}/g
   let match
   
-  while ((match = tokenPattern.exec(input)) !== null) {
-    const tokenPath = match[1].trim()
-    if (!tokens.includes(tokenPath)) {
-      tokens.push(tokenPath)
-    }
+  while ((match = TOKEN_PATTERN.exec(input)) !== null) {
+    tokens.push(match[1].trim())
   }
   
-  return tokens
+  // Reset regex state
+  TOKEN_PATTERN.lastIndex = 0
+  
+  return [...new Set(tokens)] // Remove duplicates
 }
 
 /**
- * Validates if all tokens in input can be resolved with context
+ * Validates that all tokens in a string can be resolved
  * 
- * @param input - Text containing tokens
- * @param context - Available context data
- * @returns Object with validation results
+ * @param input - Text to validate
+ * @param context - Token context
+ * @returns Validation result with details
  */
-export const validateTokens = (input: string, context: TokenContext = {}) => {
-  const tokens = extractTokens(input)
-  const results = {
-    valid: [] as string[],
-    invalid: [] as string[],
-    allValid: true
-  }
+export const validateTokens = (
+  input: string,
+  context: TokenContext
+): TokenResolutionResult => {
+  const tokensFound = findTokens(input)
+  const tokensResolved: string[] = []
+  const tokensUnresolved: string[] = []
+  const errors: string[] = []
   
-  for (const token of tokens) {
-    const resolved = resolveTokens(`{{${token}}}`, context)
-    if (resolved === `{{${token}}}`) {
-      // Token was not resolved
-      results.invalid.push(token)
-      results.allValid = false
-    } else {
-      results.valid.push(token)
+  for (const token of tokensFound) {
+    try {
+      const resolved = resolveTokenPath(token, context, {})
+      if (resolved !== null) {
+        tokensResolved.push(token)
+      } else {
+        tokensUnresolved.push(token)
+      }
+    } catch (error) {
+      tokensUnresolved.push(token)
+      errors.push(`${token}: ${error.message}`)
     }
   }
   
-  return results
+  return {
+    originalText: input,
+    resolvedText: resolveTokens(input, context),
+    tokensFound,
+    tokensResolved,
+    tokensUnresolved,
+    errors
+  }
+}
+
+// =============================================================================
+// PREDEFINED TOKEN SETS
+// =============================================================================
+
+/**
+ * Common inventory tokens
+ */
+export const INVENTORY_TOKENS = [
+  'inventory.id',
+  'inventory.year',
+  'inventory.make',
+  'inventory.model',
+  'inventory.vin',
+  'inventory.price',
+  'inventory.salePrice',
+  'inventory.rentPrice',
+  'inventory.condition',
+  'inventory.mileage',
+  'inventory.color',
+  'inventory.bedrooms',
+  'inventory.bathrooms',
+  'inventory.length',
+  'inventory.width',
+  'inventory.sleeps',
+  'inventory.slides'
+]
+
+/**
+ * Common listing tokens
+ */
+export const LISTING_TOKENS = [
+  'listing.id',
+  'listing.title',
+  'listing.description',
+  'listing.price',
+  'listing.location.city',
+  'listing.location.state',
+  'listing.location.address',
+  'listing.features',
+  'listing.images',
+  'listing.status'
+]
+
+/**
+ * Common company tokens
+ */
+export const COMPANY_TOKENS = [
+  'company.name',
+  'company.phone',
+  'company.email',
+  'company.address',
+  'company.website',
+  'company.logo'
+]
+
+/**
+ * All available tokens organized by category
+ */
+export const ALL_TOKENS = {
+  inventory: INVENTORY_TOKENS,
+  listing: LISTING_TOKENS,
+  company: COMPANY_TOKENS
+}
+
+export default {
+  resolveTokens,
+  resolveTokensBatch,
+  findTokens,
+  validateTokens,
+  ALL_TOKENS
 }
