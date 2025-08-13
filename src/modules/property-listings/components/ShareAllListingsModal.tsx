@@ -14,8 +14,10 @@ import {
   Linkedin,
   Share2,
   ExternalLink,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react'
+import { createCatalogShareLink, type ShareOptions } from '@/data/share'
 
 interface ShareAllListingsModalProps {
   open: boolean
@@ -28,6 +30,14 @@ interface ShareAllListingsModalProps {
 export function ShareAllListingsModal(props: ShareAllListingsModalProps) {
   const { toast } = useToast()
   const [customMessage, setCustomMessage] = useState('')
+  const [options, setOptions] = useState<ShareOptions>({
+    title: `Property Catalog (${props.listings.length} listings)`,
+    description: `View ${props.listings.length} available properties`,
+    includeWatermark: false,
+    expiresInDays: 30
+  })
+  const [shareLink, setShareLink] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState(false)
   
   // Derive display fields internally
   const activeListings = props.summaryStats.activeListings ?? props.listings.filter(l => l?.status === 'active').length
@@ -40,7 +50,19 @@ export function ShareAllListingsModal(props: ShareAllListingsModalProps) {
   
   // Generate shareable link (mock for now)
   const token = `catalog_${Date.now()}_${Math.random().toString(36).slice(2,9)}`
-  const shareableLink = `${window.location.origin}/${companySlug}/l/${token}`
+  const shareableLink = shareLink || `${window.location.origin}/${companySlug}/l/${token}`
+  
+  const generateLink = async () => {
+    setIsGenerating(true)
+    try {
+      const result = await createCatalogShareLink(props.listings, options)
+      setShareLink(result.shortUrl)
+    } catch (error) {
+      console.error('Failed to generate share link:', error)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
   
   const handleCopyLink = async () => {
     try {
@@ -165,6 +187,17 @@ export function ShareAllListingsModal(props: ShareAllListingsModalProps) {
               className="w-full p-2 border rounded-md resize-none h-20 text-sm"
             />
           </div>
+
+          <div>
+            <label className="text-sm font-medium">Expires in (days)</label>
+            <Input
+              type="number"
+              min="1"
+              max="365"
+              value={options.expiresInDays || 30}
+              onChange={(e) => setOptions(prev => ({ ...prev, expiresInDays: parseInt(e.target.value) || 30 }))}
+            />
+          </div>
           
           <Separator />
           
@@ -212,6 +245,18 @@ export function ShareAllListingsModal(props: ShareAllListingsModalProps) {
                 LinkedIn
               </Button>
             </div>
+          </div>
+
+          <div className="flex justify-between">
+            <Button
+              onClick={generateLink}
+              disabled={isGenerating}
+              className="flex items-center gap-2"
+            >
+              {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Share2 className="h-4 w-4" />
+              {isGenerating ? 'Generating...' : 'Generate Share Link'}
+            </Button>
           </div>
           
           {/* Analytics Preview */}
