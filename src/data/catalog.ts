@@ -1,250 +1,262 @@
 // src/data/catalog.ts
-import { useSyncExternalStore, useMemo, useCallback } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
+
+/** ---------- Types ---------- */
 
 export type ListingType = 'manufactured_home' | 'rv'
-export type Status = 'active' | 'draft' | 'inactive'
+export type ListingStatus = 'active' | 'draft' | 'inactive'
 
-export interface InventoryItem {
+export type LatLng = { lat?: number; lng?: number }
+export type Location = { city?: string; state?: string; postalCode?: string; township?: string; schoolDistrict?: string } & LatLng
+export type Media = { primaryPhoto?: string }
+
+export type InventoryBase = {
   id: string
+  type: ListingType
   year?: number
   make?: string
   model?: string
-  location?: {
-    city?: string
-    state?: string
-    lat?: number
-    lng?: number
-    township?: string
-    schoolDistrict?: string
-  }
+  location?: Location
+  media?: Media
+}
+
+export type InventoryMH = InventoryBase & {
+  type: 'manufactured_home'
   bedrooms?: number
   bathrooms?: number
-  dimensions?: { squareFeet?: number; length?: number }
+  dimensions?: { squareFeet?: number }
+}
+
+export type InventoryRV = InventoryBase & {
+  type: 'rv'
   sleeps?: number
+  dimensions?: { length?: number }
   slides?: number
-  media?: { primaryPhoto?: string }
-  lotRent?: string | number
-  taxes?: string | number
 }
 
-export interface ListingExportMeta {
-  SellerID?: string
-  CompanyID?: string
-  RentalPrice?: number
-  Township?: string
-  SchoolDistrict?: string
-  Latitude?: number
-  Longitude?: number
-  LotRent?: string
-  Taxes?: string
-  SellerAccountKey?: number
-  SellerFirstName?: string
-  SellerLastName?: string
-  SellerCompanyName?: string
-  SellerPhone?: string
-  SellerEmail?: string
-  SellerFax?: string
-  SoldPrice?: number
-  SearchResultsText?: string
-  SellerWebsite?: string
-  SellerEmail2?: string
-  SellerEmail3?: string
-  SellerEmail4?: string
-  SellerPhone2?: string
-}
+export type InventoryItem = InventoryMH | InventoryRV
 
-export interface Listing {
+export type Listing = {
   id: string
   inventoryId: string
   listingType: ListingType
-  status: Status
-  offerType?: 'sale' | 'rent'
+  status: ListingStatus
   salePrice?: number
   rentPrice?: number
   description?: string
-  hasOverrides?: boolean
-  overrides?: Partial<InventoryItem>
-  location?: InventoryItem['location']
-  make?: string
-  model?: string
-  year?: number
-  exportMeta?: ListingExportMeta
+  /** inventory field overrides (never contains id/type) */
+  overrides?: Partial<Omit<InventoryItem, 'id' | 'type'>>
+  features?: string[]
+  createdAt?: string
+  updatedAt?: string
+
+  /** Hidden/export-only meta (subset of the fields you provided) */
+  exportMeta?: {
+    SellerID?: string
+    CompanyID?: string
+    RentalPrice?: number
+    Township?: string
+    SchoolDistrict?: string
+    Latitude?: number
+    Longitude?: number
+    LotRent?: string
+    Taxes?: string
+    SellerAccountKey?: number
+    SellerFirstName?: string
+    SellerLastName?: string
+    SellerCompanyName?: string
+    SellerPhone?: string
+    SellerEmail?: string
+    SellerFax?: string
+    SoldPrice?: number
+    SearchResultsText?: string
+    SellerWebsite?: string
+    SellerEmail2?: string
+    SellerEmail3?: string
+    SellerEmail4?: string
+    SellerPhone2?: string
+  }
 }
 
-export interface CatalogStore {
+export type EffectiveListing = Listing &
+  (InventoryItem & {
+    hasOverrides?: boolean
+  })
+
+/** ---------- Store (localStorage + useSyncExternalStore) ---------- */
+
+const LS_KEY = 'ri_catalog_v1'
+
+type CatalogState = {
   inventory: InventoryItem[]
   listings: Listing[]
 }
 
-const LS_KEY = 'ri_catalog_v1'
-const EVT = 'ri_catalog_changed'
+let state: CatalogState = load()
 
-function defaultStore(): CatalogStore {
-  return {
-    inventory: [
-    { id:'inv-1', year:2020, make:'Clayton', model:'Everest',
-      location:{ city:'Austin', state:'TX' }, bedrooms:3, bathrooms:2, dimensions:{ squareFeet:1450 },
-      media:{ primaryPhoto:'https://picsum.photos/seed/mh1/800/450' }, lotRent:'400', taxes:'50' },
-    { id:'inv-2', year:2021, make:'Jayco', model:'Jay Flight',
-      location:{ city:'Boise', state:'ID' }, sleeps:6, dimensions:{ length:28 }, slides:1,
-      media:{ primaryPhoto:'https://picsum.photos/seed/rv1/800/450' } },
-    ],
-    listings: [],
-  }
+const listeners = new Set<() => void>()
+const subscribe = (cb: () => void) => {
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+const notify = () => {
+  for (const l of Array.from(listeners)) l()
+}
+function getSnapshot() {
+  return state
 }
 
-function readLS(): CatalogStore {
+function setState(mutator: (s: CatalogState) => CatalogState) {
+  state = mutator(state)
+  save(state)
+  notify()
+}
+
+function save(s: CatalogState) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(s))
+  } catch {}
+}
+
+function load(): CatalogState {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return defaultStore()
-    const parsed = JSON.parse(raw)
-    return { inventory: parsed.inventory ?? [], listings: parsed.listings ?? [] }
-  } catch { return defaultStore() }
-}
-
-export function read(): CatalogStore { return readLS() }
-
-function shallowEqual(a: any, b: any) {
-  try { return JSON.stringify(a) === JSON.stringify(b) } catch { return false }
-}
-
-function write(next: CatalogStore) {
-  const prev = read()
-  if (shallowEqual(prev, next)) return
-  localStorage.setItem(LS_KEY, JSON.stringify(next))
-  ;(typeof queueMicrotask === 'function'
-    ? queueMicrotask
-    : (fn: Function) => Promise.resolve().then(() => fn()))(() =>
-      dispatchEvent(new CustomEvent(EVT)))
-}
-
-function subscribe(fn: () => void) {
-  let raf: number | null = null
-  const handler = () => {
-    if (raf != null) cancelAnimationFrame(raf)
-    raf = requestAnimationFrame(() => { raf = null; fn() })
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  // seed a tiny sample inventory; no listings
+  const seeded: CatalogState = {
+    inventory: [
+      {
+        id: 'inv-mh-1',
+        type: 'manufactured_home',
+        year: 2020,
+        make: 'Clayton',
+        model: 'Everest',
+        bedrooms: 3,
+        bathrooms: 2,
+        dimensions: { squareFeet: 1450 },
+        location: { city: 'Austin', state: 'TX', lat: 30.2672, lng: -97.7431 },
+        media: { primaryPhoto: 'https://picsum.photos/800/450?mh' }
+      },
+      {
+        id: 'inv-rv-1',
+        type: 'rv',
+        year: 2021,
+        make: 'Jayco',
+        model: 'Jay Flight',
+        sleeps: 6,
+        slides: 1,
+        dimensions: { length: 28 },
+        location: { city: 'Boise', state: 'ID', lat: 43.615, lng: -116.2023 },
+        media: { primaryPhoto: 'https://picsum.photos/800/450?rv' }
+      }
+    ],
+    listings: []
   }
-  addEventListener(EVT, handler)
-  addEventListener('storage', handler)
-  return () => {
-    if (raf != null) cancelAnimationFrame(raf)
-    removeEventListener(EVT, handler)
-    removeEventListener('storage', handler)
-  }
+  save(seeded)
+  return seeded
 }
+
+/** ---------- Public API ---------- */
 
 export function useCatalog() {
-  const store = useSyncExternalStore(subscribe, read, read)
+  const snap = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
-  const createListingForInventory = useCallback(
-    (inventoryId: string, patch: Partial<Listing>) => {
-      const inv = store.inventory.find(i => i.id === inventoryId)
-      if (!inv) throw new Error('Inventory item not found')
+  // CRUD are stable lambdas that never set state during render
+  const createListingForInventory = (inventoryId: string, patch?: Partial<Listing>) => {
+    const inv = snap.inventory.find((i) => i.id === inventoryId)
+    if (!inv) throw new Error('Inventory item not found')
+    const now = new Date().toISOString()
+    const newListing: Listing = {
+      id: `lst_${Math.random().toString(36).slice(2, 9)}`,
+      inventoryId,
+      listingType: inv.type,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+      ...patch
+    }
+    setState((s) => ({ ...s, listings: [newListing, ...s.listings] }))
+    return newListing
+  }
 
-      const lt = (patch.listingType as ListingType) ?? 'manufactured_home'
-      if (lt === 'manufactured_home') {
-        const merged = { ...inv, ...(patch.overrides || {}) }
-        if (!merged.bedrooms || !merged.bathrooms || !merged.dimensions?.squareFeet) {
-          throw new Error('Manufactured home requires bedrooms, bathrooms, and square feet')
-        }
-      }
+  const updateListing = (listingId: string, patch: Partial<Listing>) => {
+    const now = new Date().toISOString()
+    setState((s) => ({
+      ...s,
+      listings: s.listings.map((l) =>
+        l.id === listingId ? { ...l, ...patch, updatedAt: now } : l
+      )
+    }))
+  }
 
-      const id = crypto.randomUUID?.() ?? String(Date.now())
-      const now: Listing = {
-        id,
-        inventoryId,
-        listingType: lt,
-        status: (patch.status as Status) ?? 'draft',
-        offerType: patch.offerType ?? 'sale',
-        salePrice: patch.salePrice,
-        rentPrice: patch.rentPrice,
-        description: patch.description,
-        hasOverrides: !!patch.overrides,
-        overrides: patch.overrides,
-        exportMeta: patch.exportMeta,
-        location: patch.location ?? inv.location,
-        make: patch.make ?? inv.make,
-        model: patch.model ?? inv.model,
-        year: patch.year ?? inv.year,
-      }
+  const deleteListing = (listingId: string) => {
+    setState((s) => ({ ...s, listings: s.listings.filter((l) => l.id !== listingId) }))
+  }
 
-      write({ ...store, listings: [...store.listings, now] })
-      return now
-    },
-    [store]
-  )
-
-  const updateListing = useCallback(
-    (id: string, patch: Partial<Listing>) => {
-      const next = {
-        ...store,
-        listings: store.listings.map(l =>
-          l.id === id ? { ...l, ...patch, hasOverrides: !!patch.overrides || l.hasOverrides } : l
-        ),
-      }
-      write(next)
-    },
-    [store]
-  )
-
-  const deleteListing = useCallback(
-    (id: string) => {
-      write({ ...store, listings: store.listings.filter(l => l.id !== id) })
-    },
-    [store]
-  )
-
-  const pushOverridesToInventory = useCallback(
-    (listingId: string, fields: Array<keyof InventoryItem>) => {
-      const l = store.listings.find(x => x.id === listingId)
-      if (!l || !l.overrides) return
-      const idx = store.inventory.findIndex(i => i.id === l.inventoryId)
-      if (idx < 0) return
-      const nextInv = { ...store.inventory[idx] }
-      fields.forEach(k => { (nextInv as any)[k] = (l.overrides as any)[k] })
-      write({ ...store, inventory: store.inventory.map((i, j) => j === idx ? nextInv : i) })
-    },
-    [store]
-  )
-
-  return { ...store, createListingForInventory, updateListing, deleteListing, pushOverridesToInventory }
-}
-
-export function useEffectiveListings() {
-  const { listings, inventory } = useCatalog()
-  return useMemo(() => {
-    return listings.map(l => {
-      const inv = inventory.find(i => i.id === l.inventoryId)
-      const merged: any = { ...inv, ...(l.overrides || {}) }
+  const pushOverridesToInventory = (listingId: string, fields: Partial<Omit<InventoryItem, 'id' | 'type'>>) => {
+    setState((s) => {
+      const listing = s.listings.find((l) => l.id === listingId)
+      if (!listing) return s
       return {
-        ...l,
-        location: l.location ?? merged?.location,
-        make: l.make ?? merged?.make,
-        model: l.model ?? merged?.model,
-        year: l.year ?? merged?.year,
-        bedrooms: merged?.bedrooms,
-        bathrooms: merged?.bathrooms,
-        dimensions: merged?.dimensions,
-        sleeps: merged?.sleeps,
-        slides: merged?.slides,
-        media: merged?.media,
+        ...s,
+        inventory: s.inventory.map((i) =>
+          i.id === listing.inventoryId ? ({ ...i, ...fields } as InventoryItem) : i
+        )
       }
     })
-  }, [listings, inventory])
+  }
+
+  return {
+    inventory: snap.inventory,
+    listings: snap.listings,
+    createListingForInventory,
+    updateListing,
+    deleteListing,
+    pushOverridesToInventory
+  }
 }
 
-// convenience selectors to keep older imports working
-export function useInventory() {
-  const { inventory } = useCatalog()
-  return inventory
-}
-export function useListings() {
-  const { listings } = useCatalog()
-  return listings
+export function useEffectiveListings(): EffectiveListing[] {
+  const { inventory, listings } = useCatalog()
+  return useMemo(() => {
+    return listings.map((l) => {
+      const inv = inventory.find((i) => i.id === l.inventoryId)
+      const merged = mergeInventory(inv, l.overrides)
+      return { ...l, ...merged, hasOverrides: !!l.overrides }
+    })
+  }, [inventory, listings])
 }
 
 export function averagePrice(list: Array<{ salePrice?: number; rentPrice?: number }>) {
-  const arr = list.map(l => l.salePrice ?? l.rentPrice ?? 0).filter(v => v > 0)
+  const arr = list.map((l) => (l.salePrice ?? l.rentPrice ?? 0)).filter((v) => v > 0)
   if (!arr.length) return 0
   return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length)
 }
+
+/** ---------- Helpers ---------- */
+
+function mergeInventory(inv?: InventoryItem, overrides?: Listing['overrides']): InventoryItem {
+  if (!inv) return { id: 'missing', type: 'manufactured_home' } as InventoryItem
+  return overrides ? (deepMerge(inv, overrides) as InventoryItem) : inv
+}
+
+function deepMerge<T extends object, P extends object>(base: T, patch: P): T & P {
+  const out: any = Array.isArray(base) ? [...(base as any)] : { ...base }
+  for (const [k, v] of Object.entries(patch)) {
+    const cur = (out as any)[k]
+    if (isObj(cur) && isObj(v)) out[k] = deepMerge(cur, v as any)
+    else out[k] = v
+  }
+  return out
+}
+const isObj = (x: any) => x && typeof x === 'object' && !Array.isArray(x)
+
+/** type-only helper for createListing callsites */
+export type CreateFromInventory = (
+  inventoryId: string,
+  patch?: Partial<Listing>
+) => Listing
+export const createListingForInventory: CreateFromInventory = (() => {
+  throw new Error('Call useCatalog().createListingForInventory inside a component')
+}) as any
