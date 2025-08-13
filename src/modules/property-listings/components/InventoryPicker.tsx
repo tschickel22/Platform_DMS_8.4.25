@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,9 +13,8 @@ type Props = {
 }
 
 export default function InventoryPicker({ open, onOpenChange, onPick, listingType }: Props) {
-  const { inventory, listings } = useCatalog();
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
+  const { inventory } = useCatalog()
+  const [q, setQ] = React.useState('')
 
   const filtered = useMemo(() => {
     const t = listingType
@@ -24,7 +22,7 @@ export default function InventoryPicker({ open, onOpenChange, onPick, listingTyp
       t === 'manufactured_home'
         ? (i.bedrooms || i.bathrooms || i?.dimensions?.squareFeet)
         : (i.sleeps || i?.dimensions?.length)
-    const qq = search.trim().toLowerCase()
+    const qq = q.trim().toLowerCase()
     return inventory
       .filter(matchesType)
       .filter(i =>
@@ -34,7 +32,7 @@ export default function InventoryPicker({ open, onOpenChange, onPick, listingTyp
           .toLowerCase()
           .includes(qq)
       )
-  }, [inventory, search, listingType])
+  }, [inventory, q, listingType])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +40,7 @@ export default function InventoryPicker({ open, onOpenChange, onPick, listingTyp
         <DialogHeader><DialogTitle>Select inventory</DialogTitle></DialogHeader>
 
         <div className="mb-3">
-          <Input placeholder="Search inventory..." value={search} onChange={(e)=>setSearch(e.target.value)} />
+          <Input placeholder="Search inventory..." value={q} onChange={(e)=>setQ(e.target.value)} />
         </div>
 
         {filtered.length ? (
@@ -63,18 +61,7 @@ export default function InventoryPicker({ open, onOpenChange, onPick, listingTyp
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <div className="font-semibold mb-2">No inventory available</div>
-            <p className="text-sm text-muted-foreground mb-4">Add inventory items first to create listings</p>
-            <Button onClick={() => {
-              onOpenChange(false);
-              navigate('/inventory');
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Inventory
-            </Button>
-          </div>
+          <div className="text-sm text-muted-foreground">No inventory matched.</div>
         )}
       </DialogContent>
     </Dialog>

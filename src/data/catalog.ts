@@ -260,14 +260,3 @@ export type CreateFromInventory = (
 export const createListingForInventory: CreateFromInventory = (() => {
   throw new Error('Call useCatalog().createListingForInventory inside a component')
 }) as any
-
-// Compatibility exports for legacy code
-export function useInventory() {
-  const { inventory } = useCatalog();
-  return inventory;
-}
-
-export function useListings() {
-  const { listings } = useCatalog();
-  return listings;
-}
