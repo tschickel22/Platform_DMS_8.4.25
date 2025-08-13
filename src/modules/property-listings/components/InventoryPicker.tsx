@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { useInventory } from '@/data/catalog'
+import { useCatalog } from '@/data/catalog'
 
 type Props = {
   open: boolean
@@ -13,7 +13,7 @@ type Props = {
 }
 
 export default function InventoryPicker({ open, onOpenChange, onPick, listingType }: Props) {
-  const inventory = useInventory()
+  const { inventory } = useCatalog()
   const [q, setQ] = React.useState('')
 
   const filtered = useMemo(() => {
