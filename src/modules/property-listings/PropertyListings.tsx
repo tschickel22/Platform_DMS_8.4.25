@@ -1,6 +1,6 @@
 // src/modules/property-listings/PropertyListings.tsx
 import React, { useMemo, useState } from "react";
-import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,6 @@ import InventoryPicker from "./components/InventoryPicker";
 import ListingForm from "./components/ListingForm";
 import { ShareAllListingsModal } from "./components/ShareAllListingsModal";
 import InventoryDetailsModal from "./components/InventoryDetailsModal";
-import { ListingsWorkspace } from './components/ListingsWorkspace'
-import { ListingDetail } from './components/ListingDetail'
-import { PublicCatalogView } from './components/PublicCatalogView'
 
 import { useCatalog, useEffectiveListings } from "@/data/catalog";
 
@@ -376,9 +373,8 @@ function PropertyListingsDashboard() {
 export default function PropertyListings() {
   return (
     <Routes>
-      <Route path="" element={<ListingsWorkspace />} />
-      <Route path="/" element={<Navigate to="" replace />} />
-      <Route path="/:listingId" element={<ListingDetail />} />
+      <Route path="/" element={<PropertyListingsDashboard />} />
+      <Route path="*" element={<PropertyListingsDashboard />} />
     </Routes>
   );
 }

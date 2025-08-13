@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 import { Skeleton, ListingCardSkeleton, PageHeaderSkeleton } from '@/components/ui/loading-skeleton'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -39,6 +38,7 @@ import {
 import { ShareListingModal } from './components/ShareListingModal'
 import { mockListings } from '@/mocks/listingsMock'
 import { apiClient } from '@/utils/apiClient'
+import { Home } from 'lucide-react'
 
 interface Listing {
   id: string
@@ -96,7 +96,6 @@ interface ValidationGate {
 }
 
 const PropertyListings = () => {
-  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const { handleError, handleAsyncError } = useErrorHandler()
@@ -194,10 +193,6 @@ const PropertyListings = () => {
     );
   }
 
-  const handleViewEditListing = (listing: any) => {
-    // Navigate to the listing detail/edit page
-    navigate(`/property/listings/${listing.id}`)
-  }
   return (
     <ModuleErrorBoundary moduleName="PropertyListings">
       <div className="space-y-6">
@@ -408,19 +403,11 @@ const PropertyListings = () => {
 
                     <div className="flex items-center justify-between pt-2 border-t">
                       <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleViewEditListing(listing)}
-                        >
+                        <Button size="sm" variant="outline">
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleViewEditListing(listing)}
-                        >
+                        <Button size="sm" variant="outline">
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
