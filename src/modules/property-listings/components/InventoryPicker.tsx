@@ -1,5 +1,3 @@
-mkdir -p src/modules/property-listings/components
-cat > src/modules/property-listings/components/InventoryPicker.tsx <<'TSX'
 // src/modules/property-listings/components/InventoryPicker.tsx
 import React, { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -78,4 +76,3 @@ export default function InventoryPicker({ open, onOpenChange, onPick, listingTyp
     </Dialog>
   );
 }
-TSX
