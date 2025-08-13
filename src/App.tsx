@@ -34,6 +34,7 @@ import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import PlatformSettings from '@/modules/platform-admin/settings'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import { BrochureList, BrochureTemplateEditor, PublicBrochureView } from '@/modules/brochures'
 import TaggingEngine from '@/modules/tagging-engine'
 import TaskCenter from '@/modules/task-center/TaskCenter'
 import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
@@ -132,6 +133,13 @@ function App() {
                                   <Route path="/tasks/*" element={<TaskCenter />} />
                                   <Route path="/calendar/*" element={<CalendarScheduling />} />
                                   <Route path="/contractors/*" element={<ContractorManagement />} />
+                                  <Route path="/brochures/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<BrochureList />} />
+                                      <Route path="/templates/new" element={<BrochureTemplateEditor />} />
+                                      <Route path="/templates/:id/edit" element={<BrochureTemplateEditor />} />
+                                    </Routes>
+                                  } />
 
                                   {/* Admin / Settings */}
                                   <Route path="/settings/*" element={<CompanySettings />} />
@@ -146,6 +154,9 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
+
+                      {/* Public Brochure Routes - outside main layout */}
+                      <Route path="/b/:publicId" element={<PublicBrochureView />} />
 
                       {/* -------- GLOBAL FALLBACK -------- */}
                       <Route path="*" element={<Navigate to="/" replace />} />
