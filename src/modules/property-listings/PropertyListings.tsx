@@ -131,7 +131,7 @@ function PropertyListingsDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Property Listings</h1>
           <p className="text-muted-foreground">
-            Listings are created from existing inventory. MH requires bedrooms, bathrooms and square feet.
+            Create Listings to Promote your MH Home or RV
           </p>
         </div>
         <div className="flex gap-2">
