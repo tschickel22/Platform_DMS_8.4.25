@@ -118,6 +118,39 @@ function PropertyListingsDashboard() {
   const saveEdit = (patch: any) => { if (!editingListing) return; updateListing(editingListing.id, patch); setEditingId(null); };
   const remove = (id: string) => { if (!confirm("Delete this listing?")) return; deleteListing(id); };
 
+  /** Resolve a raw listing id for a row from useEffectiveListings (ids may differ). */
+  const openEdit = (row: any) => {
+    const guessIds = [
+      row?.id,
+      row?.listingId,
+      row?._id,
+    ].filter(Boolean);
+
+    // try direct id match first
+    let found = listings.find((x: any) => guessIds.includes(x.id));
+    // fall back to inventory lineage
+    if (!found) {
+      const invId = row?.inventoryId || row?.id;
+      found =
+        listings.find((x: any) => x.inventoryId === invId) ||
+        null;
+    }
+
+    if (found) {
+      setEditingId(found.id);
+      return;
+    }
+
+    // last resort: open a create form prefilled from the matching inventory
+    const inv = inventory.find((i: any) => i.id === (row?.inventoryId || row?.id));
+    if (inv) {
+      setPickedInvId(inv.id);
+      setFormOpen(true);
+    } else {
+      console.warn("View/Edit: could not resolve listing from row:", row);
+    }
+  };
+
   /* share-all summary */
   const summaryStats = useMemo(
     () => ({ totalListings: stats.total, activeListings: stats.active, averagePrice: stats.avgPrice }),
@@ -131,7 +164,7 @@ function PropertyListingsDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Property Listings</h1>
           <p className="text-muted-foreground">
-            Create Listings to Promote your MH Home or RV
+            Listings are created from existing inventory. MH requires bedrooms, bathrooms and square feet.
           </p>
         </div>
         <div className="flex gap-2">
@@ -232,7 +265,7 @@ function PropertyListingsDashboard() {
       {filtered.length ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((l: any) => (
-            <Card key={l.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <Card key={l.id ?? l.inventoryId} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative">
                 <img src={l.media?.primaryPhoto || "https://picsum.photos/800/450"} alt={l.model ?? l.make ?? "Listing"} className="w-full h-48 object-cover" />
                 <div className="absolute top-2 left-2 flex gap-2">
@@ -268,7 +301,7 @@ function PropertyListingsDashboard() {
                 </div>
 
                 <div className="flex gap-2 pt-3">
-                  <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setEditingId(l.id)}>
+                  <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => openEdit(l)}>
                     <Eye className="h-4 w-4 mr-1" /> View / Edit
                   </Button>
                   <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setInvDetailsId(l.inventoryId)}>
@@ -297,7 +330,7 @@ function PropertyListingsDashboard() {
 
       {/* Add/Edit form */}
       <Dialog
-        open={formOpen || !!editingListing}
+        open={formOpen || editingId !== null}
         onOpenChange={(open) => {
           if (open) return;
           if (formOpen) setFormOpen(false);
@@ -316,8 +349,11 @@ function PropertyListingsDashboard() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">
-                    {[ (pickedInventory || editingInventory)?.year, (pickedInventory || editingInventory)?.make, (pickedInventory || editingInventory)?.model ]
-                      .filter(Boolean).join(" ")}
+                    {[
+                      (pickedInventory || editingInventory)?.year,
+                      (pickedInventory || editingInventory)?.make,
+                      (pickedInventory || editingInventory)?.model,
+                    ].filter(Boolean).join(" ")}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {(pickedInventory || editingInventory)?.location?.city},{" "}
@@ -325,13 +361,8 @@ function PropertyListingsDashboard() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm"
-                    onClick={() => setInvDetailsId((pickedInventory || editingInventory)?.id)}>
-                    View details
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => nav("/inventory")}>
-                    Edit in Inventory
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setInvDetailsId((pickedInventory || editingInventory)?.id)}>View details</Button>
+                  <Button variant="outline" size="sm" onClick={() => nav("/inventory")}>Edit in Inventory</Button>
                 </div>
               </div>
             </div>
@@ -365,7 +396,12 @@ function PropertyListingsDashboard() {
       />
 
       {/* Share All Listings modal */}
-      <ShareAllListingsModal open={shareOpen} onOpenChange={setShareOpen} listings={filtered} summaryStats={summaryStats} />
+      <ShareAllListingsModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        listings={filtered}
+        summaryStats={summaryStats}
+      />
     </div>
   );
 }
