@@ -9,6 +9,7 @@ import { useBrochureStore } from '../store/useBrochureStore'
 import { toPDF, toImage, toHTML } from '../utils/exporters'
 import { generateShareableUrl, trackShare } from '../utils/sharing'
 import { useToast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
 
 interface GenerateBrochureModalProps {
   isOpen: boolean
@@ -18,15 +19,17 @@ interface GenerateBrochureModalProps {
 
 export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: GenerateBrochureModalProps) {
   const { templates } = useBrochureStore()
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [generatedBrochure, setGeneratedBrochure] = useState<any>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const { toast } = useToast()
+  const vehicle = inventoryItem
+  const companyBranding = {}
+
   // Safety check - if vehicle is null/undefined, don't render
   if (!vehicle) {
     return null
   }
-    if (vehicle?.listingType === 'rv') {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
-    } else if (vehicle?.listingType === 'manufactured_home') {
-  const [generatedBrochure, setGeneratedBrochure] = useState<any>(null)
-  const { toast } = useToast()
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
 
@@ -199,8 +202,8 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
           <DialogDescription>
             Create a marketing brochure for {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
           </DialogDescription>
-                  src={vehicle?.media?.primaryPhoto || '/placeholder-vehicle.jpg'}
-                  alt={`${vehicle?.year || ''} ${vehicle?.make || ''} ${vehicle?.model || ''}`}
+        </DialogHeader>
+
         <div className="space-y-6">
           {/* Inventory Item Summary */}
           <Card>
@@ -233,11 +236,11 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                     {inventoryItem?.rentPrice && (
                       <Badge variant="outline">
                         Rent: ${inventoryItem.rentPrice.toLocaleString()}/mo
-                  <h3 className="font-semibold">{vehicle?.year || ''} {vehicle?.make || ''} {vehicle?.model || ''}</h3>
-                  <p className="text-sm text-muted-foreground">{vehicle?.vin || vehicle?.serialNumber || 'N/A'}</p>
+                      </Badge>
+                    )}
                     <Badge variant={inventoryItem?.status === 'available' ? 'default' : 'secondary'}>
-                    <Badge>{vehicle?.listingType === 'rv' ? 'RV' : 'Manufactured Home'}</Badge>
-                    <Badge variant="outline">${(vehicle?.salePrice || vehicle?.rentPrice || 0).toLocaleString()}</Badge>
+                      {inventoryItem?.status || 'Available'}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -274,7 +277,6 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">{selectedTemplate.name}</CardTitle>
-                              style={{ backgroundColor: template.theme?.primaryColor || '#3b82f6' }}
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4 text-sm">
