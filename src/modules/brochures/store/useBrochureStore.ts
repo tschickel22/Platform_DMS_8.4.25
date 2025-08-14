@@ -2,149 +2,185 @@ import { useState, useEffect } from 'react'
 import { BrochureTemplate } from '../types'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
-interface BrochureStore {
-  templates: BrochureTemplate[]
-  loading: boolean
-  error: string | null
-}
+const STORAGE_KEY = 'renter-insight-brochure-templates'
+
+// Default templates
+const defaultTemplates: BrochureTemplate[] = [
+  {
+    id: 'template-rv-showcase',
+    name: 'RV Showcase',
+    description: 'Premium RV collection brochure template',
+    type: 'rv',
+    layout: 'modern',
+    theme: {
+      primaryColor: '#3b82f6',
+      secondaryColor: '#64748b',
+      fontFamily: 'Inter',
+      backgroundColor: '#ffffff'
+    },
+    blocks: [
+      {
+        id: 'hero',
+        type: 'hero',
+        title: '{{year}} {{make}} {{model}}',
+        subtitle: 'Premium RV Collection',
+        backgroundImage: '{{primaryPhoto}}',
+        showPrice: true
+      },
+      {
+        id: 'specs',
+        type: 'specs',
+        title: 'Specifications',
+        fields: ['year', 'make', 'model', 'sleeps', 'length', 'slides']
+      },
+      {
+        id: 'features',
+        type: 'features',
+        title: 'Features & Amenities',
+        showGrid: true
+      },
+      {
+        id: 'gallery',
+        type: 'gallery',
+        title: 'Photo Gallery',
+        layout: 'grid'
+      },
+      {
+        id: 'cta',
+        type: 'cta',
+        title: 'Contact Us Today',
+        buttonText: 'Get More Info',
+        showContact: true
+      }
+    ],
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'template-mh-catalog',
+    name: 'Manufactured Homes Catalog',
+    description: 'Manufactured homes catalog template',
+    type: 'manufactured_home',
+    layout: 'classic',
+    theme: {
+      primaryColor: '#059669',
+      secondaryColor: '#6b7280',
+      fontFamily: 'Inter',
+      backgroundColor: '#ffffff'
+    },
+    blocks: [
+      {
+        id: 'hero',
+        type: 'hero',
+        title: '{{year}} {{make}} {{model}}',
+        subtitle: 'Quality Manufactured Homes',
+        backgroundImage: '{{primaryPhoto}}',
+        showPrice: true
+      },
+      {
+        id: 'specs',
+        type: 'specs',
+        title: 'Home Details',
+        fields: ['year', 'make', 'model', 'bedrooms', 'bathrooms', 'squareFootage']
+      },
+      {
+        id: 'features',
+        type: 'features',
+        title: 'Home Features',
+        showGrid: true
+      },
+      {
+        id: 'gallery',
+        type: 'gallery',
+        title: 'Photo Gallery',
+        layout: 'carousel'
+      },
+      {
+        id: 'cta',
+        type: 'cta',
+        title: 'Schedule a Viewing',
+        buttonText: 'Contact Us',
+        showContact: true
+      }
+    ],
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+]
 
 export function useBrochureStore() {
-  const [store, setStore] = useState<BrochureStore>({
-    templates: [],
-    {
-      id: 'template-rv-showcase',
-      name: 'RV Showcase',
-      description: 'Premium RV collection brochure template',
-      type: 'rv',
-      theme: 'modern',
-      layout: 'grid',
-      content: {
-        hero: {
-          title: 'Premium RV Collection',
-          subtitle: 'Discover your next adventure',
-          backgroundImage: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        },
-        specs: {
-          title: 'Specifications',
-          items: []
-        },
-        price: {
-          title: 'Pricing',
-          salePrice: null,
-          rentPrice: null,
-          showFinancing: true
-        },
-        gallery: {
-          title: 'Gallery',
-          images: []
-        },
-        features: {
-          title: 'Features & Amenities',
-          items: []
-        },
-        cta: {
-          title: 'Ready to Experience This RV?',
-          subtitle: 'Contact us today to schedule a viewing',
-          buttonText: 'Contact Us',
-          buttonUrl: '#contact'
-        }
-      },
-      isActive: true,
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: 'template-mh-catalog',
-      name: 'Manufactured Homes Catalog',
-      description: 'Manufactured homes catalog template',
-      type: 'manufactured_home',
-      theme: 'classic',
-      layout: 'list',
-      content: {
-        hero: {
-          title: 'Quality Manufactured Homes',
-          subtitle: 'Find your perfect home',
-          backgroundImage: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=1200'
-        },
-        specs: {
-          title: 'Home Details',
-          items: []
-        },
-        price: {
-          title: 'Pricing Options',
-          salePrice: null,
-          rentPrice: null,
-          showFinancing: true
-        },
-        gallery: {
-          title: 'Photos',
-          images: []
-        },
-        features: {
-          title: 'Home Features',
-          items: []
-        },
-        cta: {
-          title: 'Schedule a Tour Today',
-          subtitle: 'See this beautiful home in person',
-          buttonText: 'Schedule Tour',
-          buttonUrl: '#schedule'
-        }
-      },
-      isActive: true,
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z'
-    }
-    loading: true,
-    error: null
-  })
+  const [templates, setTemplates] = useState<BrochureTemplate[]>([])
+  const [loading, setLoading] = useState(true)
 
+  // Load templates from localStorage on mount
   useEffect(() => {
-    // Load templates from localStorage
-    const savedTemplates = loadFromLocalStorage<BrochureTemplate[]>('brochure-templates', [])
-    setStore({
-      templates: savedTemplates,
-      loading: false,
-      error: null
-    })
+    try {
+      const savedTemplates = loadFromLocalStorage<BrochureTemplate[]>(STORAGE_KEY, [])
+      
+      if (savedTemplates.length === 0) {
+        // Initialize with default templates
+        setTemplates(defaultTemplates)
+        saveToLocalStorage(STORAGE_KEY, defaultTemplates)
+      } else {
+        setTemplates(savedTemplates)
+      }
+    } catch (error) {
+      console.error('Error loading brochure templates:', error)
+      setTemplates(defaultTemplates)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const saveTemplates = (templates: BrochureTemplate[]) => {
-    saveToLocalStorage('brochure-templates', templates)
-    setStore(prev => ({ ...prev, templates }))
-  }
+  // Save templates to localStorage whenever they change
+  useEffect(() => {
+    if (!loading && templates.length > 0) {
+      saveToLocalStorage(STORAGE_KEY, templates)
+    }
+  }, [templates, loading])
 
-  const createTemplate = (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTemplate = (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTemplate: BrochureTemplate = {
       ...template,
-      id: `template-${Date.now()}`,
+      id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
     
-    const updatedTemplates = [...store.templates, newTemplate]
-    saveTemplates(updatedTemplates)
+    setTemplates(prev => [newTemplate, ...prev])
     return newTemplate
   }
 
   const updateTemplate = (id: string, updates: Partial<BrochureTemplate>) => {
-    const updatedTemplates = store.templates.map(template =>
-      template.id === id
+    setTemplates(prev => prev.map(template => 
+      template.id === id 
         ? { ...template, ...updates, updatedAt: new Date().toISOString() }
         : template
-    )
-    saveTemplates(updatedTemplates)
+    ))
   }
 
   const deleteTemplate = (id: string) => {
-    const updatedTemplates = store.templates.filter(template => template.id !== id)
-    saveTemplates(updatedTemplates)
+    setTemplates(prev => prev.filter(template => template.id !== id))
+  }
+
+  const getTemplate = (id: string) => {
+    return templates.find(template => template.id === id)
+  }
+
+  const getTemplatesByType = (type: 'rv' | 'manufactured_home' | 'all' = 'all') => {
+    if (type === 'all') return templates
+    return templates.filter(template => template.type === type)
   }
 
   return {
-    ...store,
-    createTemplate,
+    templates,
+    loading,
+    addTemplate,
     updateTemplate,
-    deleteTemplate
+    deleteTemplate,
+    getTemplate,
+    getTemplatesByType
   }
 }

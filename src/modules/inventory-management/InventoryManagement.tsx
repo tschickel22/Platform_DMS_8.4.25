@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { GenerateBrochureModal } from '@/modules/brochures/components/GenerateBrochureModal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -22,6 +23,7 @@ export default function InventoryManagement() {
   const { vehicles, addVehicle, updateVehicle, deleteVehicle, importVehicles } = useInventoryManagement()
 
   // UI state
+  const [selectedVehicleForBrochure, setSelectedVehicleForBrochure] = useState<any>(null)
   const [showAddRVModal, setShowAddRVModal] = useState(false)
   const [showAddMHModal, setShowAddMHModal] = useState(false)
   const [showImport, setShowImport] = useState(false)
@@ -258,6 +260,13 @@ export default function InventoryManagement() {
           <VehicleDetail open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)} vehicle={selectedItem} onEdit={handleEdit} onDelete={deleteVehicle} />
         </div>
       </InventoryErrorBoundary>
+
+      {/* Brochure Generation Modal */}
+      {selectedVehicleForBrochure && (
+        <GenerateBrochureModal
+          inventoryItem={selectedVehicleForBrochure}
+          onClose={() => setSelectedVehicleForBrochure(null)}
+        />
+      )}
     </TooltipProvider>
   )
-}
