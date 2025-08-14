@@ -161,14 +161,20 @@ SelectItem.displayName = SelectPrimitive.Item.displayName
 
 // Wrap Value to guard placeholder/children text after selection
 const RawSelectValue = SelectPrimitive.Value
-export { SelectValue } from SelectPrimitive
-export const SelectValue = ({
+const SelectValue = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Value>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value> & {
+    children?: React.ReactNode;
+    placeholder?: React.ReactNode;
+  }
+>(({
   children,
   placeholder,
   ...props
-}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>) => {
+}, ref) => {
   return (
     <RawSelectValue
+      ref={ref}
       {...props}
       // Radix expects a string here; coerce objects safely.
       placeholder={normalizeChildren(placeholder as any) as any}
@@ -176,7 +182,8 @@ export const SelectValue = ({
       {normalizeChildren(children)}
     </RawSelectValue>
   )
-}
+})
+SelectValue.displayName = SelectPrimitive.Value.displayName
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
