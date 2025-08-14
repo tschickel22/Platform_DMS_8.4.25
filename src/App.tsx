@@ -20,8 +20,6 @@ import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
 import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
-// Marketing - Brochures
-import BrochureList from '@/modules/brochures/pages/BrochureList'
 import { FinanceModule } from '@/modules/finance/FinanceModule'
 import AgreementVault from '@/modules/agreement-vault/AgreementVault'
 import ServiceOps from '@/modules/service-ops/ServiceOps'
