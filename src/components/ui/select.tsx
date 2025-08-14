@@ -184,14 +184,6 @@ const SelectValue = React.forwardRef<
   )
 })
 SelectValue.displayName = SelectPrimitive.Value.displayName
-      // Radix expects a string here; coerce objects safely.
-      placeholder={normalizeChildren(placeholder as any) as any}
-    >
-      {normalizeChildren(children)}
-    </RawSelectValue>
-  )
-})
-SelectValue.displayName = SelectPrimitive.Value.displayName
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
