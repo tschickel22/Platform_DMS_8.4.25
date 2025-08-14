@@ -3,6 +3,34 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// --- SAFETY: normalize any non-renderable children passed to <SelectItem> ---
+function normalizeChildren(children: React.ReactNode): React.ReactNode {
+  if (children == null) return null
+  if (typeof children === "string" || typeof children === "number") return children
+  if (React.isValidElement(children)) return children
+  if (Array.isArray(children)) {
+    return children
+      .map((c) =>
+        typeof c === "string" || typeof c === "number" || React.isValidElement(c)
+          ? c
+          : null
+      )
+      .filter(Boolean)
+  }
+  // If someone passed an object (e.g., a template or theme), pick a friendly label.
+  if (typeof children === "object") {
+    const any = children as any
+    const candidate = any?.label ?? any?.name ?? any?.title ?? any?.id
+    if (typeof candidate === "string" || typeof candidate === "number") return String(candidate)
+    try {
+      return JSON.stringify(any)
+    } catch {
+      return ""
+    }
+  }
+  return String(children)
+}
+
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
@@ -120,7 +148,7 @@ const SelectItem = React.forwardRef<
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
@@ -151,7 +179,7 @@ export {
 }
 
 // --- TEMP: compatibility re-exports so legacy imports keep working ---
-// Remove these after you’ve updated imports to '@/components/ui/dropdown-menu'.
+// Remove these after you've updated imports to '@/components/ui/dropdown-menu'.
 export {
   DropdownMenu,
   DropdownMenuTrigger,
