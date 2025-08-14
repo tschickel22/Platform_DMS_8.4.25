@@ -89,86 +89,292 @@ async function exportAsImage(
   downloadBlob(blob, `${opts.filename}.${opts.format}`)
 }
 
-export async function toPDF(elOrId: HTMLElement | string, options: ExportOptions = {}): Promise<Result> {
+export async function toPDF(brochureData: any, filename: string): Promise<void> {
   try {
-    const el = ensureHTMLElement(elOrId)
+    // Create a temporary element for PDF generation
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = await toHTML(brochureData, filename, false) // Get HTML without download
+    tempDiv.style.position = 'absolute'
+    tempDiv.style.left = '-9999px'
+    document.body.appendChild(tempDiv)
 
-    let html2canvas: any
-    try {
-      html2canvas = (await import('html2canvas')).default
-    } catch {
-      const blob = new Blob([el.outerHTML], { type: 'text/html;charset=utf-8' })
-      downloadBlob(blob, `${options.filename ?? 'brochure'}.html`)
-      return { ok: true }
-    }
-    // Import jsPDF via named export to avoid ESM default pitfalls
-    let jsPDFCtor: any
-    try {
-      const mod = await import('jspdf')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      jsPDFCtor = (mod as any).jsPDF ?? (mod as any).default
-    } catch (e) {
-      // No jsPDF? Export image instead.
-      await exportAsImage(el, {
-        filename: options.filename ?? 'brochure',
-        quality: options.quality ?? 0.92,
-        scale: options.scale ?? 2,
-        format: 'png',
+    // Use jsPDF to generate PDF
+    const { jsPDF } = await import('jspdf')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    
+    // Add content to PDF (simplified version)
+    pdf.setFontSize(20)
+    pdf.text(brochureData.title || 'Brochure', 20, 30)
+    
+    pdf.setFontSize(12)
+    let yPosition = 50
+    
+    // Add specs
+    if (brochureData.content?.specs?.items) {
+      pdf.text('Specifications:', 20, yPosition)
+      yPosition += 10
+      
+      brochureData.content.specs.items.forEach((spec: any) => {
+        pdf.text(`${spec.label}: ${spec.value}`, 25, yPosition)
+        yPosition += 8
       })
-      return { ok: true }
     }
-
-    await waitForFontsAndImages(el)
-    const canvas = await html2canvas(el, { scale: options.scale ?? 2, backgroundColor: '#ffffff' })
-    const imgData = canvas.toDataURL('image/png', options.quality ?? 0.92)
-
-    const page = options.page ?? { orientation: 'p', unit: 'pt', format: 'a4' }
-    const pdf = new jsPDFCtor(page)
-    const pageW = pdf.internal.pageSize.getWidth()
-    const pageH = pdf.internal.pageSize.getHeight()
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-    const w = canvas.width * ratio
-    const h = canvas.height * ratio
-    const x = (pageW - w) / 2
-    const y = (pageH - h) / 2
-    pdf.addImage(imgData, 'PNG', x, y, w, h)
-    pdf.save(`${options.filename ?? 'brochure'}.pdf`)
-    return { ok: true }
-  } catch (e: any) {
-    console.error('toPDF error:', e)
-    return { ok: false, error: e?.message ?? 'Unknown PDF export error' }
+    
+    // Add pricing
+    if (brochureData.content?.price) {
+      yPosition += 10
+      pdf.text('Pricing:', 20, yPosition)
+      yPosition += 10
+      
+      if (brochureData.content.price.salePrice) {
+        pdf.text(`Sale Price: $${brochureData.content.price.salePrice.toLocaleString()}`, 25, yPosition)
+        yPosition += 8
+      }
+      
+      if (brochureData.content.price.rentPrice) {
+        pdf.text(`Rent Price: $${brochureData.content.price.rentPrice.toLocaleString()}/month`, 25, yPosition)
+        yPosition += 8
+      }
+    }
+    
+    // Clean up
+    document.body.removeChild(tempDiv)
+    
+    // Download PDF
+    pdf.save(`${filename}.pdf`)
+    
+    // Track export
+    trackExport('pdf', filename)
+  } catch (error) {
+    console.error('PDF export failed:', error)
+    throw new Error('Failed to export PDF')
   }
 }
 
-export async function toImage(
-  elOrId: HTMLElement | string,
-  format: 'png' | 'jpeg' = 'png',
-  options: ExportOptions = {},
-): Promise<Result> {
+export async function toImage(brochureData: any, filename: string): Promise<void> {
   try {
-    const el = ensureHTMLElement(elOrId)
-    await exportAsImage(el, {
-      format,
-      filename: options.filename ?? 'brochure',
-      quality: options.quality ?? 0.92,
-      scale: options.scale ?? 2,
+    // Create a temporary element for image generation
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = await toHTML(brochureData, filename, false) // Get HTML without download
+    tempDiv.style.position = 'absolute'
+    tempDiv.style.left = '-9999px'
+    tempDiv.style.width = '800px'
+    tempDiv.style.backgroundColor = 'white'
+    tempDiv.style.padding = '20px'
+    document.body.appendChild(tempDiv)
+
+    // Use html2canvas to generate image
+    const html2canvas = (await import('html2canvas')).default
+    const canvas = await html2canvas(tempDiv, {
+      width: 800,
+      height: 1000,
+      backgroundColor: '#ffffff'
     })
-    return { ok: true }
-  } catch (e: any) {
-    console.error('toImage error:', e)
-    return { ok: false, error: e?.message ?? 'Unknown image export error' }
+    
+    // Clean up
+    document.body.removeChild(tempDiv)
+    
+    // Download image
+    const link = document.createElement('a')
+    link.download = `${filename}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    
+    // Track export
+    trackExport('image', filename)
+  } catch (error) {
+    console.error('Image export failed:', error)
+    throw new Error('Failed to export image')
   }
 }
 
-export async function toHTML(elOrId: HTMLElement | string, options: ExportOptions = {}): Promise<Result> {
+export async function toHTML(brochureData: any, filename: string, download: boolean = true): Promise<string> {
   try {
-    const el = ensureHTMLElement(elOrId)
-    const blob = new Blob([el.outerHTML], { type: 'text/html;charset=utf-8' })
-    downloadBlob(blob, `${options.filename ?? 'brochure'}.html`)
-    return { ok: true }
-  } catch (e: any) {
-    console.error('toHTML error:', e)
-    return { ok: false, error: e?.message ?? 'Unknown HTML export error' }
+    // Generate standalone HTML
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${brochureData.title || 'Brochure'}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        .brochure {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin: 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .price-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .price {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #059669;
+            margin-bottom: 10px;
+        }
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            list-style: none;
+            padding: 0;
+        }
+        .features-list li {
+            padding: 8px 12px;
+            background: #e0f2fe;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .gallery img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="brochure">
+        <div class="hero">
+            <h1>${brochureData.title || 'Vehicle Brochure'}</h1>
+            <p>${brochureData.description || ''}</p>
+        </div>
+        
+        <div class="content">
+            ${brochureData.content?.specs?.items ? `
+            <div class="section">
+                <h2>Specifications</h2>
+                <div class="specs-grid">
+                    ${brochureData.content.specs.items.map((spec: any) => `
+                        <div class="spec-item">
+                            <span>${spec.label}</span>
+                            <strong>${spec.value}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${brochureData.content?.price ? `
+            <div class="section">
+                <h2>Pricing</h2>
+                <div class="price-section">
+                    ${brochureData.content.price.salePrice ? `
+                        <div class="price">$${brochureData.content.price.salePrice.toLocaleString()}</div>
+                        <p>Sale Price</p>
+                    ` : ''}
+                    ${brochureData.content.price.rentPrice ? `
+                        <div class="price">$${brochureData.content.price.rentPrice.toLocaleString()}/month</div>
+                        <p>Monthly Rent</p>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${brochureData.content?.features?.items?.length ? `
+            <div class="section">
+                <h2>Features</h2>
+                <ul class="features-list">
+                    ${brochureData.content.features.items.map((feature: string) => `
+                        <li>${feature}</li>
+                    `).join('')}
+                </ul>
+            </div>
+            ` : ''}
+            
+            ${brochureData.content?.gallery?.images?.length ? `
+            <div class="section">
+                <h2>Gallery</h2>
+                <div class="gallery">
+                    ${brochureData.content.gallery.images.map((image: string) => `
+                        <img src="${image}" alt="Vehicle photo" />
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    </div>
+</body>
+</html>`
+
+    if (download) {
+      // Download HTML file
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${filename}.html`
+      link.click()
+      URL.revokeObjectURL(url)
+    }
+    
+    // Track export
+    if (download) {
+      trackExport('html', filename)
+    }
+    
+    return html
+  } catch (error) {
+    console.error('HTML export failed:', error)
+    throw new Error('Failed to export HTML')
   }
 }
 

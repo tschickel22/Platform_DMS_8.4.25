@@ -30,6 +30,7 @@ export function BrochureList() {
       }
     })
   }
+  const navigate = useNavigate()
 
   if (loading) {
     return (
@@ -49,7 +50,9 @@ export function BrochureList() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Brochures</h1>
+          <p className="text-muted-foreground">
+            Manage brochure templates. Generate brochures for specific inventory from the Inventory section.
+          </p>
             <p className="text-muted-foreground">
               Create and manage marketing brochures for your listings
             </p>
@@ -59,7 +62,7 @@ export function BrochureList() {
             New Brochure
           </Button>
         </div>
-
+        <Button onClick={() => navigate('/brochures/templates/new')}>
         {templates.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -99,20 +102,29 @@ export function BrochureList() {
                     </Button>
                     <Button variant="outline" size="sm">
                       <Share className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button 
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/brochures/templates/${template.id}/edit`)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       variant="outline" 
-                      size="sm"
-                      onClick={() => deleteTemplate(template.id)}
-                    >
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => deleteTemplate(template.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
-          </div>
+          New Template
         )}
       </div>
     </BrochureErrorBoundary>

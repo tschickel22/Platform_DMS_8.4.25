@@ -115,7 +115,13 @@ function App() {
                                   {/* Marketing → Property Listings (ADMIN) */}
                                   <Route path="/property/listings" element={<PropertyListings />} />
                                   <Route path="/property/listings/:listingId" element={<ListingDetail />} />
-                                  <Route path="/brochures" element={<BrochureList />} />
+                                  <Route path="/brochures/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<BrochureList />} />
+                                      <Route path="/templates/new" element={<BrochureTemplateEditor />} />
+                                      <Route path="/templates/:id/edit" element={<BrochureTemplateEditor />} />
+                                    </Routes>
+                                  } />
 
                                   {/* Finance & Agreements */}
                                   <Route path="/finance/*" element={<FinanceModule />} />

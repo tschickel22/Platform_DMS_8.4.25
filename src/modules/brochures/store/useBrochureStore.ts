@@ -11,6 +11,90 @@ interface BrochureStore {
 export function useBrochureStore() {
   const [store, setStore] = useState<BrochureStore>({
     templates: [],
+    {
+      id: 'template-rv-showcase',
+      name: 'RV Showcase',
+      description: 'Premium RV collection brochure template',
+      type: 'rv',
+      theme: 'modern',
+      layout: 'grid',
+      content: {
+        hero: {
+          title: 'Premium RV Collection',
+          subtitle: 'Discover your next adventure',
+          backgroundImage: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1200'
+        },
+        specs: {
+          title: 'Specifications',
+          items: []
+        },
+        price: {
+          title: 'Pricing',
+          salePrice: null,
+          rentPrice: null,
+          showFinancing: true
+        },
+        gallery: {
+          title: 'Gallery',
+          images: []
+        },
+        features: {
+          title: 'Features & Amenities',
+          items: []
+        },
+        cta: {
+          title: 'Ready to Experience This RV?',
+          subtitle: 'Contact us today to schedule a viewing',
+          buttonText: 'Contact Us',
+          buttonUrl: '#contact'
+        }
+      },
+      isActive: true,
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z'
+    },
+    {
+      id: 'template-mh-catalog',
+      name: 'Manufactured Homes Catalog',
+      description: 'Manufactured homes catalog template',
+      type: 'manufactured_home',
+      theme: 'classic',
+      layout: 'list',
+      content: {
+        hero: {
+          title: 'Quality Manufactured Homes',
+          subtitle: 'Find your perfect home',
+          backgroundImage: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=1200'
+        },
+        specs: {
+          title: 'Home Details',
+          items: []
+        },
+        price: {
+          title: 'Pricing Options',
+          salePrice: null,
+          rentPrice: null,
+          showFinancing: true
+        },
+        gallery: {
+          title: 'Photos',
+          images: []
+        },
+        features: {
+          title: 'Home Features',
+          items: []
+        },
+        cta: {
+          title: 'Schedule a Tour Today',
+          subtitle: 'See this beautiful home in person',
+          buttonText: 'Schedule Tour',
+          buttonUrl: '#schedule'
+        }
+      },
+      isActive: true,
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z'
+    }
     loading: true,
     error: null
   })
