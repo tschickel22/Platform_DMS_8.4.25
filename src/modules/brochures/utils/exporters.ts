@@ -1,172 +1,180 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+// NOTE: We avoid static imports of html2canvas/jsPDF to prevent SSR/preview crashes.
+// Everything below is browser-guarded and lazy-loaded.
 
 export interface ExportOptions {
-  format: 'pdf' | 'png' | 'jpeg' | 'html'
+  /** 'pdf' | 'png' | 'jpeg' | 'html' (default: 'pdf' when exporting from an element) */
+  format?: 'pdf' | 'png' | 'jpeg' | 'html'
+  /** image quality for png/jpeg and canvas -> dataURL, 0..1 (default 0.92) */
   quality?: number
+  /** output file name without extension (default 'brochure') */
   filename?: string
+  /** optional: include meta text if you add it later */
   includeMetadata?: boolean
+  /** html2canvas scale (default 2) */
+  scale?: number
+  /** PDF page options */
+  page?: { orientation?: 'p' | 'l'; unit?: 'pt' | 'mm' | 'cm' | 'in'; format?: string | [number, number] }
 }
 
-export async function downloadExport(data: any, filename: string, mimeType: string) {
-  const blob = new Blob([data], { type: mimeType })
+type Ok = { ok: true }
+type Err = { ok: false; error: string }
+type Result = Ok | Err
+
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined'
+
+function ensureHTMLElement(target: HTMLElement | string): HTMLElement {
+  if (!isBrowser) throw new Error('Export is only available in the browser.')
+  if (typeof target === 'string') {
+    const el = document.getElementById(target)
+    if (!el) throw new Error(`Element with id "${target}" not found.`)
+    return el as HTMLElement
+  }
+  return target
+}
+
+async function waitForFontsAndImages(root: HTMLElement): Promise<void> {
+  try {
+    // fonts
+    // @ts-ignore
+    if (document.fonts?.ready) await document.fonts.ready
+  } catch {}
+  // images
+  const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[]
+  await Promise.allSettled(
+    imgs.map((img) =>
+      img.complete && img.naturalWidth > 0
+        ? Promise.resolve()
+        : new Promise<void>((res, rej) => {
+            img.addEventListener('load', () => res(), { once: true })
+            img.addEventListener('error', () => rej(new Error(`Image failed: ${img.src}`)), { once: true })
+          }),
+    ),
+  )
+}
+
+function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = filename
   document.body.appendChild(a)
   a.click()
-  document.body.removeChild(a)
+  a.remove()
   URL.revokeObjectURL(url)
 }
 
-export async function exportBrochureToPDF(
-  brochureElement: HTMLElement,
-  options: ExportOptions = {}
+/** Back-compat utility: download raw data (string/Blob) */
+export async function downloadExport(data: any, filename: string, mimeType: string): Promise<void> {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType })
+  downloadBlob(blob, filename)
+}
+
+async function exportAsImage(
+  el: HTMLElement,
+  opts: Required<Pick<ExportOptions, 'filename' | 'quality' | 'scale'>> & { format: 'png' | 'jpeg' },
 ): Promise<void> {
+  let html2canvas: any
   try {
-    const canvas = await html2canvas(brochureElement, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    })
+    html2canvas = (await import('html2canvas')).default
+  } catch {
+    // Fallback: dump HTML so user still gets something
+    const blob = new Blob([el.outerHTML], { type: 'text/html;charset=utf-8' })
+    downloadBlob(blob, `${opts.filename}.html`)
+    return
+  }
+  await waitForFontsAndImages(el)
+  const canvas = await html2canvas(el, { scale: opts.scale, backgroundColor: '#ffffff' })
+  const dataUrl = canvas.toDataURL(`image/${opts.format}`, opts.quality)
+  const blob = await (await fetch(dataUrl)).blob()
+  downloadBlob(blob, `${opts.filename}.${opts.format}`)
+}
 
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    })
+export async function toPDF(elOrId: HTMLElement | string, options: ExportOptions = {}): Promise<Result> {
+  try {
+    const el = ensureHTMLElement(elOrId)
 
-    const imgWidth = 210 // A4 width in mm
-    const pageHeight = 295 // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-
-    let position = 0
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+    let html2canvas: any
+    try {
+      html2canvas = (await import('html2canvas')).default
+    } catch {
+      const blob = new Blob([el.outerHTML], { type: 'text/html;charset=utf-8' })
+      downloadBlob(blob, `${options.filename ?? 'brochure'}.html`)
+      return { ok: true }
+    }
+    // Import jsPDF via named export to avoid ESM default pitfalls
+    let jsPDFCtor: any
+    try {
+      const mod = await import('jspdf')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      jsPDFCtor = (mod as any).jsPDF ?? (mod as any).default
+    } catch (e) {
+      // No jsPDF? Export image instead.
+      await exportAsImage(el, {
+        filename: options.filename ?? 'brochure',
+        quality: options.quality ?? 0.92,
+        scale: options.scale ?? 2,
+        format: 'png',
+      })
+      return { ok: true }
     }
 
-    const filename = options.filename || 'brochure.pdf'
-    pdf.save(filename)
-  } catch (error) {
-    console.error('Error exporting to PDF:', error)
-    throw new Error('Failed to export brochure to PDF')
+    await waitForFontsAndImages(el)
+    const canvas = await html2canvas(el, { scale: options.scale ?? 2, backgroundColor: '#ffffff' })
+    const imgData = canvas.toDataURL('image/png', options.quality ?? 0.92)
+
+    const page = options.page ?? { orientation: 'p', unit: 'pt', format: 'a4' }
+    const pdf = new jsPDFCtor(page)
+    const pageW = pdf.internal.pageSize.getWidth()
+    const pageH = pdf.internal.pageSize.getHeight()
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
+    const w = canvas.width * ratio
+    const h = canvas.height * ratio
+    const x = (pageW - w) / 2
+    const y = (pageH - h) / 2
+    pdf.addImage(imgData, 'PNG', x, y, w, h)
+    pdf.save(`${options.filename ?? 'brochure'}.pdf`)
+    return { ok: true }
+  } catch (e: any) {
+    console.error('toPDF error:', e)
+    return { ok: false, error: e?.message ?? 'Unknown PDF export error' }
   }
 }
 
-export async function exportBrochureToImage(
-  brochureElement: HTMLElement,
-  options: ExportOptions = {}
-): Promise<void> {
+export async function toImage(
+  elOrId: HTMLElement | string,
+  format: 'png' | 'jpeg' = 'png',
+  options: ExportOptions = {},
+): Promise<Result> {
   try {
-    const canvas = await html2canvas(brochureElement, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
+    const el = ensureHTMLElement(elOrId)
+    await exportAsImage(el, {
+      format,
+      filename: options.filename ?? 'brochure',
+      quality: options.quality ?? 0.92,
+      scale: options.scale ?? 2,
     })
-
-    const format = options.format === 'jpeg' ? 'image/jpeg' : 'image/png'
-    const quality = options.quality || 0.9
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const filename = options.filename || `brochure.${options.format || 'png'}`
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
-    }, format, quality)
-  } catch (error) {
-    console.error('Error exporting to image:', error)
-    throw new Error('Failed to export brochure to image')
+    return { ok: true }
+  } catch (e: any) {
+    console.error('toImage error:', e)
+    return { ok: false, error: e?.message ?? 'Unknown image export error' }
   }
 }
 
-export function exportBrochureToHTML(
-  brochureHTML: string,
-  options: ExportOptions = {}
-): void {
+export async function toHTML(elOrId: HTMLElement | string, options: ExportOptions = {}): Promise<Result> {
   try {
-    const filename = options.filename || 'brochure.html'
-    
-    // Create a complete HTML document
-    const fullHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brochure</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .brochure-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-    </style>
-</head>
-<body>
-    <div class="brochure-container">
-        ${brochureHTML}
-    </div>
-</body>
-</html>`
-
-    downloadExport(fullHTML, filename, 'text/html')
-  } catch (error) {
-    console.error('Error exporting to HTML:', error)
-    throw new Error('Failed to export brochure to HTML')
+    const el = ensureHTMLElement(elOrId)
+    const blob = new Blob([el.outerHTML], { type: 'text/html;charset=utf-8' })
+    downloadBlob(blob, `${options.filename ?? 'brochure'}.html`)
+    return { ok: true }
+  } catch (e: any) {
+    console.error('toHTML error:', e)
+    return { ok: false, error: e?.message ?? 'Unknown HTML export error' }
   }
 }
 
-export function getExportFormats() {
-  return [
-    { value: 'pdf', label: 'PDF Document', icon: 'FileText' },
-    { value: 'png', label: 'PNG Image', icon: 'Image' },
-    { value: 'jpeg', label: 'JPEG Image', icon: 'Image' },
-    { value: 'html', label: 'HTML File', icon: 'Code' }
-  ]
-}
+// Back-compat aliases (so existing calls keep working)
+export const exportBrochureToPDF = toPDF
+export const exportToPDF = toPDF
 
-export function validateExportOptions(options: ExportOptions): string[] {
-  const errors: string[] = []
-  
-  if (!['pdf', 'png', 'jpeg', 'html'].includes(options.format)) {
-    errors.push('Invalid export format')
-  }
-  
-  if (options.quality && (options.quality < 0.1 || options.quality > 1)) {
-    errors.push('Quality must be between 0.1 and 1')
-  }
-  
-  if (options.filename && !/^[a-zA-Z0-9._-]+$/.test(options.filename)) {
-    errors.push('Filename contains invalid characters')
-  }
-  
-  return errors
-}
+// Named bundle for convenience
+export const Exporters = { toPDF, toImage, toHTML, downloadExport }

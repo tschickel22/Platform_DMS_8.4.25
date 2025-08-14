@@ -1,174 +1,121 @@
-/**
- * Brochure Builder Module - Entry Point
- * 
- * This module provides a complete brochure creation and management system.
- * Users can create modern, easy-to-edit brochure templates with company branding,
- * generate brochures from inventory/land/listings/quotes, and share them via
- * email, SMS, social media, or download as PNG/PDF.
- * 
- * Key Features:
- * - Template-based brochure creation with themes (sleek, card, poster)
- * - Drag-and-drop block editor (hero, gallery, specs, price, features, CTA, legal)
- * - Company branding integration (colors, fonts, logo)
- * - Token-based content binding ({{inventory.price}}, {{listing.title}}, etc.)
- * - Client-side sharing and export (no backend required)
- * - Analytics tracking for opens, shares, downloads
- * - Public brochure viewing with short URLs
- * 
- * Module Structure:
- * - /components - UI components (renderer, theme picker, share modal, tiles)
- * - /components/blocks - Individual block components and controls
- * - /hooks - Custom hooks for branding and data management
- * - /pages - Main page components (list, editor, public view)
- * - /store - Zustand store for state management
- * - /utils - Utilities for tokens, exports, sharing, analytics
- * 
- * Data Persistence:
- * - localStorage keys: ri_brochure_templates, ri_brochures, ri_branding, ri_brochure_analytics
- * - No backend dependencies - fully client-side for v1
- * - Rails/API integration planned for future versions
- * 
- * Navigation:
- * - /brochures - Main brochure management page
- * - /brochures/templates/new - Create new template
- * - /brochures/templates/:id/edit - Edit existing template
- * - /b/:publicId - Public brochure view
- * 
- * Integration Points:
- * - Can be launched from Inventory, Land, Listings, Quote Builder modules
- * - Uses company settings for branding defaults
- * - Tracks analytics for business insights
- * 
- * TODO: Implement all component files and wire up routing
- * TODO: Add export dependencies (html2canvas, jspdf)
- * TODO: Integrate with existing modules for data binding
- * TODO: Add comprehensive error boundaries and loading states
- */
-
 import React from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { FileText, Plus, Download, Share } from 'lucide-react'
 
-// Main module exports
-export { default as BrochureList } from './pages/BrochureList'
-export { default as BrochureTemplateEditor } from './pages/BrochureTemplateEditor'
-export { default as PublicBrochureView } from './pages/PublicBrochureView'
+// Simple placeholder components for the brochures module
+export function BrochureList() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Brochures</h1>
+          <p className="text-muted-foreground">
+            Create and manage marketing brochures for your listings
+          </p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          New Brochure
+        </Button>
+      </div>
 
-// Component exports
-export { default as BrochureRenderer } from './components/BrochureRenderer'
-export { default as ThemePicker } from './components/ThemePicker'
-export { default as ShareBrochureModal } from './components/ShareBrochureModal'
-export { default as Tiles } from './components/tiles/Tiles'
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Sample brochure cards */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              RV Showcase Brochure
+            </CardTitle>
+            <CardDescription>
+              Premium RV collection brochure template
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              <Button variant="outline" size="sm">
+                <Share className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-// Block component exports
-export { default as HeroBlock } from './components/blocks/HeroBlock'
-export { default as GalleryBlock } from './components/blocks/GalleryBlock'
-export { default as SpecsBlock } from './components/blocks/SpecsBlock'
-export { default as PriceBlock } from './components/blocks/PriceBlock'
-export { default as FeaturesBlock } from './components/blocks/FeaturesBlock'
-export { default as CTABlock } from './components/blocks/CTABlock'
-export { default as LegalBlock } from './components/blocks/LegalBlock'
-export { default as BlockPicker } from './components/blocks/BlockPicker'
-export { default as BlockControls } from './components/blocks/BlockControls'
-
-// Hook exports
-export { default as useCompanyBranding } from './hooks/useCompanyBranding'
-
-// Store exports
-export { useBrochureStore } from './store/useBrochureStore'
-
-// Utility exports
-export * from './utils/tokens'
-export * from './utils/exporters'
-export * from './utils/sharing'
-export * from './utils/analytics'
-
-// Type exports
-export * from './types'
-
-/**
- * Helper function to open the brochure wizard from other modules
- * 
- * This function provides a programmatic way to launch the brochure creation
- * process from other parts of the application (Inventory, Land, Listings, Quote Builder).
- * 
- * @param options - Configuration for the brochure wizard
- * @param options.source - Source module type ('inventory' | 'land' | 'listing' | 'quote')
- * @param options.id - Optional ID of the source item for data binding
- * @param options.templateId - Optional template ID to start with
- * 
- * Usage Examples:
- * ```typescript
- * // Create brochure from inventory item
- * openBrochureWizard({ source: 'inventory', id: 'inv_123' })
- * 
- * // Create brochure from listing
- * openBrochureWizard({ source: 'listing', id: 'listing_456' })
- * 
- * // Create blank brochure
- * openBrochureWizard({})
- * ```
- * 
- * Navigation:
- * - Navigates to /brochures/templates/new with query parameters
- * - Editor will use mock snapshot data if available
- * - No cross-module imports required for v1
- * 
- * TODO: Implement navigation logic
- * TODO: Add data snapshot creation from source modules
- * TODO: Handle template pre-selection
- */
-export const openBrochureWizard = (options: {
-  source?: 'inventory' | 'land' | 'listing' | 'quote'
-  id?: string
-  templateId?: string
-} = {}) => {
-  const { source, id, templateId } = options
-  
-  // Build query parameters
-  const params = new URLSearchParams()
-  if (source) params.set('source', source)
-  if (id) params.set('id', id)
-  if (templateId) params.set('templateId', templateId)
-  
-  // Navigate to template editor
-  const url = `/brochures/templates/new${params.toString() ? `?${params.toString()}` : ''}`
-  
-  // TODO: Use proper navigation method (React Router navigate)
-  console.log('TODO: Navigate to:', url)
-  window.location.href = url
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Manufactured Homes
+            </CardTitle>
+            <CardDescription>
+              Manufactured homes catalog template
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              <Button variant="outline" size="sm">
+                <Share className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
 
-/**
- * Helper function to create a brochure from template
- * 
- * @param templateId - ID of the template to use
- * @param options - Additional options for brochure creation
- */
-export const createBrochureFromTemplate = (templateId: string, options: {
-  source?: { type: 'inventory' | 'land' | 'listing' | 'quote', id?: string }
-  snapshot?: Record<string, any>
-} = {}) => {
-  // TODO: Implement brochure creation logic
-  console.log('TODO: Create brochure from template:', templateId, options)
+export function BrochureTemplateEditor() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Brochure Template Editor</h1>
+        <p className="text-muted-foreground">
+          Create and customize brochure templates
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p>Brochure template editor coming soon</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
-/**
- * Helper function to get brochure analytics summary
- * 
- * @returns Analytics summary for dashboard display
- */
-export const getBrochureAnalyticsSummary = () => {
-  // TODO: Implement analytics summary
-  return {
-    totalTemplates: 0,
-    totalBrochures: 0,
-    totalViews: 0,
-    totalShares: 0,
-    totalDownloads: 0
-  }
+export function PublicBrochureView() {
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-4xl mx-auto">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p>Public brochure view coming soon</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
 
+// Export all components
 export default {
-  openBrochureWizard,
-  createBrochureFromTemplate,
-  getBrochureAnalyticsSummary
+  BrochureList,
+  BrochureTemplateEditor,
+  PublicBrochureView
 }
