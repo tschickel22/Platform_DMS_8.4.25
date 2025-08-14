@@ -3,7 +3,7 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// --- SAFETY: normalize any non-renderable children passed to <SelectItem> ---
+// --- SAFETY: normalize any non-renderable content passed to Select components ---
 function normalizeChildren(children: React.ReactNode): React.ReactNode {
   if (children == null) return null
   if (typeof children === "string" || typeof children === "number") return children
@@ -20,7 +20,13 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
   // If someone passed an object (e.g., a template or theme), pick a friendly label.
   if (typeof children === "object") {
     const any = children as any
-    const candidate = any?.label ?? any?.name ?? any?.title ?? any?.id
+    const candidate =
+      any?.label ??
+      any?.name ??
+      any?.title ??
+      any?.displayName ??
+      any?.templateName ??
+      any?.id
     if (typeof candidate === "string" || typeof candidate === "number") return String(candidate)
     try {
       return JSON.stringify(any)
@@ -147,11 +153,29 @@ const SelectItem = React.forwardRef<
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
-    </span>
+      <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
     <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
+
+// Wrap Value to guard placeholder/children text after selection
+const RawSelectValue = SelectPrimitive.Value
+export const SelectValue = ({
+  children,
+  placeholder,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>) => {
+  return (
+    <RawSelectValue
+      {...props}
+      // Radix expects a string here; coerce objects safely.
+      placeholder={normalizeChildren(placeholder as any) as any}
+    >
+      {normalizeChildren(children)}
+    </RawSelectValue>
+  )
+}
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
