@@ -47,7 +47,7 @@ export default function InventoryManagement() {
     const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
 
     const status = v.type === 'RV' ? (v as RVVehicle).availability : 'available'
-    console.log('Generating brochure for vehicle:', vehicle)
+    console.log('Generating brochure for vehicle:', v)
     const matchesStatus = statusFilter === 'all' || status === statusFilter
 
     const matchesType = typeFilter === 'all' || v.type === typeFilter
@@ -82,12 +82,11 @@ export default function InventoryManagement() {
   const handleSaveMH = (mh: MHVehicle) => {
     editingItem ? updateVehicle(mh) : addVehicle(mh)
     setEditingItem(null)
-  const handleCloseBrochureModal = () => {
-    setShowBrochureModal(false)
-    setSelectedVehicle(null)
+    setShowAddMHModal(false)
   }
 
-    setShowAddMHModal(false)
+  const handleCloseBrochureModal = () => {
+    setSelectedVehicleForBrochure(null)
   }
 
   const handleImportComplete = (imported: Vehicle[]) => { importVehicles(imported); setShowImport(false) }
@@ -212,15 +211,15 @@ export default function InventoryManagement() {
                   <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
-                          ${vehicle.salePrice?.toLocaleString() || 'Price TBD'}
+                  <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="RV">RV</SelectItem>
                     <SelectItem value="MH">Manufactured Home</SelectItem>
-                          {vehicle.location?.city || 'Unknown'}, {vehicle.location?.state || 'N/A'}
+                  </SelectContent>
                 </Select>
               </div>
 
-                          {vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : 'N/A'}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                   <TabsTrigger value="all">All ({totalUnits})</TabsTrigger>
                   <TabsTrigger value="rv">RVs ({safeVehicles.filter(v => v.type === 'RV').length})</TabsTrigger>
@@ -269,18 +268,14 @@ export default function InventoryManagement() {
         </div>
       </InventoryErrorBoundary>
 
-        <ErrorBoundary>
-      {selectedVehicleForBrochure && (
-        <GenerateBrochureModal
+      <ErrorBoundary>
+        {selectedVehicleForBrochure && (
+          <GenerateBrochureModal
             onClose={handleCloseBrochureModal}
-          onClose={() => setSelectedVehicleForBrochure(null)}
-        />
-        </ErrorBoundary>
+          />
+        )}
+      </ErrorBoundary>
     </TooltipProvider>
     </ErrorBoundary>
   )
 }
-
-                        <h3 className="font-semibold">
-                          {vehicle.year || 'N/A'} {vehicle.make || 'Unknown'} {vehicle.model || 'Model'}
-                        </h3>
