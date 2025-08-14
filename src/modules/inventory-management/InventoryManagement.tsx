@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GenerateBrochureModal } from '@/modules/brochures/components/GenerateBrochureModal'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -46,6 +47,7 @@ export default function InventoryManagement() {
     const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
 
     const status = v.type === 'RV' ? (v as RVVehicle).availability : 'available'
+    console.log('Generating brochure for vehicle:', vehicle)
     const matchesStatus = statusFilter === 'all' || status === statusFilter
 
     const matchesType = typeFilter === 'all' || v.type === typeFilter
@@ -80,6 +82,11 @@ export default function InventoryManagement() {
   const handleSaveMH = (mh: MHVehicle) => {
     editingItem ? updateVehicle(mh) : addVehicle(mh)
     setEditingItem(null)
+  const handleCloseBrochureModal = () => {
+    setShowBrochureModal(false)
+    setSelectedVehicle(null)
+  }
+
     setShowAddMHModal(false)
   }
 
@@ -96,6 +103,7 @@ export default function InventoryManagement() {
   }
 
   return (
+    <ErrorBoundary>
     <TooltipProvider delayDuration={200}>
       <InventoryErrorBoundary>
         <div className="space-y-6">
@@ -204,15 +212,15 @@ export default function InventoryManagement() {
                   <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
-                  <SelectContent>
+                          ${vehicle.salePrice?.toLocaleString() || 'Price TBD'}
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="RV">RV</SelectItem>
                     <SelectItem value="MH">Manufactured Home</SelectItem>
-                  </SelectContent>
+                          {vehicle.location?.city || 'Unknown'}, {vehicle.location?.state || 'N/A'}
                 </Select>
               </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                          {vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : 'N/A'}
                 <TabsList>
                   <TabsTrigger value="all">All ({totalUnits})</TabsTrigger>
                   <TabsTrigger value="rv">RVs ({safeVehicles.filter(v => v.type === 'RV').length})</TabsTrigger>
@@ -261,13 +269,18 @@ export default function InventoryManagement() {
         </div>
       </InventoryErrorBoundary>
 
-      {/* Brochure Generation Modal */}
+        <ErrorBoundary>
       {selectedVehicleForBrochure && (
         <GenerateBrochureModal
-          inventoryItem={selectedVehicleForBrochure}
+            onClose={handleCloseBrochureModal}
           onClose={() => setSelectedVehicleForBrochure(null)}
         />
-      )}
+        </ErrorBoundary>
     </TooltipProvider>
+    </ErrorBoundary>
   )
 }
+
+                        <h3 className="font-semibold">
+                          {vehicle.year || 'N/A'} {vehicle.make || 'Unknown'} {vehicle.model || 'Model'}
+                        </h3>

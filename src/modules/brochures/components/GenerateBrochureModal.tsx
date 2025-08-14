@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Download, Share2, FileText, Image, Globe, X } from 'lucide-react'
 import { FileText, Download, Share2, Eye } from 'lucide-react'
 import { useBrochureStore } from '../store/useBrochureStore'
 import { toPDF, toImage, toHTML } from '../utils/exporters'
@@ -35,7 +35,14 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
         id: `brochure-${Date.now()}`,
         templateId: selectedTemplate.id,
         templateName: selectedTemplate.name,
-        inventoryItem,
+        branding: {
+          primaryColor: companyBranding?.primaryColor || '#3b82f6',
+          secondaryColor: companyBranding?.secondaryColor || '#64748b',
+          fontFamily: companyBranding?.fontFamily || 'Inter',
+          backgroundColor: companyBranding?.backgroundColor || '#ffffff',
+          logo: companyBranding?.logo || null,
+          companyName: companyBranding?.companyName || 'Company Name'
+        }
         title: `${inventoryItem.year} ${inventoryItem.make} ${inventoryItem.model}`,
         description: inventoryItem.description || selectedTemplate.description,
         generatedAt: new Date().toISOString(),
@@ -176,6 +183,14 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Generate Brochure</DialogTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
           <DialogDescription>
             Create a marketing brochure for {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
           </DialogDescription>
@@ -197,12 +212,15 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">
+                  <h3 className="font-semibold">
+                    {inventoryItem.year || 'N/A'} {inventoryItem.make || 'Unknown'} {inventoryItem.model || 'Model'}
+                  </h3>
                     {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
                   </h3>
                   <p className="text-muted-foreground mb-2">
                     {inventoryItem?.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
-                    Stock: {inventoryItem?.inventoryId || inventoryItem?.id}
+                    {inventoryItem.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
+                    {inventoryItem.salePrice ? `$${inventoryItem.salePrice.toLocaleString()}` : 'Price TBD'}
                   </p>
                   <div className="flex items-center space-x-2">
                     {inventoryItem?.salePrice && (
@@ -227,10 +245,6 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
           {!generatedBrochure ? (
             <>
               {/* Template Selection */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Select Brochure Template
                   </label>
                   <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                     <SelectTrigger>
@@ -269,12 +283,21 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                         </div>
                         <div>
                           <span className="font-medium">Created:</span> {new Date(selectedTemplate.createdAt).toLocaleDateString()}
-                        </div>
+                        {template.blocks?.length || 0} content blocks • 
+                        {template.theme || 'Default'} theme
                       </div>
                     </CardContent>
                   </Card>
                 )}
               </div>
+              
+              {templates.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No brochure templates available</p>
+                  <p className="text-sm">Create templates in the Brochures section first</p>
+                </div>
+              )}
 
               <DialogFooter>
                 <Button variant="outline" onClick={onClose}>
@@ -329,7 +352,7 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                           variant="outline" 
                           size="sm" 
                           className="w-full justify-start"
-                          onClick={() => handleDownload('html')}
+          {selectedTemplate && templates.length > 0 && (
                         >
                           <Download className="h-4 w-4 mr-2" />
                           HTML
@@ -381,6 +404,15 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                 <Button onClick={onClose}>
                   Done
                 </Button>
+                
+                {isGenerating && (
+                  <div className="mt-4 text-center">
+                    <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span>Generating brochure...</span>
+                    </div>
+                  </div>
+                )}
               </DialogFooter>
             </>
           )}

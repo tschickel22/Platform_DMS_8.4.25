@@ -11,8 +11,8 @@ export function useCompanyBranding() {
     companyName: tenant?.name || 'Company Name'
   }
 
-  return {
+  return React.useMemo(() => ({
     branding,
     isLoaded: !!tenant
-  }
+  }), [tenant])
 }
