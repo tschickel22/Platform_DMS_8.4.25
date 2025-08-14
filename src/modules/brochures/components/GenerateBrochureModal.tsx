@@ -42,7 +42,7 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
           backgroundColor: companyBranding?.backgroundColor || '#ffffff',
           logo: companyBranding?.logo || null,
           companyName: companyBranding?.companyName || 'Company Name'
-        }
+        },
         title: `${inventoryItem.year} ${inventoryItem.make} ${inventoryItem.model}`,
         description: inventoryItem.description || selectedTemplate.description,
         generatedAt: new Date().toISOString(),
@@ -213,12 +213,9 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                 )}
                 <div className="flex-1">
                   <h3 className="font-semibold">
-                    {inventoryItem.year || 'N/A'} {inventoryItem.make || 'Unknown'} {inventoryItem.model || 'Model'}
-                  </h3>
                     {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
                   </h3>
                   <p className="text-muted-foreground mb-2">
-                    {inventoryItem?.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
                     {inventoryItem.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
                     {inventoryItem.salePrice ? `$${inventoryItem.salePrice.toLocaleString()}` : 'Price TBD'}
                   </p>
@@ -245,6 +242,10 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
           {!generatedBrochure ? (
             <>
               {/* Template Selection */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Select Template
                   </label>
                   <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                     <SelectTrigger>
@@ -283,8 +284,7 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                         </div>
                         <div>
                           <span className="font-medium">Created:</span> {new Date(selectedTemplate.createdAt).toLocaleDateString()}
-                        {template.blocks?.length || 0} content blocks • 
-                        {template.theme || 'Default'} theme
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -352,7 +352,7 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                           variant="outline" 
                           size="sm" 
                           className="w-full justify-start"
-          {selectedTemplate && templates.length > 0 && (
+                          onClick={() => handleDownload('html')}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           HTML
@@ -404,17 +404,17 @@ export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: Genera
                 <Button onClick={onClose}>
                   Done
                 </Button>
-                
-                {isGenerating && (
-                  <div className="mt-4 text-center">
-                    <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      <span>Generating brochure...</span>
-                    </div>
-                  </div>
-                )}
               </DialogFooter>
             </>
+          )}
+          
+          {isGenerating && (
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span>Generating brochure...</span>
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
