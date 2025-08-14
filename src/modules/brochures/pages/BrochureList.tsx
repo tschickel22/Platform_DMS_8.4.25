@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { FileText, Plus, Download, Share, Edit, Trash2 } from 'lucide-react'
 import { useBrochureStore } from '../store/useBrochureStore'
 import { BrochureErrorBoundary } from '../common/ErrorBoundary'
+import { useNavigate } from 'react-router-dom'
 
 export function BrochureList() {
   const { templates, loading, createTemplate, deleteTemplate } = useBrochureStore()
+  const navigate = useNavigate()
 
   const handleCreateTemplate = () => {
     createTemplate({
@@ -30,7 +32,6 @@ export function BrochureList() {
       }
     })
   }
-  const navigate = useNavigate()
 
   if (loading) {
     return (
@@ -50,9 +51,10 @@ export function BrochureList() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-          <p className="text-muted-foreground">
-            Manage brochure templates. Generate brochures for specific inventory from the Inventory section.
-          </p>
+            <h1 className="text-3xl font-bold tracking-tight">Brochures</h1>
+            <p className="text-muted-foreground">
+              Manage brochure templates. Generate brochures for specific inventory from the Inventory section.
+            </p>
             <p className="text-muted-foreground">
               Create and manage marketing brochures for your listings
             </p>
@@ -63,6 +65,9 @@ export function BrochureList() {
           </Button>
         </div>
         <Button onClick={() => navigate('/brochures/templates/new')}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Template
+        </Button>
         {templates.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -92,7 +97,11 @@ export function BrochureList() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`/brochures/templates/${template.id}/edit`)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
@@ -102,29 +111,22 @@ export function BrochureList() {
                     </Button>
                     <Button variant="outline" size="sm">
                       <Share className="h-4 w-4 mr-2" />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate(`/brochures/templates/${template.id}/edit`)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                      Share
+                    </Button>
+                    <Button 
                       variant="outline" 
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => deleteTemplate(template.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      <Trash2 className="h-4 w-4" />
+                      size="sm"
+                      onClick={() => deleteTemplate(template.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
-          New Template
+          </div>
         )}
       </div>
     </BrochureErrorBoundary>
