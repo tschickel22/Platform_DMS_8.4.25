@@ -70,3 +70,5 @@ export function trackShareEvent(brochureId: string, method: string): void {
   // In production, you would send this to your analytics service
   // Example: analytics.track('brochure_shared', { brochureId, method })
 }
+
+export { buildEmailLink, buildSMSLink, buildSocialLinks, canUseWebShare, shareViaWebAPI }
