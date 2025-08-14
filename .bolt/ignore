@@ -1,0 +1,96 @@
+# Ignore node modules and build artifacts
+node_modules/
+dist/
+.vite/
+build/
+out/
+
+# Ignore environment variables
+.env
+.env.local
+.env.*.local
+
+# Ignore editor/IDE specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore logs and debug files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pnpm-debug.log*
+
+# Ignore test/coverage reports
+coverage/
+.nyc_output/
+*.tap
+*.xunit.xml
+*.lcov
+*.lcov.info
+
+# Ignore temporary files and caches
+*.tmp
+*.bak
+*.swp
+*.swo
+.cache/
+.next/
+.nuxt/
+.parcel-cache/
+.rollup.cache/
+.svelte-kit/
+.turbo/
+.vercel/
+.yarn/
+.pnpm-store/
+
+# Ignore user-specific files
+.bash_history
+.zsh_history
+.npm/
+.yarn-cache/
+
+# Ignore Bolt-specific internal files (if any, usually handled by Bolt itself)
+.bolt/
+
+# --- STRICT MODULE IGNORING ---
+# Ignore all apps/ directories (assuming they are separate deployments)
+apps/
+
+# Ignore all src/modules/ directories by default
+src/modules/
+
+# EXCEPT for the ones needed for Brochure Builder and its direct interactions
+# These lines will re-include the necessary directories
+!src/modules/brochures/
+!src/modules/brochures/**
+!src/modules/inventory-management/
+!src/modules/inventory-management/**
+!src/modules/land-management/
+!src/modules/land-management/**
+!src/modules/property-listings/
+!src/modules/property-listings/**
+!src/modules/quote-builder/
+!src/modules/quote-builder/**
+
+# Ensure core src/ directories are not ignored
+!src/App.tsx
+!src/main.tsx
+!src/index.css
+!src/lib/
+!src/lib/**
+!src/components/
+!src/components/**
+!src/contexts/
+!src/contexts/**
+!src/hooks/
+!src/hooks/**
+!src/utils/
+!src/utils/**
+!src/mocks/
+!src/mocks/**
+!src/types/
+!src/types/**
