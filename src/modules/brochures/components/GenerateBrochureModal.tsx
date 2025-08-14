@@ -1,14 +1,11 @@
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Download, Share2, FileText, Image, Globe, X } from 'lucide-react'
-import { Eye } from 'lucide-react'
-import { useBrochureStore } from '../store/useBrochureStore'
-import { toPDF, toImage, toHTML } from '../utils/exporters'
-import { generateShareableUrl, trackShare } from '../utils/sharing'
-import { useToast } from '@/hooks/use-toast'
+import { Download, Share2, FileText, Image, Globe, Loader2, X } from 'lucide-react'
+import { useBrochureStore } from '@/modules/brochures/store/useBrochureStore'
+import { toPDF, toImage, toHTML } from '@/modules/brochures/utils/exporters'
+import { useTenant } from '@/contexts/TenantContext'
 
 interface GenerateBrochureModalProps {
   isOpen: boolean
@@ -17,402 +14,199 @@ interface GenerateBrochureModalProps {
 }
 
 export function GenerateBrochureModal({ isOpen, onClose, inventoryItem }: GenerateBrochureModalProps) {
-  const { templates } = useBrochureStore()
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedBrochure, setGeneratedBrochure] = useState<any>(null)
-  const { toast } = useToast()
+  const { templates, isLoading } = useBrochureStore()
+  const { tenant } = useTenant()
+
+  // Safe branding object with fallbacks
+  const branding = {
+    primaryColor: tenant?.branding?.primaryColor || '#3b82f6',
+    secondaryColor: tenant?.branding?.secondaryColor || '#64748b',
+    fontFamily: tenant?.branding?.fontFamily || 'Inter',
+    companyName: tenant?.name || 'Demo Company'
+  }
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
 
-  const handleGenerate = async () => {
-    if (!selectedTemplate || !inventoryItem) return
+  const handleGenerate = async (format: 'pdf' | 'image' | 'html') => {
+    if (!selectedTemplateId) return
 
-    setIsGenerating(true)
     try {
+      setIsGenerating(true)
+      
       // Create brochure data by merging template with inventory item
       const brochureData = {
-        id: `brochure-${Date.now()}`,
-        templateId: selectedTemplate.id,
-        templateName: selectedTemplate.name,
-        branding: {
-          primaryColor: companyBranding?.primaryColor || '#3b82f6',
-          secondaryColor: companyBranding?.secondaryColor || '#64748b',
-          fontFamily: companyBranding?.fontFamily || 'Inter',
-          backgroundColor: companyBranding?.backgroundColor || '#ffffff',
-          logo: companyBranding?.logo || null,
-          companyName: companyBranding?.companyName || 'Company Name'
-        },
-        title: `${inventoryItem.year} ${inventoryItem.make} ${inventoryItem.model}`,
-        description: inventoryItem.description || selectedTemplate.description,
-        generatedAt: new Date().toISOString(),
-        // Merge template content with inventory data
-        content: {
-          ...selectedTemplate.content,
-          // Override with inventory-specific data
-          hero: {
-            ...selectedTemplate.content.hero,
-            title: `${inventoryItem.year} ${inventoryItem.make} ${inventoryItem.model}`,
-            subtitle: inventoryItem.description || '',
-            backgroundImage: inventoryItem.media?.primaryPhoto || selectedTemplate.content.hero.backgroundImage
-          },
-          specs: {
-            ...selectedTemplate.content.specs,
-            // Add inventory-specific specs
-            items: [
-              { label: 'Year', value: inventoryItem.year?.toString() || 'N/A' },
-              { label: 'Make', value: inventoryItem.make || 'N/A' },
-              { label: 'Model', value: inventoryItem.model || 'N/A' },
-              ...(inventoryItem.listingType === 'rv' ? [
-                { label: 'Length', value: inventoryItem.length ? `${inventoryItem.length} ft` : 'N/A' },
-                { label: 'Sleeps', value: inventoryItem.sleeps?.toString() || 'N/A' },
-                { label: 'Slides', value: inventoryItem.slides?.toString() || 'N/A' }
-              ] : []),
-              ...(inventoryItem.listingType === 'manufactured_home' ? [
-                { label: 'Bedrooms', value: inventoryItem.bedrooms?.toString() || 'N/A' },
-                { label: 'Bathrooms', value: inventoryItem.bathrooms?.toString() || 'N/A' },
-                { label: 'Square Feet', value: inventoryItem.dimensions?.squareFeet ? `${inventoryItem.dimensions.squareFeet} sq ft` : 'N/A' }
-              ] : []),
-              { label: 'VIN/Serial', value: inventoryItem.vin || inventoryItem.serialNumber || 'N/A' },
-              { label: 'Condition', value: inventoryItem.condition || 'N/A' }
-            ]
-          },
-          price: {
-            ...selectedTemplate.content.price,
-            salePrice: inventoryItem.salePrice,
-            rentPrice: inventoryItem.rentPrice,
-            showFinancing: true
-          },
-          gallery: {
-            ...selectedTemplate.content.gallery,
-            images: inventoryItem.media?.photos || [inventoryItem.media?.primaryPhoto].filter(Boolean) || []
-          },
-          features: {
-            ...selectedTemplate.content.features,
-            items: inventoryItem.features ? Object.entries(inventoryItem.features)
-              .filter(([key, value]) => value === true)
-              .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())) : []
-          }
-        }
+        template: selectedTemplate,
+        inventory: inventoryItem,
+        branding: branding
       }
 
-      setGeneratedBrochure(brochureData)
-      
-      toast({
-        title: 'Brochure Generated',
-        description: 'Your brochure has been generated successfully!'
-      })
+      // Generate based on format
+      switch (format) {
+        case 'pdf':
+          await toPDF(brochureData)
+          break
+        case 'image':
+          await toImage(brochureData)
+          break
+        case 'html':
+          await toHTML(brochureData)
+          break
+      }
     } catch (error) {
-      console.error('Error generating brochure:', error)
-      toast({
-        title: 'Generation Failed',
-        description: 'Failed to generate brochure. Please try again.',
-        variant: 'destructive'
-      })
+      console.error(`Error generating ${format} brochure:`, error)
+      // You could add a toast notification here
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleDownload = async (format: 'pdf' | 'image' | 'html') => {
-    if (!generatedBrochure) return
-
-    try {
-      const filename = `${generatedBrochure.title.replace(/[^a-zA-Z0-9]/g, '_')}_brochure`
-      
-      switch (format) {
-        case 'pdf':
-          await toPDF(generatedBrochure, filename)
-          break
-        case 'image':
-          await toImage(generatedBrochure, filename)
-          break
-        case 'html':
-          await toHTML(generatedBrochure, filename)
-          break
-      }
-
-      trackShare('download', format, generatedBrochure.id)
-      
-      toast({
-        title: 'Download Started',
-        description: `Your ${format.toUpperCase()} brochure is downloading.`
-      })
-    } catch (error) {
-      console.error('Error downloading brochure:', error)
-      toast({
-        title: 'Download Failed',
-        description: 'Failed to download brochure. Please try again.',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleShare = async () => {
-    if (!generatedBrochure) return
-
-    try {
-      const shareUrl = await generateShareableUrl(generatedBrochure)
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl)
-      
-      trackShare('link', 'copy', generatedBrochure.id)
-      
-      toast({
-        title: 'Share Link Copied',
-        description: 'The brochure share link has been copied to your clipboard.'
-      })
-    } catch (error) {
-      console.error('Error sharing brochure:', error)
-      toast({
-        title: 'Share Failed',
-        description: 'Failed to generate share link. Please try again.',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleReset = () => {
-    setGeneratedBrochure(null)
-    setSelectedTemplateId('')
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Generate Brochure</DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-4 top-4"
-            onClick={onClose}
-          >
+        <div className="absolute right-4 top-4">
+          <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
+        </div>
+        
+        <DialogHeader>
+          <DialogTitle>Generate Brochure</DialogTitle>
           <DialogDescription>
             Create a marketing brochure for {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Inventory Item Summary */}
+          {/* Inventory Preview */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Selected Item</CardTitle>
+              <CardTitle className="text-lg">Selected Inventory</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-start space-x-4">
-                {inventoryItem?.media?.primaryPhoto && (
-                  <img 
-                    src={inventoryItem.media.primaryPhoto} 
-                    alt={`${inventoryItem.make} ${inventoryItem.model}`}
-                    className="w-24 h-24 object-cover rounded-lg"
-                  />
-                )}
-                <div className="flex-1">
+              <div className="flex items-center space-x-4">
+                <img
+                  src={inventoryItem?.media?.primaryPhoto || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=200'}
+                  alt={`${inventoryItem?.year} ${inventoryItem?.make} ${inventoryItem?.model}`}
+                  className="w-20 h-20 rounded object-cover"
+                />
+                <div>
                   <h3 className="font-semibold">
                     {inventoryItem?.year} {inventoryItem?.make} {inventoryItem?.model}
                   </h3>
-                  <p className="text-muted-foreground mb-2">
-                    {inventoryItem.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
-                    {inventoryItem.salePrice ? `$${inventoryItem.salePrice.toLocaleString()}` : 'Price TBD'}
+                  <p className="text-sm text-muted-foreground">
+                    ID: {inventoryItem?.inventoryId}
                   </p>
-                  <div className="flex items-center space-x-2">
-                    {inventoryItem?.salePrice && (
-                      <Badge variant="outline">
-                        Sale: ${inventoryItem.salePrice.toLocaleString()}
-                      </Badge>
-                    )}
-                    {inventoryItem?.rentPrice && (
-                      <Badge variant="outline">
-                        Rent: ${inventoryItem.rentPrice.toLocaleString()}/mo
-                      </Badge>
-                    )}
-                    <Badge variant={inventoryItem?.status === 'available' ? 'default' : 'secondary'}>
-                      {inventoryItem?.status || 'Unknown'}
-                    </Badge>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Price: ${(inventoryItem?.salePrice || inventoryItem?.rentPrice || 0).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {!generatedBrochure ? (
-            <>
-              {/* Template Selection */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Select Template
-                  </label>
-                  <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          <div className="flex items-center space-x-2">
-                            <FileText className="h-4 w-4" />
-                            <span>{template.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {/* Template Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Choose Template</CardTitle>
+              <CardDescription>
+                Select a brochure template to use for this inventory item
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  <span>Loading templates...</span>
                 </div>
-
-                {/* Template Preview */}
-                {selectedTemplate && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">{selectedTemplate.name}</CardTitle>
-                      <CardDescription>{selectedTemplate.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Theme:</span> {selectedTemplate.theme}
+              ) : templates.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {templates.map((template) => (
+                    <Card 
+                      key={template.id}
+                      className={`cursor-pointer transition-colors ${
+                        selectedTemplateId === template.id 
+                          ? 'ring-2 ring-primary bg-primary/5' 
+                          : 'hover:bg-accent'
+                      }`}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                        <CardDescription className="text-sm">
+                          {template.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="text-xs text-muted-foreground">
+                          Suitable for: {template.suitableFor?.join(', ') || 'All types'}
                         </div>
-                        <div>
-                          <span className="font-medium">Type:</span> {selectedTemplate.type}
-                        </div>
-                        <div>
-                          <span className="font-medium">Layout:</span> {selectedTemplate.layout}
-                        </div>
-                        <div>
-                          <span className="font-medium">Created:</span> {new Date(selectedTemplate.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-              
-              {templates.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No brochure templates available</p>
-                  <p className="text-sm">Create templates in the Brochures section first</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Templates Available</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create brochure templates first to generate brochures for inventory items.
+                  </p>
+                  <Button variant="outline" onClick={onClose}>
+                    Go to Brochures
+                  </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleGenerate}
+          {/* Generation Actions */}
+          {templates.length > 0 && (
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => handleGenerate('pdf')}
                   disabled={!selectedTemplateId || isGenerating}
                 >
-                  {isGenerating ? 'Generating...' : 'Generate Brochure'}
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  PDF
                 </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              {/* Generated Brochure Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <FileText className="h-5 w-5" />
-                    <span>Brochure Generated</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Your brochure for {generatedBrochure.title} is ready to download or share.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Download Options */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Download</h4>
-                      <div className="space-y-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start"
-                          onClick={() => handleDownload('pdf')}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start"
-                          onClick={() => handleDownload('image')}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Image
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start"
-                          onClick={() => handleDownload('html')}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          HTML
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Share Options */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Share</h4>
-                      <div className="space-y-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start"
-                          onClick={handleShare}
-                        >
-                          <Share2 className="h-4 w-4 mr-2" />
-                          Copy Link
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Preview */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Preview</h4>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full justify-start"
-                        onClick={() => {
-                          // Open preview in new tab
-                          const previewUrl = `/b/${generatedBrochure.id}`
-                          window.open(previewUrl, '_blank')
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={handleReset}>
-                  Generate Another
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleGenerate('image')}
+                  disabled={!selectedTemplateId || isGenerating}
+                >
+                  <Image className="h-4 w-4 mr-2" />
+                  Image
                 </Button>
-                <Button onClick={onClose}>
-                  Done
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleGenerate('html')}
+                  disabled={!selectedTemplateId || isGenerating}
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  HTML
                 </Button>
-              </DialogFooter>
-            </>
-          )}
-          
-          {isGenerating && (
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span>Generating brochure...</span>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleGenerate('pdf')}
+                  disabled={!selectedTemplateId || isGenerating}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
               </div>
             </div>
           )}
