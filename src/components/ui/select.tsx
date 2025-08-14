@@ -153,7 +153,7 @@ const SelectItem = React.forwardRef<
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
-      <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
+    </span>
     <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
@@ -161,6 +161,7 @@ SelectItem.displayName = SelectPrimitive.Item.displayName
 
 // Wrap Value to guard placeholder/children text after selection
 const RawSelectValue = SelectPrimitive.Value
+export { SelectValue } from SelectPrimitive
 export const SelectValue = ({
   children,
   placeholder,
