@@ -1,233 +1,160 @@
 import React, { useState } from 'react'
-import { Vehicle, RVVehicle, MHVehicle } from '../state/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Eye, Edit, Trash2, MoreHorizontal, Package, Send } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/select'
-import { useToast } from '@/components/ui/use-toast'
-import ListingHandoffModal from './ListingHandoffModal'
-
-interface InventoryItem {
-  id: string
-  type: 'RV' | 'MH'
-  vin: string
-  make: string
-  model: string
-  year: number
-  status: string
-  createdAt: string
-  [key: string]: any
-}
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { MoreHorizontal, Eye, Edit, Trash2, FileText, Share2 } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
+import { GenerateBrochureModal } from '@/modules/brochures/components/GenerateBrochureModal'
 
 interface InventoryTableProps {
-  vehicles: Vehicle[]
-  onView: (vehicle: Vehicle) => void
-  onEdit: (vehicle: Vehicle) => void
-  onDelete: (vehicle: Vehicle) => void
-  onStatusChange: (vehicle: Vehicle, newStatus: Vehicle['status']) => void
-  inventory?: InventoryItem[]
+  vehicles: any[]
+  onEdit: (vehicle: any) => void
+  onDelete: (vehicleId: string) => void
+  onView: (vehicle: any) => void
 }
 
-const getStatusColor = (status: Vehicle['status']) => {
-  switch (status) {
-    case 'Available':
-      return 'bg-green-100 text-green-800 hover:bg-green-200'
-    case 'Reserved':
-      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-    case 'Sold':
-      return 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-    case 'Pending':
-      return 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-    default:
-      return 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+export function InventoryTable({ vehicles, onEdit, onDelete, onView }: InventoryTableProps) {
+  const [selectedVehicleForBrochure, setSelectedVehicleForBrochure] = useState<any>(null)
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'available':
+        return 'bg-green-100 text-green-800'
+      case 'sold':
+        return 'bg-blue-100 text-blue-800'
+      case 'reserved':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'service':
+        return 'bg-orange-100 text-orange-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
   }
-}
 
-const formatPrice = (vehicle: Vehicle): string => {
-  if (vehicle.type === 'RV') {
-    return `$${vehicle.price?.toLocaleString() || '0'}`
-  } else if (vehicle.type === 'MH') {
-    return `$${vehicle.askingPrice?.toLocaleString() || '0'}`
+  const handleGenerateBrochure = (vehicle: any) => {
+    setSelectedVehicleForBrochure(vehicle)
   }
-  return '$0'
-}
 
-const getVehicleTitle = (vehicle: Vehicle): string => {
-  if (vehicle.type === 'RV') {
-    const rv = vehicle as RVVehicle
-    return `${rv.modelDate || ''} ${rv.brand || ''} ${rv.model || ''}`.trim()
-  } else if (vehicle.type === 'MH') {
-    const mh = vehicle as MHVehicle
-    return `${mh.year || ''} ${mh.make || ''} ${mh.model || ''}`.trim()
-  }
-  return 'Unknown Vehicle'
-}
-
-const getVehicleSubtitle = (vehicle: Vehicle): string => {
-  if (vehicle.type === 'RV') {
-    const rv = vehicle as RVVehicle
-    return [rv.bodyStyle, rv.vehicleIdentificationNumber].filter(Boolean).join(' • ')
-  } else if (vehicle.type === 'MH') {
-    const mh = vehicle as MHVehicle
-    return [mh.homeType, `${mh.bedrooms}BR/${mh.bathrooms}BA`].filter(Boolean).join(' • ')
-  }
-  return ''
-}
-
-export const InventoryTable: React.FC<InventoryTableProps> = ({
-  vehicles,
-  onView,
-  onEdit,
-  onDelete,
-  onStatusChange,
-  inventory = []
-}) => {
-  const [sortField, setSortField] = useState<string>('updatedAt')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [handoffItem, setHandoffItem] = useState<any>(null)
-  const { toast } = useToast()
-
-  // Combine vehicles with inventory
-  const allInventory = [...vehicles, ...inventory]
-
-  if (!Array.isArray(allInventory) || allInventory.length === 0) {
+  if (vehicles.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg font-medium">No vehicles found</p>
-            <p className="text-sm">Add your first vehicle to get started</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No inventory items found</p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Inventory ({allInventory.length})</CardTitle>
-        <CardDescription>
-          Manage your RV and manufactured home inventory
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allInventory.map((vehicle) => (
-                <TableRow key={vehicle.id}>
-                  <TableCell>
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {vehicles.map((vehicle) => (
+              <TableRow key={vehicle.id}>
+                <TableCell>
+                  <div className="flex items-center space-x-3">
+                    {vehicle.media?.primaryPhoto && (
+                      <img 
+                        src={vehicle.media.primaryPhoto} 
+                        alt={`${vehicle.make} ${vehicle.model}`}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    )}
                     <div>
                       <div className="font-medium">
-                        {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
-                          getVehicleTitle(vehicle as Vehicle) : 
-                          `${vehicle.year} ${vehicle.make} ${vehicle.model || vehicle.name}`
-                        }
+                        {vehicle.year} {vehicle.make} {vehicle.model}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
-                          getVehicleSubtitle(vehicle as Vehicle) :
-                          `VIN: ${vehicle.vin}`
-                        }
+                        {vehicle.vin || vehicle.serialNumber || 'No VIN/Serial'}
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {vehicle.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {vehicle.type === 'RV' || vehicle.type === 'MH' ? 
-                      formatPrice(vehicle as Vehicle) :
-                      `$${vehicle.price?.toLocaleString() || 'TBD'}`
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {vehicle.listingType === 'rv' ? 'RV' : 'MH'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {vehicle.salePrice && (
+                      <div className="text-sm">
+                        Sale: {formatCurrency(vehicle.salePrice)}
+                      </div>
+                    )}
+                    {vehicle.rentPrice && (
+                      <div className="text-sm text-muted-foreground">
+                        Rent: {formatCurrency(vehicle.rentPrice)}/mo
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getStatusColor(vehicle.status)}>
+                    {vehicle.status || 'Unknown'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {vehicle.location?.city && vehicle.location?.state 
+                      ? `${vehicle.location.city}, ${vehicle.location.state}`
+                      : 'Not specified'
                     }
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(vehicle.status)}>
-                      {vehicle.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {vehicle.type === 'MH' ? 
-                      `${(vehicle as MHVehicle).city}, ${(vehicle as MHVehicle).state}` : 
-                      vehicle.location || 'Mobile'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onView(vehicle as Vehicle)}
-                      >
-                        <Eye className="h-4 w-4" />
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(vehicle as Vehicle)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setHandoffItem(vehicle)}>
-                            <Send className="mr-2 h-4 w-4" />
-                            Create Listing
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => onDelete(vehicle as Vehicle)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-      
-      <ListingHandoffModal
-        isOpen={!!handoffItem}
-        onClose={() => setHandoffItem(null)}
-        inventoryItem={handoffItem}
-        onSuccess={(listingId) => {
-          toast({
-            title: "Listing Created",
-            description: `Successfully created listing ${listingId} from inventory item.`,
-          })
-          setHandoffItem(null)
-        }}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onView(vehicle)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(vehicle)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleGenerateBrochure(vehicle)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Brochure
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => onDelete(vehicle.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Generate Brochure Modal */}
+      <GenerateBrochureModal
+        isOpen={!!selectedVehicleForBrochure}
+        onClose={() => setSelectedVehicleForBrochure(null)}
+        inventoryItem={selectedVehicleForBrochure}
       />
-    </Card>
+    </>
   )
 }
