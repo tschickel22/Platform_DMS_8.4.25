@@ -3,22 +3,21 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// --- SAFETY: normalize any non-renderable content passed to Select components ---
+/** Normalize any non-renderable content passed to Select components. */
 function normalizeChildren(children: React.ReactNode): React.ReactNode {
   if (children == null) return null
-  if (typeof children === "string" || typeof children === "number") return children
+  if (typeof children === 'string' || typeof children === 'number') return children
   if (React.isValidElement(children)) return children
   if (Array.isArray(children)) {
     return children
       .map((c) =>
-        typeof c === "string" || typeof c === "number" || React.isValidElement(c)
+        typeof c === 'string' || typeof c === 'number' || React.isValidElement(c)
           ? c
           : null
       )
       .filter(Boolean)
   }
-  // If someone passed an object (e.g., a template or theme), pick a friendly label.
-  if (typeof children === "object") {
+  if (typeof children === 'object') {
     const any = children as any
     const candidate =
       any?.label ??
@@ -27,11 +26,13 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
       any?.displayName ??
       any?.templateName ??
       any?.id
-    if (typeof candidate === "string" || typeof candidate === "number") return String(candidate)
+    if (typeof candidate === 'string' || typeof candidate === 'number') {
+      return String(candidate)
+    }
     try {
       return JSON.stringify(any)
     } catch {
-      return ""
+      return ''
     }
   }
   return String(children)
@@ -39,7 +40,7 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
-const SelectValue = SelectPrimitive.Value
+// NOTE: do NOT alias SelectValue here; we export a wrapped version below.
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -159,24 +160,20 @@ const SelectItem = React.forwardRef<
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
-// Wrap Value to guard placeholder/children text after selection
+/** Wrap Value to guard placeholder/children text after selection. */
 const RawSelectValue = SelectPrimitive.Value
 const SelectValue = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Value>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value> & {
-    children?: React.ReactNode;
-    placeholder?: React.ReactNode;
+    children?: React.ReactNode
+    placeholder?: React.ReactNode
   }
->(({
-  children,
-  placeholder,
-  ...props
-}, ref) => {
+>(({ children, placeholder, ...props }, ref) => {
   return (
     <RawSelectValue
       ref={ref}
       {...props}
-      // Radix expects a string here; coerce objects safely.
+      // Radix expects renderable text; coerce objects safely.
       placeholder={normalizeChildren(placeholder as any) as any}
     >
       {normalizeChildren(children)}
@@ -200,7 +197,7 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 export {
   Select,
   SelectGroup,
-  SelectValue,
+  SelectValue,          // our safe wrapper
   SelectTrigger,
   SelectContent,
   SelectLabel,
