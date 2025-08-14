@@ -1,198 +1,226 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { FileText, Image, Filter, Download } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { FileText, Package, Image, CheckCircle } from 'lucide-react'
+import { BrochureTemplate, GeneratedBrochure } from '../types'
 import { useBrochureStore } from '../store/useBrochureStore'
-import { BrochureTemplate } from '../types'
 import { mockInventory } from '@/mocks/inventoryMock'
 
 interface GenerateBrochureModalProps {
-  template?: BrochureTemplate | null
-  onClose: () => void
-  onSuccess: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  selectedTemplate?: BrochureTemplate | null
+  onSuccess: (brochure: GeneratedBrochure) => void
 }
 
-export function GenerateBrochureModal({ template, onClose, onSuccess }: GenerateBrochureModalProps) {
+export function GenerateBrochureModal({ 
+  open, 
+  onOpenChange, 
+  selectedTemplate, 
+  onSuccess 
+}: GenerateBrochureModalProps) {
   const { templates, generateBrochure } = useBrochureStore()
-  const [selectedTemplate, setSelectedTemplate] = useState<BrochureTemplate | null>(template || null)
-  const [selectedListings, setSelectedListings] = useState<string[]>([])
-  const [brochureTitle, setBrochureTitle] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState(1)
+  const [formData, setFormData] = useState({
+    name: '',
+    templateId: selectedTemplate?.id || '',
+    listingIds: [] as string[],
+    customizations: {}
+  })
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  // Get available listings based on template type
-  const availableListings = selectedTemplate 
-    ? mockInventory.sampleVehicles.filter(vehicle => 
-        selectedTemplate.listingType === 'both' || 
-        vehicle.listingType === selectedTemplate.listingType
-      )
-    : []
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setStep(1)
+      setFormData({
+        name: '',
+        templateId: selectedTemplate?.id || '',
+        listingIds: [],
+        customizations: {}
+      })
+    }
+  }, [open, selectedTemplate])
+
+  const selectedTemplateData = templates.find(t => t.id === formData.templateId)
+  
+  // Filter inventory based on template type
+  const availableListings = mockInventory.sampleVehicles.filter(vehicle => {
+    if (!selectedTemplateData) return true
+    if (selectedTemplateData.listingType === 'both') return true
+    return vehicle.listingType === selectedTemplateData.listingType
+  })
 
   const handleListingToggle = (listingId: string) => {
-    setSelectedListings(prev => 
-      prev.includes(listingId)
-        ? prev.filter(id => id !== listingId)
-        : [...prev, listingId]
-    )
-  }
-
-  const handleSelectAll = () => {
-    if (selectedListings.length === availableListings.length) {
-      setSelectedListings([])
-    } else {
-      setSelectedListings(availableListings.map(listing => listing.id))
-    }
+    setFormData(prev => ({
+      ...prev,
+      listingIds: prev.listingIds.includes(listingId)
+        ? prev.listingIds.filter(id => id !== listingId)
+        : [...prev.listingIds, listingId]
+    }))
   }
 
   const handleGenerate = async () => {
-    if (!selectedTemplate || selectedListings.length === 0) return
+    if (!formData.name || !formData.templateId || formData.listingIds.length === 0) {
+      return
+    }
 
-    setLoading(true)
+    setIsGenerating(true)
     try {
-      await generateBrochure({
-        templateId: selectedTemplate.id,
-        title: brochureTitle || `${selectedTemplate.name} - ${new Date().toLocaleDateString()}`,
-        listingIds: selectedListings
-      })
-      onSuccess()
+      const brochure = await generateBrochure(formData)
+      onSuccess(brochure)
     } catch (error) {
       console.error('Failed to generate brochure:', error)
     } finally {
-      setLoading(false)
+      setIsGenerating(false)
+    }
+  }
+
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return formData.name.trim() && formData.templateId
+      case 2:
+        return formData.listingIds.length > 0
+      case 3:
+        return true
+      default:
+        return false
     }
   }
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Generate Brochure</DialogTitle>
           <DialogDescription>
-            Select a template and listings to create a marketing brochure
+            Step {step} of 3: Create a new brochure from a template
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Template Selection */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="template">Template</Label>
-              <Select
-                value={selectedTemplate?.id || ''}
-                onValueChange={(value) => {
-                  const template = templates.find(t => t.id === value)
-                  setSelectedTemplate(template || null)
-                  setSelectedListings([]) // Reset selections when template changes
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedTemplate && (
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center space-x-4">
-                    <div 
-                      className="w-16 h-12 rounded border bg-cover bg-center"
-                      style={{ 
-                        backgroundImage: `url(${selectedTemplate.theme.preview})`,
-                        backgroundColor: selectedTemplate.theme.primaryColor 
-                      }}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">{selectedTemplate.name}</h4>
-                      <p className="text-sm text-muted-foreground">{selectedTemplate.description}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {selectedTemplate.theme.name}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedTemplate.blocks.length} blocks
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          {/* Progress Indicator */}
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3].map((stepNum) => (
+              <div key={stepNum} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  stepNum === step 
+                    ? 'bg-primary text-primary-foreground' 
+                    : stepNum < step 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {stepNum < step ? <CheckCircle className="h-4 w-4" /> : stepNum}
+                </div>
+                {stepNum < 3 && (
+                  <div className={`w-12 h-0.5 mx-2 ${
+                    stepNum < step ? 'bg-primary' : 'bg-muted'
+                  }`} />
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Brochure Title */}
-          <div>
-            <Label htmlFor="title">Brochure Title</Label>
-            <Input
-              id="title"
-              value={brochureTitle}
-              onChange={(e) => setBrochureTitle(e.target.value)}
-              placeholder={`${selectedTemplate?.name || 'Brochure'} - ${new Date().toLocaleDateString()}`}
-            />
-          </div>
-
-          {/* Listing Selection */}
-          {selectedTemplate && (
+          {/* Step 1: Basic Info & Template Selection */}
+          {step === 1 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Select Listings ({selectedListings.length} of {availableListings.length})</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
+              <div>
+                <Label htmlFor="brochureName">Brochure Name</Label>
+                <Input
+                  id="brochureName"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Spring 2024 RV Collection"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="template">Select Template</Label>
+                <Select
+                  value={formData.templateId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, templateId: value }))}
                 >
-                  {selectedListings.length === availableListings.length ? 'Deselect All' : 'Select All'}
-                </Button>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="grid gap-3 max-h-64 overflow-y-auto">
+              {selectedTemplateData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">{selectedTemplateData.name}</CardTitle>
+                    <CardDescription>{selectedTemplateData.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center space-x-4 text-sm">
+                      <Badge variant="outline">{selectedTemplateData.theme}</Badge>
+                      <Badge variant="secondary">
+                        {selectedTemplateData.listingType === 'rv' ? 'RV' : 
+                         selectedTemplateData.listingType === 'manufactured_home' ? 'Manufactured Homes' : 'Both'}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Listing Selection */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <Label>Select Listings to Include</Label>
+                <p className="text-sm text-muted-foreground">
+                  Choose which inventory items to feature in this brochure
+                </p>
+              </div>
+
+              <div className="grid gap-3 max-h-96 overflow-y-auto">
                 {availableListings.map((listing) => (
                   <Card 
                     key={listing.id}
                     className={`cursor-pointer transition-all ${
-                      selectedListings.includes(listing.id) 
+                      formData.listingIds.includes(listing.id) 
                         ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-accent/50'
+                        : 'hover:bg-accent'
                     }`}
                     onClick={() => handleListingToggle(listing.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-3">
                         <Checkbox
-                          checked={selectedListings.includes(listing.id)}
+                          checked={formData.listingIds.includes(listing.id)}
                           onChange={() => handleListingToggle(listing.id)}
                         />
-                        <img 
-                          src={listing.media?.primaryPhoto || 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=100&h=75'}
-                          alt={listing.searchResultsText}
-                          className="w-16 h-12 object-cover rounded border"
-                        />
                         <div className="flex-1">
-                          <h4 className="font-medium text-sm">
-                            {listing.year} {listing.make} {listing.model}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {listing.location?.city}, {listing.location?.state}
-                          </p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">
+                              {listing.year} {listing.make} {listing.model}
+                            </h4>
+                            <Badge variant="outline">
+                              {listing.listingType === 'rv' ? 'RV' : 'MH'}
                             </Badge>
-                            <span className="text-xs font-medium">
-                              ${(listing.salePrice || listing.rentPrice || 0).toLocaleString()}
-                            </span>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                            <span>${(listing.salePrice || listing.rentPrice || 0).toLocaleString()}</span>
+                            <span>{listing.location?.city}, {listing.location?.state}</span>
+                            {listing.bedrooms && <span>{listing.bedrooms}BR/{listing.bathrooms}BA</span>}
+                            {listing.sleeps && <span>Sleeps {listing.sleeps}</span>}
                           </div>
                         </div>
                       </div>
@@ -201,37 +229,81 @@ export function GenerateBrochureModal({ template, onClose, onSuccess }: Generate
                 ))}
               </div>
 
-              {availableListings.length === 0 && (
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                    <Image className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No listings available for this template type
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              <div className="text-sm text-muted-foreground">
+                Selected: {formData.listingIds.length} listing{formData.listingIds.length !== 1 ? 's' : ''}
+              </div>
             </div>
           )}
 
-          {/* Actions */}
+          {/* Step 3: Review & Generate */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div>
+                <Label>Review & Generate</Label>
+                <p className="text-sm text-muted-foreground">
+                  Review your selections and generate the brochure
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Brochure Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{formData.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Template:</span>
+                      <span className="font-medium">{selectedTemplateData?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Listings:</span>
+                      <span className="font-medium">{formData.listingIds.length} items</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Selected Listings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {formData.listingIds.map(listingId => {
+                        const listing = availableListings.find(l => l.id === listingId)
+                        return listing ? (
+                          <div key={listingId} className="flex items-center justify-between text-sm">
+                            <span>{listing.year} {listing.make} {listing.model}</span>
+                            <span className="text-muted-foreground">
+                              ${(listing.salePrice || listing.rentPrice || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ) : null
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
           <div className="flex justify-between pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            
-            <Button 
-              onClick={handleGenerate}
-              disabled={!selectedTemplate || selectedListings.length === 0 || loading}
+            <Button
+              variant="outline"
+              onClick={() => step > 1 ? setStep(step - 1) : onOpenChange(false)}
+              disabled={isGenerating}
             >
-              {loading ? (
-                <>Generating...</>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Generate Brochure
-                </>
-              )}
+              {step === 1 ? 'Cancel' : 'Back'}
+            </Button>
+            <Button
+              onClick={() => step < 3 ? setStep(step + 1) : handleGenerate()}
+              disabled={!isStepValid() || isGenerating}
+            >
+              {isGenerating ? 'Generating...' : step === 3 ? 'Generate Brochure' : 'Next'}
             </Button>
           </div>
         </div>

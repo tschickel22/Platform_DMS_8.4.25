@@ -1,302 +1,229 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { BrochureTemplate, GeneratedBrochure, BrochureTheme } from '../types'
-import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
-interface BrochureStore {
+interface BrochureState {
   templates: BrochureTemplate[]
-  generatedBrochures: GeneratedBrochure[]
+  brochures: GeneratedBrochure[]
   
-  // Template CRUD
+  // Template actions
   createTemplate: (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => Promise<BrochureTemplate>
   updateTemplate: (id: string, updates: Partial<BrochureTemplate>) => Promise<void>
   deleteTemplate: (id: string) => Promise<void>
-  duplicateTemplate: (id: string) => Promise<BrochureTemplate>
   
-  // Brochure generation
-  generateBrochure: (params: {
+  // Brochure actions
+  generateBrochure: (data: {
     templateId: string
-    title: string
+    name: string
     listingIds: string[]
+    customizations?: any
   }) => Promise<GeneratedBrochure>
-  
-  // Brochure CRUD
   deleteBrochure: (id: string) => Promise<void>
-  updateBrochureAnalytics: (id: string, analytics: Partial<GeneratedBrochure['analytics']>) => Promise<void>
+  shareBrochure: (id: string, method: 'email' | 'sms' | 'link', options: any) => Promise<void>
 }
 
-const STORAGE_KEY = 'renter-insight-brochures'
-
-// Mock initial data
-const initialTemplates: BrochureTemplate[] = [
+// Sample templates to start with
+const sampleTemplates: BrochureTemplate[] = [
   {
-    id: 'template-1',
+    id: 'template-rv-showcase',
     name: 'RV Showcase Brochure',
     description: 'Premium RV collection brochure template',
+    theme: 'modern',
     listingType: 'rv',
-    theme: {
-      id: 'modern',
-      name: 'Modern',
-      description: 'Clean, contemporary design',
+    layout: {
+      coverPage: true,
+      tableOfContents: false,
+      listingPages: true,
+      contactPage: true
+    },
+    design: {
       primaryColor: '#3b82f6',
       secondaryColor: '#64748b',
-      accentColor: '#f59e0b',
       fontFamily: 'Inter',
-      preview: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+      logoPosition: 'top-left'
     },
-    blocks: [
-      {
-        id: 'hero-1',
-        type: 'hero',
-        title: 'Premium RV Collection',
-        subtitle: 'Discover your next adventure',
-        backgroundImage: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=800',
-        order: 0
-      },
-      {
-        id: 'gallery-1',
-        type: 'gallery',
-        title: 'Featured RVs',
-        showPrices: true,
-        columns: 2,
-        order: 1
+    content: {
+      coverTitle: 'Premium RV Collection',
+      coverSubtitle: 'Discover Your Next Adventure',
+      companyDescription: 'Your trusted RV dealer with over 20 years of experience.',
+      contactInfo: {
+        phone: '(555) 123-4567',
+        email: 'sales@company.com',
+        website: 'www.company.com',
+        address: '123 RV Lane, City, State 12345'
       }
-    ],
-    status: 'active',
+    },
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z'
   },
   {
-    id: 'template-2',
+    id: 'template-mh-homes',
     name: 'Manufactured Homes',
     description: 'Manufactured homes catalog template',
+    theme: 'luxury',
     listingType: 'manufactured_home',
-    theme: {
-      id: 'family',
-      name: 'Family Friendly',
-      description: 'Warm, welcoming design',
-      primaryColor: '#dc2626',
-      secondaryColor: '#7c3aed',
-      accentColor: '#f97316',
-      fontFamily: 'Open Sans',
-      preview: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+    layout: {
+      coverPage: true,
+      tableOfContents: true,
+      listingPages: true,
+      contactPage: true
     },
-    blocks: [
-      {
-        id: 'hero-2',
-        type: 'hero',
-        title: 'Quality Manufactured Homes',
-        subtitle: 'Find your perfect home today',
-        backgroundImage: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
-        order: 0
-      },
-      {
-        id: 'gallery-2',
-        type: 'gallery',
-        title: 'Available Homes',
-        showPrices: true,
-        columns: 3,
-        order: 1
+    design: {
+      primaryColor: '#059669',
+      secondaryColor: '#374151',
+      fontFamily: 'Inter',
+      logoPosition: 'center'
+    },
+    content: {
+      coverTitle: 'Quality Manufactured Homes',
+      coverSubtitle: 'Find Your Perfect Home',
+      companyDescription: 'Building dreams with quality manufactured homes.',
+      contactInfo: {
+        phone: '(555) 987-6543',
+        email: 'homes@company.com',
+        website: 'www.company.com',
+        address: '456 Home Street, City, State 12345'
       }
-    ],
-    status: 'active',
-    createdAt: '2024-01-12T14:30:00Z',
-    updatedAt: '2024-01-12T14:30:00Z'
+    },
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
   }
 ]
 
-const initialBrochures: GeneratedBrochure[] = [
+// Sample generated brochures
+const sampleBrochures: GeneratedBrochure[] = [
   {
-    id: 'brochure-1',
-    templateId: 'template-1',
+    id: 'brochure-001',
+    name: 'Spring 2024 RV Collection',
+    templateId: 'template-rv-showcase',
     templateName: 'RV Showcase Brochure',
-    title: 'January 2024 RV Collection',
-    listingType: 'rv',
-    listingIds: ['rv001', 'rv002'],
-    listingCount: 2,
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    publicId: 'pub-brochure-1',
-    shareUrl: `${window.location.origin}/b/pub-brochure-1`,
+    listingIds: ['rv001', 'rv002', 'rv003'],
+    pdfUrl: '/mock/brochures/spring-2024-rv-collection.pdf',
+    shareUrl: 'https://company.com/brochures/spring-2024-rv',
     analytics: {
-      views: 45,
-      downloads: 12,
-      shares: 3,
-      lastViewed: '2024-01-20T15:30:00Z'
+      views: 245,
+      downloads: 67,
+      shares: 23,
+      lastViewed: '2024-01-25T14:30:00Z'
     },
-    createdAt: '2024-01-18T09:00:00Z',
-    updatedAt: '2024-01-20T15:30:00Z'
+    createdAt: '2024-01-20T09:00:00Z',
+    updatedAt: '2024-01-25T14:30:00Z'
   },
   {
-    id: 'brochure-2',
-    templateId: 'template-2',
+    id: 'brochure-002',
+    name: 'Luxury Manufactured Homes',
+    templateId: 'template-mh-homes',
     templateName: 'Manufactured Homes',
-    title: 'Winter 2024 Home Catalog',
-    listingType: 'manufactured_home',
-    listingIds: ['mh001', 'mh002'],
-    listingCount: 2,
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    publicId: 'pub-brochure-2',
-    shareUrl: `${window.location.origin}/b/pub-brochure-2`,
+    listingIds: ['mh001', 'mh002', 'mh004'],
+    pdfUrl: '/mock/brochures/luxury-manufactured-homes.pdf',
+    shareUrl: 'https://company.com/brochures/luxury-homes',
     analytics: {
-      views: 28,
-      downloads: 8,
-      shares: 1,
-      lastViewed: '2024-01-19T11:15:00Z'
+      views: 189,
+      downloads: 45,
+      shares: 12,
+      lastViewed: '2024-01-24T16:15:00Z'
     },
-    createdAt: '2024-01-16T11:30:00Z',
-    updatedAt: '2024-01-19T11:15:00Z'
+    createdAt: '2024-01-18T11:30:00Z',
+    updatedAt: '2024-01-24T16:15:00Z'
   }
 ]
 
-export const useBrochureStore = create<BrochureStore>((set, get) => {
-  // Load initial data from localStorage or use defaults
-  const savedData = loadFromLocalStorage(STORAGE_KEY, {
-    templates: initialTemplates,
-    generatedBrochures: initialBrochures
-  })
+export const useBrochureStore = create<BrochureState>()(
+  persist(
+    (set, get) => ({
+      templates: sampleTemplates,
+      brochures: sampleBrochures,
 
-  return {
-    templates: savedData.templates,
-    generatedBrochures: savedData.generatedBrochures,
-
-    createTemplate: async (templateData) => {
-      const newTemplate: BrochureTemplate = {
-        ...templateData,
-        id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      set(state => {
-        const newState = {
-          ...state,
-          templates: [newTemplate, ...state.templates]
+      createTemplate: async (templateData) => {
+        const newTemplate: BrochureTemplate = {
+          ...templateData,
+          id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
 
-      return newTemplate
-    },
+        set((state) => ({
+          templates: [newTemplate, ...state.templates]
+        }))
 
-    updateTemplate: async (id, updates) => {
-      set(state => {
-        const newState = {
-          ...state,
+        return newTemplate
+      },
+
+      updateTemplate: async (id, updates) => {
+        set((state) => ({
           templates: state.templates.map(template =>
             template.id === id
               ? { ...template, ...updates, updatedAt: new Date().toISOString() }
               : template
           )
-        }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
-    },
+        }))
+      },
 
-    deleteTemplate: async (id) => {
-      set(state => {
-        const newState = {
-          ...state,
+      deleteTemplate: async (id) => {
+        set((state) => ({
           templates: state.templates.filter(template => template.id !== id)
+        }))
+      },
+
+      generateBrochure: async (data) => {
+        const template = get().templates.find(t => t.id === data.templateId)
+        if (!template) {
+          throw new Error('Template not found')
         }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
-    },
 
-    duplicateTemplate: async (id) => {
-      const template = get().templates.find(t => t.id === id)
-      if (!template) throw new Error('Template not found')
-
-      const duplicatedTemplate: BrochureTemplate = {
-        ...template,
-        id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: `${template.name} (Copy)`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      set(state => {
-        const newState = {
-          ...state,
-          templates: [duplicatedTemplate, ...state.templates]
+        const newBrochure: GeneratedBrochure = {
+          id: `brochure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: data.name,
+          templateId: data.templateId,
+          templateName: template.name,
+          listingIds: data.listingIds,
+          pdfUrl: `/mock/brochures/${data.name.toLowerCase().replace(/\s+/g, '-')}.pdf`,
+          shareUrl: `https://company.com/brochures/${data.name.toLowerCase().replace(/\s+/g, '-')}`,
+          analytics: {
+            views: 0,
+            downloads: 0,
+            shares: 0,
+            lastViewed: null
+          },
+          customizations: data.customizations,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
 
-      return duplicatedTemplate
-    },
+        set((state) => ({
+          brochures: [newBrochure, ...state.brochures]
+        }))
 
-    generateBrochure: async ({ templateId, title, listingIds }) => {
-      const template = get().templates.find(t => t.id === templateId)
-      if (!template) throw new Error('Template not found')
+        return newBrochure
+      },
 
-      // Simulate PDF generation
-      const mockPdfUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
-      const publicId = `pub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      deleteBrochure: async (id) => {
+        set((state) => ({
+          brochures: state.brochures.filter(brochure => brochure.id !== id)
+        }))
+      },
 
-      const newBrochure: GeneratedBrochure = {
-        id: `brochure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        templateId,
-        templateName: template.name,
-        title,
-        listingType: template.listingType,
-        listingIds,
-        listingCount: listingIds.length,
-        pdfUrl: mockPdfUrl,
-        publicId,
-        shareUrl: `${window.location.origin}/b/${publicId}`,
-        analytics: {
-          views: 0,
-          downloads: 0,
-          shares: 0,
-          lastViewed: null
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      set(state => {
-        const newState = {
-          ...state,
-          generatedBrochures: [newBrochure, ...state.generatedBrochures]
-        }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
-
-      return newBrochure
-    },
-
-    deleteBrochure: async (id) => {
-      set(state => {
-        const newState = {
-          ...state,
-          generatedBrochures: state.generatedBrochures.filter(brochure => brochure.id !== id)
-        }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
-    },
-
-    updateBrochureAnalytics: async (id, analytics) => {
-      set(state => {
-        const newState = {
-          ...state,
-          generatedBrochures: state.generatedBrochures.map(brochure =>
+      shareBrochure: async (id, method, options) => {
+        // Update analytics when shared
+        set((state) => ({
+          brochures: state.brochures.map(brochure =>
             brochure.id === id
-              ? { 
-                  ...brochure, 
-                  analytics: { ...brochure.analytics, ...analytics },
+              ? {
+                  ...brochure,
+                  analytics: {
+                    ...brochure.analytics,
+                    shares: brochure.analytics.shares + 1
+                  },
                   updatedAt: new Date().toISOString()
                 }
               : brochure
           )
-        }
-        saveToLocalStorage(STORAGE_KEY, newState)
-        return newState
-      })
+        }))
+      }
+    }),
+    {
+      name: 'brochure-store',
+      version: 1
     }
-  }
-})
+  )
+)

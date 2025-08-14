@@ -7,136 +7,137 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Palette, Layout, Image } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Palette, FileText, Settings, Eye } from 'lucide-react'
+import { BrochureTemplate, BrochureTheme, ListingType } from '../types'
 import { useBrochureStore } from '../store/useBrochureStore'
-import { BrochureTemplate, BrochureTheme } from '../types'
 
 interface NewTemplateModalProps {
-  onClose: () => void
-  onSuccess: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: (template: BrochureTemplate) => void
 }
 
-const predefinedThemes: BrochureTheme[] = [
+const themes: Array<{ value: BrochureTheme; label: string; description: string; colors: { primary: string; secondary: string } }> = [
   {
-    id: 'modern',
-    name: 'Modern',
+    value: 'modern',
+    label: 'Modern',
     description: 'Clean, contemporary design with bold typography',
-    primaryColor: '#3b82f6',
-    secondaryColor: '#64748b',
-    accentColor: '#f59e0b',
-    fontFamily: 'Inter',
-    preview: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+    colors: { primary: '#3b82f6', secondary: '#64748b' }
   },
   {
-    id: 'luxury',
-    name: 'Luxury',
+    value: 'luxury',
+    label: 'Luxury',
     description: 'Elegant design with premium feel',
-    primaryColor: '#1f2937',
-    secondaryColor: '#d4af37',
-    accentColor: '#ffffff',
-    fontFamily: 'Playfair Display',
-    preview: 'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+    colors: { primary: '#059669', secondary: '#374151' }
   },
   {
-    id: 'outdoor',
-    name: 'Outdoor Adventure',
-    description: 'Nature-inspired design for RV and outdoor lifestyle',
-    primaryColor: '#059669',
-    secondaryColor: '#92400e',
-    accentColor: '#fbbf24',
-    fontFamily: 'Roboto',
-    preview: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+    value: 'outdoor',
+    label: 'Outdoor Adventure',
+    description: 'Nature-inspired design for outdoor enthusiasts',
+    colors: { primary: '#dc2626', secondary: '#92400e' }
   },
   {
-    id: 'family',
-    name: 'Family Friendly',
-    description: 'Warm, welcoming design for family homes',
-    primaryColor: '#dc2626',
-    secondaryColor: '#7c3aed',
-    accentColor: '#f97316',
-    fontFamily: 'Open Sans',
-    preview: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
+    value: 'family',
+    label: 'Family Friendly',
+    description: 'Warm, welcoming design for families',
+    colors: { primary: '#7c3aed', secondary: '#1f2937' }
   }
 ]
 
-export function NewTemplateModal({ onClose, onSuccess }: NewTemplateModalProps) {
+export function NewTemplateModal({ open, onOpenChange, onSuccess }: NewTemplateModalProps) {
   const { createTemplate } = useBrochureStore()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    listingType: 'both' as 'rv' | 'manufactured_home' | 'both',
-    selectedTheme: predefinedThemes[0]
+    theme: 'modern' as BrochureTheme,
+    listingType: 'both' as ListingType,
+    layout: {
+      coverPage: true,
+      tableOfContents: false,
+      listingPages: true,
+      contactPage: true
+    },
+    content: {
+      coverTitle: '',
+      coverSubtitle: '',
+      companyDescription: '',
+      contactInfo: {
+        phone: '',
+        email: '',
+        website: '',
+        address: ''
+      }
+    }
   })
-  const [loading, setLoading] = useState(false)
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1)
-  }
-
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1)
-  }
+  const selectedTheme = themes.find(t => t.value === formData.theme)
 
   const handleSubmit = async () => {
-    setLoading(true)
     try {
-      const template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'> = {
-        name: formData.name,
-        description: formData.description,
-        listingType: formData.listingType,
-        theme: formData.selectedTheme,
-        blocks: [
-          {
-            id: 'hero',
-            type: 'hero',
-            title: 'Welcome to {{company_name}}',
-            subtitle: 'Your trusted partner for quality homes and RVs',
-            backgroundImage: formData.selectedTheme.preview,
-            order: 0
-          },
-          {
-            id: 'gallery',
-            type: 'gallery',
-            title: 'Featured Properties',
-            showPrices: true,
-            columns: 2,
-            order: 1
-          },
-          {
-            id: 'cta',
-            type: 'cta',
-            title: 'Ready to Find Your Perfect Home?',
-            subtitle: 'Contact us today to schedule a viewing',
-            buttonText: 'Contact Us',
-            buttonUrl: '{{company_phone}}',
-            order: 2
-          }
-        ],
-        status: 'active'
-      }
-
-      await createTemplate(template)
-      onSuccess()
+      const template = await createTemplate({
+        ...formData,
+        design: {
+          primaryColor: selectedTheme?.colors.primary || '#3b82f6',
+          secondaryColor: selectedTheme?.colors.secondary || '#64748b',
+          fontFamily: 'Inter',
+          logoPosition: 'top-left'
+        }
+      })
+      onSuccess(template)
     } catch (error) {
       console.error('Failed to create template:', error)
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return formData.name.trim() && formData.description.trim()
+      case 2:
+        return true // Theme selection is always valid
+      case 3:
+        return formData.content.coverTitle.trim()
+      default:
+        return false
     }
   }
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Brochure Template</DialogTitle>
+          <DialogTitle>Create New Template</DialogTitle>
           <DialogDescription>
-            Step {step} of 3: {step === 1 ? 'Basic Information' : step === 2 ? 'Choose Theme' : 'Review & Create'}
+            Step {step} of 3: Create a new brochure template
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Step 1: Basic Information */}
+          {/* Progress Indicator */}
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3].map((stepNum) => (
+              <div key={stepNum} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  stepNum === step 
+                    ? 'bg-primary text-primary-foreground' 
+                    : stepNum < step 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {stepNum}
+                </div>
+                {stepNum < 3 && (
+                  <div className={`w-12 h-0.5 mx-2 ${
+                    stepNum < step ? 'bg-primary' : 'bg-muted'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step 1: Basic Info */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -148,7 +149,6 @@ export function NewTemplateModal({ onClose, onSuccess }: NewTemplateModalProps) 
                   placeholder="e.g., Premium RV Showcase"
                 />
               </div>
-
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -159,12 +159,11 @@ export function NewTemplateModal({ onClose, onSuccess }: NewTemplateModalProps) 
                   rows={3}
                 />
               </div>
-
               <div>
                 <Label htmlFor="listingType">Listing Type</Label>
                 <Select
                   value={formData.listingType}
-                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, listingType: value }))}
+                  onValueChange={(value: ListingType) => setFormData(prev => ({ ...prev, listingType: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select listing type" />
@@ -179,135 +178,137 @@ export function NewTemplateModal({ onClose, onSuccess }: NewTemplateModalProps) 
             </div>
           )}
 
-          {/* Step 2: Choose Theme */}
+          {/* Step 2: Theme Selection */}
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Choose a Theme</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a design theme that matches your brand
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {predefinedThemes.map((theme) => (
-                  <Card 
-                    key={theme.id}
-                    className={`cursor-pointer transition-all ${
-                      formData.selectedTheme.id === theme.id 
-                        ? 'ring-2 ring-primary shadow-md' 
-                        : 'hover:shadow-sm'
-                    }`}
-                    onClick={() => setFormData(prev => ({ ...prev, selectedTheme: theme }))}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{theme.name}</CardTitle>
-                        {formData.selectedTheme.id === theme.id && (
-                          <Badge variant="default">Selected</Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-xs">
-                        {theme.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <img 
-                          src={theme.preview} 
-                          alt={theme.name}
-                          className="w-full h-24 object-cover rounded-md"
-                        />
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-4 h-4 rounded-full border"
-                            style={{ backgroundColor: theme.primaryColor }}
-                          />
-                          <div 
-                            className="w-4 h-4 rounded-full border"
-                            style={{ backgroundColor: theme.secondaryColor }}
-                          />
-                          <div 
-                            className="w-4 h-4 rounded-full border"
-                            style={{ backgroundColor: theme.accentColor }}
-                          />
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {theme.fontFamily}
-                          </span>
+                <Label>Choose a Theme</Label>
+                <div className="grid gap-3 mt-2">
+                  {themes.map((theme) => (
+                    <Card 
+                      key={theme.value}
+                      className={`cursor-pointer transition-all ${
+                        formData.theme === theme.value 
+                          ? 'ring-2 ring-primary bg-primary/5' 
+                          : 'hover:bg-accent'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, theme: theme.value }))}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{theme.label}</CardTitle>
+                            <CardDescription className="text-sm">
+                              {theme.description}
+                            </CardDescription>
+                          </div>
+                          <div className="flex space-x-1">
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.primary }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.secondary }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 3: Review */}
+          {/* Step 3: Content Setup */}
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Review Template</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Review your template configuration before creating
-                </p>
+                <Label htmlFor="coverTitle">Cover Title</Label>
+                <Input
+                  id="coverTitle"
+                  value={formData.content.coverTitle}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    content: { ...prev.content, coverTitle: e.target.value }
+                  }))}
+                  placeholder="e.g., Premium RV Collection"
+                />
               </div>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label className="text-sm font-medium">Template Name</Label>
-                      <p className="text-sm text-muted-foreground">{formData.name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Listing Type</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {formData.listingType === 'both' ? 'RV & Manufactured Homes' : 
-                         formData.listingType === 'rv' ? 'RV Only' : 'Manufactured Homes Only'}
-                      </p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label className="text-sm font-medium">Description</Label>
-                      <p className="text-sm text-muted-foreground">{formData.description}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label className="text-sm font-medium">Selected Theme</Label>
-                      <div className="flex items-center space-x-3 mt-2">
-                        <img 
-                          src={formData.selectedTheme.preview} 
-                          alt={formData.selectedTheme.name}
-                          className="w-16 h-12 object-cover rounded border"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{formData.selectedTheme.name}</p>
-                          <p className="text-xs text-muted-foreground">{formData.selectedTheme.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div>
+                <Label htmlFor="coverSubtitle">Cover Subtitle</Label>
+                <Input
+                  id="coverSubtitle"
+                  value={formData.content.coverSubtitle}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    content: { ...prev.content, coverSubtitle: e.target.value }
+                  }))}
+                  placeholder="e.g., Discover Your Next Adventure"
+                />
+              </div>
+              <div>
+                <Label htmlFor="companyDescription">Company Description</Label>
+                <Textarea
+                  id="companyDescription"
+                  value={formData.content.companyDescription}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    content: { ...prev.content, companyDescription: e.target.value }
+                  }))}
+                  placeholder="Brief description of your company..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.content.contactInfo.phone}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      content: {
+                        ...prev.content,
+                        contactInfo: { ...prev.content.contactInfo, phone: e.target.value }
+                      }
+                    }))}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    value={formData.content.contactInfo.email}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      content: {
+                        ...prev.content,
+                        contactInfo: { ...prev.content.contactInfo, email: e.target.value }
+                      }
+                    }))}
+                    placeholder="sales@company.com"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Navigation */}
+          {/* Navigation Buttons */}
           <div className="flex justify-between pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={step === 1 ? onClose : handleBack}
+            <Button
+              variant="outline"
+              onClick={() => step > 1 ? setStep(step - 1) : onOpenChange(false)}
             >
               {step === 1 ? 'Cancel' : 'Back'}
             </Button>
-            
-            <Button 
-              onClick={step === 3 ? handleSubmit : handleNext}
-              disabled={
-                (step === 1 && (!formData.name || !formData.description)) ||
-                loading
-              }
+            <Button
+              onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()}
+              disabled={!isStepValid()}
             >
-              {loading ? 'Creating...' : step === 3 ? 'Create Template' : 'Next'}
+              {step === 3 ? 'Create Template' : 'Next'}
             </Button>
           </div>
         </div>
