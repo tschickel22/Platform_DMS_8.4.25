@@ -1,68 +1,72 @@
-export interface BrochureTemplate {
+export interface BrochureTheme {
   id: string
   name: string
   description: string
-  thumbnail?: string
-  blocks: BrochureBlock[]
-  theme: BrochureTheme
-  createdAt: string
-  updatedAt: string
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+  fontFamily: string
+  preview: string
 }
 
 export interface BrochureBlock {
   id: string
-  type: BlockType
-  content: any
-  style?: BlockStyle
+  type: 'hero' | 'gallery' | 'specs' | 'price' | 'features' | 'cta' | 'legal'
+  title?: string
+  subtitle?: string
+  content?: string
+  backgroundImage?: string
+  showPrices?: boolean
+  columns?: number
+  buttonText?: string
+  buttonUrl?: string
   order: number
+  settings?: Record<string, any>
 }
 
-export interface BrochureTheme {
+export interface BrochureTemplate {
   id: string
   name: string
-  colors: {
-    primary: string
-    secondary: string
-    accent: string
-    background: string
-    text: string
+  description: string
+  listingType: 'rv' | 'manufactured_home' | 'both'
+  theme: BrochureTheme
+  blocks: BrochureBlock[]
+  status: 'active' | 'draft' | 'archived'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface GeneratedBrochure {
+  id: string
+  templateId: string
+  templateName: string
+  title: string
+  listingType: 'rv' | 'manufactured_home' | 'both'
+  listingIds: string[]
+  listingCount: number
+  pdfUrl: string
+  publicId: string
+  shareUrl: string
+  analytics?: {
+    views: number
+    downloads: number
+    shares: number
+    lastViewed: string | null
   }
-  fonts: {
-    heading: string
-    body: string
-  }
-}
-
-export interface BlockStyle {
-  backgroundColor?: string
-  textColor?: string
-  padding?: string
-  margin?: string
-  borderRadius?: string
-  border?: string
-}
-
-export enum BlockType {
-  HERO = 'hero',
-  GALLERY = 'gallery',
-  SPECS = 'specs',
-  PRICE = 'price',
-  FEATURES = 'features',
-  CTA = 'cta',
-  LEGAL = 'legal'
-}
-
-export interface ShareOptions {
-  platform: 'email' | 'sms' | 'social' | 'qr' | 'link'
-  recipients?: string[]
-  message?: string
-  trackClicks?: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface BrochureAnalytics {
-  views: number
-  downloads: number
-  shares: number
-  clickThroughRate: number
-  topSources: Array<{ source: string; count: number }>
+  totalBrochures: number
+  totalViews: number
+  totalDownloads: number
+  totalShares: number
+  topPerforming: GeneratedBrochure[]
+  templateUsage: Array<{
+    templateId: string
+    templateName: string
+    usageCount: number
+    avgViews: number
+  }>
 }

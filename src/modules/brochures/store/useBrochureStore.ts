@@ -1,186 +1,302 @@
-import { useState, useEffect } from 'react'
-import { BrochureTemplate } from '../types'
+import { create } from 'zustand'
+import { BrochureTemplate, GeneratedBrochure, BrochureTheme } from '../types'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
-const STORAGE_KEY = 'renter-insight-brochure-templates'
+interface BrochureStore {
+  templates: BrochureTemplate[]
+  generatedBrochures: GeneratedBrochure[]
+  
+  // Template CRUD
+  createTemplate: (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => Promise<BrochureTemplate>
+  updateTemplate: (id: string, updates: Partial<BrochureTemplate>) => Promise<void>
+  deleteTemplate: (id: string) => Promise<void>
+  duplicateTemplate: (id: string) => Promise<BrochureTemplate>
+  
+  // Brochure generation
+  generateBrochure: (params: {
+    templateId: string
+    title: string
+    listingIds: string[]
+  }) => Promise<GeneratedBrochure>
+  
+  // Brochure CRUD
+  deleteBrochure: (id: string) => Promise<void>
+  updateBrochureAnalytics: (id: string, analytics: Partial<GeneratedBrochure['analytics']>) => Promise<void>
+}
 
-// Default templates
-const defaultTemplates: BrochureTemplate[] = [
+const STORAGE_KEY = 'renter-insight-brochures'
+
+// Mock initial data
+const initialTemplates: BrochureTemplate[] = [
   {
-    id: 'template-rv-showcase',
-    name: 'RV Showcase',
+    id: 'template-1',
+    name: 'RV Showcase Brochure',
     description: 'Premium RV collection brochure template',
-    type: 'rv',
-    layout: 'modern',
+    listingType: 'rv',
     theme: {
+      id: 'modern',
+      name: 'Modern',
+      description: 'Clean, contemporary design',
       primaryColor: '#3b82f6',
       secondaryColor: '#64748b',
+      accentColor: '#f59e0b',
       fontFamily: 'Inter',
-      backgroundColor: '#ffffff'
+      preview: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
     },
     blocks: [
       {
-        id: 'hero',
+        id: 'hero-1',
         type: 'hero',
-        title: '{{year}} {{make}} {{model}}',
-        subtitle: 'Premium RV Collection',
-        backgroundImage: '{{primaryPhoto}}',
-        showPrice: true
+        title: 'Premium RV Collection',
+        subtitle: 'Discover your next adventure',
+        backgroundImage: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=800',
+        order: 0
       },
       {
-        id: 'specs',
-        type: 'specs',
-        title: 'Specifications',
-        fields: ['year', 'make', 'model', 'sleeps', 'length', 'slides']
-      },
-      {
-        id: 'features',
-        type: 'features',
-        title: 'Features & Amenities',
-        showGrid: true
-      },
-      {
-        id: 'gallery',
+        id: 'gallery-1',
         type: 'gallery',
-        title: 'Photo Gallery',
-        layout: 'grid'
-      },
-      {
-        id: 'cta',
-        type: 'cta',
-        title: 'Contact Us Today',
-        buttonText: 'Get More Info',
-        showContact: true
+        title: 'Featured RVs',
+        showPrices: true,
+        columns: 2,
+        order: 1
       }
     ],
-    isDefault: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    status: 'active',
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
   },
   {
-    id: 'template-mh-catalog',
-    name: 'Manufactured Homes Catalog',
+    id: 'template-2',
+    name: 'Manufactured Homes',
     description: 'Manufactured homes catalog template',
-    type: 'manufactured_home',
-    layout: 'classic',
+    listingType: 'manufactured_home',
     theme: {
-      primaryColor: '#059669',
-      secondaryColor: '#6b7280',
-      fontFamily: 'Inter',
-      backgroundColor: '#ffffff'
+      id: 'family',
+      name: 'Family Friendly',
+      description: 'Warm, welcoming design',
+      primaryColor: '#dc2626',
+      secondaryColor: '#7c3aed',
+      accentColor: '#f97316',
+      fontFamily: 'Open Sans',
+      preview: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400&h=300'
     },
     blocks: [
       {
-        id: 'hero',
+        id: 'hero-2',
         type: 'hero',
-        title: '{{year}} {{make}} {{model}}',
-        subtitle: 'Quality Manufactured Homes',
-        backgroundImage: '{{primaryPhoto}}',
-        showPrice: true
+        title: 'Quality Manufactured Homes',
+        subtitle: 'Find your perfect home today',
+        backgroundImage: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
+        order: 0
       },
       {
-        id: 'specs',
-        type: 'specs',
-        title: 'Home Details',
-        fields: ['year', 'make', 'model', 'bedrooms', 'bathrooms', 'squareFootage']
-      },
-      {
-        id: 'features',
-        type: 'features',
-        title: 'Home Features',
-        showGrid: true
-      },
-      {
-        id: 'gallery',
+        id: 'gallery-2',
         type: 'gallery',
-        title: 'Photo Gallery',
-        layout: 'carousel'
-      },
-      {
-        id: 'cta',
-        type: 'cta',
-        title: 'Schedule a Viewing',
-        buttonText: 'Contact Us',
-        showContact: true
+        title: 'Available Homes',
+        showPrices: true,
+        columns: 3,
+        order: 1
       }
     ],
-    isDefault: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    status: 'active',
+    createdAt: '2024-01-12T14:30:00Z',
+    updatedAt: '2024-01-12T14:30:00Z'
   }
 ]
 
-export function useBrochureStore() {
-  const [templates, setTemplates] = useState<BrochureTemplate[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Load templates from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedTemplates = loadFromLocalStorage<BrochureTemplate[]>(STORAGE_KEY, [])
-      
-      if (savedTemplates.length === 0) {
-        // Initialize with default templates
-        setTemplates(defaultTemplates)
-        saveToLocalStorage(STORAGE_KEY, defaultTemplates)
-      } else {
-        setTemplates(savedTemplates)
-      }
-    } catch (error) {
-      console.error('Error loading brochure templates:', error)
-      setTemplates(defaultTemplates)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Save templates to localStorage whenever they change
-  useEffect(() => {
-    if (!loading && templates.length > 0) {
-      saveToLocalStorage(STORAGE_KEY, templates)
-    }
-  }, [templates, loading])
-
-  const addTemplate = (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newTemplate: BrochureTemplate = {
-      ...template,
-      id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    setTemplates(prev => [newTemplate, ...prev])
-    return newTemplate
+const initialBrochures: GeneratedBrochure[] = [
+  {
+    id: 'brochure-1',
+    templateId: 'template-1',
+    templateName: 'RV Showcase Brochure',
+    title: 'January 2024 RV Collection',
+    listingType: 'rv',
+    listingIds: ['rv001', 'rv002'],
+    listingCount: 2,
+    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    publicId: 'pub-brochure-1',
+    shareUrl: `${window.location.origin}/b/pub-brochure-1`,
+    analytics: {
+      views: 45,
+      downloads: 12,
+      shares: 3,
+      lastViewed: '2024-01-20T15:30:00Z'
+    },
+    createdAt: '2024-01-18T09:00:00Z',
+    updatedAt: '2024-01-20T15:30:00Z'
+  },
+  {
+    id: 'brochure-2',
+    templateId: 'template-2',
+    templateName: 'Manufactured Homes',
+    title: 'Winter 2024 Home Catalog',
+    listingType: 'manufactured_home',
+    listingIds: ['mh001', 'mh002'],
+    listingCount: 2,
+    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    publicId: 'pub-brochure-2',
+    shareUrl: `${window.location.origin}/b/pub-brochure-2`,
+    analytics: {
+      views: 28,
+      downloads: 8,
+      shares: 1,
+      lastViewed: '2024-01-19T11:15:00Z'
+    },
+    createdAt: '2024-01-16T11:30:00Z',
+    updatedAt: '2024-01-19T11:15:00Z'
   }
+]
 
-  const updateTemplate = (id: string, updates: Partial<BrochureTemplate>) => {
-    setTemplates(prev => prev.map(template => 
-      template.id === id 
-        ? { ...template, ...updates, updatedAt: new Date().toISOString() }
-        : template
-    ))
-  }
-
-  const deleteTemplate = (id: string) => {
-    setTemplates(prev => prev.filter(template => template.id !== id))
-  }
-
-  const getTemplate = (id: string) => {
-    return templates.find(template => template.id === id)
-  }
-
-  const getTemplatesByType = (type: 'rv' | 'manufactured_home' | 'all' = 'all') => {
-    if (type === 'all') return templates
-    return templates.filter(template => template.type === type)
-  }
+export const useBrochureStore = create<BrochureStore>((set, get) => {
+  // Load initial data from localStorage or use defaults
+  const savedData = loadFromLocalStorage(STORAGE_KEY, {
+    templates: initialTemplates,
+    generatedBrochures: initialBrochures
+  })
 
   return {
-    templates,
-    loading,
-    addTemplate,
-    updateTemplate,
-    deleteTemplate,
-    getTemplate,
-    getTemplatesByType
+    templates: savedData.templates,
+    generatedBrochures: savedData.generatedBrochures,
+
+    createTemplate: async (templateData) => {
+      const newTemplate: BrochureTemplate = {
+        ...templateData,
+        id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      set(state => {
+        const newState = {
+          ...state,
+          templates: [newTemplate, ...state.templates]
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+
+      return newTemplate
+    },
+
+    updateTemplate: async (id, updates) => {
+      set(state => {
+        const newState = {
+          ...state,
+          templates: state.templates.map(template =>
+            template.id === id
+              ? { ...template, ...updates, updatedAt: new Date().toISOString() }
+              : template
+          )
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+    },
+
+    deleteTemplate: async (id) => {
+      set(state => {
+        const newState = {
+          ...state,
+          templates: state.templates.filter(template => template.id !== id)
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+    },
+
+    duplicateTemplate: async (id) => {
+      const template = get().templates.find(t => t.id === id)
+      if (!template) throw new Error('Template not found')
+
+      const duplicatedTemplate: BrochureTemplate = {
+        ...template,
+        id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: `${template.name} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      set(state => {
+        const newState = {
+          ...state,
+          templates: [duplicatedTemplate, ...state.templates]
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+
+      return duplicatedTemplate
+    },
+
+    generateBrochure: async ({ templateId, title, listingIds }) => {
+      const template = get().templates.find(t => t.id === templateId)
+      if (!template) throw new Error('Template not found')
+
+      // Simulate PDF generation
+      const mockPdfUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+      const publicId = `pub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      const newBrochure: GeneratedBrochure = {
+        id: `brochure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        templateId,
+        templateName: template.name,
+        title,
+        listingType: template.listingType,
+        listingIds,
+        listingCount: listingIds.length,
+        pdfUrl: mockPdfUrl,
+        publicId,
+        shareUrl: `${window.location.origin}/b/${publicId}`,
+        analytics: {
+          views: 0,
+          downloads: 0,
+          shares: 0,
+          lastViewed: null
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      set(state => {
+        const newState = {
+          ...state,
+          generatedBrochures: [newBrochure, ...state.generatedBrochures]
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+
+      return newBrochure
+    },
+
+    deleteBrochure: async (id) => {
+      set(state => {
+        const newState = {
+          ...state,
+          generatedBrochures: state.generatedBrochures.filter(brochure => brochure.id !== id)
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+    },
+
+    updateBrochureAnalytics: async (id, analytics) => {
+      set(state => {
+        const newState = {
+          ...state,
+          generatedBrochures: state.generatedBrochures.map(brochure =>
+            brochure.id === id
+              ? { 
+                  ...brochure, 
+                  analytics: { ...brochure.analytics, ...analytics },
+                  updatedAt: new Date().toISOString()
+                }
+              : brochure
+          )
+        }
+        saveToLocalStorage(STORAGE_KEY, newState)
+        return newState
+      })
+    }
   }
-}
+})
