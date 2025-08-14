@@ -1,71 +1,53 @@
-export type BrochureTheme = 'modern' | 'luxury' | 'outdoor' | 'family'
-export type ListingType = 'rv' | 'manufactured_home' | 'both'
-
 export interface BrochureTemplate {
   id: string
   name: string
   description: string
-  theme: BrochureTheme
-  listingType: ListingType
-  layout: {
-    coverPage: boolean
-    tableOfContents: boolean
-    listingPages: boolean
-    contactPage: boolean
-  }
-  design: {
-    primaryColor: string
-    secondaryColor: string
-    fontFamily: string
-    logoPosition: 'top-left' | 'top-center' | 'top-right' | 'center'
-  }
-  content: {
-    coverTitle: string
-    coverSubtitle: string
-    companyDescription: string
-    contactInfo: {
-      phone: string
-      email: string
-      website: string
-      address: string
-    }
-  }
+  theme: string
+  blocks: BrochureBlock[]
   createdAt: string
   updatedAt: string
 }
 
-export interface GeneratedBrochure {
+export interface BrochureBlock {
+  id: string
+  type: 'hero' | 'gallery' | 'features' | 'specs' | 'price' | 'cta' | 'legal'
+  config: Record<string, any>
+}
+
+export interface BrochureTheme {
   id: string
   name: string
+  description: string
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+  fontFamily: string
+  headerFont: string
+  bodyFont: string
+}
+
+export interface GeneratedBrochure {
+  id: string
   templateId: string
   templateName: string
+  title: string
+  description?: string
   listingIds: string[]
-  pdfUrl: string
-  shareUrl: string
-  analytics: {
-    views: number
-    downloads: number
-    shares: number
-    lastViewed: string | null
-  }
-  customizations?: any
+  publicId: string
+  isPublic: boolean
+  downloadCount: number
+  shareCount: number
   createdAt: string
   updatedAt: string
 }
 
 export interface BrochureAnalytics {
-  totalViews: number
-  totalDownloads: number
-  totalShares: number
-  topPerformingBrochures: Array<{
-    id: string
-    name: string
-    views: number
-    downloads: number
-  }>
-  viewsByDate: Array<{
-    date: string
-    views: number
-    downloads: number
-  }>
+  brochureId: string
+  views: number
+  downloads: number
+  shares: number
+  clickThroughs: number
+  conversionRate: number
+  topReferrers: Array<{ domain: string; count: number }>
+  viewsByDate: Array<{ date: string; views: number }>
 }

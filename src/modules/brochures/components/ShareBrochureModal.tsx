@@ -3,289 +3,248 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
+  Copy, 
   Mail, 
   MessageSquare, 
-  Link2, 
   QrCode, 
-  Copy, 
+  Download, 
   ExternalLink,
-  Send,
-  CheckCircle
+  Check,
+  Share
 } from 'lucide-react'
 import { GeneratedBrochure } from '../types'
-import { useBrochureStore } from '../store/useBrochureStore'
-import { useToast } from '@/hooks/use-toast'
 import QRCode from 'react-qr-code'
 
 interface ShareBrochureModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  brochure: GeneratedBrochure | null
+  brochure: GeneratedBrochure
   onClose: () => void
 }
 
-export function ShareBrochureModal({ 
-  open, 
-  onOpenChange, 
-  brochure, 
-  onClose 
-}: ShareBrochureModalProps) {
-  const { shareBrochure } = useBrochureStore()
-  const { toast } = useToast()
-  const [emailData, setEmailData] = useState({
-    to: '',
-    subject: '',
-    message: ''
-  })
-  const [smsData, setSmsData] = useState({
-    to: '',
-    message: ''
-  })
-  const [isSending, setIsSending] = useState(false)
+export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProps) {
+  const [copied, setCopied] = useState(false)
+  const [emailRecipient, setEmailRecipient] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [smsRecipient, setSmsRecipient] = useState('')
+  const [smsMessage, setSmsMessage] = useState('')
 
-  if (!brochure) return null
-
-  const shareUrl = brochure.shareUrl
-  const qrCodeValue = shareUrl
+  const brochureUrl = `${window.location.origin}/b/${brochure.publicId}`
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl)
-      toast({
-        title: 'Link Copied',
-        description: 'Share link has been copied to clipboard.'
-      })
+      await navigator.clipboard.writeText(brochureUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (error) {
-      toast({
-        title: 'Copy Failed',
-        description: 'Failed to copy link to clipboard.',
-        variant: 'destructive'
-      })
+      console.error('Failed to copy link:', error)
     }
   }
 
-  const handleEmailShare = async () => {
-    if (!emailData.to || !emailData.subject) return
-
-    setIsSending(true)
-    try {
-      await shareBrochure(brochure.id, 'email', emailData)
-      toast({
-        title: 'Email Sent',
-        description: `Brochure shared via email to ${emailData.to}.`
-      })
-      setEmailData({ to: '', subject: '', message: '' })
-    } catch (error) {
-      toast({
-        title: 'Send Failed',
-        description: 'Failed to send email.',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsSending(false)
-    }
+  const handleEmailShare = () => {
+    const subject = `Check out this brochure: ${brochure.title}`
+    const body = `${emailMessage}\n\nView the brochure: ${brochureUrl}`
+    const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.open(mailtoUrl)
   }
 
-  const handleSmsShare = async () => {
-    if (!smsData.to || !smsData.message) return
+  const handleSmsShare = () => {
+    const message = `${smsMessage} ${brochureUrl}`
+    const smsUrl = `sms:${smsRecipient}?body=${encodeURIComponent(message)}`
+    window.open(smsUrl)
+  }
 
-    setIsSending(true)
-    try {
-      await shareBrochure(brochure.id, 'sms', smsData)
-      toast({
-        title: 'SMS Sent',
-        description: `Brochure shared via SMS to ${smsData.to}.`
-      })
-      setSmsData({ to: '', message: '' })
-    } catch (error) {
-      toast({
-        title: 'Send Failed',
-        description: 'Failed to send SMS.',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsSending(false)
-    }
+  const handleDownload = () => {
+    // In a real implementation, this would generate and download a PDF
+    console.log('Downloading brochure:', brochure.id)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Share Brochure</DialogTitle>
           <DialogDescription>
-            Share "{brochure.name}" with customers and prospects
+            Share "{brochure.title}" with customers and prospects
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="link" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="link">
-              <Link2 className="h-4 w-4 mr-2" />
-              Link
-            </TabsTrigger>
-            <TabsTrigger value="email">
-              <Mail className="h-4 w-4 mr-2" />
-              Email
-            </TabsTrigger>
-            <TabsTrigger value="sms">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              SMS
-            </TabsTrigger>
-            <TabsTrigger value="qr">
-              <QrCode className="h-4 w-4 mr-2" />
-              QR Code
-            </TabsTrigger>
+            <TabsTrigger value="link">Link</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+            <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="qr">QR Code</TabsTrigger>
           </TabsList>
 
-          {/* Link Sharing */}
           <TabsContent value="link" className="space-y-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label>Share Link</Label>
-                    <div className="flex space-x-2 mt-2">
-                      <Input value={shareUrl} readOnly />
-                      <Button onClick={handleCopyLink}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" asChild>
-                      <a href={shareUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Open Preview
-                      </a>
-                    </Button>
-                  </div>
+              <CardHeader>
+                <CardTitle className="text-lg">Share Link</CardTitle>
+                <CardDescription>
+                  Copy and share this direct link to your brochure
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Input value={brochureUrl} readOnly className="flex-1" />
+                  <Button onClick={handleCopyLink} variant="outline">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button onClick={() => window.open(brochureUrl, '_blank')} variant="outline">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button onClick={handleDownload} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Email Sharing */}
           <TabsContent value="email" className="space-y-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="emailTo">Recipient Email</Label>
-                    <Input
-                      id="emailTo"
-                      type="email"
-                      value={emailData.to}
-                      onChange={(e) => setEmailData(prev => ({ ...prev, to: e.target.value }))}
-                      placeholder="customer@example.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="emailSubject">Subject</Label>
-                    <Input
-                      id="emailSubject"
-                      value={emailData.subject}
-                      onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder={`Check out our ${brochure.name}`}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="emailMessage">Message (Optional)</Label>
-                    <Textarea
-                      id="emailMessage"
-                      value={emailData.message}
-                      onChange={(e) => setEmailData(prev => ({ ...prev, message: e.target.value }))}
-                      placeholder="Add a personal message..."
-                      rows={4}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleEmailShare}
-                    disabled={!emailData.to || !emailData.subject || isSending}
-                    className="w-full"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {isSending ? 'Sending...' : 'Send Email'}
-                  </Button>
+              <CardHeader>
+                <CardTitle className="text-lg">Email Sharing</CardTitle>
+                <CardDescription>
+                  Send this brochure via email
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="email-recipient">Recipient Email</Label>
+                  <Input
+                    id="email-recipient"
+                    type="email"
+                    value={emailRecipient}
+                    onChange={(e) => setEmailRecipient(e.target.value)}
+                    placeholder="customer@example.com"
+                  />
                 </div>
+                <div>
+                  <Label htmlFor="email-message">Message (Optional)</Label>
+                  <Input
+                    id="email-message"
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Hi! I thought you'd be interested in these properties..."
+                  />
+                </div>
+                <Button 
+                  onClick={handleEmailShare}
+                  disabled={!emailRecipient}
+                  className="w-full"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* SMS Sharing */}
           <TabsContent value="sms" className="space-y-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="smsTo">Phone Number</Label>
-                    <Input
-                      id="smsTo"
-                      type="tel"
-                      value={smsData.to}
-                      onChange={(e) => setSmsData(prev => ({ ...prev, to: e.target.value }))}
-                      placeholder="(555) 123-4567"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="smsMessage">Message</Label>
-                    <Textarea
-                      id="smsMessage"
-                      value={smsData.message}
-                      onChange={(e) => setSmsData(prev => ({ ...prev, message: e.target.value }))}
-                      placeholder={`Check out our ${brochure.name}: ${shareUrl}`}
-                      rows={4}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Character count: {smsData.message.length}/160
-                  </div>
-                  <Button 
-                    onClick={handleSmsShare}
-                    disabled={!smsData.to || !smsData.message || isSending}
-                    className="w-full"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {isSending ? 'Sending...' : 'Send SMS'}
-                  </Button>
+              <CardHeader>
+                <CardTitle className="text-lg">SMS Sharing</CardTitle>
+                <CardDescription>
+                  Send this brochure via text message
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="sms-recipient">Phone Number</Label>
+                  <Input
+                    id="sms-recipient"
+                    type="tel"
+                    value={smsRecipient}
+                    onChange={(e) => setSmsRecipient(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
                 </div>
+                <div>
+                  <Label htmlFor="sms-message">Message</Label>
+                  <Input
+                    id="sms-message"
+                    value={smsMessage}
+                    onChange={(e) => setSmsMessage(e.target.value)}
+                    placeholder="Check out our latest properties:"
+                  />
+                </div>
+                <Button 
+                  onClick={handleSmsShare}
+                  disabled={!smsRecipient}
+                  className="w-full"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Send SMS
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* QR Code */}
           <TabsContent value="qr" className="space-y-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="inline-block p-4 bg-white rounded-lg border">
-                      <QRCode value={qrCodeValue} size={200} />
-                    </div>
+              <CardHeader>
+                <CardTitle className="text-lg">QR Code</CardTitle>
+                <CardDescription>
+                  Generate a QR code for easy mobile access
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-center">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <QRCode value={brochureUrl} size={200} />
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Scan this QR code to view the brochure on mobile devices
-                    </p>
-                    <Button onClick={handleCopyLink}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Link
-                    </Button>
-                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Scan this QR code to view the brochure on mobile devices
+                  </p>
+                  <Button onClick={() => window.print()} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Print QR Code
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+        {/* Brochure Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Brochure Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Template:</span>
+                <span className="ml-2">{brochure.templateName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Properties:</span>
+                <span className="ml-2">{brochure.listingIds.length} listings</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Downloads:</span>
+                <span className="ml-2">{brochure.downloadCount}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Shares:</span>
+                <span className="ml-2">{brochure.shareCount}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button onClick={onClose} variant="outline">
             Close
           </Button>
         </div>

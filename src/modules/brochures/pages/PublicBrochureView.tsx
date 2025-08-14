@@ -1,54 +1,78 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { BrochureRenderer } from '../components/BrochureRenderer'
+import { useBrochureStore } from '../store/useBrochureStore'
+import { mockInventory } from '@/mocks/inventoryMock'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Download, Share2, FileText } from 'lucide-react'
-import { BrochureErrorBoundary } from '../common/ErrorBoundary'
+import { FileText } from 'lucide-react'
 
 export function PublicBrochureView() {
   const { publicId } = useParams<{ publicId: string }>()
+  const { brochures, templates, getBrochure, getTemplate } = useBrochureStore()
+  const [brochure, setBrochure] = useState<any>(null)
+  const [template, setTemplate] = useState<any>(null)
+  const [listings, setListings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!publicId) return
+
+    // Find brochure by public ID
+    const foundBrochure = brochures.find(b => b.publicId === publicId)
+    if (!foundBrochure) {
+      setLoading(false)
+      return
+    }
+
+    setBrochure(foundBrochure)
+
+    // Get template
+    const foundTemplate = getTemplate(foundBrochure.templateId)
+    if (foundTemplate) {
+      setTemplate(foundTemplate)
+    }
+
+    // Get listings data
+    const brochureListings = mockInventory.sampleVehicles.filter(vehicle =>
+      foundBrochure.listingIds.includes(vehicle.id)
+    )
+    setListings(brochureListings)
+
+    setLoading(false)
+  }, [publicId, brochures, getTemplate])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!brochure || !template) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Brochure Not Found</h3>
+            <p className="text-muted-foreground">
+              The brochure you're looking for doesn't exist or has been removed.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <BrochureErrorBoundary>
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <div className="border-b bg-card">
-          <div className="max-w-4xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <FileText className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-semibold">Property Brochure</h1>
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="max-w-4xl mx-auto p-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-medium mb-2">Brochure Loading</h3>
-                <p>Public brochure view for ID: {publicId}</p>
-                <p className="text-sm mt-2">Full brochure rendering coming soon</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </BrochureErrorBoundary>
+    <div className="min-h-screen bg-background">
+      <BrochureRenderer 
+        template={template}
+        brochure={brochure}
+        listings={listings}
+        preview={false}
+      />
+    </div>
   )
 }
-
-export default PublicBrochureView
