@@ -1,690 +1,324 @@
-/**
- * Brochure Builder - Zustand Store
- * 
- * This store manages all state for the Brochure Builder module using Zustand.
- * It provides actions for templates, brochures, branding, and UI state management.
- * All data is persisted to localStorage with automatic serialization/deserialization.
- * 
- * Store Features:
- * - Template CRUD operations with versioning
- * - Brochure generation and management
- * - Company branding integration
- * - Autosave functionality with debouncing
- * - Error handling and loading states
- * - Analytics event tracking
- * 
- * LocalStorage Keys:
- * - ri_brochure_templates: Template data
- * - ri_brochures: Generated brochure instances
- * - ri_branding: Company branding profile
- * - ri_brochure_analytics: Usage analytics
- * - ri_brochure_public_<id>: Public brochure data
- * 
- * State Management:
- * - Immutable updates using Zustand patterns
- * - Automatic persistence on state changes
- * - Debounced saves for performance
- * - Error boundaries for resilience
- * 
- * TODO: Implement all store actions
- * TODO: Add data validation and sanitization
- * TODO: Add migration utilities for version upgrades
- * TODO: Add offline support and sync capabilities
- * TODO: Add undo/redo functionality for editor
- */
-
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import type { 
-  BrochureStore, 
-  BrochureTemplate, 
-  Brochure, 
-  BrandingProfile,
-  BrochureBlock,
-  ThemeId
-} from '../types'
 
-// =============================================================================
-// PERSISTENCE UTILITIES
-// =============================================================================
+export interface BrochureTemplate {
+  id: string
+  name: string
+  description: string
+  blocks: BrochureBlock[]
+  theme: BrochureTheme
+  createdAt: string
+  updatedAt: string
+  isActive: boolean
+}
 
-/**
- * LocalStorage keys for data persistence
- */
-const STORAGE_KEYS = {
-  TEMPLATES: 'ri_brochure_templates',
-  BROCHURES: 'ri_brochures', 
-  BRANDING: 'ri_branding',
-  ANALYTICS: 'ri_brochure_analytics',
-  PUBLIC_PREFIX: 'ri_brochure_public_'
-} as const
+export interface BrochureBlock {
+  id: string
+  type: 'hero' | 'gallery' | 'specs' | 'price' | 'features' | 'cta' | 'legal'
+  content: Record<string, any>
+  order: number
+}
 
-/**
- * Safely parse JSON from localStorage
- */
-const safeParseJSON = <T>(key: string, defaultValue: T): T => {
+export interface BrochureTheme {
+  id: string
+  name: string
+  primaryColor: string
+  secondaryColor: string
+  fontFamily: string
+  layout: 'modern' | 'classic' | 'minimal'
+}
+
+export interface BrochureInstance {
+  id: string
+  templateId: string
+  listingId: string
+  customizations: Record<string, any>
+  publicId: string
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+interface BrochureStore {
+  templates: BrochureTemplate[]
+  instances: BrochureInstance[]
+  themes: BrochureTheme[]
+  
+  // Template actions
+  createTemplate: (template: Omit<BrochureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => BrochureTemplate
+  updateTemplate: (id: string, updates: Partial<BrochureTemplate>) => void
+  deleteTemplate: (id: string) => void
+  getTemplate: (id: string) => BrochureTemplate | undefined
+  
+  // Instance actions
+  createInstance: (instance: Omit<BrochureInstance, 'id' | 'publicId' | 'createdAt' | 'updatedAt'>) => BrochureInstance
+  updateInstance: (id: string, updates: Partial<BrochureInstance>) => void
+  deleteInstance: (id: string) => void
+  getInstance: (id: string) => BrochureInstance | undefined
+  getInstanceByPublicId: (publicId: string) => BrochureInstance | undefined
+  
+  // Block actions
+  addBlock: (templateId: string, block: Omit<BrochureBlock, 'id' | 'order'>) => void
+  updateBlock: (templateId: string, blockId: string, updates: Partial<BrochureBlock>) => void
+  deleteBlock: (templateId: string, blockId: string) => void
+  reorderBlocks: (templateId: string, blockIds: string[]) => void
+}
+
+const STORAGE_KEY = 'renter-insight-brochures'
+
+// Default themes
+const defaultThemes: BrochureTheme[] = [
+  {
+    id: 'modern',
+    name: 'Modern',
+    primaryColor: '#3b82f6',
+    secondaryColor: '#64748b',
+    fontFamily: 'Inter',
+    layout: 'modern'
+  },
+  {
+    id: 'classic',
+    name: 'Classic',
+    primaryColor: '#1f2937',
+    secondaryColor: '#6b7280',
+    fontFamily: 'Georgia',
+    layout: 'classic'
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    primaryColor: '#000000',
+    secondaryColor: '#9ca3af',
+    fontFamily: 'Helvetica',
+    layout: 'minimal'
+  }
+]
+
+// Load initial state from localStorage
+const loadState = (): Pick<BrochureStore, 'templates' | 'instances'> => {
   try {
-    const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      return JSON.parse(saved)
+    }
   } catch (error) {
-    console.warn(`Failed to parse localStorage key "${key}":`, error)
-    return defaultValue
+    console.warn('Failed to load brochure state from localStorage:', error)
+  }
+  
+  return {
+    templates: [],
+    instances: []
   }
 }
 
-/**
- * Safely stringify and save to localStorage
- */
-const safeSaveJSON = (key: string, data: any): boolean => {
+// Save state to localStorage
+const saveState = (state: Pick<BrochureStore, 'templates' | 'instances'>) => {
   try {
-    localStorage.setItem(key, JSON.stringify(data))
-    return true
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   } catch (error) {
-    console.error(`Failed to save to localStorage key "${key}":`, error)
-    return false
+    console.warn('Failed to save brochure state to localStorage:', error)
   }
 }
 
-// =============================================================================
-// DEFAULT DATA
-// =============================================================================
-
-/**
- * Default branding profile with neutral colors and placeholders
- */
-const DEFAULT_BRANDING: BrandingProfile = {
-  companyName: 'Your Company',
-  primaryColor: '#3B82F6', // Blue
-  secondaryColor: '#64748B', // Slate
-  accentColor: '#10B981', // Emerald
-  fontFamily: 'Inter, system-ui, sans-serif',
-  headingFont: 'Inter, system-ui, sans-serif',
-  logoUrl: undefined,
-  address: undefined,
-  phone: undefined,
-  email: undefined,
-  website: undefined,
-  disclaimer: 'All information subject to change without notice.',
-  copyright: `© ${new Date().getFullYear()} Your Company. All rights reserved.`
-}
-
-/**
- * Default block configurations for new blocks
- */
-const DEFAULT_BLOCKS: Record<string, Partial<BrochureBlock>> = {
-  hero: {
-    type: 'hero',
-    title: 'Your Headline Here',
-    subtitle: 'Add a compelling subtitle',
-    alignment: 'center',
-    height: 'medium',
-    visible: true
-  },
-  gallery: {
-    type: 'gallery',
-    images: [],
-    layout: 'grid',
-    columns: 3,
-    showCaptions: true,
-    visible: true
-  },
-  specs: {
-    type: 'specs',
-    title: 'Specifications',
-    specs: [
-      { label: 'Year', value: '{{inventory.year}}' },
-      { label: 'Make', value: '{{inventory.make}}' },
-      { label: 'Model', value: '{{inventory.model}}' }
-    ],
-    layout: 'table',
-    columns: 2,
-    visible: true
-  },
-  price: {
-    type: 'price',
-    amount: null,
-    currency: 'USD',
-    label: 'Price',
-    size: 'large',
-    alignment: 'center',
-    visible: true
-  },
-  features: {
-    type: 'features',
-    title: 'Key Features',
-    features: ['Feature 1', 'Feature 2', 'Feature 3'],
-    layout: 'list',
-    columns: 1,
-    visible: true
-  },
-  cta: {
-    type: 'cta',
-    headline: 'Ready to Learn More?',
-    buttonText: 'Contact Us',
-    style: 'primary',
-    size: 'large',
-    alignment: 'center',
-    visible: true
-  },
-  legal: {
-    type: 'legal',
-    text: 'All information is subject to change without notice. Please verify all details.',
-    fontSize: 'sm',
-    alignment: 'center',
-    visible: true
-  }
-}
-
-// =============================================================================
-// STORE IMPLEMENTATION
-// =============================================================================
-
-/**
- * Main brochure store using Zustand
- */
-export const useBrochureStore = create<BrochureStore>((set, get) => ({
-  // =============================================================================
-  // STATE
-  // =============================================================================
+export const useBrochureStore = create<BrochureStore>((set, get) => {
+  const initialState = loadState()
   
-  // Templates
-  templates: safeParseJSON(STORAGE_KEYS.TEMPLATES, []),
-  currentTemplate: null,
-  
-  // Brochures
-  brochures: safeParseJSON(STORAGE_KEYS.BROCHURES, []),
-  currentBrochure: null,
-  
-  // Branding
-  branding: { ...DEFAULT_BRANDING, ...safeParseJSON(STORAGE_KEYS.BRANDING, {}) },
-  
-  // UI state
-  selectedBlockId: null,
-  autosaveEnabled: true,
-  lastOpenedTemplateId: null,
-  
-  // Loading states
-  isLoading: false,
-  isSaving: false,
-  isExporting: false,
-  
-  // Error handling
-  error: null,
-
-  // =============================================================================
-  // TEMPLATE ACTIONS
-  // =============================================================================
-
-  /**
-   * Creates a new template with default values
-   * Returns the new template ID
-   */
-  createTemplate: (templateData = {}) => {
-    const id = uuidv4()
-    const now = new Date().toISOString()
-    const { branding } = get()
+  return {
+    templates: initialState.templates,
+    instances: initialState.instances,
+    themes: defaultThemes,
     
-    const newTemplate: BrochureTemplate = {
-      id,
-      name: templateData.name || 'Untitled Template',
-      description: templateData.description || '',
-      theme: templateData.theme || 'sleek',
-      blocks: templateData.blocks || [],
-      branding: { ...branding, ...templateData.branding },
-      createdAt: now,
-      updatedAt: now,
-      version: 1,
-      usageCount: 0,
-      isPublic: false,
-      tags: templateData.tags || [],
-      ...templateData
-    }
-    
-    set((state) => {
-      const updatedTemplates = [...state.templates, newTemplate]
-      safeSaveJSON(STORAGE_KEYS.TEMPLATES, updatedTemplates)
-      
-      return {
-        templates: updatedTemplates,
-        currentTemplate: newTemplate,
-        lastOpenedTemplateId: id,
-        error: null
-      }
-    })
-    
-    // TODO: Track analytics event
-    console.log('TODO: Track template_created event')
-    
-    return id
-  },
-
-  /**
-   * Updates an existing template with new data
-   * Automatically updates the updatedAt timestamp and increments version
-   */
-  updateTemplate: (id, updates) => {
-    set((state) => {
-      const templateIndex = state.templates.findIndex(t => t.id === id)
-      if (templateIndex === -1) {
-        console.warn(`Template with id "${id}" not found`)
-        return { error: 'Template not found' }
-      }
-      
-      const updatedTemplate = {
-        ...state.templates[templateIndex],
-        ...updates,
-        updatedAt: new Date().toISOString(),
-        version: state.templates[templateIndex].version + 1
-      }
-      
-      const updatedTemplates = [...state.templates]
-      updatedTemplates[templateIndex] = updatedTemplate
-      
-      safeSaveJSON(STORAGE_KEYS.TEMPLATES, updatedTemplates)
-      
-      return {
-        templates: updatedTemplates,
-        currentTemplate: state.currentTemplate?.id === id ? updatedTemplate : state.currentTemplate,
-        error: null
-      }
-    })
-    
-    // TODO: Implement debounced autosave
-    console.log('TODO: Implement debounced autosave for template updates')
-  },
-
-  /**
-   * Deletes a template and all associated brochures
-   */
-  deleteTemplate: (id) => {
-    set((state) => {
-      const updatedTemplates = state.templates.filter(t => t.id !== id)
-      const updatedBrochures = state.brochures.filter(b => b.templateId !== id)
-      
-      safeSaveJSON(STORAGE_KEYS.TEMPLATES, updatedTemplates)
-      safeSaveJSON(STORAGE_KEYS.BROCHURES, updatedBrochures)
-      
-      return {
-        templates: updatedTemplates,
-        brochures: updatedBrochures,
-        currentTemplate: state.currentTemplate?.id === id ? null : state.currentTemplate,
-        selectedBlockId: null,
-        error: null
-      }
-    })
-    
-    // TODO: Track analytics event
-    console.log('TODO: Track template_deleted event')
-  },
-
-  /**
-   * Duplicates an existing template with a new ID and " (Copy)" suffix
-   */
-  duplicateTemplate: (id) => {
-    const { templates, createTemplate } = get()
-    const originalTemplate = templates.find(t => t.id === id)
-    
-    if (!originalTemplate) {
-      set({ error: 'Template not found for duplication' })
-      return ''
-    }
-    
-    const duplicateData = {
-      ...originalTemplate,
-      name: `${originalTemplate.name} (Copy)`,
-      usageCount: 0,
-      lastUsedAt: undefined
-    }
-    
-    // Remove fields that should be regenerated
-    delete duplicateData.id
-    delete duplicateData.createdAt
-    delete duplicateData.updatedAt
-    
-    return createTemplate(duplicateData)
-  },
-
-  /**
-   * Retrieves a single template by ID
-   */
-  getTemplate: (id) => {
-    const { templates } = get()
-    return templates.find(t => t.id === id) || null
-  },
-
-  /**
-   * Returns all templates sorted by updatedAt descending
-   */
-  listTemplates: () => {
-    const { templates } = get()
-    return [...templates].sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
-  },
-
-  // =============================================================================
-  // BROCHURE ACTIONS
-  // =============================================================================
-
-  /**
-   * Creates a new brochure from a template
-   * Optionally includes source data and snapshot for token resolution
-   */
-  createBrochure: (templateId, options = {}) => {
-    const { templates } = get()
-    const template = templates.find(t => t.id === templateId)
-    
-    if (!template) {
-      set({ error: 'Template not found for brochure creation' })
-      return ''
-    }
-    
-    const id = uuidv4()
-    const publicId = options.publicId || `pub_${uuidv4().slice(0, 8)}`
-    const now = new Date().toISOString()
-    
-    const newBrochure: Brochure = {
-      id,
-      templateId,
-      source: options.source,
-      snapshot: options.snapshot,
-      publicId,
-      isPublic: options.isPublic !== false, // Default to public
-      createdAt: now,
-      viewCount: 0,
-      shareCount: 0,
-      downloadCount: 0,
-      ...options
-    }
-    
-    set((state) => {
-      const updatedBrochures = [...state.brochures, newBrochure]
-      safeSaveJSON(STORAGE_KEYS.BROCHURES, updatedBrochures)
-      
-      // Save public brochure data for public access
-      if (newBrochure.isPublic && publicId) {
-        const publicData = {
-          brochure: newBrochure,
-          template: template,
-          createdAt: now
-        }
-        safeSaveJSON(`${STORAGE_KEYS.PUBLIC_PREFIX}${publicId}`, publicData)
-      }
-      
-      // Update template usage count
-      const templateIndex = state.templates.findIndex(t => t.id === templateId)
-      if (templateIndex !== -1) {
-        const updatedTemplates = [...state.templates]
-        updatedTemplates[templateIndex] = {
-          ...updatedTemplates[templateIndex],
-          usageCount: (updatedTemplates[templateIndex].usageCount || 0) + 1,
-          lastUsedAt: now
-        }
-        safeSaveJSON(STORAGE_KEYS.TEMPLATES, updatedTemplates)
-        
-        return {
-          brochures: updatedBrochures,
-          templates: updatedTemplates,
-          currentBrochure: newBrochure,
-          error: null
-        }
-      }
-      
-      return {
-        brochures: updatedBrochures,
-        currentBrochure: newBrochure,
-        error: null
-      }
-    })
-    
-    // TODO: Track analytics event
-    console.log('TODO: Track brochure_created event')
-    
-    return id
-  },
-
-  /**
-   * Updates an existing brochure
-   */
-  updateBrochure: (id, updates) => {
-    set((state) => {
-      const brochureIndex = state.brochures.findIndex(b => b.id === id)
-      if (brochureIndex === -1) {
-        console.warn(`Brochure with id "${id}" not found`)
-        return { error: 'Brochure not found' }
-      }
-      
-      const updatedBrochure = {
-        ...state.brochures[brochureIndex],
-        ...updates,
+    createTemplate: (templateData) => {
+      const template: BrochureTemplate = {
+        ...templateData,
+        id: uuidv4(),
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
       
-      const updatedBrochures = [...state.brochures]
-      updatedBrochures[brochureIndex] = updatedBrochure
-      
-      safeSaveJSON(STORAGE_KEYS.BROCHURES, updatedBrochures)
-      
-      // Update public data if brochure is public
-      if (updatedBrochure.isPublic && updatedBrochure.publicId) {
-        const publicData = safeParseJSON(`${STORAGE_KEYS.PUBLIC_PREFIX}${updatedBrochure.publicId}`, null)
-        if (publicData) {
-          publicData.brochure = updatedBrochure
-          safeSaveJSON(`${STORAGE_KEYS.PUBLIC_PREFIX}${updatedBrochure.publicId}`, publicData)
+      set((state) => {
+        const newState = {
+          ...state,
+          templates: [template, ...state.templates]
         }
-      }
+        saveState(newState)
+        return newState
+      })
       
-      return {
-        brochures: updatedBrochures,
-        currentBrochure: state.currentBrochure?.id === id ? updatedBrochure : state.currentBrochure,
-        error: null
-      }
-    })
-  },
-
-  /**
-   * Deletes a brochure and its public data
-   */
-  deleteBrochure: (id) => {
-    set((state) => {
-      const brochure = state.brochures.find(b => b.id === id)
-      const updatedBrochures = state.brochures.filter(b => b.id !== id)
-      
-      safeSaveJSON(STORAGE_KEYS.BROCHURES, updatedBrochures)
-      
-      // Remove public data if exists
-      if (brochure?.publicId) {
-        localStorage.removeItem(`${STORAGE_KEYS.PUBLIC_PREFIX}${brochure.publicId}`)
-      }
-      
-      return {
-        brochures: updatedBrochures,
-        currentBrochure: state.currentBrochure?.id === id ? null : state.currentBrochure,
-        error: null
-      }
-    })
+      return template
+    },
     
-    // TODO: Track analytics event
-    console.log('TODO: Track brochure_deleted event')
-  },
-
-  /**
-   * Retrieves a single brochure by ID
-   */
-  getBrochure: (id) => {
-    const { brochures } = get()
-    return brochures.find(b => b.id === id) || null
-  },
-
-  /**
-   * Retrieves a brochure by its public ID
-   */
-  getBrochureByPublicId: (publicId) => {
-    const publicData = safeParseJSON(`${STORAGE_KEYS.PUBLIC_PREFIX}${publicId}`, null)
-    return publicData?.brochure || null
-  },
-
-  /**
-   * Returns all brochures sorted by creation date descending
-   */
-  listBrochures: () => {
-    const { brochures } = get()
-    return [...brochures].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-  },
-
-  // =============================================================================
-  // BRANDING ACTIONS
-  // =============================================================================
-
-  /**
-   * Updates the company branding profile
-   * Automatically applies to new templates unless overridden
-   */
-  setBranding: (brandingUpdates) => {
-    set((state) => {
-      const updatedBranding = { ...state.branding, ...brandingUpdates }
-      safeSaveJSON(STORAGE_KEYS.BRANDING, updatedBranding)
-      
-      return {
-        branding: updatedBranding,
-        error: null
+    updateTemplate: (id, updates) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          templates: state.templates.map(template =>
+            template.id === id
+              ? { ...template, ...updates, updatedAt: new Date().toISOString() }
+              : template
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    deleteTemplate: (id) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          templates: state.templates.filter(template => template.id !== id),
+          instances: state.instances.filter(instance => instance.templateId !== id)
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    getTemplate: (id) => {
+      return get().templates.find(template => template.id === id)
+    },
+    
+    createInstance: (instanceData) => {
+      const instance: BrochureInstance = {
+        ...instanceData,
+        id: uuidv4(),
+        publicId: `brochure_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
-    })
-  },
-
-  /**
-   * Returns the current branding profile
-   */
-  getBranding: () => {
-    const { branding } = get()
-    return branding
-  },
-
-  // =============================================================================
-  // UI ACTIONS
-  // =============================================================================
-
-  /**
-   * Sets the currently active template
-   */
-  setCurrentTemplate: (template) => {
-    set({
-      currentTemplate: template,
-      lastOpenedTemplateId: template?.id || null,
-      selectedBlockId: null,
-      error: null
-    })
-  },
-
-  /**
-   * Sets the currently active brochure
-   */
-  setCurrentBrochure: (brochure) => {
-    set({
-      currentBrochure: brochure,
-      error: null
-    })
-  },
-
-  /**
-   * Sets the currently selected block for editing
-   */
-  setSelectedBlock: (blockId) => {
-    set({ selectedBlockId: blockId })
-  },
-
-  /**
-   * Toggles autosave functionality
-   */
-  setAutosave: (enabled) => {
-    set({ autosaveEnabled: enabled })
-  },
-
-  // =============================================================================
-  // UTILITY ACTIONS
-  // =============================================================================
-
-  /**
-   * Clears any error state
-   */
-  clearError: () => {
-    set({ error: null })
-  },
-
-  /**
-   * Sets loading state
-   */
-  setLoading: (loading) => {
-    set({ isLoading: loading })
-  },
-
-  /**
-   * Sets saving state
-   */
-  setSaving: (saving) => {
-    set({ isSaving: saving })
-  },
-
-  /**
-   * Sets exporting state
-   */
-  setExporting: (exporting) => {
-    set({ isExporting: exporting })
+      
+      set((state) => {
+        const newState = {
+          ...state,
+          instances: [instance, ...state.instances]
+        }
+        saveState(newState)
+        return newState
+      })
+      
+      return instance
+    },
+    
+    updateInstance: (id, updates) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          instances: state.instances.map(instance =>
+            instance.id === id
+              ? { ...instance, ...updates, updatedAt: new Date().toISOString() }
+              : instance
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    deleteInstance: (id) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          instances: state.instances.filter(instance => instance.id !== id)
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    getInstance: (id) => {
+      return get().instances.find(instance => instance.id === id)
+    },
+    
+    getInstanceByPublicId: (publicId) => {
+      return get().instances.find(instance => instance.publicId === publicId)
+    },
+    
+    addBlock: (templateId, blockData) => {
+      set((state) => {
+        const template = state.templates.find(t => t.id === templateId)
+        if (!template) return state
+        
+        const newBlock: BrochureBlock = {
+          ...blockData,
+          id: uuidv4(),
+          order: template.blocks.length
+        }
+        
+        const newState = {
+          ...state,
+          templates: state.templates.map(t =>
+            t.id === templateId
+              ? { ...t, blocks: [...t.blocks, newBlock], updatedAt: new Date().toISOString() }
+              : t
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    updateBlock: (templateId, blockId, updates) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          templates: state.templates.map(template =>
+            template.id === templateId
+              ? {
+                  ...template,
+                  blocks: template.blocks.map(block =>
+                    block.id === blockId ? { ...block, ...updates } : block
+                  ),
+                  updatedAt: new Date().toISOString()
+                }
+              : template
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    deleteBlock: (templateId, blockId) => {
+      set((state) => {
+        const newState = {
+          ...state,
+          templates: state.templates.map(template =>
+            template.id === templateId
+              ? {
+                  ...template,
+                  blocks: template.blocks.filter(block => block.id !== blockId),
+                  updatedAt: new Date().toISOString()
+                }
+              : template
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    },
+    
+    reorderBlocks: (templateId, blockIds) => {
+      set((state) => {
+        const template = state.templates.find(t => t.id === templateId)
+        if (!template) return state
+        
+        const reorderedBlocks = blockIds.map((id, index) => {
+          const block = template.blocks.find(b => b.id === id)
+          return block ? { ...block, order: index } : null
+        }).filter(Boolean) as BrochureBlock[]
+        
+        const newState = {
+          ...state,
+          templates: state.templates.map(t =>
+            t.id === templateId
+              ? { ...t, blocks: reorderedBlocks, updatedAt: new Date().toISOString() }
+              : t
+          )
+        }
+        saveState(newState)
+        return newState
+      })
+    }
   }
-}))
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Creates a new block with default properties
- */
-export const createDefaultBlock = (type: string): BrochureBlock => {
-  const id = uuidv4()
-  const defaultProps = DEFAULT_BLOCKS[type] || { type, visible: true }
-  
-  return {
-    id,
-    order: 0,
-    ...defaultProps
-  } as BrochureBlock
-}
-
-/**
- * Applies branding to a template's blocks
- */
-export const applyBrandingToTemplate = (template: BrochureTemplate, branding: BrandingProfile): BrochureTemplate => {
-  // TODO: Implement branding application logic
-  console.log('TODO: Apply branding to template blocks')
-  return template
-}
-
-/**
- * Validates template data before saving
- */
-export const validateTemplate = (template: Partial<BrochureTemplate>): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = []
-  
-  if (!template.name || template.name.trim().length === 0) {
-    errors.push('Template name is required')
-  }
-  
-  if (!template.theme || !['sleek', 'card', 'poster'].includes(template.theme)) {
-    errors.push('Valid theme is required')
-  }
-  
-  if (!Array.isArray(template.blocks)) {
-    errors.push('Template must have a blocks array')
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  }
-}
-
-// Export store hook as default
-export default useBrochureStore
+})
