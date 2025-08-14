@@ -52,6 +52,8 @@ const ROUTES = {
 
   // ✅ Admin Property Listings dashboard (must exist in App.tsx)
   PROPERTY_LISTINGS_ADMIN: '/property/listings',
+  // ✅ Marketing: Brochures
+  BROCHURES: '/brochures',
 
   FINANCE: '/finance',
   AGREEMENTS: '/agreements',
@@ -125,7 +127,8 @@ export default function Layout({ children }: LayoutProps) {
       name: 'Marketing',
       icon: Globe,
       children: [
-        { name: 'Property Listings', path: ROUTES.PROPERTY_LISTINGS_ADMIN, icon: Home }
+        { name: 'Property Listings', path: ROUTES.PROPERTY_LISTINGS_ADMIN, icon: Home },
+        { name: 'Brochures', path: ROUTES.BROCHURES, icon: FileText }
       ]
     },
 
