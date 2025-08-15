@@ -318,11 +318,15 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
             </p>
             <p>Social platforms will show your brochure image, title, and description as a rich preview card.</p>
           </CardContent>
+            <p className="text-xs text-muted-foreground">
+              Share with preview image and description from your brochure content
+            </p>
         </Card>
 
         {/* Brochure Info */}
         <Card>
-          <CardHeader>
+                size="sm"
+                title="Share on Facebook with preview"
             <CardTitle className="text-lg">Brochure Details</CardTitle>
           </CardHeader>
           <CardContent>
@@ -330,7 +334,8 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
               <div>
                 <span className="text-muted-foreground">Template:</span>
                 <span className="ml-2">{brochure.templateName}</span>
-              </div>
+                size="sm"
+                title="Share on Twitter with preview"
               <div>
                 <span className="text-muted-foreground">Properties:</span>
                 <span className="ml-2">{brochure.listingIds.length} listings</span>
@@ -338,7 +343,8 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
               <div>
                 <span className="text-muted-foreground">Downloads:</span>
                 <span className="ml-2">{brochure.downloadCount}</span>
-              </div>
+                size="sm"
+                title="Share on LinkedIn with preview"
               <div>
                 <span className="text-muted-foreground">Shares:</span>
                 <span className="ml-2">{brochure.shareCount}</span>
