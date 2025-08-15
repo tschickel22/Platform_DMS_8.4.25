@@ -94,6 +94,26 @@ export default function InventoryManagement() {
 
   const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
     switch (key) {
+      case 'available':
+        setStatusFilter('available')
+        break
+      case 'reserved':
+        setStatusFilter('reserved')
+        break
+      case 'sold':
+        setStatusFilter('sold')
+        break
+      case 'all':
+        setStatusFilter('all')
+        break
+      case 'total':
+        setStatusFilter('all')
+        break
+      default:
+        setStatusFilter('all')
+    }
+  }
+
   const handleGenerateBrochure = (vehicles: any[]) => {
     setSelectedListings(vehicles)
     setShowBrochureModal(true)
