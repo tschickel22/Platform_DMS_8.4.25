@@ -293,17 +293,11 @@ export default function InventoryManagement() {
         {/* Brochure Modal — lazy mounted only after user clicks */}
         <ErrorBoundary>
           {userRequestedBrochure && (
+                )
+                }
             <Suspense fallback={null}>
               <GenerateBrochureModal
-                open={showBrochureModal as any}
-                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
-                onClose={handleCloseBrochureModal}
-                selectedItems={selectedListings as any}
-              />
-            </Suspense>
-          )}
-        </ErrorBoundary>
-      </TooltipProvider>
     </ErrorBoundary>
+  )
   )
 }
