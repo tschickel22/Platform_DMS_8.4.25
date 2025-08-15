@@ -124,12 +124,7 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
                       <DropdownMenuItem onClick={() => onEdit(vehicle)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleGenerateBrochure(vehicle)}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate Brochure
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
+                                          <DropdownMenuItem
                         onClick={() => onDelete(vehicle.id)}
                         className="text-destructive"
                       >
