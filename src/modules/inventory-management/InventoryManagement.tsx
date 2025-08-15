@@ -9,7 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
@@ -35,6 +35,8 @@ export default function InventoryManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState('all')
+  const [showBrochureModal, setShowBrochureModal] = useState(false)
+  const [selectedListings, setSelectedListings] = useState<any[]>([])
 
   const safeVehicles = Array.isArray(vehicles) ? vehicles : []
 
@@ -42,12 +44,11 @@ export default function InventoryManagement() {
   const filteredVehicles = safeVehicles.filter(v => {
     const q = searchTerm.toLowerCase()
     const make = v.make?.toLowerCase() || ''
-  const [showBrochureModal, setShowBrochureModal] = useState(false)
+    const model = v.model?.toLowerCase() || ''
     const vin = v.type === 'RV' ? (v as RVVehicle).vin?.toLowerCase() || '' : (v as MHVehicle).serialNumber?.toLowerCase() || ''
     const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
 
     const status = v.type === 'RV' ? (v as RVVehicle).availability : 'available'
-    console.log('Generating brochure for vehicle:', v)
     const matchesStatus = statusFilter === 'all' || status === statusFilter
 
     const matchesType = typeFilter === 'all' || v.type === typeFilter
@@ -95,13 +96,13 @@ export default function InventoryManagement() {
   const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
     switch (key) {
       case 'available':
-        setStatusFilter('available')
+        setStatusFilter('InStock')
         break
       case 'reserved':
-        setStatusFilter('reserved')
+        setStatusFilter('PreOrder')
         break
       case 'sold':
-        setStatusFilter('sold')
+        setStatusFilter('SoldOut')
         break
       case 'all':
         setStatusFilter('all')
@@ -115,15 +116,9 @@ export default function InventoryManagement() {
   }
 
   const handleGenerateBrochure = (vehicles: any[]) => {
+    console.log('Generating brochure for vehicle:', vehicles)
     setSelectedListings(vehicles)
     setShowBrochureModal(true)
-  }
-
-      case 'available': setStatusFilter('InStock'); break
-      case 'reserved': setStatusFilter('PreOrder'); break
-      case 'sold': setStatusFilter('SoldOut'); break
-      default: setStatusFilter('all')
-    }
   }
 
   return (
@@ -259,13 +254,6 @@ export default function InventoryManagement() {
                   <TabsTrigger value="mh">MH ({safeVehicles.filter(v => v.type === 'MH').length})</TabsTrigger>
                 </TabsList>
 
-                    <Button
-                      onClick={() => handleGenerateBrochure([vehicle])}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
                 <TabsContent value="all" className="mt-4">
                   <InventoryTable vehicles={filteredVehicles} onEdit={handleEdit} onView={handleView} onDelete={deleteVehicle} />
                 </TabsContent>
