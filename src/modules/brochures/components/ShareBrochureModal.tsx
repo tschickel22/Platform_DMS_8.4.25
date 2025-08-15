@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { Badge } from '@/components/ui/badge'
 import { 
   Copy, 
@@ -16,9 +14,9 @@ import {
   Twitter, 
   Linkedin,
   QrCode, 
+  Download, 
   ExternalLink,
-  Download,
-  Loader2,
+  Check,
   Share
 } from 'lucide-react'
 import { GeneratedBrochure } from '../types'
@@ -293,20 +291,10 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Downloads:</span>
                 <span className="ml-2">{brochure.downloadCount}</span>
               </div>
-              <Button 
-                onClick={handleDownloadPDF} 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
-                disabled={isDownloading}
-              >
-                {isDownloading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                {isDownloading ? 'Generating...' : 'Download PDF'}
-              </Button>
+              <div>
+                <span className="text-muted-foreground">Shares:</span>
+                <span className="ml-2">{brochure.shareCount}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
