@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Save, Plus, Edit, Trash2, Building, Tag, Mail } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { CustomField, CustomFieldType } from '@/types'
@@ -160,7 +161,8 @@ function CompanySettingsPage() {
                 value={timezone} 
                 onChange={(e) => setTimezone(e.target.value)}
                 className="mt-1 shadow-sm" 
-    { id: 'custom-fields', name: 'Custom Fields', icon: Settings }
+              />
+            </div>
             <div>
               <label className="text-sm font-medium text-foreground">Currency</label>
               <Input 
@@ -375,6 +377,13 @@ function CompanySettingsPage() {
         {activeTab === 'general' && renderGeneralSettings()}
         {activeTab === 'branding' && renderBrandingSettings()}
         {activeTab === 'labels' && renderLabelOverrides()}
+        {activeTab === 'notifications' && renderNotificationTemplates()}
+        {activeTab === 'integrations' && renderIntegrationSettings()}
+        {activeTab === 'users' && renderUsersSettings()}
+        {activeTab === 'custom-fields' && renderCustomFieldsSettings()}
+        {activeTab === 'warranty' && <WarrantySettings />}
+        {activeTab === 'listing-partners' && <ListingPartnersSettings />}
+      </div>
     </div>
   )
   
