@@ -311,18 +311,6 @@ export default function InventoryManagement() {
           </div>
         </InventoryErrorBoundary>
       </TooltipProvider>
-
-      {/* Generate Brochure Modal */}
-      {showBrochureModal && selectedVehicleForBrochure && (
-        <GenerateBrochureModal
-          isOpen={showBrochureModal}
-          onClose={() => {
-            setShowBrochureModal(false)
-            setSelectedVehicleForBrochure(null)
-          }}
-          vehicle={selectedVehicleForBrochure}
-        />
-      )}
     </ErrorBoundary>
   )
 }
