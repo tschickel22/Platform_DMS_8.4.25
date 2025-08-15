@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Save, Plus, Edit, Trash2, Building, Tag, Mail } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { CustomField, CustomFieldType } from '@/types'
@@ -17,6 +18,7 @@ import { NotificationTemplates } from './components/NotificationTemplates'
 import { IntegrationSettings } from './components/IntegrationSettings'
 import WarrantySettings from './components/WarrantySettings'
 import ListingPartnersSettings from './components/ListingPartnersSettings'
+import ListingPreviewsSettings from './components/ListingPreviewsSettings'
 
 function CompanySettingsPage() {
   const { tenant, getCustomFields, updateTenant, addCustomField, updateCustomField, deleteCustomField } = useTenant()
@@ -346,6 +348,7 @@ function CompanySettingsPage() {
             <h1 className="ri-page-title">Company Settings</h1>
             <p className="ri-page-description">
               Configure your dealership settings and preferences
+            </p>
           </div>
         </div>
       </div>
