@@ -19,7 +19,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ShareBrochureModal } from '../components/ShareBrochureModal'
 import { useBrochureStore } from '../store/useBrochureStore'
 import { GenerateBrochureModal } from '../components/GenerateBrochureModal'
-import { ShareBrochureModal } from '../components/ShareBrochureModal'
 import { NewTemplateModal } from '../components/NewTemplateModal'
 import { useNavigate } from 'react-router-dom'
 
