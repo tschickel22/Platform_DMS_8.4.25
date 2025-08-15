@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Eye, Edit, Trash2, FileText } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
-// ⚠️ Lazy-load so it cannot run “open on mount” behavior on first paint
+// ⚠️ Lazy-load so it cannot run "open on mount" behavior on first paint
 const GenerateBrochureModal = lazy(() => import('@/modules/brochures/components/GenerateBrochureModal'))
 
 interface InventoryTableProps {
@@ -124,13 +124,17 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
                       <DropdownMenuItem onClick={() => onEdit(vehicle)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
-                                          <DropdownMenuItem
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleGenerateBrochure(vehicle)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Brochure
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         onClick={() => onDelete(vehicle.id)}
                         className="text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
-                      </DropdownMenuItem>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -141,7 +145,14 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
         </Table>
       </div>
 
-  
+      {userRequestedBrochure && selectedVehicleForBrochure && (
+        <Suspense fallback={<div>Loading brochure generator...</div>}>
+          <GenerateBrochureModal
+            vehicle={selectedVehicleForBrochure}
+            onClose={() => {
+              setSelectedVehicleForBrochure(null)
+              setUserRequestedBrochure(false)
+            }}
           />
         </Suspense>
       )}
