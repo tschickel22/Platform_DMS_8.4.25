@@ -17,9 +17,8 @@ import { mockQuoteBuilder } from '@/mocks/quoteBuilderMock'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
+import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 
-// Import the QuoteBuilder component from CRM module
-import { QuoteBuilder as QuoteBuilderComponent } from '@/modules/crm-prospecting/components/QuoteBuilder'
 
 const mockQuotes: Quote[] = [
   {
@@ -207,6 +206,7 @@ function QuoteDetailModal({ quote, onClose, onEdit }: QuoteDetailModalProps) {
 function QuotesList() {
   const { toast } = useToast()
   const { createTask } = useTasks()
+  const { vehicles } = useInventoryManagement()
   const [quotes, setQuotes] = useState<Quote[]>(mockQuotes)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -435,9 +435,10 @@ function QuotesList() {
 
       {/* Quote Builder Modal */}
       {showQuoteBuilder && (
-        <QuoteBuilderComponent
+        <SimpleQuoteBuilder
           quote={editingQuote}
           customerId={selectedCustomerId}
+          vehicles={vehicles}
           onSave={handleSaveQuote}
           onCancel={() => {
             setShowQuoteBuilder(false)
