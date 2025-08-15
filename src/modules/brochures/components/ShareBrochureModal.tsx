@@ -292,7 +292,7 @@ export function ShareBrochureModal(props: ShareBrochureModalProps) {
                 <div className="space-y-1">
                   <p><strong>Title:</strong> {brochureTitle} ({brochureTitle.length} chars)</p>
                   <p><strong>Description:</strong> {previewDescription.substring(0, 50)}... ({previewDescription.length} chars)</p>
-                  <p><strong>Preview Image:</strong> {previewImage.includes('api/brochure-preview') ? \'Generated preview' : \'From brochure content'}</p>
+                  <p><strong>Preview Image:</strong> {previewImage.includes('api/brochure-preview') ? 'Generated preview' : 'From brochure content'}</p>
                 </div>
                 <p className="text-muted-foreground">Social platforms will show your brochure image, title, and description as a rich preview card.</p>
               </div>
