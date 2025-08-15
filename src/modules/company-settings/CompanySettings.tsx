@@ -17,7 +17,6 @@ import { NotificationTemplates } from './components/NotificationTemplates'
 import { IntegrationSettings } from './components/IntegrationSettings'
 import WarrantySettings from './components/WarrantySettings'
 import ListingPartnersSettings from './components/ListingPartnersSettings'
-import ListingPreviewsSettings from './components/ListingPreviewsSettings'
 
 function CompanySettingsPage() {
   const { tenant, getCustomFields, updateTenant, addCustomField, updateCustomField, deleteCustomField } = useTenant()
@@ -32,8 +31,6 @@ function CompanySettingsPage() {
   const [companyDomain, setCompanyDomain] = useState(tenant?.domain || '')
   const [timezone, setTimezone] = useState(tenant?.settings?.timezone || '')
   const [currency, setCurrency] = useState(tenant?.settings?.currency || '')
-
-  // Use tabs and modules from mock
   const tabs = [
     { id: 'general', name: 'General', icon: Building },
     { id: 'branding', name: 'Branding', icon: Palette },
@@ -163,8 +160,7 @@ function CompanySettingsPage() {
                 value={timezone} 
                 onChange={(e) => setTimezone(e.target.value)}
                 className="mt-1 shadow-sm" 
-              />
-            </div>
+    { id: 'custom-fields', name: 'Custom Fields', icon: Settings }
             <div>
               <label className="text-sm font-medium text-foreground">Currency</label>
               <Input 
@@ -379,14 +375,6 @@ function CompanySettingsPage() {
         {activeTab === 'general' && renderGeneralSettings()}
         {activeTab === 'branding' && renderBrandingSettings()}
         {activeTab === 'labels' && renderLabelOverrides()}
-        {activeTab === 'notifications' && renderNotificationTemplates()}
-        {activeTab === 'integrations' && renderIntegrationSettings()}
-        {activeTab === 'users' && renderUsersSettings()}
-        {activeTab === 'custom-fields' && renderCustomFieldsSettings()}
-        {activeTab === 'warranty' && <WarrantySettings />}
-        {activeTab === 'listing-partners' && <ListingPartnersSettings />}
-        {activeTab === 'listing-previews' && <ListingPreviewsSettings />}
-      </div>
     </div>
   )
   
