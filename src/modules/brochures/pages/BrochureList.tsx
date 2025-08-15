@@ -22,6 +22,9 @@ import { GenerateBrochureModal } from '../components/GenerateBrochureModal'
 import { ShareBrochureModal } from '../components/ShareBrochureModal'
 import { NewTemplateModal } from '../components/NewTemplateModal'
 import { useNavigate } from 'react-router-dom'
+
+export default function BrochuresPage() {
+  const navigate = useNavigate()
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const handleShare = (brochure: any) => {
     setSelectedBrochure(brochure)
@@ -284,6 +287,15 @@ import { useNavigate } from 'react-router-dom'
 
       {/* Modals */}
       {showGenerateModal && (
+        <GenerateBrochureModal
+          onClose={() => setShowGenerateModal(false)}
+          onSuccess={() => {
+            setShowGenerateModal(false)
+            // Refresh the list or show success message
+          }}
+        />
+      )}
+
       {/* Share Modal */}
       {selectedBrochure && (
         <ShareBrochureModal
@@ -293,14 +305,6 @@ import { useNavigate } from 'react-router-dom'
             setSelectedBrochure(null)
           }}
           brochure={selectedBrochure}
-        />
-      )}
-        <GenerateBrochureModal
-          onClose={() => setShowGenerateModal(false)}
-          onSuccess={() => {
-            setShowGenerateModal(false)
-            // Refresh the list or show success message
-          }}
         />
       )}
 
