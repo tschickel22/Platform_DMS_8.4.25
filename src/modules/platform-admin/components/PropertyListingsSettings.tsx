@@ -14,6 +14,7 @@ import { SyndicationPartnerForm } from '@/modules/property-listings/components/S
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 import { mockPlatformAdmin } from '@/mocks/platformAdminMock'
+import { mockPropertyListings } from '@/mocks/propertyListingsMock'
 
 export default function PropertyListingsSettings() {
   const { tenant, updateTenant } = useTenant()
@@ -24,6 +25,39 @@ export default function PropertyListingsSettings() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [leadReplyEmail, setLeadReplyEmail] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState('partners')
+  const [shareLinks, setShareLinks] = useState([
+    {
+      id: 'link-1',
+      name: 'Full Catalog Preview',
+      type: 'catalog',
+      url: 'https://previews.renterinsight.com/demo/l/9vmtz4yv',
+      clicks: 0,
+      unique: 0,
+      created: '8/15/2025',
+      lastAccess: '8/15/2025'
+    },
+    {
+      id: 'link-2', 
+      name: 'Featured RV Inventory',
+      type: 'selection',
+      url: 'https://previews.renterinsight.com/demo/l/abc123',
+      clicks: 45,
+      unique: 32,
+      created: '8/8/2025',
+      lastAccess: '8/15/2025'
+    },
+    {
+      id: 'link-3',
+      name: '2023 Forest River Cherokee',
+      type: 'single',
+      url: 'https://previews.renterinsight.com/demo/l/def456',
+      clicks: 12,
+      unique: 8,
+      created: '8/12/2025',
+      lastAccess: '8/15/2025'
+    }
+  ])
   const { toast } = useToast()
 
   // Get platform partners and lead reply email
@@ -252,6 +286,32 @@ export default function PropertyListingsSettings() {
     window.open(url, '_blank')
   }
 
+  const handleCreateTestLink = () => {
+    const newLink = {
+      id: `link-${Date.now()}`,
+      name: 'Test Link',
+      type: 'catalog',
+      url: `https://previews.renterinsight.com/demo/l/test${Date.now()}`,
+      clicks: 0,
+      unique: 0,
+      created: new Date().toLocaleDateString(),
+      lastAccess: new Date().toLocaleDateString()
+    }
+    setShareLinks(prev => [newLink, ...prev])
+    toast({
+      title: 'Success',
+      description: 'Test share link created'
+    })
+  }
+
+  const handleDeleteShareLink = (linkId: string) => {
+    setShareLinks(prev => prev.filter(link => link.id !== linkId))
+    toast({
+      title: 'Success',
+      description: 'Share link deleted'
+    })
+  }
+
   const openEditForm = (partner: SyndicationPartnerConfiguration) => {
     setEditingPartner(partner)
     setIsFormOpen(true)
@@ -279,6 +339,135 @@ export default function PropertyListingsSettings() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
+
+      {/* Share Links Tab */}
+      {activeTab === 'share-links' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Active Share Links</CardTitle>
+                <CardDescription>
+                  Manage listing share links and their analytics
+                </CardDescription>
+              </div>
+              <Button onClick={handleCreateTestLink}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Test Link
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {shareLinks.map((link) => (
+                <div key={link.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{link.name}</h4>
+                        <Badge variant="outline">{link.type}</Badge>
+                        {link.type === 'single' && (
+                          <Badge variant="default" className="bg-blue-100 text-blue-800">
+                            Watermarked
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div>Created: {link.created} | Clicks: {link.clicks} | Unique: {link.unique} | Last: {link.lastAccess}</div>
+                        <div className="font-mono text-xs bg-muted p-2 rounded break-all">
+                          {link.url}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(link.url, link.id)}
+                      >
+                        {copiedUrl === link.id ? (
+                          <CheckCircle className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openTestFeed(link.url)}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Share Link</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{link.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteShareLink(link.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Global Settings Tab */}
+      {activeTab === 'global-settings' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Feed Settings</CardTitle>
+            <CardDescription>
+              Global configuration for syndication feeds
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Default Cache Duration</Label>
+              <Input
+                type="number"
+                defaultValue="3600"
+                placeholder="Seconds"
+              />
+              <p className="text-sm text-muted-foreground">
+                How long feeds should be cached (in seconds)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Feed Rate Limit</Label>
+              <Input
+                type="number"
+                defaultValue="100"
+                placeholder="Requests per hour"
+              />
+              <p className="text-sm text-muted-foreground">
+                Maximum requests per hour per partner
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     )
   }
 
@@ -312,12 +501,51 @@ export default function PropertyListingsSettings() {
               availablePlatformPartners={platformPartners}
               globalLeadReplyEmail={leadReplyEmail}
               onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-              onCancel={closeForm}
+        <h3 className="text-lg font-medium">Platform Syndication Settings</h3>
             />
-          </DialogContent>
+          Manage syndication partners, share links, and export feeds
         </Dialog>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('partners')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'partners'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Partners
+          </button>
+          <button
+            onClick={() => setActiveTab('share-links')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'share-links'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Share Links
+          </button>
+          <button
+            onClick={() => setActiveTab('global-settings')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'global-settings'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Global Settings
+          </button>
+        </nav>
+      </div>
+
+      {/* Partners Tab */}
+      {activeTab === 'partners' && (
+        <>
       <Tabs defaultValue="partners" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="partners" className="flex items-center gap-2">

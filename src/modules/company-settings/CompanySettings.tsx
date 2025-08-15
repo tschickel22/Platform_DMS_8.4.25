@@ -17,7 +17,6 @@ import { NotificationTemplates } from './components/NotificationTemplates'
 import { IntegrationSettings } from './components/IntegrationSettings'
 import WarrantySettings from './components/WarrantySettings'
 import ListingPartnersSettings from './components/ListingPartnersSettings'
-import ListingPreviewsSettings from './components/ListingPreviewsSettings'
 
 function CompanySettingsPage() {
   const { tenant, getCustomFields, updateTenant, addCustomField, updateCustomField, deleteCustomField } = useTenant()
@@ -41,7 +40,6 @@ function CompanySettingsPage() {
     { id: 'notifications', name: 'Notifications', icon: Mail },
     { id: 'integrations', name: 'Integrations', icon: Globe },
     { id: 'users', name: 'Users', icon: Users },
-    { id: 'custom-fields', name: 'Custom Fields', icon: Settings },
     { id: 'warranty', name: 'Warranty', icon: Settings },
     { id: 'listing-partners', name: 'Listing Partners', icon: Globe },
     { id: 'listing-previews', name: 'Listing Previews', icon: Settings },
@@ -348,7 +346,6 @@ function CompanySettingsPage() {
             <h1 className="ri-page-title">Company Settings</h1>
             <p className="ri-page-description">
               Configure your dealership settings and preferences
-            </p>
           </div>
         </div>
       </div>
