@@ -60,16 +60,25 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
   }
 
   const handleSocialShare = (platform: string) => {
-    const text = encodeURIComponent(`Check out this brochure: ${brochure.title}`)
-    const url = encodeURIComponent(brochureUrl)
+    const text = `Check out this property brochure: ${brochure.title}`
+    const url = brochureUrl
     
-    const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
+    let shareUrl = ''
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+        break
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        break
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+        break
     }
     
-    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400')
+    }
   }
 
   const handleDownload = () => {
@@ -119,6 +128,37 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                     <Download className="h-4 w-4 mr-2" />
                     Download PDF
                   </Button>
+                </div>
+
+                {/* Social Media */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium">Social Media</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button 
+                      onClick={() => handleSocialShare('facebook')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Facebook className="h-4 w-4 mr-1" />
+                      Facebook
+                    </Button>
+                    <Button 
+                      onClick={() => handleSocialShare('twitter')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Twitter className="h-4 w-4 mr-1" />
+                      Twitter
+                    </Button>
+                    <Button 
+                      onClick={() => handleSocialShare('linkedin')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Linkedin className="h-4 w-4 mr-1" />
+                      LinkedIn
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
