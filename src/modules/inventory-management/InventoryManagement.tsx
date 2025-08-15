@@ -295,6 +295,15 @@ export default function InventoryManagement() {
           {userRequestedBrochure && (
             <Suspense fallback={null}>
               <GenerateBrochureModal
+                open={showBrochureModal as any}
+                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
+                onClose={handleCloseBrochureModal}
+                selectedItems={selectedListings as any}
+              />
+            </Suspense>
+          )}
+        </ErrorBoundary>
+      </TooltipProvider>
     </ErrorBoundary>
   )
 }
