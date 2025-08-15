@@ -16,7 +16,6 @@ import {
   Twitter, 
   Linkedin,
   QrCode, 
-  Download, 
   ExternalLink,
   Download,
   Loader2
