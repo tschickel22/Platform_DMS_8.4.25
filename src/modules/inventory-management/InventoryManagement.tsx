@@ -1,467 +1,309 @@
-import React, { useState, useEffect } from 'react'
+// src/modules/inventory-management/InventoryManagement.tsx
+import React, { useState, lazy, Suspense } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Package, 
-  Search, 
-  Plus, 
-  Filter, 
-  Download, 
-  Upload,
-  BarChart3,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Eye,
-  Edit,
-  Trash2,
-  ExternalLink
-} from 'lucide-react'
-import { useInventoryManagement } from './hooks/useInventoryManagement'
-import { VehicleDetail } from './components/VehicleDetail'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
-import { CSVSmartImport } from './components/CSVSmartImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
-import { ListingHandoffModal } from './components/ListingHandoffModal'
-import { RVInventoryForm } from './forms/RVInventoryForm'
-import { MHInventoryForm } from './forms/MHInventoryForm'
+import VehicleDetail from './components/VehicleDetail'
+import CSVSmartImport from './components/CSVSmartImport'
+import RVInventoryForm from './forms/RVInventoryForm'
+import MHInventoryForm from './forms/MHInventoryForm'
+import { InventoryErrorBoundary } from './components/InventoryErrorBoundary'
+import { useInventoryManagement } from './hooks/useInventoryManagement'
+import { Vehicle, RVVehicle, MHVehicle } from './state/types'
+
+// 🚫 Do NOT import the modal eagerly; it may auto-open on mount.
+// @ts-ignore - path is correct at runtime
+const GenerateBrochureModal = lazy(() => import('@/modules/brochures/components/GenerateBrochureModal'))
 
 export default function InventoryManagement() {
-  const {
-    vehicles,
-    loading,
-    error,
-    searchTerm,
-    setSearchTerm,
-    statusFilter,
-    setStatusFilter,
-    typeFilter,
-    setTypeFilter,
-    selectedVehicle,
-    setSelectedVehicle,
-    createVehicle,
-    updateVehicle,
-    deleteVehicle,
-    refreshInventory
-  } = useInventoryManagement()
+  const { vehicles, addVehicle, updateVehicle, deleteVehicle, importVehicles } = useInventoryManagement()
 
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [showImportModal, setShowImportModal] = useState(false)
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
-  const [showListingHandoff, setShowListingHandoff] = useState(false)
-  const [addFormType, setAddFormType] = useState<'rv' | 'manufactured_home'>('rv')
-  const [activeTab, setActiveTab] = useState('overview')
+  // UI state
+  const [showAddRVModal, setShowAddRVModal] = useState(false)
+  const [showAddMHModal, setShowAddMHModal] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
+  const [selectedItem, setSelectedItem] = useState<Vehicle | null>(null)
 
-  // Calculate stats
-  const stats = {
-    total: vehicles.length,
-    available: vehicles.filter(v => v.status === 'available').length,
-    sold: vehicles.filter(v => v.status === 'sold').length,
-    service: vehicles.filter(v => v.status === 'service').length,
-    totalValue: vehicles.reduce((sum, v) => sum + (v.salePrice || v.rentPrice || 0), 0)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [activeTab, setActiveTab] = useState('all')
+
+  // Brochure modal (lazy-mounted, fully controlled)
+  const [showBrochureModal, setShowBrochureModal] = useState(false)
+  const [userRequestedBrochure, setUserRequestedBrochure] = useState(false)   // <- hard gate
+  const [selectedListings, setSelectedListings] = useState<any[]>([])
+
+  const safeVehicles = Array.isArray(vehicles) ? vehicles : []
+
+  // filter
+  const filteredVehicles = safeVehicles.filter(v => {
+    const q = searchTerm.toLowerCase()
+    const make = v.make?.toLowerCase() || ''
+    const model = v.model?.toLowerCase() || ''
+    const vin = v.type === 'RV' ? (v as RVVehicle).vin?.toLowerCase() || '' : (v as MHVehicle).serialNumber?.toLowerCase() || ''
+    const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
+
+    const status = v.type === 'RV' ? (v as RVVehicle).availability : 'available'
+    const matchesStatus = statusFilter === 'all' || status === statusFilter
+
+    const matchesType = typeFilter === 'all' || v.type === typeFilter
+    const matchesTab = activeTab === 'all' || (activeTab === 'rv' && v.type === 'RV') || (activeTab === 'mh' && v.type === 'MH')
+    return matchesSearch && matchesStatus && matchesType && matchesTab
+  })
+
+  // stats
+  const totalUnits = safeVehicles.length
+  const availableUnits = safeVehicles.filter(v => v.type !== 'RV' || (v as RVVehicle).availability === 'InStock').length
+  const reservedUnits  = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'PreOrder').length
+  const soldUnits      = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'SoldOut').length
+  const totalValue = safeVehicles.reduce((s, v) => s + (v.type === 'RV' ? (v as RVVehicle).price || 0 : (v as MHVehicle).askingPrice || 0), 0)
+
+  // header buttons
+  const handleAddRV = () => { setEditingItem(null); setShowAddRVModal(true) }
+  const handleAddMH = () => { setEditingItem(null); setShowAddMHModal(true) }
+
+  // table actions -> open modals (no inline forms)
+  const handleEdit = (vehicle: Vehicle) => {
+    setEditingItem(vehicle)
+    vehicle.type === 'RV' ? setShowAddRVModal(true) : setShowAddMHModal(true)
+  }
+  const handleView = (vehicle: Vehicle) => setSelectedItem(vehicle)
+
+  // save from modal forms
+  const handleSaveRV = (rv: RVVehicle) => {
+    editingItem ? updateVehicle(rv) : addVehicle(rv)
+    setEditingItem(null)
+    setShowAddRVModal(false)
+  }
+  const handleSaveMH = (mh: MHVehicle) => {
+    editingItem ? updateVehicle(mh) : addVehicle(mh)
+    setEditingItem(null)
+    setShowAddMHModal(false)
   }
 
-  const handleAddVehicle = (type: 'rv' | 'manufactured_home') => {
-    setAddFormType(type)
-    setShowAddForm(true)
+  const handleImportComplete = (imported: Vehicle[]) => { importVehicles(imported); setShowImport(false) }
+  const handleScanComplete = () => setShowScanner(false)
+
+  const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
+    switch (key) {
+      case 'available': setStatusFilter('InStock'); break
+      case 'reserved':  setStatusFilter('PreOrder'); break
+      case 'sold':      setStatusFilter('SoldOut'); break
+      case 'all':
+      case 'total':
+      default:          setStatusFilter('all')
+    }
   }
 
-  const handleVehicleCreated = (vehicle: any) => {
-    createVehicle(vehicle)
-    setShowAddForm(false)
+  const handleGenerateBrochure = (vehiclesList: any[]) => {
+    setSelectedListings(vehiclesList)
+    setUserRequestedBrochure(true)     // ✅ allow mounting from this point on
+    setShowBrochureModal(true)
   }
 
-  const handleVehicleUpdated = (vehicle: any) => {
-    updateVehicle(vehicle.id, vehicle)
-    setSelectedVehicle(null)
-  }
-
-  const handleCreateListing = (vehicle: any) => {
-    setSelectedVehicle(vehicle)
-    setShowListingHandoff(true)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600">Error loading inventory: {error}</p>
-        <Button onClick={refreshInventory} className="mt-4">
-          Try Again
-        </Button>
-      </div>
-    )
+  const handleCloseBrochureModal = () => {
+    setShowBrochureModal(false)
+    // keep userRequestedBrochure = true so the chunk stays loaded for re-open during session
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
-          <p className="text-muted-foreground">
-            Manage your RV and manufactured home inventory
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowBarcodeScanner(true)}
-          >
-            <Package className="h-4 w-4 mr-2" />
-            Scan Barcode
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowImportModal(true)}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import CSV
-          </Button>
-          <Button onClick={() => handleAddVehicle('rv')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add RV
-          </Button>
-          <Button onClick={() => handleAddVehicle('manufactured_home')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add MH
-          </Button>
-        </div>
-      </div>
+    <ErrorBoundary>
+      <TooltipProvider delayDuration={200}>
+        <InventoryErrorBoundary>
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold">Inventory Management</h1>
+                <p className="text-muted-foreground">Manage your RV and manufactured home inventory</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleAddRV}><Plus className="h-4 w-4 mr-2" />Add RV</Button>
+                <Button onClick={handleAddMH} variant="outline"><Plus className="h-4 w-4 mr-2" />Add MH</Button>
+                <Button onClick={() => setShowImport(true)} variant="outline"><Upload className="h-4 w-4 mr-2" />Import CSV</Button>
+                <Button onClick={() => setShowScanner(true)} variant="outline"><Scan className="h-4 w-4 mr-2" />Scan</Button>
+                <Button onClick={() => handleGenerateBrochure(filteredVehicles)} variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Brochure
+                </Button>
+              </div>
+            </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Units</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available</CardTitle>
-            <Package className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.available}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sold</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.sold}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Service</CardTitle>
-            <Package className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.service}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Stats */}
+            <div className="grid gap-4 md:grid-cols-5">
+              <Card className="cursor-pointer hover:bg-accent/50 bg-blue-50 border-blue-200" onClick={() => handleStatClick('total')}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+                  <Package className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-700">{totalUnits}</div>
+                  <p className="text-xs text-muted-foreground">All inventory items</p>
+                </CardContent>
+              </Card>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="table">Table View</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
+              <Card className="cursor-pointer hover:bg-accent/50 bg-emerald-50 border-emerald-200" onClick={() => handleStatClick('available')}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Available</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-emerald-700">{availableUnits}</div>
+                  <p className="text-xs text-muted-foreground">Ready for sale</p>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Search and Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Search & Filter</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Card className="cursor-pointer hover:bg-accent/50 bg-amber-50 border-amber-200" onClick={() => handleStatClick('reserved')}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Reserved</CardTitle>
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-amber-700">{reservedUnits}</div>
+                  <p className="text-xs text-muted-foreground">Pre-orders & holds</p>
+                </CardContent>
+              </Card>
+
+              <Card className="cursor-pointer hover:bg-accent/50 bg-rose-50 border-rose-200" onClick={() => handleStatClick('sold')}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Sold</CardTitle>
+                  <XCircle className="h-4 w-4 text-rose-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-rose-700">{soldUnits}</div>
+                  <p className="text-xs text-muted-foreground">Completed sales</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+                  <DollarSign className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-700">
+                    ${Number.isFinite(totalValue) ? totalValue.toLocaleString() : '0'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Inventory worth</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search / Filters / Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory</CardTitle>
+                <CardDescription>Search and filter your inventory</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by VIN, make, model..."
+                      placeholder="Search by make, model, VIN, or serial number..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
                     />
                   </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="InStock">Available</SelectItem>
+                      <SelectItem value="PreOrder">Reserved</SelectItem>
+                      <SelectItem value="SoldOut">Sold</SelectItem>
+                      <SelectItem value="OutOfStock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="RV">RV</SelectItem>
+                      <SelectItem value="MH">Manufactured Home</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex gap-2">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border rounded-md"
-                  >
-                    <option value="">All Status</option>
-                    <option value="available">Available</option>
-                    <option value="sold">Sold</option>
-                    <option value="service">Service</option>
-                    <option value="reserved">Reserved</option>
-                  </select>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="px-3 py-2 border rounded-md"
-                  >
-                    <option value="">All Types</option>
-                    <option value="rv">RV</option>
-                    <option value="manufactured_home">Manufactured Home</option>
-                  </select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Vehicle Grid */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((vehicle) => (
-              <Card key={vehicle.id} className="overflow-hidden">
-                <div className="aspect-video bg-muted relative">
-                  {vehicle.media?.primaryPhoto ? (
-                    <img
-                      src={vehicle.media.primaryPhoto}
-                      alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <Package className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
-                  <Badge 
-                    className="absolute top-2 right-2"
-                    variant={vehicle.status === 'available' ? 'default' : 'secondary'}
-                  >
-                    {vehicle.status}
-                  </Badge>
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </CardTitle>
-                  <CardDescription>
-                    {vehicle.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
-                    {vehicle.vin || vehicle.serialNumber}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Sale Price:</span>
-                      <span className="font-medium">
-                        ${vehicle.salePrice?.toLocaleString() || 'N/A'}
-                      </span>
-                    </div>
-                    {vehicle.rentPrice && (
-                      <div className="flex justify-between text-sm">
-                        <span>Rent Price:</span>
-                        <span className="font-medium">
-                          ${vehicle.rentPrice.toLocaleString()}/mo
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm">
-                      <span>Location:</span>
-                      <span>{vehicle.location?.city}, {vehicle.location?.state}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedVehicle(vehicle)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCreateListing(vehicle)}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      List
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList>
+                    <TabsTrigger value="all">All ({totalUnits})</TabsTrigger>
+                    <TabsTrigger value="rv">RVs ({safeVehicles.filter(v => v.type === 'RV').length})</TabsTrigger>
+                    <TabsTrigger value="mh">MH ({safeVehicles.filter(v => v.type === 'MH').length})</TabsTrigger>
+                  </TabsList>
 
-          {vehicles.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No inventory found</h3>
-                <p className="text-muted-foreground mb-4">
-                  Get started by adding your first vehicle to inventory
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <Button onClick={() => handleAddVehicle('rv')}>
-                    Add RV
-                  </Button>
-                  <Button onClick={() => handleAddVehicle('manufactured_home')}>
-                    Add Manufactured Home
-                  </Button>
-                </div>
+                  <TabsContent value="all" className="mt-4">
+                    <InventoryTable vehicles={filteredVehicles} onEdit={handleEdit} onView={handleView} onDelete={deleteVehicle} />
+                  </TabsContent>
+                  <TabsContent value="rv" className="mt-4">
+                    <InventoryTable vehicles={filteredVehicles.filter(v => v.type === 'RV')} onEdit={handleEdit} onView={handleView} onDelete={deleteVehicle} />
+                  </TabsContent>
+                  <TabsContent value="mh" className="mt-4">
+                    <InventoryTable vehicles={filteredVehicles.filter(v => v.type === 'MH')} onEdit={handleEdit} onView={handleView} onDelete={deleteVehicle} />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
+
+            {/* MODALS ONLY — no inline forms */}
+            <Dialog open={showAddRVModal} onOpenChange={setShowAddRVModal}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
+                <DialogHeader><DialogTitle>{editingItem?.type === 'RV' ? 'Edit RV' : 'Add RV'}</DialogTitle></DialogHeader>
+                <RVInventoryForm
+                  editingItem={editingItem?.type === 'RV' ? (editingItem as RVVehicle) : undefined}
+                  onSave={handleSaveRV}
+                  onCancel={() => { setEditingItem(null); setShowAddRVModal(false) }}
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showAddMHModal} onOpenChange={setShowAddMHModal}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
+                <DialogHeader><DialogTitle>{editingItem?.type === 'MH' ? 'Edit MH' : 'Add MH'}</DialogTitle></DialogHeader>
+                <MHInventoryForm
+                  editingItem={editingItem?.type === 'MH' ? (editingItem as MHVehicle) : undefined}
+                  onSave={handleSaveMH}
+                  onCancel={() => { setEditingItem(null); setShowAddMHModal(false) }}
+                />
+              </DialogContent>
+            </Dialog>
+
+            <CSVSmartImport open={showImport} onOpenChange={setShowImport} onComplete={handleImportComplete} />
+            <BarcodeScanner open={showScanner} onOpenChange={setShowScanner} onScanComplete={handleScanComplete} />
+            <VehicleDetail open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)} vehicle={selectedItem} onEdit={handleEdit} onDelete={deleteVehicle} />
+          </div>
+        </InventoryErrorBoundary>
+
+        {/* Brochure Modal — lazy mounted only after user clicks */}
+        <ErrorBoundary>
+          {userRequestedBrochure && (
+            <Suspense fallback={null}>
+              <GenerateBrochureModal
+                open={showBrochureModal as any}
+                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
+                onClose={handleCloseBrochureModal}
+                selectedItems={selectedListings as any}
+              />
+            </Suspense>
           )}
-        </TabsContent>
-
-        <TabsContent value="table">
-          <InventoryTable
-            vehicles={vehicles}
-            onVehicleSelect={setSelectedVehicle}
-            onVehicleUpdate={updateVehicle}
-            onVehicleDelete={deleteVehicle}
-            onCreateListing={handleCreateListing}
-          />
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Analytics</CardTitle>
-                <CardDescription>
-                  Performance metrics and insights
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-4" />
-                  <p>Analytics dashboard coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Distribution</CardTitle>
-                <CardDescription>
-                  Inventory by location
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <MapPin className="h-12 w-12 mx-auto mb-4" />
-                  <p>Location analytics coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Modals */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">
-                Add {addFormType === 'rv' ? 'RV' : 'Manufactured Home'}
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddForm(false)}
-              >
-                ×
-              </Button>
-            </div>
-            {addFormType === 'rv' ? (
-              <RVInventoryForm
-                onSubmit={handleVehicleCreated}
-                onCancel={() => setShowAddForm(false)}
-              />
-            ) : (
-              <MHInventoryForm
-                onSubmit={handleVehicleCreated}
-                onCancel={() => setShowAddForm(false)}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {showImportModal && (
-        <CSVSmartImport
-          onClose={() => setShowImportModal(false)}
-          onImportComplete={(importedVehicles) => {
-            importedVehicles.forEach(vehicle => createVehicle(vehicle))
-            setShowImportModal(false)
-          }}
-        />
-      )}
-
-      {showBarcodeScanner && (
-        <BarcodeScanner
-          onClose={() => setShowBarcodeScanner(false)}
-          onScanComplete={(scannedData) => {
-            console.log('Scanned:', scannedData)
-            setShowBarcodeScanner(false)
-          }}
-        />
-      )}
-
-      {selectedVehicle && !showListingHandoff && (
-        <VehicleDetail
-          vehicle={selectedVehicle}
-          onClose={() => setSelectedVehicle(null)}
-          onUpdate={handleVehicleUpdated}
-          onDelete={(id) => {
-            deleteVehicle(id)
-            setSelectedVehicle(null)
-          }}
-          onCreateListing={() => {
-            setShowListingHandoff(true)
-          }}
-        />
-      )}
-
-      {showListingHandoff && selectedVehicle && (
-        <ListingHandoffModal
-          vehicle={selectedVehicle}
-          onClose={() => {
-            setShowListingHandoff(false)
-            setSelectedVehicle(null)
-          }}
-          onListingCreated={(listing) => {
-            console.log('Listing created:', listing)
-            setShowListingHandoff(false)
-            setSelectedVehicle(null)
-          }}
-        />
-      )}
-    </div>
+        </ErrorBoundary>
+      </TooltipProvider>
+    </ErrorBoundary>
   )
 }
