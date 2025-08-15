@@ -1,583 +1,579 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Plus, 
-  Edit, 
-  Trash, 
-  Globe, 
-  FileText, 
-  Mail, 
-  Home, 
-  Car,
-  ExternalLink,
-  Settings,
-  BarChart3,
-  Clock,
-  Shield
-} from 'lucide-react'
-
-interface SyndicationPartner {
-  id: string
-  name: string
-  format: 'json' | 'xml'
-  listingTypes: ('manufactured_home' | 'rv')[]
-  leadEmail?: string
-  isActive: boolean
-  exportUrl: string
-  description?: string
-}
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Plus, ExternalLink, Edit, Trash2, Copy, CheckCircle } from 'lucide-react'
+import { SyndicationPartnerConfiguration } from '@/types'
+import { SyndicationPartnerForm } from '@/modules/property-listings/components/SyndicationPartnerForm'
+import { useTenant } from '@/contexts/TenantContext'
+import { useToast } from '@/hooks/use-toast'
+import { mockPlatformAdmin } from '@/mocks/platformAdminMock'
 
 export default function PropertyListingsSettings() {
-  const [partners, setPartners] = useState<SyndicationPartner[]>([
-    {
-      id: 'mhvillage',
-      name: 'MHVillage',
-      format: 'json',
-      listingTypes: ['manufactured_home'],
-      leadEmail: 'leads@mhvillage.com',
-      isActive: true,
-      exportUrl: '/api/syndication/mhvillage',
-      description: 'Leading manufactured home marketplace'
-    },
-    {
-      id: 'rvtrader',
-      name: 'RV Trader',
-      format: 'json',
-      listingTypes: ['rv'],
-      leadEmail: 'rvleads@trader.com',
-      isActive: true,
-      exportUrl: '/api/syndication/rvtrader',
-      description: 'Premier RV marketplace platform'
-    },
-    {
-      id: 'zillow',
-      name: 'Zillow',
-      format: 'xml',
-      listingTypes: ['manufactured_home', 'rv'],
-      isActive: false,
-      exportUrl: '/api/syndication/zillow',
-      description: 'Real estate marketplace integration'
-    }
-  ])
+  const { tenant, updateTenant } = useTenant()
+  const [syndicationPartners, setSyndicationPartners] = useState<SyndicationPartnerConfiguration[]>([])
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingPartner, setEditingPartner] = useState<SyndicationPartnerConfiguration | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const [leadReplyEmail, setLeadReplyEmail] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
 
-  const [globalSettings, setGlobalSettings] = useState({
-    autoSyncNightly: true,
-    rebuildCacheNightly: true,
-    requireAuthForPreview: false,
-    enableShareAnalytics: true,
-    defaultTokenExpiry: 30, // days
-    maxTokensPerCompany: 100
-  })
+  // Get platform partners and lead reply email
+  const platformPartners = mockPlatformAdmin.platformSyndicationPartners
+  const defaultLeadReplyEmail = mockPlatformAdmin.leadReplyEmail
 
-  const [showPartnerModal, setShowPartnerModal] = useState(false)
-  const [editingPartner, setEditingPartner] = useState<SyndicationPartner | null>(null)
+  // Initialize lead reply email
+  useEffect(() => {
+    setLeadReplyEmail(tenant?.settings?.leadReplyEmail || defaultLeadReplyEmail)
+  }, [tenant, defaultLeadReplyEmail])
 
-  const handlePartnerToggle = (partnerId: string) => {
-    setPartners(prev => prev.map(p => 
-      p.id === partnerId ? { ...p, isActive: !p.isActive } : p
-    ))
-  }
-
-  const handleDeletePartner = (partnerId: string) => {
-    if (confirm('Are you sure you want to delete this partner?')) {
-      setPartners(prev => prev.filter(p => p.id !== partnerId))
-    }
-  }
-
-  const handleSavePartner = (partnerData: any) => {
-    if (editingPartner) {
-      setPartners(prev => prev.map(p => 
-        p.id === editingPartner.id ? { ...p, ...partnerData } : p
-      ))
-    } else {
-      const newPartner = {
-        ...partnerData,
-        id: partnerData.name.toLowerCase().replace(/\s+/g, ''),
-        exportUrl: `/api/syndication/${partnerData.name.toLowerCase().replace(/\s+/g, '')}`
+  // Mock data for development - replace with Rails API calls
+  useEffect(() => {
+    const fetchSyndicationPartners = async () => {
+      setIsLoading(true)
+      try {
+        // Mock data for now - replace with actual API call
+        const mockPartners: SyndicationPartnerConfiguration[] = [
+          {
+            id: '1',
+            platformPartnerId: 'zillow',
+            name: 'Zillow',
+            listingTypes: ['for_rent', 'for_sale', 'apartment', 'house', 'condo'],
+            leadEmail: 'support+zillow@notifications.renterinsight.com',
+            exportFormat: 'XML',
+            exportUrl: '',
+            accountId: 'ZILL123456',
+            isActive: true,
+            createdAt: '2024-01-15T10:00:00Z',
+            updatedAt: '2024-01-15T10:00:00Z'
+          },
+          {
+            id: '2',
+            platformPartnerId: 'mhvillage',
+            name: 'MH Village',
+            listingTypes: ['manufactured_home', 'for_sale'],
+            leadEmail: 'support+mhvillage@notifications.renterinsight.com',
+            exportFormat: 'JSON',
+            exportUrl: '',
+            accountId: '',
+            isActive: false,
+            createdAt: '2024-01-20T14:30:00Z',
+            updatedAt: '2024-01-20T14:30:00Z'
+          }
+        ]
+        
+        // Generate export URLs for existing partners
+        const partnersWithUrls = mockPartners.map(p => ({
+          ...p,
+          exportUrl: generateExportUrl(p)
+        }))
+        
+        setSyndicationPartners(partnersWithUrls)
+      } catch (error) {
+        console.error('Failed to fetch syndication partners:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load syndication partners',
+          variant: 'destructive'
+        })
+      } finally {
+        setIsLoading(false)
       }
-      setPartners(prev => [...prev, newPartner])
     }
-    setShowPartnerModal(false)
+
+    fetchSyndicationPartners()
+  }, [toast, tenant])
+
+  const generateExportUrl = (partner: SyndicationPartnerConfiguration | any): string => {
+    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
+    const companyId = tenant?.id || 'demo-company'
+    
+    const params = new URLSearchParams({
+      partnerId: partner.platformPartnerId || partner.platformId || partner.id,
+      companyId: companyId,
+      format: partner.exportFormat || partner.defaultExportFormat,
+      listingTypes: partner.listingTypes?.join(',') || partner.supportedListingTypes?.join(',') || '',
+      leadEmail: partner.leadEmail || partner.baseLeadEmail || leadReplyEmail
+    })
+
+    if (partner.accountId) {
+      params.set('accountId', partner.accountId)
+    }
+
+    return `${baseUrl}?${params.toString()}`
+  }
+
+  const handleCreatePartner = async (partnerData: SyndicationPartnerConfiguration) => {
+    try {
+      const newPartner: SyndicationPartnerConfiguration = {
+        ...partnerData,
+        id: Date.now().toString(),
+        exportUrl: generateExportUrl(partnerData),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setSyndicationPartners(prev => [...prev, newPartner])
+      setIsFormOpen(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner created successfully'
+      })
+    } catch (error) {
+      console.error('Failed to create syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to create syndication partner',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleUpdatePartner = async (partnerData: SyndicationPartnerConfiguration) => {
+    try {
+      const updatedPartner: SyndicationPartnerConfiguration = {
+        ...partnerData,
+        exportUrl: generateExportUrl(partnerData),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setSyndicationPartners(prev => 
+        prev.map(p => p.id === partnerData.id ? updatedPartner : p)
+      )
+      setEditingPartner(null)
+      setIsFormOpen(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner updated successfully'
+      })
+    } catch (error) {
+      console.error('Failed to update syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update syndication partner',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleDeletePartner = async (partnerId: string) => {
+    try {
+      setSyndicationPartners(prev => prev.filter(p => p.id !== partnerId))
+      
+      toast({
+        title: 'Success',
+        description: 'Syndication partner deleted successfully'
+      })
+    } catch (error) {
+      console.error('Failed to delete syndication partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete syndication partner',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleToggleActive = async (partnerId: string, isActive: boolean) => {
+    try {
+      setSyndicationPartners(prev =>
+        prev.map(p => p.id === partnerId ? { ...p, isActive } : p)
+      )
+      
+      toast({
+        title: 'Success',
+        description: `Syndication partner ${isActive ? 'activated' : 'deactivated'}`
+      })
+    } catch (error) {
+      console.error('Failed to toggle partner status:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update partner status',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleSaveLeadEmail = async () => {
+    setIsSaving(true)
+    try {
+      await updateTenant({
+        settings: {
+          ...tenant?.settings,
+          leadReplyEmail: leadReplyEmail
+        }
+      })
+      
+      toast({
+        title: 'Success',
+        description: 'Lead reply email updated successfully'
+      })
+    } catch (error) {
+      console.error('Failed to update lead reply email:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update lead reply email',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const copyToClipboard = async (url: string, partnerId: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedUrl(partnerId)
+      setTimeout(() => setCopiedUrl(null), 2000)
+      toast({
+        title: 'Copied',
+        description: 'Export URL copied to clipboard'
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy URL',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const openTestFeed = (url: string) => {
+    window.open(url, '_blank')
+  }
+
+  const openEditForm = (partner: SyndicationPartnerConfiguration) => {
+    setEditingPartner(partner)
+    setIsFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setIsFormOpen(false)
     setEditingPartner(null)
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">Property Listings Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure syndication partners and export settings
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12 text-muted-foreground">
+              Loading syndication partners...
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       <div>
-        <h2 className="text-2xl font-bold">Property Listings Settings</h2>
-        <p className="text-gray-600">Manage syndication partners and global listing settings</p>
+        <h3 className="text-lg font-medium">Syndication Settings</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure listing syndication to partner marketplaces
+        </p>
       </div>
 
-      <Tabs defaultValue="partners" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="partners">Syndication Partners</TabsTrigger>
-          <TabsTrigger value="settings">Global Settings</TabsTrigger>
-          <TabsTrigger value="health">System Health</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="partners" className="space-y-6">
-          {/* Partners Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Syndication Partners</h3>
-              <p className="text-sm text-gray-600">Manage external listing syndication partners</p>
+      {/* Lead Reply Email Setting */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Global Settings</CardTitle>
+          <CardDescription>
+            Platform-wide settings for syndication feeds
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="lead-reply-email">Lead Reply Email</Label>
+            <div className="flex space-x-2 max-w-md">
+              <Input
+                id="lead-reply-email"
+                type="email"
+                value={leadReplyEmail}
+                onChange={(e) => setLeadReplyEmail(e.target.value)}
+                placeholder="support@notifications.renterinsight.com"
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleSaveLeadEmail}
+                variant="outline"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
             </div>
-            <Button onClick={() => setShowPartnerModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Partner
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              This email will be used as the default contact email in syndication feeds
+            </p>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Partners Grid */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {partners.map((partner) => (
-              <Card key={partner.id} className="relative">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{partner.name}</CardTitle>
-                      {partner.description && (
-                        <CardDescription>{partner.description}</CardDescription>
-                      )}
-                    </div>
-                    <Switch
-                      checked={partner.isActive}
-                      onCheckedChange={() => handlePartnerToggle(partner.id)}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">FORMAT</Label>
-                    <Badge variant="outline" className="ml-2">
-                      {partner.format.toUpperCase()}
-                    </Badge>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">LISTING TYPES</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {partner.listingTypes.map((type) => (
-                        <Badge key={type} variant="secondary" className="text-xs">
-                          {type === 'manufactured_home' ? (
-                            <>
-                              <Home className="h-3 w-3 mr-1" />
-                              MH
-                            </>
-                          ) : (
-                            <>
-                              <Car className="h-3 w-3 mr-1" />
-                              RV
-                            </>
-                          )}
+      {/* Available Platform Partners */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Syndication Partners</CardTitle>
+          <CardDescription>
+            Platform-level syndication partners with export URLs
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {platformPartners.map((platformPartner) => {
+              const isConfigured = syndicationPartners.some(p => p.platformPartnerId === platformPartner.platformId)
+              const exportUrl = generateExportUrl(platformPartner)
+              
+              return (
+                <div key={platformPartner.platformId} className="border rounded-lg p-4">
+                  <div className="space-y-4">
+                    {/* Partner Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{platformPartner.name}</h4>
+                        <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
+                        <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
+                          {platformPartner.isActive ? "Available" : "Unavailable"}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {partner.leadEmail && (
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">LEAD EMAIL</Label>
-                      <div className="flex items-center text-sm text-gray-700 mt-1">
-                        <Mail className="h-3 w-3 mr-1" />
-                        {partner.leadEmail}
+                        {isConfigured && (
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            Configured
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  )}
 
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">EXPORT URL</Label>
-                    <div className="flex items-center text-sm text-gray-700 mt-1">
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      <code className="text-xs bg-gray-100 px-1 rounded">
-                        {partner.exportUrl}
-                      </code>
+                    {/* Partner Details */}
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>{platformPartner.description}</p>
+                      <div>
+                        <span className="font-medium">Supported Types:</span> {platformPartner.supportedListingTypes.join(', ')}
+                      </div>
+                      <div>
+                        <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
+                      </div>
+                    </div>
+
+                    {/* Export URL Section - This is what was missing! */}
+                    <div className="pt-3 border-t space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Export URL:</Label>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openTestFeed(exportUrl)}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Test Feed
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
+                          >
+                            {copiedUrl === platformPartner.platformId ? (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            ) : (
+                              <Copy className="h-4 w-4 mr-2" />
+                            )}
+                            {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-muted rounded text-xs font-mono break-all border">
+                        {exportUrl}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Share this URL with {platformPartner.name} to enable listing syndication
+                      </p>
                     </div>
                   </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingPartner(partner)
-                        setShowPartnerModal(true)
-                      }}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeletePartner(partner.id)}
-                    >
-                      <Trash className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              )
+            })}
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Global Settings
-              </CardTitle>
-              <CardDescription>
-                Configure system-wide property listing behaviors
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Automation Settings</h4>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Auto-sync listings nightly</Label>
-                      <p className="text-sm text-gray-600">
-                        Automatically sync listings with inventory status
-                      </p>
-                    </div>
-                    <Switch
-                      checked={globalSettings.autoSyncNightly}
-                      onCheckedChange={(checked) => 
-                        setGlobalSettings(prev => ({ ...prev, autoSyncNightly: checked }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Rebuild feed cache nightly</Label>
-                      <p className="text-sm text-gray-600">
-                        Refresh syndication feeds automatically
-                      </p>
-                    </div>
-                    <Switch
-                      checked={globalSettings.rebuildCacheNightly}
-                      onCheckedChange={(checked) => 
-                        setGlobalSettings(prev => ({ ...prev, rebuildCacheNightly: checked }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">Security Settings</h4>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Require auth for feed preview</Label>
-                      <p className="text-sm text-gray-600">
-                        Require authentication to preview feeds
-                      </p>
-                    </div>
-                    <Switch
-                      checked={globalSettings.requireAuthForPreview}
-                      onCheckedChange={(checked) => 
-                        setGlobalSettings(prev => ({ ...prev, requireAuthForPreview: checked }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Enable share analytics</Label>
-                      <p className="text-sm text-gray-600">
-                        Track clicks and views on shared listings
-                      </p>
-                    </div>
-                    <Switch
-                      checked={globalSettings.enableShareAnalytics}
-                      onCheckedChange={(checked) => 
-                        setGlobalSettings(prev => ({ ...prev, enableShareAnalytics: checked }))
-                      }
-                    />
-                  </div>
-                </div>
+      {/* Configured Partners Section */}
+      {syndicationPartners.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Configured Partners</CardTitle>
+                <CardDescription>
+                  Company-specific syndication partner configurations
+                </CardDescription>
               </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="defaultTokenExpiry">Default token expiry (days)</Label>
-                  <Input
-                    id="defaultTokenExpiry"
-                    type="number"
-                    value={globalSettings.defaultTokenExpiry}
-                    onChange={(e) => 
-                      setGlobalSettings(prev => ({ 
-                        ...prev, 
-                        defaultTokenExpiry: parseInt(e.target.value) || 30 
-                      }))
-                    }
-                    className="mt-1"
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setEditingPartner(null)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Partner
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Configure a syndication partner to export your listings
+                    </DialogDescription>
+                  </DialogHeader>
+                  <SyndicationPartnerForm
+                    partner={editingPartner}
+                    availablePlatformPartners={platformPartners}
+                    globalLeadReplyEmail={leadReplyEmail}
+                    onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+                    onCancel={closeForm}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Default expiration for share tokens
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="maxTokens">Max tokens per company</Label>
-                  <Input
-                    id="maxTokens"
-                    type="number"
-                    value={globalSettings.maxTokensPerCompany}
-                    onChange={(e) => 
-                      setGlobalSettings(prev => ({ 
-                        ...prev, 
-                        maxTokensPerCompany: parseInt(e.target.value) || 100 
-                      }))
-                    }
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Maximum share tokens per company
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button>Save Global Settings</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="health" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                System Health
-              </CardTitle>
-              <CardDescription>
-                Monitor syndication feeds and system status
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="font-medium">MHVillage Feed</span>
-                  </div>
-                  <p className="text-sm text-gray-600">Last build: 2 hours ago</p>
-                  <p className="text-sm text-gray-600">Records: 1,247</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="font-medium">RV Trader Feed</span>
-                  </div>
-                  <p className="text-sm text-gray-600">Last build: 1 hour ago</p>
-                  <p className="text-sm text-gray-600">Records: 892</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="font-medium">Zillow Feed</span>
-                  </div>
-                  <p className="text-sm text-gray-600">Last build: 6 hours ago</p>
-                  <p className="text-sm text-gray-600">Status: Inactive</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Partner Modal */}
-      <PartnerFormModal
-        open={showPartnerModal}
-        partner={editingPartner}
-        onClose={() => {
-          setShowPartnerModal(false)
-          setEditingPartner(null)
-        }}
-        onSave={handleSavePartner}
-      />
-    </div>
-  )
-}
-
-interface PartnerFormModalProps {
-  open: boolean
-  partner: SyndicationPartner | null
-  onClose: () => void
-  onSave: (data: any) => void
-}
-
-function PartnerFormModal({ open, partner, onClose, onSave }: PartnerFormModalProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    format: 'json',
-    listingTypes: [] as string[],
-    leadEmail: '',
-    description: '',
-    isActive: true
-  })
-
-  React.useEffect(() => {
-    if (partner) {
-      setFormData({
-        name: partner.name,
-        format: partner.format,
-        listingTypes: partner.listingTypes,
-        leadEmail: partner.leadEmail || '',
-        description: partner.description || '',
-        isActive: partner.isActive
-      })
-    } else {
-      setFormData({
-        name: '',
-        format: 'json',
-        listingTypes: [],
-        leadEmail: '',
-        description: '',
-        isActive: true
-      })
-    }
-  }, [partner])
-
-  const handleSubmit = () => {
-    if (!formData.name || formData.listingTypes.length === 0) return
-    onSave(formData)
-  }
-
-  const handleListingTypeToggle = (type: string) => {
-    setFormData(prev => ({
-      ...prev,
-      listingTypes: prev.listingTypes.includes(type)
-        ? prev.listingTypes.filter(t => t !== type)
-        : [...prev.listingTypes, type]
-    }))
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {partner ? 'Edit Partner' : 'Add New Partner'}
-          </DialogTitle>
-          <DialogDescription>
-            Configure syndication partner settings
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="partnerName">Partner Name *</Label>
-            <Input
-              id="partnerName"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="MHVillage"
-            />
-          </div>
-
-          <div>
-            <Label>Data Format *</Label>
-            <Select 
-              value={formData.format} 
-              onValueChange={(value: 'json' | 'xml') => 
-                setFormData(prev => ({ ...prev, format: value }))
-              }
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="xml">XML</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Listing Types *</Label>
-            <div className="flex gap-4 mt-2">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.listingTypes.includes('manufactured_home')}
-                  onChange={() => handleListingTypeToggle('manufactured_home')}
-                />
-                <Home className="h-4 w-4" />
-                <span>Manufactured Homes</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.listingTypes.includes('rv')}
-                  onChange={() => handleListingTypeToggle('rv')}
-                />
-                <Car className="h-4 w-4" />
-                <span>RVs</span>
-              </label>
+                </DialogContent>
+              </Dialog>
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="leadEmail">Lead Email</Label>
-            <Input
-              id="leadEmail"
-              type="email"
-              value={formData.leadEmail}
-              onChange={(e) => setFormData(prev => ({ ...prev, leadEmail: e.target.value }))}
-              placeholder="leads@partner.com"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of the partner"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={formData.isActive}
-              onCheckedChange={(checked) => 
-                setFormData(prev => ({ ...prev, isActive: checked }))
-              }
-            />
-            <Label htmlFor="isActive">Active</Label>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>
-            {partner ? 'Update' : 'Create'} Partner
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {syndicationPartners.map((partner) => (
+                <div key={partner.id} className="border rounded-lg p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold">{partner.name}</h3>
+                          <Badge variant={partner.isActive ? "default" : "secondary"}>
+                            {partner.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          <Badge variant="outline">{partner.exportFormat}</Badge>
+                          {partner.accountId && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              ID: {partner.accountId}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <div>
+                            <span className="font-medium">Lead Email:</span> {partner.leadEmail}
+                          </div>
+                          <div>
+                            <span className="font-medium">Listing Types:</span>{" "}
+                            {partner.listingTypes.join(", ")}
+                          </div>
+                          {partner.accountId && (
+                            <div>
+                              <span className="font-medium">Account ID:</span> {partner.accountId}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={partner.isActive}
+                            onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
+                          />
+                          <Label className="text-sm">Active</Label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditForm(partner)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{partner.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeletePartner(partner.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                    
+                    {/* Export URL for configured partners */}
+                    <div className="pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <Label className="text-sm font-medium">Export URL:</Label>
+                          <div className="mt-1 p-3 bg-muted rounded text-xs font-mono break-all border">
+                            {partner.exportUrl}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Share this URL with {partner.name} to enable listing syndication
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openTestFeed(partner.exportUrl)}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Test Feed
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(partner.exportUrl, partner.id)}
+                          >
+                            {copiedUrl === partner.id ? (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            ) : (
+                              <Copy className="h-4 w-4 mr-2" />
+                            )}
+                            {copiedUrl === partner.id ? 'Copied' : 'Copy'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
