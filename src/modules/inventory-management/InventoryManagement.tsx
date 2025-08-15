@@ -29,8 +29,6 @@ export default function InventoryManagement() {
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
   const [selectedItem, setSelectedItem] = useState<Vehicle | null>(null)
-  const [showBrochureModal, setShowBrochureModal] = useState(false)
-  const [selectedVehicleForBrochure, setSelectedVehicleForBrochure] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -313,6 +311,18 @@ export default function InventoryManagement() {
           </div>
         </InventoryErrorBoundary>
       </TooltipProvider>
+
+      {/* Generate Brochure Modal */}
+      {showBrochureModal && selectedVehicleForBrochure && (
+        <GenerateBrochureModal
+          isOpen={showBrochureModal}
+          onClose={() => {
+            setShowBrochureModal(false)
+            setSelectedVehicleForBrochure(null)
+          }}
+          vehicle={selectedVehicleForBrochure}
+        />
+      )}
     </ErrorBoundary>
   )
 }
