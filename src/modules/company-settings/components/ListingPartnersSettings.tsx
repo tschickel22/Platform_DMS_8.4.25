@@ -5,314 +5,243 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ExternalLink, Settings } from 'lucide-react'
-import { SyndicationPartnerConfiguration } from '@/types'
+import { Globe, ExternalLink } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 import { mockPlatformAdmin } from '@/mocks/platformAdminMock'
 
-interface CompanySyndicationPartner {
+interface CompanyPartnerConfig {
   platformPartnerId: string
-  name: string
-  accountId?: string
   isEnabled: boolean
-  supportedListingTypes: string[]
-  exportFormat: 'XML' | 'JSON'
+  accountId: string
+  customLeadEmail?: string
 }
 
 export default function ListingPartnersSettings() {
   const { tenant, updateTenant } = useTenant()
-  const [companyPartners, setCompanyPartners] = useState<CompanySyndicationPartner[]>([])
-  const [editingPartner, setEditingPartner] = useState<CompanySyndicationPartner | null>(null)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [partnerConfigs, setPartnerConfigs] = useState<CompanyPartnerConfig[]>([])
+  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
 
   // Get platform partners
   const platformPartners = mockPlatformAdmin.platformSyndicationPartners
 
-  // Initialize company partners from platform partners
+  // Initialize partner configs from tenant settings
   useEffect(() => {
-    setIsLoading(true)
+    const savedConfigs = tenant?.settings?.syndicationPartners || []
+    
+    // Ensure all platform partners have a config entry
+    const configs = platformPartners.map(partner => {
+      const existing = savedConfigs.find((c: any) => c.platformPartnerId === partner.platformId)
+      return existing || {
+        platformPartnerId: partner.platformId,
+        isEnabled: false,
+        accountId: '',
+        customLeadEmail: ''
+      }
+    })
+    
+    setPartnerConfigs(configs)
+  }, [tenant, platformPartners])
+
+  const handleTogglePartner = (platformPartnerId: string, isEnabled: boolean) => {
+    setPartnerConfigs(prev => 
+      prev.map(config => 
+        config.platformPartnerId === platformPartnerId 
+          ? { ...config, isEnabled }
+          : config
+      )
+    )
+  }
+
+  const handleUpdateAccountId = (platformPartnerId: string, accountId: string) => {
+    setPartnerConfigs(prev => 
+      prev.map(config => 
+        config.platformPartnerId === platformPartnerId 
+          ? { ...config, accountId }
+          : config
+      )
+    )
+  }
+
+  const handleUpdateLeadEmail = (platformPartnerId: string, customLeadEmail: string) => {
+    setPartnerConfigs(prev => 
+      prev.map(config => 
+        config.platformPartnerId === platformPartnerId 
+          ? { ...config, customLeadEmail }
+          : config
+      )
+    )
+  }
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true)
     try {
-      // Load existing company partner configurations or initialize from platform partners
-      const savedPartners = tenant?.settings?.syndicationPartners || []
+      await updateTenant({
+        settings: {
+          ...tenant?.settings,
+          syndicationPartners: partnerConfigs
+        }
+      })
       
-      // Create company partners based on platform partners
-      const initialPartners: CompanySyndicationPartner[] = platformPartners
-        .filter(p => p.isActive)
-        .map(platformPartner => {
-          const existing = savedPartners.find((sp: any) => sp.platformPartnerId === platformPartner.platformId)
-          return {
-            platformPartnerId: platformPartner.platformId,
-            name: platformPartner.name,
-            accountId: existing?.accountId || '',
-            isEnabled: existing?.isEnabled || false,
-            supportedListingTypes: platformPartner.supportedListingTypes,
-            exportFormat: platformPartner.defaultExportFormat
-          }
-        })
-      
-      setCompanyPartners(initialPartners)
+      toast({
+        title: 'Success',
+        description: 'Syndication partner settings saved successfully'
+      })
     } catch (error) {
-      console.error('Failed to initialize syndication partners:', error)
+      console.error('Failed to save syndication settings:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load syndication partners',
+        description: 'Failed to save syndication settings',
         variant: 'destructive'
       })
     } finally {
-      setIsLoading(false)
-    }
-  }, [tenant, platformPartners, toast])
-
-  const handleTogglePartner = async (platformPartnerId: string, isEnabled: boolean) => {
-    try {
-      const updatedPartners = companyPartners.map(p =>
-        p.platformPartnerId === platformPartnerId ? { ...p, isEnabled } : p
-      )
-      
-      setCompanyPartners(updatedPartners)
-      
-      // Save to tenant settings
-      await updateTenant({
-        settings: {
-          ...tenant?.settings,
-          syndicationPartners: updatedPartners
-        }
-      })
-      
-      toast({
-        title: 'Success',
-        description: `${updatedPartners.find(p => p.platformPartnerId === platformPartnerId)?.name} ${isEnabled ? 'enabled' : 'disabled'}`
-      })
-    } catch (error) {
-      console.error('Failed to toggle partner:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update partner status',
-        variant: 'destructive'
-      })
+      setIsSaving(false)
     }
   }
 
-  const handleUpdateAccountId = async (platformPartnerId: string, accountId: string) => {
-    try {
-      const updatedPartners = companyPartners.map(p =>
-        p.platformPartnerId === platformPartnerId ? { ...p, accountId: accountId.trim() } : p
-      )
-      
-      setCompanyPartners(updatedPartners)
-      
-      // Save to tenant settings
-      await updateTenant({
-        settings: {
-          ...tenant?.settings,
-          syndicationPartners: updatedPartners
-        }
-      })
-      
-      setEditingPartner(null)
-      setIsEditDialogOpen(false)
-      
-      toast({
-        title: 'Success',
-        description: 'Account ID updated successfully'
-      })
-    } catch (error) {
-      console.error('Failed to update account ID:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update account ID',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const openEditDialog = (partner: CompanySyndicationPartner) => {
-    setEditingPartner(partner)
-    setIsEditDialogOpen(true)
-  }
-
-  const generateExportUrl = (partner: CompanySyndicationPartner): string => {
-    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
-    const companyId = tenant?.id || 'demo-company'
-    const leadReplyEmail = tenant?.settings?.leadReplyEmail || mockPlatformAdmin.leadReplyEmail
-    
-    const params = new URLSearchParams({
-      partnerId: partner.platformPartnerId,
-      companyId: companyId,
-      format: partner.exportFormat,
-      listingTypes: partner.supportedListingTypes.join(','),
-      leadEmail: leadReplyEmail
-    })
-
-    if (partner.accountId) {
-      params.set('accountId', partner.accountId)
-    }
-
-    return `${baseUrl}?${params.toString()}`
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Listing Partners</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure syndication partners for your listings
-          </p>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              Loading syndication partners...
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const openPlatformAdmin = () => {
+    window.location.href = '/admin/settings'
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Listing Partners</h3>
-        <p className="text-sm text-muted-foreground">
-          Enable syndication partners and configure account settings
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Listing Partners</h3>
+          <p className="text-sm text-muted-foreground">
+            Enable syndication partners and configure account settings
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openPlatformAdmin}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Platform Admin
+          </Button>
+          <Button onClick={handleSaveSettings} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </div>
       </div>
 
-      {/* Syndication Partners List */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Syndication Partners</CardTitle>
+          <CardTitle>Available Partners</CardTitle>
           <CardDescription>
-            Toggle partners on/off and configure account IDs for premium features
+            Enable syndication partners and configure your account details
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {companyPartners.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="mb-4">
-                <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
-              </div>
-              <p className="text-sm mb-4">
-                No syndication partners available
-              </p>
-              <p className="text-xs">
-                Contact platform administrator to enable syndication partners
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {companyPartners.map((partner) => (
-                <div key={partner.platformPartnerId} className="border rounded-lg p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{partner.name}</h3>
-                          <Badge variant={partner.isEnabled ? "default" : "secondary"}>
-                            {partner.isEnabled ? "Enabled" : "Disabled"}
-                          </Badge>
-                          <Badge variant="outline">{partner.exportFormat}</Badge>
-                          {partner.accountId && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                              ID: {partner.accountId}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium">Listing Types:</span>{" "}
-                            {partner.supportedListingTypes.join(", ")}
-                          </div>
-                          {partner.accountId && (
-                            <div>
-                              <span className="font-medium">Account ID:</span> {partner.accountId}
-                            </div>
-                          )}
+          <div className="space-y-6">
+            {platformPartners.map((platformPartner) => {
+              const config = partnerConfigs.find(c => c.platformPartnerId === platformPartner.platformId)
+              const isEnabled = config?.isEnabled || false
+              const accountId = config?.accountId || ''
+              const customLeadEmail = config?.customLeadEmail || ''
+              
+              return (
+                <div key={platformPartner.platformId} className="border rounded-lg p-4">
+                  <div className="space-y-4">
+                    {/* Partner Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Globe className="h-5 w-5 text-primary" />
+                        <div>
+                          <h4 className="font-medium">{platformPartner.name}</h4>
+                          <p className="text-sm text-muted-foreground">{platformPartner.description}</p>
                         </div>
                       </div>
-                      
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
+                        <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
+                          {platformPartner.isActive ? "Available" : "Unavailable"}
+                        </Badge>
                         <div className="flex items-center space-x-2">
                           <Switch
-                            checked={partner.isEnabled}
-                            onCheckedChange={(checked) => handleTogglePartner(partner.platformPartnerId, checked)}
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => handleTogglePartner(platformPartner.platformId, checked)}
+                            disabled={!platformPartner.isActive}
                           />
-                          <Label className="text-sm">Enabled</Label>
+                          <Label className="text-sm">Enable</Label>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(partner)}
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
-                    
-                    {/* Export URL (only shown if enabled) */}
+
+                    {/* Configuration Fields - Only show when enabled */}
+                    {isEnabled && (
+                      <div className="pt-4 border-t space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor={`account-${platformPartner.platformId}`}>
+                              Account ID {platformPartner.name === 'MH Village' ? '(Premium Feature)' : '(Optional)'}
+                            </Label>
+                            <Input
+                              id={`account-${platformPartner.platformId}`}
+                              value={accountId}
+                              onChange={(e) => handleUpdateAccountId(platformPartner.platformId, e.target.value)}
+                              placeholder={`Your ${platformPartner.name} account ID`}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {platformPartner.name === 'MH Village' 
+                                ? 'Required for premium listing features and enhanced visibility'
+                                : 'Optional - used for tracking and enhanced features'
+                              }
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`email-${platformPartner.platformId}`}>
+                              Custom Lead Email (Optional)
+                            </Label>
+                            <Input
+                              id={`email-${platformPartner.platformId}`}
+                              type="email"
+                              value={customLeadEmail}
+                              onChange={(e) => handleUpdateLeadEmail(platformPartner.platformId, e.target.value)}
+                              placeholder={platformPartner.baseLeadEmail}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Override the default lead email for this partner
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span className="font-medium">Supported Types:</span>
+                          <span>{platformPartner.supportedListingTypes.join(', ')}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Edit Account ID Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configure {editingPartner?.name}</DialogTitle>
-            <DialogDescription>
-              Set your account ID for premium features with this partner
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="account-id">Account ID</Label>
-              <Input
-                id="account-id"
-                value={editingPartner?.accountId || ''}
-                onChange={(e) => setEditingPartner(prev => 
-                  prev ? { ...prev, accountId: e.target.value } : null
-                )}
-                placeholder="Enter your partner account ID"
-              />
+      <Card>
+        <CardHeader>
+          <CardTitle>Need More Partners?</CardTitle>
+          <CardDescription>
+            Additional syndication partners can be configured in Platform Admin
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium">Platform Administration</p>
               <p className="text-sm text-muted-foreground">
-                Optional: Provide your account ID with {editingPartner?.name} for premium listing features
+                Configure additional syndication partners, export URLs, and advanced settings
               </p>
             </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsEditDialogOpen(false)
-                  setEditingPartner(null)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  if (editingPartner) {
-                    handleUpdateAccountId(editingPartner.platformPartnerId, editingPartner.accountId || '')
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </div>
+            <Button variant="outline" onClick={openPlatformAdmin}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Platform Admin
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   )
 }
