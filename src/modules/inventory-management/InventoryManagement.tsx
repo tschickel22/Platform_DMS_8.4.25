@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
-import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
 import CSVSmartImport from './components/CSVSmartImport'
@@ -25,7 +24,6 @@ const GenerateBrochureModal = lazy(() => import('@/modules/brochures/components/
 
 export default function InventoryManagement() {
   const { vehicles, addVehicle, updateVehicle, deleteVehicle, importVehicles } = useInventoryManagement()
-
   // UI state
   const [showAddRVModal, setShowAddRVModal] = useState(false)
   const [showAddMHModal, setShowAddMHModal] = useState(false)
