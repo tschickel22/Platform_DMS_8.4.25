@@ -1,5 +1,46 @@
 export const mockPlatformAdmin = {
   tenantRoles: [
+  leadReplyEmail: 'support@notifications.renterinsight.com',
+  
+  platformSyndicationPartners: [
+    {
+      platformId: 'zillow',
+      name: 'Zillow',
+      defaultExportFormat: 'XML' as const,
+      supportedListingTypes: ['for_rent', 'for_sale', 'apartment', 'house', 'condo', 'manufactured_home'],
+      baseLeadEmail: 'support+zillow@notifications.renterinsight.com',
+      description: 'Leading real estate marketplace for rentals and sales',
+      isActive: true
+    },
+    {
+      platformId: 'mhvillage',
+      name: 'MH Village',
+      defaultExportFormat: 'JSON' as const,
+      supportedListingTypes: ['manufactured_home', 'for_sale', 'for_rent'],
+      baseLeadEmail: 'support+mhvillage@notifications.renterinsight.com',
+      description: 'Specialized marketplace for manufactured homes',
+      isActive: true
+    },
+    {
+      platformId: 'rvtrader',
+      name: 'RV Trader',
+      defaultExportFormat: 'JSON' as const,
+      supportedListingTypes: ['rv', 'for_sale', 'for_rent'],
+      baseLeadEmail: 'support+rvtrader@notifications.renterinsight.com',
+      description: 'Premier marketplace for recreational vehicles',
+      isActive: true
+    },
+    {
+      platformId: 'apartments',
+      name: 'Apartments.com',
+      defaultExportFormat: 'XML' as const,
+      supportedListingTypes: ['for_rent', 'apartment', 'house', 'condo'],
+      baseLeadEmail: 'support+apartments@notifications.renterinsight.com',
+      description: 'Major apartment and rental listing platform',
+      isActive: true
+    }
+  ] as PlatformSyndicationPartner[],
+  
     { value: 'admin', label: 'Admin', description: 'Full access to all features' },
     { value: 'manager', label: 'Manager', description: 'Manage users and settings' },
     { value: 'sales', label: 'Sales', description: 'Access to CRM and quotes' },
@@ -222,4 +263,5 @@ export const mockPlatformAdmin = {
   }
 }
 
+import { PlatformSyndicationPartner } from '@/types'
 export default mockPlatformAdmin

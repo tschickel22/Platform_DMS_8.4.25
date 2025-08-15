@@ -42,6 +42,7 @@ export interface TenantSettings {
   allowedOrigins?: string[]
   emailTemplates?: Array<any>
   smsTemplates?: Array<any>
+  leadReplyEmail?: string
 }
 
 export interface TenantBranding {
@@ -386,6 +387,30 @@ export interface Land {
   updatedAt: string
   createdBy: string
   updatedBy: string
+}
+
+export interface PlatformSyndicationPartner {
+  platformId: string
+  name: string
+  defaultExportFormat: 'XML' | 'JSON'
+  supportedListingTypes: string[]
+  baseLeadEmail: string
+  description?: string
+  isActive: boolean
+}
+
+export interface SyndicationPartnerConfiguration {
+  id: string
+  platformPartnerId?: string
+  name: string
+  listingTypes: string[]
+  leadEmail: string
+  exportFormat: 'XML' | 'JSON'
+  exportUrl: string
+  accountId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface LoanHistoryEntry {

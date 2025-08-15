@@ -4,13 +4,13 @@ const { getStore } = require('@netlify/blobs');
 const partnerMappings = {
   'mhvillage': {
     format: 'json',
-    mapListing: (listing) => ({
+    mapListing: (listing, options = {}) => ({
       sellerId: listing.seller?.sellerId || listing.companyId,
       seller: {
-        accountKey: listing.seller?.accountKey || 'default',
+        accountKey: options.accountId || listing.seller?.accountKey || 'default',
         companyName: listing.seller?.companyName || 'Company Name',
         phone: listing.seller?.phone || '',
-        emails: listing.seller?.emails || [],
+        emails: listing.seller?.emails || [options.leadEmail || 'support@company.com'],
         fax: listing.seller?.fax || '',
         website: listing.seller?.website || ''
       },
@@ -94,9 +94,10 @@ const partnerMappings = {
   
   'zillow': {
     format: 'xml',
-    mapListing: (listing) => ({
+    mapListing: (listing, options = {}) => ({
       ListingKey: listing.id,
       MlsId: listing.id,
+      ManagementIDValue: options.accountId || listing.companyId,
       StandardStatus: listing.status === 'active' ? 'Active' : 'Inactive',
       ListPrice: listing.salePrice || listing.rentPrice || 0,
       ListingContractDate: listing.createdAt,
@@ -116,6 +117,8 @@ const partnerMappings = {
       LivingArea: listing.dimensions?.width_ft && listing.dimensions?.length_ft ? 
         (listing.dimensions.width_ft * listing.dimensions.length_ft) : null,
       PublicRemarks: listing.description || '',
+      ContactEmail: options.leadEmail || 'support@company.com',
+      ContactPhone: listing.seller?.phone || '',
       ...(listing.listingType === 'rv' && {
         VIN: listing.vin || '',
         BodyStyle: listing.vehicleType || '',
@@ -135,9 +138,10 @@ const partnerMappings = {
   // Add RV Trader mapping
   'rvtrader': {
     format: 'json',
-    mapListing: (listing) => ({
+    mapListing: (listing, options = {}) => ({
       id: listing.id,
       companyId: listing.companyId,
+      accountId: options.accountId || listing.companyId,
       vin: listing.vin || '',
       year: listing.year || 0,
       make: listing.make || '',
@@ -171,7 +175,7 @@ const partnerMappings = {
       seller: {
         name: listing.seller?.companyName || '',
         phone: listing.seller?.phone || '',
-        email: listing.seller?.emails?.[0] || '',
+        email: options.leadEmail || listing.seller?.emails?.[0] || '',
         website: listing.seller?.website || ''
       }
     })
@@ -233,6 +237,8 @@ exports.handler = async (event, context) => {
       partnerId, 
       format = 'json', 
       companyId,
+      accountId,
+      leadEmail,
       listingTypes,
       preview = '0',
       rebuild = '0'
@@ -319,7 +325,13 @@ exports.handler = async (event, context) => {
     }
 
     // Map listings to partner format
-    const mappedListings = listings.map(listing => partnerMapping.mapListing(listing));
+    const mappingOptions = {
+      accountId,
+      leadEmail,
+      companyId
+    };
+    
+    const mappedListings = listings.map(listing => partnerMapping.mapListing(listing, mappingOptions));
 
     // Generate feed data
     let feedData;

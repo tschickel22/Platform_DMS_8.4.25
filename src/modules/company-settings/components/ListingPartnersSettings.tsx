@@ -1,537 +1,331 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { 
-  Settings, 
-  Globe, 
-  Mail, 
-  Phone, 
-  ExternalLink,
-  Plus,
-  Trash2,
-  AlertTriangle,
-  CheckCircle,
-  RefreshCw
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { ExternalLink, Settings } from 'lucide-react'
+import { SyndicationPartnerConfiguration } from '@/types'
 import { useTenant } from '@/contexts/TenantContext'
+import { useToast } from '@/hooks/use-toast'
+import { mockPlatformAdmin } from '@/mocks/platformAdminMock'
 
-interface PartnerOverride {
-  partnerId: string
-  partnerName: string
-  enabled: boolean
-  leadEmail?: string
-  alternatePhone?: string
-  customAccountId?: string
-  specialInstructions?: string
-  priorityLevel: 'normal' | 'high' | 'premium'
-  autoSync: boolean
-  includeListingTypes: ('manufactured_home' | 'rv')[]
-  priceOverrides: {
-    minimumPrice?: number
-    maximumPrice?: number
-    hidePrice?: boolean
-  }
-  customFields: Record<string, any>
-}
-
-interface PartnerTemplate {
-  id: string
+interface CompanySyndicationPartner {
+  platformPartnerId: string
   name: string
-  description: string
-  logoUrl?: string
-  supportedTypes: ('manufactured_home' | 'rv')[]
-  requiresAccount: boolean
-  defaultFields: string[]
+  accountId?: string
+  isEnabled: boolean
+  supportedListingTypes: string[]
+  exportFormat: 'XML' | 'JSON'
 }
 
 export default function ListingPartnersSettings() {
+  const { tenant, updateTenant } = useTenant()
+  const [companyPartners, setCompanyPartners] = useState<CompanySyndicationPartner[]>([])
+  const [editingPartner, setEditingPartner] = useState<CompanySyndicationPartner | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
-  const { tenant } = useTenant()
-  const [overrides, setOverrides] = useState<PartnerOverride[]>([])
-  const [availablePartners, setAvailablePartners] = useState<PartnerTemplate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [addingPartner, setAddingPartner] = useState(false)
 
-  const defaultPartnerTemplates: PartnerTemplate[] = [
-    {
-      id: 'mhvillage',
-      name: 'MH Village',
-      description: 'Leading manufactured home marketplace',
-      logoUrl: '/partners/mhvillage-logo.png',
-      supportedTypes: ['manufactured_home'],
-      requiresAccount: true,
-      defaultFields: ['accountKey', 'companyName', 'phone', 'email']
-    },
-    {
-      id: 'rvtrader',
-      name: 'RV Trader',
-      description: 'Premier RV marketplace',
-      logoUrl: '/partners/rvtrader-logo.png', 
-      supportedTypes: ['rv'],
-      requiresAccount: true,
-      defaultFields: ['dealerCode', 'companyName', 'phone', 'email']
-    },
-    {
-      id: 'zillow',
-      name: 'Zillow',
-      description: 'Real estate platform',
-      logoUrl: '/partners/zillow-logo.png',
-      supportedTypes: ['manufactured_home'],
-      requiresAccount: true,
-      defaultFields: ['mlsId', 'agentId', 'phone', 'email']
-    }
-  ]
+  // Get platform partners
+  const platformPartners = mockPlatformAdmin.platformSyndicationPartners
 
+  // Initialize company partners from platform partners
   useEffect(() => {
-    loadPartnerSettings()
-  }, [])
-
-  const loadPartnerSettings = async () => {
+    setIsLoading(true)
     try {
-      setLoading(true)
-      setAvailablePartners(defaultPartnerTemplates)
+      // Load existing company partner configurations or initialize from platform partners
+      const savedPartners = tenant?.settings?.syndicationPartners || []
       
-      // Mock existing overrides - in production, fetch from backend
-      const mockOverrides: PartnerOverride[] = [
-        {
-          partnerId: 'mhvillage',
-          partnerName: 'MH Village',
-          enabled: true,
-          leadEmail: 'mh-leads@company.com',
-          customAccountId: 'MHV123456',
-          priorityLevel: 'premium',
-          autoSync: true,
-          includeListingTypes: ['manufactured_home'],
-          priceOverrides: {
-            minimumPrice: 5000,
-            hidePrice: false
-          },
-          customFields: {}
+      // Create company partners based on platform partners
+      const initialPartners: CompanySyndicationPartner[] = platformPartners
+        .filter(p => p.isActive)
+        .map(platformPartner => {
+          const existing = savedPartners.find((sp: any) => sp.platformPartnerId === platformPartner.platformId)
+          return {
+            platformPartnerId: platformPartner.platformId,
+            name: platformPartner.name,
+            accountId: existing?.accountId || '',
+            isEnabled: existing?.isEnabled || false,
+            supportedListingTypes: platformPartner.supportedListingTypes,
+            exportFormat: platformPartner.defaultExportFormat
+          }
+        })
+      
+      setCompanyPartners(initialPartners)
+    } catch (error) {
+      console.error('Failed to initialize syndication partners:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load syndication partners',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [tenant, platformPartners, toast])
+
+  const handleTogglePartner = async (platformPartnerId: string, isEnabled: boolean) => {
+    try {
+      const updatedPartners = companyPartners.map(p =>
+        p.platformPartnerId === platformPartnerId ? { ...p, isEnabled } : p
+      )
+      
+      setCompanyPartners(updatedPartners)
+      
+      // Save to tenant settings
+      await updateTenant({
+        settings: {
+          ...tenant?.settings,
+          syndicationPartners: updatedPartners
         }
-      ]
-      
-      setOverrides(mockOverrides)
-      
-    } catch (error) {
-      console.error('Error loading partner settings:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load partner settings",
-        variant: "destructive",
       })
-    } finally {
-      setLoading(false)
+      
+      toast({
+        title: 'Success',
+        description: `${updatedPartners.find(p => p.platformPartnerId === platformPartnerId)?.name} ${isEnabled ? 'enabled' : 'disabled'}`
+      })
+    } catch (error) {
+      console.error('Failed to toggle partner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update partner status',
+        variant: 'destructive'
+      })
     }
   }
 
-  const saveSettings = async () => {
+  const handleUpdateAccountId = async (platformPartnerId: string, accountId: string) => {
     try {
-      setSaving(true)
+      const updatedPartners = companyPartners.map(p =>
+        p.platformPartnerId === platformPartnerId ? { ...p, accountId: accountId.trim() } : p
+      )
       
-      // Mock save - in production, save to backend
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      setCompanyPartners(updatedPartners)
       
-      toast({
-        title: "Settings Saved",
-        description: "Partner listing settings have been updated",
+      // Save to tenant settings
+      await updateTenant({
+        settings: {
+          ...tenant?.settings,
+          syndicationPartners: updatedPartners
+        }
       })
       
+      setEditingPartner(null)
+      setIsEditDialogOpen(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Account ID updated successfully'
+      })
     } catch (error) {
-      console.error('Error saving settings:', error)
+      console.error('Failed to update account ID:', error)
       toast({
-        title: "Error",
-        description: "Failed to save partner settings",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update account ID',
+        variant: 'destructive'
       })
-    } finally {
-      setSaving(false)
     }
   }
 
-  const addPartnerOverride = (partnerId: string) => {
-    const partner = availablePartners.find(p => p.id === partnerId)
-    if (!partner) return
+  const openEditDialog = (partner: CompanySyndicationPartner) => {
+    setEditingPartner(partner)
+    setIsEditDialogOpen(true)
+  }
 
-    const newOverride: PartnerOverride = {
-      partnerId,
-      partnerName: partner.name,
-      enabled: false,
-      priorityLevel: 'normal',
-      autoSync: false,
-      includeListingTypes: partner.supportedTypes,
-      priceOverrides: {},
-      customFields: {}
+  const generateExportUrl = (partner: CompanySyndicationPartner): string => {
+    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
+    const companyId = tenant?.id || 'demo-company'
+    const leadReplyEmail = tenant?.settings?.leadReplyEmail || mockPlatformAdmin.leadReplyEmail
+    
+    const params = new URLSearchParams({
+      partnerId: partner.platformPartnerId,
+      companyId: companyId,
+      format: partner.exportFormat,
+      listingTypes: partner.supportedListingTypes.join(','),
+      leadEmail: leadReplyEmail
+    })
+
+    if (partner.accountId) {
+      params.set('accountId', partner.accountId)
     }
 
-    setOverrides(prev => [...prev, newOverride])
-    setAddingPartner(false)
+    return `${baseUrl}?${params.toString()}`
   }
 
-  const removePartnerOverride = (partnerId: string) => {
-    setOverrides(prev => prev.filter(o => o.partnerId !== partnerId))
-  }
-
-  const updateOverride = (partnerId: string, updates: Partial<PartnerOverride>) => {
-    setOverrides(prev => prev.map(o => 
-      o.partnerId === partnerId ? { ...o, ...updates } : o
-    ))
-  }
-
-  const availableToAdd = availablePartners.filter(
-    partner => !overrides.find(override => override.partnerId === partner.id)
-  )
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-48 bg-gray-200 rounded"></div>
-          ))}
+        <div>
+          <h3 className="text-lg font-medium">Listing Partners</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure syndication partners for your listings
+          </p>
         </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12 text-muted-foreground">
+              Loading syndication partners...
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Listing Partner Settings</h2>
-          <p className="text-muted-foreground">
-            Configure partner-specific settings and overrides for listing syndication
-          </p>
-        </div>
-        <div className="flex space-x-2">
-          {availableToAdd.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setAddingPartner(!addingPartner)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Partner
-            </Button>
-          )}
-          <Button onClick={saveSettings} disabled={saving}>
-            {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}
-            Save Settings
-          </Button>
-        </div>
+      <div>
+        <h3 className="text-lg font-medium">Listing Partners</h3>
+        <p className="text-sm text-muted-foreground">
+          Enable syndication partners and configure account settings
+        </p>
       </div>
 
-      {addingPartner && availableToAdd.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Partner Integration</CardTitle>
-            <CardDescription>
-              Select a partner to configure custom settings for
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availableToAdd.map(partner => (
-                <div
-                  key={partner.id}
-                  className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => addPartnerOverride(partner.id)}
-                >
-                  <div className="flex items-start space-x-3">
-                    <Globe className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-medium">{partner.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {partner.description}
-                      </p>
-                      <div className="flex space-x-1">
-                        {partner.supportedTypes.map(type => (
-                          <Badge key={type} variant="secondary" className="text-xs">
-                            {type === 'manufactured_home' ? 'MH' : 'RV'}
+      {/* Syndication Partners List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Syndication Partners</CardTitle>
+          <CardDescription>
+            Toggle partners on/off and configure account IDs for premium features
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {companyPartners.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="mb-4">
+                <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              </div>
+              <p className="text-sm mb-4">
+                No syndication partners available
+              </p>
+              <p className="text-xs">
+                Contact platform administrator to enable syndication partners
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {companyPartners.map((partner) => (
+                <div key={partner.platformPartnerId} className="border rounded-lg p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold">{partner.name}</h3>
+                          <Badge variant={partner.isEnabled ? "default" : "secondary"}>
+                            {partner.isEnabled ? "Enabled" : "Disabled"}
                           </Badge>
-                        ))}
+                          <Badge variant="outline">{partner.exportFormat}</Badge>
+                          {partner.accountId && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              ID: {partner.accountId}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div>
+                            <span className="font-medium">Listing Types:</span>{" "}
+                            {partner.supportedListingTypes.join(", ")}
+                          </div>
+                          {partner.accountId && (
+                            <div>
+                              <span className="font-medium">Account ID:</span> {partner.accountId}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={partner.isEnabled}
+                            onCheckedChange={(checked) => handleTogglePartner(partner.platformPartnerId, checked)}
+                          />
+                          <Label className="text-sm">Enabled</Label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(partner)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
+                    
+                    {/* Export URL (only shown if enabled) */}
+                    {partner.isEnabled && (
+                      <div className="pt-4 border-t">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Export URL:</Label>
+                          <div className="p-2 bg-muted rounded text-xs font-mono break-all">
+                            {generateExportUrl(partner)}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Share this URL with {partner.name} to enable listing syndication
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {overrides.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Partners Configured</h3>
-            <p className="text-muted-foreground mb-4">
-              Add partner integrations to customize how your listings are syndicated
-            </p>
-            <Button onClick={() => setAddingPartner(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Partner
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {overrides.map(override => {
-            const partner = availablePartners.find(p => p.id === override.partnerId)
+      {/* Edit Account ID Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configure {editingPartner?.name}</DialogTitle>
+            <DialogDescription>
+              Set your account ID for premium features with this partner
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="account-id">Account ID</Label>
+              <Input
+                id="account-id"
+                value={editingPartner?.accountId || ''}
+                onChange={(e) => setEditingPartner(prev => 
+                  prev ? { ...prev, accountId: e.target.value } : null
+                )}
+                placeholder="Enter your partner account ID"
+              />
+              <p className="text-sm text-muted-foreground">
+                Optional: Provide your account ID with {editingPartner?.name} for premium listing features
+              </p>
+            </div>
             
-            return (
-              <Card key={override.partnerId}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Globe className="h-6 w-6 text-primary" />
-                      <div>
-                        <CardTitle>{override.partnerName}</CardTitle>
-                        <CardDescription>
-                          {partner?.description || 'Custom partner integration'}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-2">
-                        {override.enabled ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        )}
-                        <Switch
-                          checked={override.enabled}
-                          onCheckedChange={(checked) => updateOverride(override.partnerId, { enabled: checked })}
-                        />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removePartnerOverride(override.partnerId)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Contact Overrides */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium flex items-center">
-                        <Mail className="h-4 w-4 mr-2" />
-                        Contact Overrides
-                      </h4>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`lead-email-${override.partnerId}`}>Lead Email</Label>
-                        <Input
-                          id={`lead-email-${override.partnerId}`}
-                          type="email"
-                          placeholder="leads@company.com"
-                          value={override.leadEmail || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { leadEmail: e.target.value })}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Override default email for leads from this partner
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`alt-phone-${override.partnerId}`}>Alternate Phone</Label>
-                        <Input
-                          id={`alt-phone-${override.partnerId}`}
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          value={override.alternatePhone || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { alternatePhone: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Account Settings */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium flex items-center">
-                        <Settings className="h-4 w-4 mr-2" />
-                        Account Settings
-                      </h4>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`account-id-${override.partnerId}`}>Account ID</Label>
-                        <Input
-                          id={`account-id-${override.partnerId}`}
-                          placeholder="Partner account identifier"
-                          value={override.customAccountId || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { customAccountId: e.target.value })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`priority-${override.partnerId}`}>Priority Level</Label>
-                        <select
-                          id={`priority-${override.partnerId}`}
-                          className="w-full p-2 border rounded-md"
-                          value={override.priorityLevel}
-                          onChange={(e) => updateOverride(override.partnerId, { 
-                            priorityLevel: e.target.value as 'normal' | 'high' | 'premium' 
-                          })}
-                        >
-                          <option value="normal">Normal</option>
-                          <option value="high">High Priority</option>
-                          <option value="premium">Premium</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Sync Settings */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Sync Settings</h4>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor={`auto-sync-${override.partnerId}`}>Auto Sync</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Automatically sync new/updated listings
-                          </p>
-                        </div>
-                        <Switch
-                          id={`auto-sync-${override.partnerId}`}
-                          checked={override.autoSync}
-                          onCheckedChange={(checked) => updateOverride(override.partnerId, { autoSync: checked })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Include Listing Types</Label>
-                        <div className="space-y-2">
-                          {partner?.supportedTypes.includes('manufactured_home') && (
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`mh-${override.partnerId}`}
-                                checked={override.includeListingTypes.includes('manufactured_home')}
-                                onChange={(e) => {
-                                  const types = e.target.checked
-                                    ? [...override.includeListingTypes, 'manufactured_home' as const]
-                                    : override.includeListingTypes.filter(t => t !== 'manufactured_home')
-                                  updateOverride(override.partnerId, { includeListingTypes: types })
-                                }}
-                              />
-                              <Label htmlFor={`mh-${override.partnerId}`}>Manufactured Homes</Label>
-                            </div>
-                          )}
-                          
-                          {partner?.supportedTypes.includes('rv') && (
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`rv-${override.partnerId}`}
-                                checked={override.includeListingTypes.includes('rv')}
-                                onChange={(e) => {
-                                  const types = e.target.checked
-                                    ? [...override.includeListingTypes, 'rv' as const]
-                                    : override.includeListingTypes.filter(t => t !== 'rv')
-                                  updateOverride(override.partnerId, { includeListingTypes: types })
-                                }}
-                              />
-                              <Label htmlFor={`rv-${override.partnerId}`}>RVs</Label>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Price Overrides */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Price Settings</h4>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`min-price-${override.partnerId}`}>Minimum Price</Label>
-                        <Input
-                          id={`min-price-${override.partnerId}`}
-                          type="number"
-                          placeholder="0"
-                          value={override.priceOverrides.minimumPrice || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { 
-                            priceOverrides: { 
-                              ...override.priceOverrides, 
-                              minimumPrice: parseInt(e.target.value) || undefined 
-                            } 
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`max-price-${override.partnerId}`}>Maximum Price</Label>
-                        <Input
-                          id={`max-price-${override.partnerId}`}
-                          type="number"
-                          placeholder="No limit"
-                          value={override.priceOverrides.maximumPrice || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { 
-                            priceOverrides: { 
-                              ...override.priceOverrides, 
-                              maximumPrice: parseInt(e.target.value) || undefined 
-                            } 
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor={`hide-price-${override.partnerId}`}>Hide Prices</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Don't include pricing in feeds
-                          </p>
-                        </div>
-                        <Switch
-                          id={`hide-price-${override.partnerId}`}
-                          checked={override.priceOverrides.hidePrice || false}
-                          onCheckedChange={(checked) => updateOverride(override.partnerId, { 
-                            priceOverrides: { 
-                              ...override.priceOverrides, 
-                              hidePrice: checked 
-                            } 
-                          })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {override.specialInstructions && (
-                    <>
-                      <Separator />
-                      <div className="space-y-2">
-                        <Label htmlFor={`instructions-${override.partnerId}`}>Special Instructions</Label>
-                        <textarea
-                          id={`instructions-${override.partnerId}`}
-                          className="w-full p-2 border rounded-md"
-                          rows={3}
-                          placeholder="Special handling instructions for this partner..."
-                          value={override.specialInstructions || ''}
-                          onChange={(e) => updateOverride(override.partnerId, { specialInstructions: e.target.value })}
-                        />
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditDialogOpen(false)
+                  setEditingPartner(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (editingPartner) {
+                    handleUpdateAccountId(editingPartner.platformPartnerId, editingPartner.accountId || '')
+                  }
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
