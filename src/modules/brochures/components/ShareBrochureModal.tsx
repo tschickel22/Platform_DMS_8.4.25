@@ -94,20 +94,21 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
     const previewImage = getPreviewImage()
     const text = encodeURIComponent(`${description.substring(0, 200)}${description.length > 200 ? '...' : ''}`)
     const url = brochureUrl
+    const title = encodeURIComponent(brochure.title)
+    const image = encodeURIComponent(previewImage)
+    const companyName = 'Your Company'
     
     let shareUrl = ''
     switch (platform) {
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${text}&picture=${image}`
         break
       case 'twitter':
-    const title = encodeURIComponent(brochure.title)
-    const image = encodeURIComponent(previewImage)
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}&via=${encodeURIComponent(companyName.replace(/\s+/g, ''))}`
         break
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}&picture=${image}`,
-      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}&via=${encodeURIComponent(companyName.replace(/\s+/g, ''))}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}&summary=${text}&source=${encodeURIComponent(companyName)}`
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${title}&summary=${text}&source=${encodeURIComponent(companyName)}`
+        break
     }
     
     if (shareUrl) {
@@ -304,15 +305,24 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
               </CardContent>
             </Card>
           </TabsContent>
+        </Tabs>
+
+        {/* Rich Social Previews */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Rich Social Previews</CardTitle>
+          </CardHeader>
+          <CardContent>
             <p className="text-xs text-muted-foreground">
               Share with preview image and description from your brochure content
             </p>
-        </Tabs>
+            <p>Social platforms will show your brochure image, title, and description as a rich preview card.</p>
+          </CardContent>
+        </Card>
 
         {/* Brochure Info */}
         <Card>
           <CardHeader>
-                title="Share on Facebook with preview"
             <CardTitle className="text-lg">Brochure Details</CardTitle>
           </CardHeader>
           <CardContent>
@@ -321,7 +331,6 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Template:</span>
                 <span className="ml-2">{brochure.templateName}</span>
               </div>
-                title="Share on Twitter with preview"
               <div>
                 <span className="text-muted-foreground">Properties:</span>
                 <span className="ml-2">{brochure.listingIds.length} listings</span>
@@ -330,18 +339,17 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Downloads:</span>
                 <span className="ml-2">{brochure.downloadCount}</span>
               </div>
-                title="Share on LinkedIn with preview"
               <div>
                 <span className="text-muted-foreground">Shares:</span>
                 <span className="ml-2">{brochure.shareCount}</span>
-              Rich Social Previews
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end">
           <Button onClick={onClose} variant="outline">
-            <p>Social platforms will show your brochure image, title, and description as a rich preview card.</p>
+            Close
           </Button>
         </div>
       </DialogContent>
