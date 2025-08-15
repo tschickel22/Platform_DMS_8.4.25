@@ -16,19 +16,14 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ShareBrochureModal } from '../components/ShareBrochureModal'
 import { useBrochureStore } from '../store/useBrochureStore'
 import { GenerateBrochureModal } from '../components/GenerateBrochureModal'
+import { ShareBrochureModal } from '../components/ShareBrochureModal'
 import { NewTemplateModal } from '../components/NewTemplateModal'
 import { useNavigate } from 'react-router-dom'
 
-export default function BrochuresPage() {
+export function BrochureList() {
   const navigate = useNavigate()
-  const [shareModalOpen, setShareModalOpen] = useState(false)
-  const handleShare = (brochure: any) => {
-    setSelectedBrochure(brochure)
-    setShareModalOpen(true)
-  }
   const { templates, brochures, deleteTemplate, deleteBrochure } = useBrochureStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [showGenerateModal, setShowGenerateModal] = useState(false)
@@ -292,18 +287,6 @@ export default function BrochuresPage() {
             setShowGenerateModal(false)
             // Refresh the list or show success message
           }}
-        />
-      )}
-
-      {/* Share Modal */}
-      {selectedBrochure && (
-        <ShareBrochureModal
-          isOpen={shareModalOpen}
-          onClose={() => {
-            setShareModalOpen(false)
-            setSelectedBrochure(null)
-          }}
-          brochure={selectedBrochure}
         />
       )}
 
