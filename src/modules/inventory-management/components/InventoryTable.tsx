@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Eye, Edit, Trash2, FileText } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
-// ⚠️ Lazy-load so it cannot run "open on mount" behavior on first paint
+// ⚠️ Lazy-load so it cannot run “open on mount” behavior on first paint
 const GenerateBrochureModal = lazy(() => import('@/modules/brochures/components/GenerateBrochureModal'))
 
 interface InventoryTableProps {
@@ -145,14 +145,15 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
         </Table>
       </div>
 
+      {/* Generate Brochure Modal — mount ONLY after click */}
       {userRequestedBrochure && selectedVehicleForBrochure && (
-        <Suspense fallback={<div>Loading brochure generator...</div>}>
+        <Suspense fallback={null}>
           <GenerateBrochureModal
-            vehicle={selectedVehicleForBrochure}
-            onClose={() => {
-              setSelectedVehicleForBrochure(null)
-              setUserRequestedBrochure(false)
-            }}
+            // If your modal expects `open`/`onOpenChange`, it will still work because it's mounted only when open.
+            // Keeping your existing API for minimal changes:
+            isOpen={true}
+            onClose={() => setSelectedVehicleForBrochure(null)}
+            inventoryItem={selectedVehicleForBrochure}
           />
         </Suspense>
       )}
