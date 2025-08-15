@@ -8,7 +8,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
@@ -134,6 +134,7 @@ export default function InventoryManagement() {
                 <Button onClick={() => setShowImport(true)} variant="outline"><Upload className="h-4 w-4 mr-2" />Import CSV</Button>
                 <Button onClick={() => setShowScanner(true)} variant="outline"><Scan className="h-4 w-4 mr-2" />Scan</Button>
                 <Button onClick={() => handleGenerateBrochure(filteredVehicles)} variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
                   Generate Brochure
                 </Button>
               </div>
@@ -294,15 +295,6 @@ export default function InventoryManagement() {
           {userRequestedBrochure && (
             <Suspense fallback={null}>
               <GenerateBrochureModal
-                open={showBrochureModal as any}
-                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
-                onClose={handleCloseBrochureModal}
-                selectedItems={selectedListings as any}
-              />
-            </Suspense>
-          )}
-        </ErrorBoundary>
-      </TooltipProvider>
     </ErrorBoundary>
   )
 }
