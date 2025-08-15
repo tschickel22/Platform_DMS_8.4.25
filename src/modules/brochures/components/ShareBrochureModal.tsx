@@ -7,12 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Copy, Mail, MessageSquare, QrCode, ExternalLink, Download, Share2, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Copy, 
-  Mail, 
-  MessageSquare, 
-  QrCode, 
-  Download, 
-  ExternalLink,
   Check,
   Share
 } from 'lucide-react'
