@@ -95,11 +95,11 @@ export default function InventoryManagement() {
   const handleImportComplete = (imported: Vehicle[]) => { importVehicles(imported); setShowImport(false) }
   const handleScanComplete = () => setShowScanner(false)
 
-  const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
-    switch (key) {
-      case 'available': setStatusFilter('InStock'); break
-      case 'reserved':  setStatusFilter('PreOrder'); break
-      case 'sold':      setStatusFilter('SoldOut'); break
+  const handleStatClick = (statType: string) => {
+    switch (statType) {
+      case 'available':  setStatusFilter('InStock'); break;
+      case 'reserved':  setStatusFilter('PreOrder'); break;
+      case 'sold':      setStatusFilter('SoldOut'); break;
       case 'all':
       case 'total':
       default:          setStatusFilter('all')
@@ -293,11 +293,17 @@ export default function InventoryManagement() {
         {/* Brochure Modal — lazy mounted only after user clicks */}
         <ErrorBoundary>
           {userRequestedBrochure && (
-                )
-                }
             <Suspense fallback={null}>
               <GenerateBrochureModal
+                open={showBrochureModal as any}
+                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
+                onClose={handleCloseBrochureModal}
+                selectedItems={selectedListings as any}
+              />
+            </Suspense>
+          )}
+        </ErrorBoundary>
+      </TooltipProvider>
     </ErrorBoundary>
-  )
   )
 }
