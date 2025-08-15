@@ -4,9 +4,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Copy, Mail, MessageSquare, QrCode, ExternalLink, Download, Share2, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
+  Copy, 
+  Mail, 
+  MessageSquare, 
+  QrCode, 
+  Download, 
+  ExternalLink,
   Check,
   Share
 } from 'lucide-react'
@@ -34,40 +40,6 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
       console.error('Failed to copy link:', error)
-    }
-  }
-
-  const shareToSocialMedia = (platform: string) => {
-    const url = encodeURIComponent(shareUrl)
-    const text = encodeURIComponent(`Check out this brochure: ${brochure.title}`)
-    const hashtags = encodeURIComponent('RV,ManufacturedHomes,PropertyListings')
-    
-    let shareLink = ''
-    
-    switch (platform) {
-      case 'facebook':
-        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${url}`
-        break
-      case 'twitter':
-        shareLink = `https://twitter.com/intent/tweet?url=${url}&text=${text}&hashtags=${hashtags}`
-        break
-      case 'linkedin':
-        shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
-        break
-      case 'instagram':
-        // Instagram doesn't support direct URL sharing, so copy to clipboard with instructions
-        copyToClipboard(`${brochure.title}\n\n${shareUrl}\n\n#RV #ManufacturedHomes #PropertyListings`)
-        toast({
-          title: 'Content copied for Instagram',
-          description: 'Paste this content in your Instagram post or story',
-        })
-        return
-      default:
-        return
-    }
-    
-    if (shareLink) {
-      window.open(shareLink, '_blank', 'width=600,height=400')
     }
   }
 
@@ -99,12 +71,11 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="link" className="w-full">
+        <Tabs defaultValue="link" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="link">Link</TabsTrigger>
             <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
-            <TabsTrigger value="social">Social</TabsTrigger>
             <TabsTrigger value="qr">QR Code</TabsTrigger>
           </TabsList>
 
@@ -217,87 +188,6 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
             </Card>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Social Media</CardTitle>
-                <CardDescription>
-                  Share this brochure on social media platforms
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => shareToSocialMedia('facebook')}
-                    className="flex items-center justify-center space-x-2 h-12"
-                  >
-                    <Facebook className="h-5 w-5 text-blue-600" />
-                    <span>Facebook</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => shareToSocialMedia('twitter')}
-                    className="flex items-center justify-center space-x-2 h-12"
-                  >
-                    <Twitter className="h-5 w-5 text-blue-400" />
-                    <span>Twitter</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => shareToSocialMedia('linkedin')}
-                    className="flex items-center justify-center space-x-2 h-12"
-                  >
-                    <Linkedin className="h-5 w-5 text-blue-700" />
-                    <span>LinkedIn</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => shareToSocialMedia('instagram')}
-                    className="flex items-center justify-center space-x-2 h-12"
-                  >
-                    <Instagram className="h-5 w-5 text-pink-600" />
-                    <span>Instagram</span>
-                  </Button>
-                </div>
-                
-                <div className="mt-4 p-3 bg-muted rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Tip:</strong> For Instagram, the content will be copied to your clipboard. 
-                    Paste it into your Instagram post or story along with the brochure image.
-                  </p>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-2">Quick Share Options</h4>
-                  <div className="space-y-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(`🏠 New listings available! Check out our latest brochure: ${brochure.title}\n\n${shareUrl}\n\n#RV #ManufacturedHomes #PropertyListings`)}
-                      className="w-full justify-start"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy social media post template
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(`${shareUrl}`)}
-                      className="w-full justify-start"
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Copy link only
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
           <TabsContent value="qr" className="space-y-4">
             <Card>
               <CardHeader>
