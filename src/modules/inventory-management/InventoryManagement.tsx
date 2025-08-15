@@ -8,7 +8,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
@@ -40,7 +40,6 @@ export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState('all')
 
   // Brochure modal (lazy-mounted, fully controlled)
-  const [showBrochureModal, setShowBrochureModal] = useState(false)
   const [userRequestedBrochure, setUserRequestedBrochure] = useState(false)   // <- hard gate
   const [selectedListings, setSelectedListings] = useState<any[]>([])
 
@@ -109,11 +108,9 @@ export default function InventoryManagement() {
   const handleGenerateBrochure = (vehiclesList: any[]) => {
     setSelectedListings(vehiclesList)
     setUserRequestedBrochure(true)     // ✅ allow mounting from this point on
-    setShowBrochureModal(true)
   }
 
   const handleCloseBrochureModal = () => {
-    setShowBrochureModal(false)
     // keep userRequestedBrochure = true so the chunk stays loaded for re-open during session
   }
 
@@ -133,6 +130,10 @@ export default function InventoryManagement() {
                 <Button onClick={handleAddMH} variant="outline"><Plus className="h-4 w-4 mr-2" />Add MH</Button>
                 <Button onClick={() => setShowImport(true)} variant="outline"><Upload className="h-4 w-4 mr-2" />Import CSV</Button>
                 <Button onClick={() => setShowScanner(true)} variant="outline"><Scan className="h-4 w-4 mr-2" />Scan</Button>
+                <Button onClick={() => handleGenerateBrochure(filteredVehicles)} variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Brochure
+                </Button>
               </div>
             </div>
 
@@ -291,8 +292,8 @@ export default function InventoryManagement() {
           {userRequestedBrochure && (
             <Suspense fallback={null}>
               <GenerateBrochureModal
-                open={showBrochureModal as any}
-                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
+                open={userRequestedBrochure as any}
+                onOpenChange={(open: boolean) => setUserRequestedBrochure(open)}
                 onClose={handleCloseBrochureModal}
                 selectedItems={selectedListings as any}
               />
