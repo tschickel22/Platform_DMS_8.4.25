@@ -1,316 +1,417 @@
-// src/modules/inventory-management/InventoryManagement.tsx
 import React, { useState } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import ErrorBoundary from '@/components/ErrorBoundary'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
-import { InventoryTable } from './components/InventoryTable'
-import { BarcodeScanner } from './components/BarcodeScanner'
-import VehicleDetail from './components/VehicleDetail'
-import CSVSmartImport from './components/CSVSmartImport'
-import RVInventoryForm from './forms/RVInventoryForm'
-import MHInventoryForm from './forms/MHInventoryForm'
-import { InventoryErrorBoundary } from './components/InventoryErrorBoundary'
+import { Button } from '@/components/ui/button' 
+import { Badge } from '@/components/ui/badge'
+import { Package, Plus, Upload, Download, QrCode, TrendingUp, DollarSign } from 'lucide-react'
+import { Vehicle, VehicleStatus, VehicleType } from '@/types'
+import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
-import { Vehicle, RVVehicle, MHVehicle } from './state/types'
+import { useToast } from '@/hooks/use-toast'
+import { InventoryTable } from './components/InventoryTable'
+import { VehicleForm } from './components/VehicleForm'
+import { VehicleDetail } from './components/VehicleDetail'
+import { CSVImport } from './components/CSVImport'
+import { BarcodeScanner } from './components/BarcodeScanner'
+import { TagSelector } from '@/modules/tagging-engine'
+import { TagType } from '@/modules/tagging-engine/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { useTasks } from '@/hooks/useTasks'
+import { Task, TaskModule, TaskPriority } from '@/types'
 
-export default function InventoryManagement() {
-  const { vehicles, addVehicle, updateVehicle, deleteVehicle, importVehicles } = useInventoryManagement()
-
-  // UI state
-  const [showAddRVModal, setShowAddRVModal] = useState(false)
-  const [showAddMHModal, setShowAddMHModal] = useState(false)
-  const [showImport, setShowImport] = useState(false)
-  const [showScanner, setShowScanner] = useState(false)
-  const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
-  const [selectedItem, setSelectedItem] = useState<Vehicle | null>(null)
-
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [activeTab, setActiveTab] = useState('all')
-
-  const safeVehicles = Array.isArray(vehicles) ? vehicles : []
-
-  // filter
-  const filteredVehicles = safeVehicles.filter(v => {
-    const q = searchTerm.toLowerCase()
-    const make = v.make?.toLowerCase() || ''
-    const model = v.model?.toLowerCase() || ''
-    const vin = v.type === 'RV'
-      ? (v as RVVehicle).vin?.toLowerCase() || ''
-      : (v as MHVehicle).serialNumber?.toLowerCase() || ''
-
-    const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
-    const status = v.type === 'RV' ? (v as RVVehicle).availability : 'available'
-    const matchesStatus = statusFilter === 'all' || status === statusFilter
-    const matchesType = typeFilter === 'all' || v.type === typeFilter
-    const matchesTab =
-      activeTab === 'all' ||
-      (activeTab === 'rv' && v.type === 'RV') ||
-      (activeTab === 'mh' && v.type === 'MH')
-
-    return matchesSearch && matchesStatus && matchesType && matchesTab
-  })
-
-  // stats
-  const totalUnits = safeVehicles.length
-  const availableUnits = safeVehicles.filter(v => v.type !== 'RV' || (v as RVVehicle).availability === 'InStock').length
-  const reservedUnits  = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'PreOrder').length
-  const soldUnits      = safeVehicles.filter(v => v.type === 'RV' && (v as RVVehicle).availability === 'SoldOut').length
-  const totalValue = safeVehicles.reduce(
-    (s, v) => s + (v.type === 'RV' ? (v as RVVehicle).price || 0 : (v as MHVehicle).askingPrice || 0),
-    0
-  )
-
-  // header buttons
-  const handleAddRV = () => { setEditingItem(null); setShowAddRVModal(true) }
-  const handleAddMH = () => { setEditingItem(null); setShowAddMHModal(true) }
-
-  // table actions -> open modals (no inline forms)
-  const handleEdit = (vehicle: Vehicle) => {
-    setEditingItem(vehicle)
-    vehicle.type === 'RV' ? setShowAddRVModal(true) : setShowAddMHModal(true)
+function InventoryList() {
+  const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle } = useInventoryManagement()
+  const { toast } = useToast()
+  const { createTask } = useTasks()
+  const [showVehicleForm, setShowVehicleForm] = useState(false)
+  const [showVehicleDetail, setShowVehicleDetail] = useState(false)
+  const [showCSVImport, setShowCSVImport] = useState(false)
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+  
+  const handleCreateVehicle = () => {
+    setSelectedVehicle(null)
+    setShowVehicleForm(true)
   }
-  const handleView = (vehicle: Vehicle) => setSelectedItem(vehicle)
-
-  // save from modal forms
-  const handleSaveRV = (rv: RVVehicle) => {
-    editingItem ? updateVehicle(rv) : addVehicle(rv)
-    setEditingItem(null)
-    setShowAddRVModal(false)
+  
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle)
+    setShowVehicleForm(true)
   }
-  const handleSaveMH = (mh: MHVehicle) => {
-    editingItem ? updateVehicle(mh) : addVehicle(mh)
-    setEditingItem(null)
-    setShowAddMHModal(false)
+  
+  const handleViewVehicle = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle)
+    setShowVehicleDetail(true)
   }
-
-  const handleImportComplete = (imported: Vehicle[]) => { importVehicles(imported); setShowImport(false) }
-  const handleScanComplete = () => setShowScanner(false)
-
-  const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
-    switch (key) {
-      case 'available': setStatusFilter('InStock'); break
-      case 'reserved':  setStatusFilter('PreOrder'); break
-      case 'sold':      setStatusFilter('SoldOut'); break
-      case 'all':
-      case 'total':
-      default:          setStatusFilter('all')
+  
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      await createTask(taskData)
+      setShowTaskForm(false)
+      setInitialTaskData(undefined)
+      toast({
+        title: 'Task Created',
+        description: 'Task has been created successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      })
     }
   }
 
+  const handleCreateTaskForVehicle = (vehicle: Vehicle) => {
+    // Determine priority based on vehicle status
+    const priority = vehicle.status === 'service' ? TaskPriority.HIGH :
+                    TaskPriority.LOW
+
+    // Set due date based on vehicle status
+    const dueDate = vehicle.status === 'service' 
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for service
+      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days for others
+
+    setInitialTaskData({
+      sourceId: vehicle.id,
+      sourceType: 'vehicle',
+      module: TaskModule.CRM,
+      title: `Follow up on ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      priority,
+      dueDate,
+      link: `/inventory`,
+      customFields: {
+        vehicleVin: vehicle.vin,
+        vehiclePrice: vehicle.price,
+        vehicleLocation: vehicle.location,
+        vehicleStatus: vehicle.status
+      }
+    })
+    setShowTaskForm(true)
+  }
+
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    if (window.confirm('Are you sure you want to delete this vehicle?')) {
+      try {
+        await deleteVehicle(vehicleId)
+        toast({
+          title: 'Vehicle Deleted',
+          description: 'The vehicle has been removed from inventory',
+        })
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete vehicle',
+        })
+      }
+    }
+  }
+  
+  const handleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
+    try {
+      await updateVehicleStatus(vehicleId, status)
+      toast({
+        title: 'Status Updated',
+        description: `Vehicle status changed to ${status}`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update vehicle status',
+        variant: 'destructive'
+      })
+    }
+  }
+  
+  const handleSaveVehicle = async (vehicleData: Partial<Vehicle>) => {
+    try {
+      if (selectedVehicle) {
+        // Update existing vehicle
+        await updateVehicleStatus(selectedVehicle.id, vehicleData.status || selectedVehicle.status)
+        toast({
+          title: 'Vehicle Updated',
+          description: 'Vehicle information has been updated',
+        })
+      } else {
+        // Create new vehicle
+        await createVehicle(vehicleData)
+        toast({
+          title: 'Vehicle Added',
+          description: 'New vehicle has been added to inventory',
+        })
+      }
+      setShowVehicleForm(false)
+      setSelectedVehicle(null)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to ${selectedVehicle ? 'update' : 'create'} vehicle`,
+        variant: 'destructive'
+      })
+    }
+  }
+  
+  const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[]) => {
+    try {
+      // In a real app, this would be a batch import
+      for (const vehicle of vehiclesToImport) {
+        await createVehicle(vehicle)
+      }
+      
+      setShowCSVImport(false)
+      toast({
+        title: 'Import Successful',
+        description: `Imported ${vehiclesToImport.length} vehicles`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Import Failed',
+        description: 'There was an error importing the vehicles',
+        variant: 'destructive'
+      })
+    }
+  }
+  
+  const handleBarcodeScanned = (data: string) => {
+    // Check if this VIN already exists
+    const existingVehicle = vehicles.find(v => v.vin === data)
+    
+    if (existingVehicle) {
+      setSelectedVehicle(existingVehicle)
+      setShowVehicleDetail(true)
+      toast({
+        title: 'Vehicle Found',
+        description: `Found existing vehicle with VIN: ${data}`,
+      })
+    } else {
+      // Create a new vehicle with this VIN
+      setSelectedVehicle(null)
+      setShowVehicleForm(true)
+      
+      // Pre-fill the VIN field
+      setTimeout(() => {
+        const vinInput = document.getElementById('vin') as HTMLInputElement
+        if (vinInput) {
+          vinInput.value = data
+          // Trigger a change event
+          const event = new Event('input', { bubbles: true })
+          vinInput.dispatchEvent(event)
+        }
+      }, 100)
+      
+      toast({
+        title: 'New VIN Scanned',
+        description: `Creating new vehicle with VIN: ${data}`,
+      })
+    }
+    
+    setShowBarcodeScanner(false)
+  }
+
+  // Helper function to apply tile filters
+  const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
+    setActiveTab('inventory')
+    setStatusFilter(status)
+  }
+
+  const tileProps = (handler: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: handler,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
+  })
+
+  const filteredVehicles = vehicles.filter(vehicle => {
+    const matchesStatus = statusFilter === 'all' || vehicle.status.toLowerCase() === statusFilter.toLowerCase()
+    return matchesStatus
+  })
+
   return (
-    <ErrorBoundary>
-      <TooltipProvider delayDuration={200}>
-        <InventoryErrorBoundary>
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">Inventory Management</h1>
-                <p className="text-muted-foreground">Manage your RV and manufactured home inventory</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={handleAddRV}><Plus className="h-4 w-4 mr-2" />Add RV</Button>
-                <Button onClick={handleAddMH} variant="outline"><Plus className="h-4 w-4 mr-2" />Add MH</Button>
-                <Button onClick={() => setShowImport(true)} variant="outline"><Upload className="h-4 w-4 mr-2" />Import CSV</Button>
-                <Button onClick={() => setShowScanner(true)} variant="outline"><Scan className="h-4 w-4 mr-2" />Scan</Button>
-              </div>
-            </div>
+    <div className="space-y-8">
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <TaskForm
+          initialData={initialTaskData}
+          onSave={handleCreateTask}
+          onCancel={() => {
+            setShowTaskForm(false)
+            setInitialTaskData(undefined)
+          }}
+        />
+      )}
+      
+      {/* Vehicle Form Modal */}
+      {showVehicleForm && (
+        <VehicleForm
+          vehicle={selectedVehicle || undefined}
+          onSave={handleSaveVehicle}
+          onCancel={() => {
+            setShowVehicleForm(false)
+            setSelectedVehicle(null)
+          }}
+        />
+      )}
+      
+      {/* Vehicle Detail Modal */}
+      {showVehicleDetail && selectedVehicle && (
+        <VehicleDetail
+          vehicle={selectedVehicle}
+          onClose={() => setShowVehicleDetail(false)}
+          onEdit={handleEditVehicle}
+          onCreateTask={handleCreateTaskForVehicle}
+        />
+      )}
+      
+      {/* CSV Import Modal */}
+      {showCSVImport && (
+        <CSVImport
+          onImport={handleImportCSV}
+          onCancel={() => setShowCSVImport(false)}
+        />
+      )}
+      
+      {/* Barcode Scanner Modal */}
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScanned}
+          onClose={() => setShowBarcodeScanner(false)}
+        />
+      )}
 
-            {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-5">
-              <Card
-                className="cursor-pointer hover:bg-accent/50 bg-blue-50 border-blue-200"
-                onClick={() => handleStatClick('total')}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Units</CardTitle>
-                  <Package className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-700">{totalUnits}</div>
-                  <p className="text-xs text-muted-foreground">All inventory items</p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent/50 bg-emerald-50 border-emerald-200"
-                onClick={() => handleStatClick('available')}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Available</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-emerald-700">{availableUnits}</div>
-                  <p className="text-xs text-muted-foreground">Ready for sale</p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent/50 bg-amber-50 border-amber-200"
-                onClick={() => handleStatClick('reserved')}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Reserved</CardTitle>
-                  <Clock className="h-4 w-4 text-amber-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-amber-700">{reservedUnits}</div>
-                  <p className="text-xs text-muted-foreground">Pre-orders & holds</p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent/50 bg-rose-50 border-rose-200"
-                onClick={() => handleStatClick('sold')}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sold</CardTitle>
-                  <XCircle className="h-4 w-4 text-rose-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-rose-700">{soldUnits}</div>
-                  <p className="text-xs text-muted-foreground">Completed sales</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-blue-50 border-blue-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                  <DollarSign className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-700">
-                    ${Number.isFinite(totalValue) ? totalValue.toLocaleString() : '0'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Inventory worth</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Search / Filters / Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory</CardTitle>
-                <CardDescription>Search and filter your inventory</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by make, model, VIN, or serial number..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="InStock">Available</SelectItem>
-                      <SelectItem value="PreOrder">Reserved</SelectItem>
-                      <SelectItem value="SoldOut">Sold</SelectItem>
-                      <SelectItem value="OutOfStock">Out of Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="RV">RV</SelectItem>
-                      <SelectItem value="MH">Manufactured Home</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList>
-                    <TabsTrigger value="all">All ({totalUnits})</TabsTrigger>
-                    <TabsTrigger value="rv">RVs ({safeVehicles.filter(v => v.type === 'RV').length})</TabsTrigger>
-                    <TabsTrigger value="mh">MH ({safeVehicles.filter(v => v.type === 'MH').length})</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="all" className="mt-4">
-                    <InventoryTable
-                      vehicles={filteredVehicles}
-                      onEdit={handleEdit}
-                      onView={handleView}
-                      onDelete={deleteVehicle}
-                    />
-                  </TabsContent>
-                  <TabsContent value="rv" className="mt-4">
-                    <InventoryTable
-                      vehicles={filteredVehicles.filter(v => v.type === 'RV')}
-                      onEdit={handleEdit}
-                      onView={handleView}
-                      onDelete={deleteVehicle}
-                    />
-                  </TabsContent>
-                  <TabsContent value="mh" className="mt-4">
-                    <InventoryTable
-                      vehicles={filteredVehicles.filter(v => v.type === 'MH')}
-                      onEdit={handleEdit}
-                      onView={handleView}
-                      onDelete={deleteVehicle}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* MODALS ONLY — no inline forms */}
-            <Dialog open={showAddRVModal} onOpenChange={setShowAddRVModal}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
-                <DialogHeader>
-                  <DialogTitle>{editingItem?.type === 'RV' ? 'Edit RV' : 'Add RV'}</DialogTitle>
-                </DialogHeader>
-                <RVInventoryForm
-                  editingItem={editingItem?.type === 'RV' ? (editingItem as RVVehicle) : undefined}
-                  onSave={handleSaveRV}
-                  onCancel={() => { setEditingItem(null); setShowAddRVModal(false) }}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showAddMHModal} onOpenChange={setShowAddMHModal}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
-                <DialogHeader>
-                  <DialogTitle>{editingItem?.type === 'MH' ? 'Edit MH' : 'Add MH'}</DialogTitle>
-                </DialogHeader>
-                <MHInventoryForm
-                  editingItem={editingItem?.type === 'MH' ? (editingItem as MHVehicle) : undefined}
-                  onSave={handleSaveMH}
-                  onCancel={() => { setEditingItem(null); setShowAddMHModal(false) }}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <CSVSmartImport open={showImport} onOpenChange={setShowImport} onComplete={handleImportComplete} />
-            <BarcodeScanner open={showScanner} onOpenChange={setShowScanner} onScanComplete={handleScanComplete} />
-            <VehicleDetail
-              open={!!selectedItem}
-              onOpenChange={(open) => !open && setSelectedItem(null)}
-              vehicle={selectedItem}
-              onEdit={handleEdit}
-              onDelete={deleteVehicle}
-            />
+      {/* Page Header */}
+      <div className="ri-page-header">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="ri-page-title">Inventory Management</h1>
+            <p className="ri-page-description">
+              Manage your RV and motorhome inventory
+            </p>
           </div>
-        </InventoryErrorBoundary>
-      </TooltipProvider>
-    </ErrorBoundary>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
+              <QrCode className="h-4 w-4 mr-2" />
+              Scan Barcode
+            </Button>
+            <Button variant="outline" onClick={() => setShowCSVImport(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
+            <Button onClick={handleCreateVehicle}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Home
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="ri-stats-grid">
+        <Card 
+          {...tileProps(() => applyTileFilter('all'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900">Total Units</CardTitle>
+            <Package className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900">{vehicles.length}</div>
+            <p className="text-xs text-blue-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +5 units this month
+            </p>
+          </CardContent>
+        </Card>
+        <Card 
+          {...tileProps(() => applyTileFilter('available'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-900">Available</CardTitle>
+            <Package className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">
+              {vehicles.filter(v => v.status === VehicleStatus.AVAILABLE).length}
+            </div>
+            <p className="text-xs text-green-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Ready for sale
+            </p>
+          </CardContent>
+        </Card>
+        <Card 
+          {...tileProps(() => applyTileFilter('sold'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-orange-100/50"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-900">Reserved</CardTitle>
+            <Package className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900">
+              {vehicles.filter(v => v.status === VehicleStatus.RESERVED).length}
+            </div>
+            <p className="text-xs text-yellow-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Pending sale
+            </p>
+          </CardContent>
+        </Card>
+        <Card 
+          {...tileProps(() => applyTileFilter('reserved'))}
+          className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-900">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-900">
+              {formatCurrency(vehicles.reduce((sum, v) => sum + v.price, 0))}
+            </div>
+            <p className="text-xs text-purple-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Inventory value
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter Indicator */}
+      {statusFilter !== 'all' && (
+        <div className="flex items-center gap-2 mb-4">
+          <Badge variant="secondary">
+            Filtered by: {statusFilter}
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
+            Clear Filter
+          </Button>
+        </div>
+      )}
+      
+      {/* Inventory Table */}
+      <InventoryTable 
+        vehicles={filteredVehicles}
+        onEdit={handleEditVehicle}
+        onView={handleViewVehicle}
+        onStatusChange={handleStatusChange}
+        onCreateTask={handleCreateTaskForVehicle}
+      />
+    </div>
+  )
+}
+
+export default function InventoryManagement() {
+  return (
+    <Routes>
+      <Route path="/" element={<InventoryList />} />
+      <Route path="/*" element={<InventoryList />} />
+    </Routes>
   )
 }
