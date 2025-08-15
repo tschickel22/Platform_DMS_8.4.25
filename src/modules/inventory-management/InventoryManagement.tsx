@@ -40,6 +40,7 @@ export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState('all')
 
   // Brochure modal (lazy-mounted, fully controlled)
+  const [showBrochureModal, setShowBrochureModal] = useState(false)
   const [userRequestedBrochure, setUserRequestedBrochure] = useState(false)   // <- hard gate
   const [selectedListings, setSelectedListings] = useState<any[]>([])
 
@@ -105,12 +106,8 @@ export default function InventoryManagement() {
     }
   }
 
-  const handleGenerateBrochure = (vehiclesList: any[]) => {
-    setSelectedListings(vehiclesList)
-    setUserRequestedBrochure(true)     // ✅ allow mounting from this point on
-  }
-
   const handleCloseBrochureModal = () => {
+    setShowBrochureModal(false)
     // keep userRequestedBrochure = true so the chunk stays loaded for re-open during session
   }
 
@@ -292,8 +289,8 @@ export default function InventoryManagement() {
           {userRequestedBrochure && (
             <Suspense fallback={null}>
               <GenerateBrochureModal
-                open={userRequestedBrochure as any}
-                onOpenChange={(open: boolean) => setUserRequestedBrochure(open)}
+                open={showBrochureModal as any}
+                onOpenChange={(open: boolean) => setShowBrochureModal(open)}
                 onClose={handleCloseBrochureModal}
                 selectedItems={selectedListings as any}
               />
