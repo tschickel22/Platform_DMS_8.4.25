@@ -257,19 +257,6 @@ export default function ListingPartnersSettings() {
                     </div>
                     
                     {/* Export URL (only shown if enabled) */}
-                    {partner.isEnabled && (
-                      <div className="pt-4 border-t">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Export URL:</Label>
-                          <div className="p-2 bg-muted rounded text-xs font-mono break-all">
-                            {generateExportUrl(partner)}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Share this URL with {partner.name} to enable listing syndication
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

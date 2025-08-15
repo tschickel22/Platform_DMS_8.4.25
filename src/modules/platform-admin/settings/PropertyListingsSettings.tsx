@@ -405,6 +405,33 @@ export default function PropertyListingsSettings() {
                           </div>
                         </div>
                         {/* Actions */}
+                        {/* Export URL - Only visible in Platform Settings */}
+                        <div className="pt-4 border-t">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <Label className="text-sm font-medium">Export URL:</Label>
+                              <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
+                                {generateExportUrl(partner)}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Share this URL with {partner.name} to enable listing syndication
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(generateExportUrl(partner), partner.id)}
+                              className="shrink-0"
+                            >
+                              {copiedUrl === partner.id ? (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Copy className="h-4 w-4 mr-2" />
+                              )}
+                              {copiedUrl === partner.id ? 'Copied' : 'Copy'}
+                            </Button>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="flex items-center space-x-2">
                             <Switch
@@ -532,37 +559,31 @@ export default function PropertyListingsSettings() {
       {/* General Settings Section */}
       <Card>
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle>Lead Reply Settings</CardTitle>
           <CardDescription>
-            Configure general property listing settings
+            Configure the email address used for lead notifications from syndication partners
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-base">Auto-sync listings</Label>
-              <div className="text-sm text-muted-foreground">
-                Automatically sync listings with syndication partners
-              </div>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          
-          <Separator />
-          
           <div className="space-y-2">
-            <Label htmlFor="sync-interval">Sync interval (hours)</Label>
+            <Label htmlFor="lead-reply-email">Lead Reply Email</Label>
             <Input
-              id="sync-interval"
-              type="number"
-              defaultValue="24"
-              className="w-32"
-              min="1"
-              max="168"
+              id="lead-reply-email"
+              type="email"
+              value={leadReplyEmail}
+              onChange={(e) => setLeadReplyEmail(e.target.value)}
+              placeholder="support@notifications.renterinsight.com"
+              className="max-w-md"
             />
             <div className="text-sm text-muted-foreground">
-              How often to sync listings with partners (1-168 hours)
+              This email address will be included in syndication feeds for lead notifications
             </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button onClick={handleSaveLeadEmail} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
         </CardContent>
       </Card>
