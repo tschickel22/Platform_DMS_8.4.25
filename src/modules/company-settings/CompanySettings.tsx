@@ -42,7 +42,6 @@ function CompanySettingsPage() {
     { id: 'custom-fields', name: 'Custom Fields', icon: Settings },
     { id: 'warranty', name: 'Warranty', icon: Settings },
     { id: 'listing-partners', name: 'Listing Partners', icon: Globe },
-    { id: 'listing-previews', name: 'Listing Previews', icon: Settings },
   ]
   const modules = mockCompanySettings.customFields.modules
 
