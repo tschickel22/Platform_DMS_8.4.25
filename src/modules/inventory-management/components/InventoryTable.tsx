@@ -131,6 +131,7 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
