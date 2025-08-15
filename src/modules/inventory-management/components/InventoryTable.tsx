@@ -140,15 +140,7 @@ export function InventoryTable({ vehicles, onEdit, onDelete, onView }: Inventory
         </Table>
       </div>
 
-      {/* Generate Brochure Modal — mount ONLY after click */}
-      {userRequestedBrochure && selectedVehicleForBrochure && (
-        <Suspense fallback={null}>
-          <GenerateBrochureModal
-            // If your modal expects `open`/`onOpenChange`, it will still work because it's mounted only when open.
-            // Keeping your existing API for minimal changes:
-            isOpen={true}
-            onClose={() => setSelectedVehicleForBrochure(null)}
-            inventoryItem={selectedVehicleForBrochure}
+  
           />
         </Suspense>
       )}
