@@ -339,6 +339,304 @@ export default function PropertyListingsSettings() {
           </CardContent>
         </Card>
       </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6 max-w-full">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Platform Syndication Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage syndication partners, share links, and export feeds
+          </p>
+        </div>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setEditingPartner(null)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Partner
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure a syndication partner to export your listings
+              </DialogDescription>
+            </DialogHeader>
+            <SyndicationPartnerForm
+              partner={editingPartner}
+              availablePlatformPartners={platformPartners}
+              globalLeadReplyEmail={leadReplyEmail}
+              onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+              onCancel={closeForm}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('partners')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'partners'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Partners
+          </button>
+          <button
+            onClick={() => setActiveTab('share-links')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'share-links'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Share Links
+          </button>
+          <button
+            onClick={() => setActiveTab('global-settings')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'global-settings'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+            }`}
+          >
+            Global Settings
+          </button>
+        </nav>
+      </div>
+
+      {/* Partners Tab */}
+      {activeTab === 'partners' && (
+        <>
+          {/* Available Platform Partners */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Platform Partners</CardTitle>
+              <CardDescription>
+                Platform-level syndication partners available for configuration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {platformPartners.map((platformPartner) => {
+                  const isConfigured = syndicationPartners.some(p => p.platformPartnerId === platformPartner.platformId)
+                  const exportUrl = generateExportUrl(platformPartner)
+                  
+                  return (
+                    <div key={platformPartner.platformId} className="border rounded-lg p-4 space-y-4">
+                      {/* Partner Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-5 w-5 text-primary" />
+                          <h4 className="font-medium">{platformPartner.name}</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
+                          <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
+                            {platformPartner.isActive ? "Available" : "Unavailable"}
+                          </Badge>
+                          {isConfigured && (
+                            <Badge variant="default" className="bg-green-100 text-green-800">
+                              Configured
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Partner Details */}
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>{platformPartner.description}</p>
+                        <div>
+                          <span className="font-medium">Supported Types:</span> {platformPartner.supportedListingTypes.join(', ')}
+                        </div>
+                        <div>
+                          <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
+                        </div>
+                      </div>
+
+                      {/* Export URL Section */}
+                      <div className="pt-3 border-t space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Export URL:</Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openTestFeed(exportUrl)}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Test Feed
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
+                            >
+                              {copiedUrl === platformPartner.platformId ? (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Copy className="h-4 w-4 mr-2" />
+                              )}
+                              {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-muted rounded text-xs font-mono break-all border">
+                          {exportUrl}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Share this URL with {platformPartner.name} to enable listing syndication
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Configured Partners Section */}
+          {syndicationPartners.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Configured Partners</CardTitle>
+                <CardDescription>
+                  Company-specific syndication partner configurations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {syndicationPartners.map((partner) => (
+                    <div key={partner.id} className="border rounded-lg p-4">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <h3 className="text-lg font-semibold">{partner.name}</h3>
+                              <Badge variant={partner.isActive ? "default" : "secondary"}>
+                                {partner.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                              <Badge variant="outline">{partner.exportFormat}</Badge>
+                              {partner.accountId && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                  ID: {partner.accountId}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <div>
+                                <span className="font-medium">Lead Email:</span> {partner.leadEmail}
+                              </div>
+                              <div>
+                                <span className="font-medium">Listing Types:</span>{" "}
+                                {partner.listingTypes.join(", ")}
+                              </div>
+                              {partner.accountId && (
+                                <div>
+                                  <span className="font-medium">Account ID:</span> {partner.accountId}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={partner.isActive}
+                                onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
+                              />
+                              <Label className="text-sm">Active</Label>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditForm(partner)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{partner.name}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeletePartner(partner.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                        
+                        {/* Export URL for configured partners */}
+                        <div className="pt-4 border-t">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <Label className="text-sm font-medium">Export URL:</Label>
+                              <div className="mt-1 p-3 bg-muted rounded text-xs font-mono break-all border">
+                                {partner.exportUrl}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Share this URL with {partner.name} to enable listing syndication
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openTestFeed(partner.exportUrl)}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Test Feed
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => copyToClipboard(partner.exportUrl, partner.id)}
+                              >
+                                {copiedUrl === partner.id ? (
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <Copy className="h-4 w-4 mr-2" />
+                                )}
+                                {copiedUrl === partner.id ? 'Copied' : 'Copy'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -468,84 +766,7 @@ export default function PropertyListingsSettings() {
           </CardContent>
         </Card>
       )}
-    )
-  }
 
-  return (
-    <div className="space-y-6 max-w-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Syndication Settings</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure listing syndication to partner marketplaces
-          </p>
-        </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingPartner(null)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Partner
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
-              </DialogTitle>
-              <DialogDescription>
-                Configure a syndication partner to export your listings
-              </DialogDescription>
-            </DialogHeader>
-            <SyndicationPartnerForm
-              partner={editingPartner}
-              availablePlatformPartners={platformPartners}
-              globalLeadReplyEmail={leadReplyEmail}
-              onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-        <h3 className="text-lg font-medium">Platform Syndication Settings</h3>
-            />
-          Manage syndication partners, share links, and export feeds
-        </Dialog>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('partners')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'partners'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-            }`}
-          >
-            Partners
-          </button>
-          <button
-            onClick={() => setActiveTab('share-links')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'share-links'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-            }`}
-          >
-            Share Links
-          </button>
-          <button
-            onClick={() => setActiveTab('global-settings')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'global-settings'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-            }`}
-          >
-            Global Settings
-          </button>
-        </nav>
-      </div>
-
-      {/* Partners Tab */}
-      {activeTab === 'partners' && (
-        <>
       <Tabs defaultValue="partners" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="partners" className="flex items-center gap-2">
