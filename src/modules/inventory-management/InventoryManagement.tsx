@@ -106,6 +106,12 @@ export default function InventoryManagement() {
     }
   }
 
+  const handleGenerateBrochure = (vehiclesList: any[]) => {
+    setSelectedListings(vehiclesList)
+    setUserRequestedBrochure(true)     // ✅ allow mounting from this point on
+    setShowBrochureModal(true)
+  }
+
   const handleCloseBrochureModal = () => {
     setShowBrochureModal(false)
     // keep userRequestedBrochure = true so the chunk stays loaded for re-open during session
