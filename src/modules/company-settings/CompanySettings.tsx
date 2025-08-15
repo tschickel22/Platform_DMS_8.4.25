@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2, Users, Settings, Palette, Bell, Zap, Globe, Home } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Save, Plus, Edit, Trash2, Building, Tag, Mail } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { CustomField, CustomFieldType } from '@/types'
@@ -42,6 +41,7 @@ function CompanySettingsPage() {
     { id: 'notifications', name: 'Notifications', icon: Mail },
     { id: 'integrations', name: 'Integrations', icon: Globe },
     { id: 'users', name: 'Users', icon: Users },
+    { id: 'custom-fields', name: 'Custom Fields', icon: Settings },
     { id: 'warranty', name: 'Warranty', icon: Settings },
     { id: 'listing-partners', name: 'Listing Partners', icon: Globe },
     { id: 'listing-previews', name: 'Listing Previews', icon: Settings },
