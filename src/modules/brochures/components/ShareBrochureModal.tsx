@@ -59,6 +59,19 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
     window.open(smsUrl)
   }
 
+  const handleSocialShare = (platform: string) => {
+    const text = encodeURIComponent(`Check out this brochure: ${brochure.title}`)
+    const url = encodeURIComponent(brochureUrl)
+    
+    const urls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
+    }
+    
+    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
+  }
+
   const handleDownload = () => {
     // In a real implementation, this would generate and download a PDF
     console.log('Downloading brochure:', brochure.id)
