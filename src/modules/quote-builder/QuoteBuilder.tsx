@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsTrigger, TabsList } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { FileText, Plus, Search, Filter, Send, Edit, Eye, TrendingUp, DollarSign, Copy, Trash2, Download, X, ListTodo } from 'lucide-react'
-import { Quote, QuoteStatus } from '@/types'
+import { Quote, QuoteStatus, Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -77,6 +77,103 @@ const mockQuotes: Quote[] = [
   }
 ]
 
+// --- Simple, self-contained Quote Builder modal used by QuotesList ---
+type SimpleQuoteBuilderProps = {
+  quote: Quote | null
+  customerId: string
+  vehicles: Vehicle[]
+  onSave: (data: Partial<Quote>) => void
+  onCancel: () => void
+}
+
+function SimpleQuoteBuilder({
+  quote,
+  customerId,
+  vehicles,
+  onSave,
+  onCancel
+}: SimpleQuoteBuilderProps) {
+  const [custId, setCustId] = React.useState(customerId || '')
+  const [vehicleId, setVehicleId] = React.useState<string>(quote?.vehicleId || '')
+  const [price, setPrice] = React.useState<number>(quote?.total || 0)
+
+  // Keep it dumb: pick a vehicle and a price
+  const available = React.useMemo(
+    () => vehicles.filter(v => v.status === VehicleStatus.AVAILABLE),
+    [vehicles]
+  )
+
+  const handleSave = () => {
+    const selected = vehicles.find(v => v.id === vehicleId)
+    const subtotal = price
+    const tax = Math.round(subtotal * 0.08)
+    const total = subtotal + tax
+
+    onSave({
+      customerId: custId || 'unknown',
+      vehicleId: selected?.id,
+      items: selected
+        ? [{
+            id: 'li-1',
+            description: `${selected.year} ${selected.make} ${selected.model}`,
+            quantity: 1,
+            unitPrice: price,
+            total: price
+          }]
+        : [],
+      subtotal,
+      tax,
+      total,
+      notes: quote?.notes || '',
+      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    } as Partial<Quote>)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle>{quote ? 'Edit Quote' : 'New Quote'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="cust">Customer ID</Label>
+            <Input id="cust" value={custId} onChange={(e) => setCustId(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="veh">Vehicle</Label>
+            <Select value={vehicleId} onValueChange={setVehicleId}>
+              <SelectTrigger id="veh"><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+              <SelectContent>
+                {available.map(v => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.year} {v.make} {v.model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="price">Price</Label>
+            <Input
+              id="price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleSave}>Save</Button>
+            <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 // Quote Detail Modal Component
 interface QuoteDetailModalProps {
   quote: Quote
