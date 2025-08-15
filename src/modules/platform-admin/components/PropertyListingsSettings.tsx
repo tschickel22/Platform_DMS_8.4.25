@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Plus, ExternalLink, Edit, Trash2, Copy, CheckCircle, Globe, Settings, Zap } from 'lucide-react'
-import { SyndicationPartnerConfiguration, PlatformSyndicationPartner } from '@/types'
+import { SyndicationPartnerConfiguration } from '@/types'
 import { SyndicationPartnerForm } from '@/modules/property-listings/components/SyndicationPartnerForm'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
@@ -92,19 +92,19 @@ export default function PropertyListingsSettings() {
     fetchSyndicationPartners()
   }, [toast, tenant])
 
-  const generateExportUrl = (partner: SyndicationPartnerConfiguration | PlatformSyndicationPartner): string => {
+  const generateExportUrl = (partner: SyndicationPartnerConfiguration | any): string => {
     const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
     const companyId = tenant?.id || 'demo-company'
     
     const params = new URLSearchParams({
-      partnerId: 'platformPartnerId' in partner ? partner.platformPartnerId! : partner.platformId,
+      partnerId: partner.platformPartnerId || partner.platformId || partner.id,
       companyId: companyId,
-      format: 'exportFormat' in partner ? partner.exportFormat : partner.defaultExportFormat,
-      listingTypes: 'listingTypes' in partner ? partner.listingTypes.join(',') : partner.supportedListingTypes.join(','),
-      leadEmail: 'leadEmail' in partner ? partner.leadEmail : partner.baseLeadEmail
+      format: partner.exportFormat || partner.defaultExportFormat,
+      listingTypes: partner.listingTypes?.join(',') || partner.supportedListingTypes?.join(',') || '',
+      leadEmail: partner.leadEmail || partner.baseLeadEmail || leadReplyEmail
     })
 
-    if ('accountId' in partner && partner.accountId) {
+    if (partner.accountId) {
       params.set('accountId', partner.accountId)
     }
 
@@ -268,13 +268,13 @@ export default function PropertyListingsSettings() {
         <div>
           <h3 className="text-lg font-medium">Syndication Settings</h3>
           <p className="text-sm text-muted-foreground">
-            Configure platform-wide syndication partners and settings
+            Configure listing syndication to partner marketplaces
           </p>
         </div>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12 text-muted-foreground">
-              Loading syndication settings...
+              Loading syndication partners...
             </div>
           </CardContent>
         </Card>
@@ -283,15 +283,42 @@ export default function PropertyListingsSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Syndication Settings</h3>
-        <p className="text-sm text-muted-foreground">
-          Configure platform-wide syndication partners and export settings
-        </p>
+    <div className="space-y-6 max-w-full">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Syndication Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure listing syndication to partner marketplaces
+          </p>
+        </div>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setEditingPartner(null)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Partner
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure a syndication partner to export your listings
+              </DialogDescription>
+            </DialogHeader>
+            <SyndicationPartnerForm
+              partner={editingPartner}
+              availablePlatformPartners={platformPartners}
+              globalLeadReplyEmail={leadReplyEmail}
+              onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+              onCancel={closeForm}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs defaultValue="partners" className="space-y-6">
+      <Tabs defaultValue="partners" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="partners" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
@@ -311,122 +338,84 @@ export default function PropertyListingsSettings() {
           {/* Available Platform Partners */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Available Syndication Partners</CardTitle>
-                  <CardDescription>
-                    Platform-level syndication partners available for configuration
-                  </CardDescription>
-                </div>
-                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditingPartner(null)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Partner
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Configure a syndication partner to export listings
-                      </DialogDescription>
-                    </DialogHeader>
-                    <SyndicationPartnerForm
-                      partner={editingPartner}
-                      availablePlatformPartners={platformPartners}
-                      globalLeadReplyEmail={leadReplyEmail}
-                      onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-                      onCancel={closeForm}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <CardTitle>Available Platform Partners</CardTitle>
+              <CardDescription>
+                Platform-level syndication partners available for configuration
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {platformPartners.map((platformPartner) => {
                   const isConfigured = syndicationPartners.some(p => p.platformPartnerId === platformPartner.platformId)
                   const exportUrl = generateExportUrl(platformPartner)
                   
                   return (
-                    <Card key={platformPartner.platformId} className="border-2">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-5 w-5 text-primary" />
-                            <CardTitle className="text-lg">{platformPartner.name}</CardTitle>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
-                            <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
-                              {platformPartner.isActive ? "Available" : "Unavailable"}
+                    <div key={platformPartner.platformId} className="border rounded-lg p-4 space-y-4">
+                      {/* Partner Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-5 w-5 text-primary" />
+                          <h4 className="font-medium">{platformPartner.name}</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
+                          <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
+                            {platformPartner.isActive ? "Available" : "Unavailable"}
+                          </Badge>
+                          {isConfigured && (
+                            <Badge variant="default" className="bg-green-100 text-green-800">
+                              Configured
                             </Badge>
-                            {isConfigured && (
-                              <Badge className="bg-green-100 text-green-800">
-                                Configured
-                              </Badge>
-                            )}
-                          </div>
+                          )}
                         </div>
-                        <CardDescription>{platformPartner.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2 text-sm">
-                          <div>
-                            <span className="font-medium text-muted-foreground">Supported Types:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {platformPartner.supportedListingTypes.map(type => (
-                                <Badge key={type} variant="outline" className="text-xs">
-                                  {type.replace('_', ' ')}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="font-medium text-muted-foreground">Base Lead Email:</span>
-                            <p className="text-sm font-mono">{platformPartner.baseLeadEmail}</p>
-                          </div>
-                        </div>
+                      </div>
 
-                        {/* Export URL Section */}
-                        <div className="pt-3 border-t space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-sm font-medium">Export URL:</Label>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openTestFeed(exportUrl)}
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Test Feed
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
-                              >
-                                {copiedUrl === platformPartner.platformId ? (
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                ) : (
-                                  <Copy className="h-4 w-4 mr-2" />
-                                )}
-                                {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="p-3 bg-muted rounded text-xs font-mono break-all border">
-                            {exportUrl}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Share this URL with {platformPartner.name} to enable listing syndication
-                          </p>
+                      {/* Partner Details */}
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>{platformPartner.description}</p>
+                        <div>
+                          <span className="font-medium">Supported Types:</span> {platformPartner.supportedListingTypes.join(', ')}
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div>
+                          <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
+                        </div>
+                      </div>
+
+                      {/* Export URL Section */}
+                      <div className="pt-3 border-t space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Export URL:</Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openTestFeed(exportUrl)}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Test Feed
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
+                            >
+                              {copiedUrl === platformPartner.platformId ? (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Copy className="h-4 w-4 mr-2" />
+                              )}
+                              {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-muted rounded text-xs font-mono break-all border">
+                          {exportUrl}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Share this URL with {platformPartner.name} to enable listing syndication
+                        </p>
+                      </div>
+                    </div>
                   )
                 })}
               </div>
@@ -608,15 +597,15 @@ export default function PropertyListingsSettings() {
         <TabsContent value="feeds" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Feed Settings</CardTitle>
+              <CardTitle>Feed Configuration</CardTitle>
               <CardDescription>
-                Configure export feed formats and options
+                Advanced feed settings and export options
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-12 text-muted-foreground">
                 <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>Feed configuration options coming soon</p>
+                <p>Advanced feed settings coming soon</p>
               </div>
             </CardContent>
           </Card>
