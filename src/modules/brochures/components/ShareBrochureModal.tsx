@@ -18,7 +18,7 @@ import {
   QrCode, 
   ExternalLink,
   Download,
-  Loader2
+  Loader2,
   Share
 } from 'lucide-react'
 import { GeneratedBrochure } from '../types'
