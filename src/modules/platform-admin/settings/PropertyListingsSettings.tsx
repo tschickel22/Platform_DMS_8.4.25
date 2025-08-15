@@ -23,6 +23,7 @@ export default function PropertyListingsSettings() {
   const [isLoading, setIsLoading] = useState(true)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [leadReplyEmail, setLeadReplyEmail] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
 
   // Get platform partners and lead reply email
@@ -91,20 +92,23 @@ export default function PropertyListingsSettings() {
     fetchSyndicationPartners()
   }, [toast, tenant])
 
-  const generateExportUrl = (partner: SyndicationPartnerConfiguration): string => {
+  const generateExportUrl = (partner: SyndicationPartnerConfiguration | any): string => {
     const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
-    const companyId = tenant?.id || 'demo-company'
     
     const params = new URLSearchParams({
-      partnerId: partner.platformPartnerId || partner.id,
-      companyId: companyId,
-      format: partner.exportFormat,
-      listingTypes: partner.listingTypes.join(','),
-      leadEmail: partner.leadEmail
+      partnerId: partner.platformPartnerId || partner.platformId || partner.id,
+      format: partner.exportFormat || partner.defaultExportFormat,
+      leadEmail: leadReplyEmail
     })
 
     if (partner.accountId) {
       params.set('accountId', partner.accountId)
+    }
+
+    // Add listing types
+    const listingTypes = partner.listingTypes || partner.supportedListingTypes || []
+    if (listingTypes.length > 0) {
+      params.set('listingTypes', listingTypes.join(','))
     }
 
     return `${baseUrl}?${params.toString()}`
@@ -203,12 +207,13 @@ export default function PropertyListingsSettings() {
     }
   }
 
-  const handleLeadReplyEmailChange = async (email: string) => {
+  const handleSaveLeadEmail = async () => {
+    setIsSaving(true)
     try {
       await updateTenant({
         settings: {
           ...tenant?.settings,
-          leadReplyEmail: email
+          leadReplyEmail: leadReplyEmail
         }
       })
       
@@ -223,6 +228,8 @@ export default function PropertyListingsSettings() {
         description: 'Failed to update lead reply email',
         variant: 'destructive'
       })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -301,13 +308,14 @@ export default function PropertyListingsSettings() {
                 value={leadReplyEmail}
                 onChange={(e) => setLeadReplyEmail(e.target.value)}
                 placeholder="support@notifications.renterinsight.com"
-                className="flex-1"
+                className="flex-1 max-w-md"
               />
               <Button 
-                onClick={() => handleLeadReplyEmailChange(leadReplyEmail)}
+                onClick={handleSaveLeadEmail}
                 variant="outline"
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -317,241 +325,60 @@ export default function PropertyListingsSettings() {
         </CardContent>
       </Card>
 
-      {/* Syndication Partners Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Syndication Partners</CardTitle>
-              <CardDescription>
-                Manage listing syndication to external platforms
-              </CardDescription>
-            </div>
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingPartner(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Partner
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Configure a syndication partner to export your listings
-                  </DialogDescription>
-                </DialogHeader>
-                <SyndicationPartnerForm
-                  partner={editingPartner}
-                  availablePlatformPartners={platformPartners}
-                  globalLeadReplyEmail={leadReplyEmail}
-                  onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-                  onCancel={closeForm}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {syndicationPartners.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="mb-4">
-                <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground/50" />
-              </div>
-              <p className="text-sm mb-4">
-                No syndication partners configured yet
-              </p>
-              <p className="text-xs">
-                Add a syndication partner to start exporting your listings
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {syndicationPartners.map((partner) => (
-                <div key={partner.id} className="border rounded-lg p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="w-full">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <h3 className="text-lg font-semibold">{partner.name}</h3>
-                            <Badge variant={partner.isActive ? "default" : "secondary"}>
-                              {partner.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                            <Badge variant="outline">{partner.exportFormat}</Badge>
-                            {partner.accountId && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                ID: {partner.accountId}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="space-y-2 text-sm text-muted-foreground">
-                              <div>
-                                <span className="font-medium">Lead Email:</span> {partner.leadEmail}
-                              </div>
-                              <div>
-                                <span className="font-medium">Listing Types:</span>{" "}
-                                {partner.listingTypes.join(", ")}
-                              </div>
-                              {partner.accountId && (
-                                <div>
-                                  <span className="font-medium">Account ID:</span> {partner.accountId}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        {/* Actions */}
-                        {/* Export URL - Only visible in Platform Settings */}
-                        <div className="pt-4 border-t">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <Label className="text-sm font-medium">Export URL:</Label>
-                              <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
-                                {generateExportUrl(partner)}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Share this URL with {partner.name} to enable listing syndication
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copyToClipboard(generateExportUrl(partner), partner.id)}
-                              className="shrink-0"
-                            >
-                              {copiedUrl === partner.id ? (
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                              ) : (
-                                <Copy className="h-4 w-4 mr-2" />
-                              )}
-                              {copiedUrl === partner.id ? 'Copied' : 'Copy'}
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={partner.isActive}
-                              onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
-                            />
-                            <Label className="text-sm">Active</Label>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditForm(partner)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{partner.name}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeletePartner(partner.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                      {/* Export URL */}
-                      <div className="pt-4 border-t">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <Label className="text-sm font-medium">Export URL:</Label>
-                            <div className="mt-1 p-2 bg-muted rounded text-xs font-mono break-all">
-                              {partner.exportUrl}
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(partner.exportUrl, partner.id)}
-                            className="shrink-0"
-                          >
-                            {copiedUrl === partner.id ? (
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                            ) : (
-                              <Copy className="h-4 w-4 mr-2" />
-                            )}
-                            {copiedUrl === partner.id ? 'Copied' : 'Copy'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Available Platform Partners */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Platform Partners</CardTitle>
+          <CardTitle>Syndication Partners</CardTitle>
           <CardDescription>
-            Platform-level syndication partners available for configuration
+            Platform-level syndication partners and their export URLs
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {platformPartners.map((platformPartner) => {
-              const isConfigured = syndicationPartners.some(p => p.platformPartnerId === platformPartner.platformId)
+              const exportUrl = generateExportUrl(platformPartner)
               
               return (
-                <div key={platformPartner.platformId} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium">{platformPartner.name}</h4>
-                      <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
-                      {isConfigured && (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          Configured
-                        </Badge>
-                      )}
+                <div key={platformPartner.platformId} className="border rounded-lg p-4">
+                  <div className="space-y-4">
+                    {/* Partner Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="text-lg font-semibold">{platformPartner.name}</h4>
+                          <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
+                          <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
+                            {platformPartner.isActive ? "Available" : "Unavailable"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {platformPartner.description}
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-muted-foreground">Supported Types:</span>
+                            <div className="mt-1">
+                              {platformPartner.supportedListingTypes.join(', ')}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Base Lead Email:</span>
+                            <div className="mt-1 font-mono text-xs">
+                              {platformPartner.baseLeadEmail}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {platformPartner.description}
-                    </p>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-medium">Supported Types:</span> {platformPartner.supportedListingTypes.join(', ')}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
-                    </div>
-                    
+
                     {/* Export URL Section */}
-                    <div className="pt-3 border-t space-y-2">
-                      <div className="flex items-center justify-between">
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
                         <Label className="text-sm font-medium">Export URL:</Label>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(generateExportUrl(platformPartner), platformPartner.platformId)}
+                          onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
                           className="shrink-0"
                         >
                           {copiedUrl === platformPartner.platformId ? (
@@ -562,18 +389,28 @@ export default function PropertyListingsSettings() {
                           {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
                         </Button>
                       </div>
-                      <div className="p-2 bg-muted rounded text-xs font-mono break-all">
-                        {generateExportUrl(platformPartner)}
+                      <div className="p-3 bg-muted rounded-md">
+                        <code className="text-xs break-all">
+                          {exportUrl}
+                        </code>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Share this URL with {platformPartner.name} to enable listing syndication
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Share this URL with {platformPartner.name} to enable listing syndication across all companies
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
-                      {platformPartner.isActive ? "Available" : "Unavailable"}
-                    </Badge>
+
+                    {/* Test Feed Button */}
+                    <div className="flex justify-start">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(exportUrl, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Test Feed
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )
@@ -582,37 +419,159 @@ export default function PropertyListingsSettings() {
         </CardContent>
       </Card>
 
-      {/* General Settings Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lead Reply Settings</CardTitle>
-          <CardDescription>
-            Configure the email address used for lead notifications from syndication partners
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="lead-reply-email">Lead Reply Email</Label>
-            <Input
-              id="lead-reply-email"
-              type="email"
-              value={leadReplyEmail}
-              onChange={(e) => setLeadReplyEmail(e.target.value)}
-              placeholder="support@notifications.renterinsight.com"
-              className="max-w-md"
-            />
-            <div className="text-sm text-muted-foreground">
-              This email address will be included in syndication feeds for lead notifications
+      {/* Configured Partners (if any exist) */}
+      {syndicationPartners.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Configured Partners</CardTitle>
+                <CardDescription>
+                  Company-specific syndication partner configurations
+                </CardDescription>
+              </div>
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setEditingPartner(null)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Partner
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Configure a syndication partner to export your listings
+                    </DialogDescription>
+                  </DialogHeader>
+                  <SyndicationPartnerForm
+                    partner={editingPartner}
+                    availablePlatformPartners={platformPartners}
+                    globalLeadReplyEmail={leadReplyEmail}
+                    onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+                    onCancel={closeForm}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <Button onClick={handleSaveLeadEmail} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {syndicationPartners.map((partner) => (
+                <div key={partner.id} className="border rounded-lg p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold">{partner.name}</h3>
+                          <Badge variant={partner.isActive ? "default" : "secondary"}>
+                            {partner.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          <Badge variant="outline">{partner.exportFormat}</Badge>
+                          {partner.accountId && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              ID: {partner.accountId}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <div>
+                            <span className="font-medium">Lead Email:</span> {partner.leadEmail}
+                          </div>
+                          <div>
+                            <span className="font-medium">Listing Types:</span>{" "}
+                            {partner.listingTypes.join(", ")}
+                          </div>
+                          {partner.accountId && (
+                            <div>
+                              <span className="font-medium">Account ID:</span> {partner.accountId}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={partner.isActive}
+                            onCheckedChange={(checked) => handleToggleActive(partner.id, checked)}
+                          />
+                          <Label className="text-sm">Active</Label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditForm(partner)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Syndication Partner</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{partner.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeletePartner(partner.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+
+                    {/* Export URL Section */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium">Export URL:</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(generateExportUrl(partner), partner.id)}
+                          className="shrink-0"
+                        >
+                          {copiedUrl === partner.id ? (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          ) : (
+                            <Copy className="h-4 w-4 mr-2" />
+                          )}
+                          {copiedUrl === partner.id ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
+                      <div className="p-3 bg-muted rounded-md">
+                        <code className="text-xs break-all">
+                          {generateExportUrl(partner)}
+                        </code>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Share this URL with {partner.name} to enable listing syndication
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
