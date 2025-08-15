@@ -1,815 +1,184 @@
 import React, { useState, useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsTrigger, TabsList } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { FileText, Plus, Search, Filter, Send, Edit, Eye, TrendingUp, DollarSign, Copy, Trash2, Download, X, ListTodo } from 'lucide-react'
-import { Quote, QuoteStatus } from '@/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { X, Save, Plus, Trash2, Download, Send, Calculator, Package, Percent, DollarSign, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { mockQuoteBuilder } from '@/mocks/quoteBuilderMock'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
-import { useTasks } from '@/hooks/useTasks'
-import { Task, TaskModule, TaskPriority } from '@/types'
+import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
+import { TagSelector } from '@/modules/tagging-engine'
+import { TagType } from '@/modules/tagging-engine/types'
+import { formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
-// Import the QuoteBuilder component from CRM module
-import { QuoteBuilder as QuoteBuilderComponent } from '@/modules/crm-prospecting/components/QuoteBuilder'
-
-const mockQuotes: Quote[] = [
-  {
-    id: '1',
-    customerId: 'cust-1',
-    vehicleId: 'veh-1',
-    items: [
-      {
-        id: '1',
-        description: '2024 Forest River Georgetown',
-        quantity: 1,
-        unitPrice: 125000,
-        total: 125000
-      },
-      {
-        id: '2',
-        description: 'Extended Warranty',
-        quantity: 1,
-        unitPrice: 2500,
-        total: 2500
-      }
-    ],
-    subtotal: 127500,
-    tax: 10200,
-    total: 137700,
-    status: QuoteStatus.SENT,
-    validUntil: new Date('2024-02-15'),
-    notes: 'Customer interested in financing options',
-    customFields: {},
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-16')
-  },
-  {
-    id: '2',
-    customerId: 'cust-2',
-    vehicleId: 'veh-2',
-    items: [
-      {
-        id: '3',
-        description: '2023 Winnebago View',
-        quantity: 1,
-        unitPrice: 89000,
-        total: 89000
-      }
-    ],
-    subtotal: 89000,
-    tax: 7120,
-    total: 96120,
-    status: QuoteStatus.ACCEPTED,
-    validUntil: new Date('2024-02-20'),
-    notes: 'Ready to proceed with purchase',
-    customFields: {},
-    createdAt: new Date('2024-01-12'),
-    updatedAt: new Date('2024-01-18')
-  }
-]
-
-// Quote Detail Modal Component
-interface QuoteDetailModalProps {
-  quote: Quote
-  onClose: () => void
-  onEdit: (quote: Quote) => void
-}
-
-function QuoteDetailModal({ quote, onClose, onEdit }: QuoteDetailModalProps) {
-  const getStatusColor = (status: Quote['status']) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-      case 'sent':
-        return 'bg-blue-50 text-blue-700 border-blue-200'
-      case 'viewed':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case 'accepted':
-        return 'bg-green-50 text-green-700 border-green-200'
-      case 'rejected':
-        return 'bg-red-50 text-red-700 border-red-200'
-      case 'expired':
-        return 'bg-orange-50 text-orange-700 border-orange-200'
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">Quote #{quote.id}</CardTitle>
-              <CardDescription>
-                Quote details and line items
-              </CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button onClick={() => onEdit(quote)} size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Quote
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Quote Header Info */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Customer ID</label>
-              <p className="font-medium">{quote.customerId}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
-              <div className="mt-1">
-                <Badge className={cn("ri-badge-status", getStatusColor(quote.status))}>
-                  {quote.status.toUpperCase()}
-                </Badge>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Created Date</label>
-              <p className="font-medium">{formatDate(quote.createdAt)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Valid Until</label>
-              <p className="font-medium">{formatDate(quote.validUntil)}</p>
-            </div>
-          </div>
-
-          {/* Line Items */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Line Items</h3>
-            <div className="space-y-3">
-              {quote.items.map((item, index) => (
-                <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{item.description}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Quantity: {item.quantity} × {formatCurrency(item.unitPrice)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg">{formatCurrency(item.total)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quote Totals */}
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(quote.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax:</span>
-                <span>{formatCurrency(quote.tax)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>{formatCurrency(quote.total)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {quote.notes && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Notes</label>
-              <div className="mt-1 p-3 bg-muted/30 rounded-md">
-                <p className="text-sm">{quote.notes}</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function QuotesList() {
-  const { toast } = useToast()
-  const { createTask } = useTasks()
-  const [quotes, setQuotes] = useState<Quote[]>(mockQuotes)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [showQuoteBuilder, setShowQuoteBuilder] = useState(false)
-  const [editingQuote, setEditingQuote] = useState<Quote | null>(null)
-  const [viewingQuote, setViewingQuote] = useState<Quote | null>(null)
-  const [selectedCustomerId, setSelectedCustomerId] = useState('')
-  const [showTaskForm, setShowTaskForm] = useState(false)
-  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
-
-  const getStatusColor = (status: QuoteStatus) => {
-    switch (status) {
-      case QuoteStatus.DRAFT:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-      case QuoteStatus.SENT:
-        return 'bg-blue-50 text-blue-700 border-blue-200'
-      case QuoteStatus.VIEWED:
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case QuoteStatus.ACCEPTED:
-        return 'bg-green-50 text-green-700 border-green-200'
-      case QuoteStatus.REJECTED:
-        return 'bg-red-50 text-red-700 border-red-200'
-      case QuoteStatus.EXPIRED:
-        return 'bg-orange-50 text-orange-700 border-orange-200'
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-  }
-
-  const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch = 
-      quote.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.customerId.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || quote.status === statusFilter
-
-    return matchesSearch && matchesStatus
-  })
-
-  const handleCreateQuote = () => {
-    setEditingQuote(null)
-    setSelectedCustomerId('')
-    setShowQuoteBuilder(true)
-  }
-
-  const handleEditQuote = (quote: Quote) => {
-    setEditingQuote(quote)
-    setSelectedCustomerId(quote.customerId)
-    setShowQuoteBuilder(true)
-  }
-
-  const handleViewQuote = (quote: Quote) => {
-    setViewingQuote(quote)
-  }
-
-  const handleCloseView = () => setViewingQuote(null)
-
-  const handleSaveQuote = async (quoteData: any) => {
-    try {
-      if (editingQuote) {
-        // Update existing quote
-        setQuotes(prev => prev.map(q => 
-          q.id === editingQuote.id 
-            ? { ...q, ...quoteData, updatedAt: new Date() }
-            : q
-        ))
-        toast({
-          title: 'Success',
-          description: 'Quote updated successfully',
-        })
-      } else {
-        // Create new quote
-        const newQuote: Quote = {
-          id: Math.random().toString(36).substr(2, 9),
-          ...quoteData,
-          status: QuoteStatus.DRAFT,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-        setQuotes(prev => [...prev, newQuote])
-        toast({
-          title: 'Success',
-          description: 'Quote created successfully',
-        })
-      }
-      setShowQuoteBuilder(false)
-      setEditingQuote(null)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save quote',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleSendQuote = async (quoteId: string) => {
-    try {
-      setQuotes(prev => prev.map(q => 
-        q.id === quoteId 
-          ? { ...q, status: QuoteStatus.SENT, updatedAt: new Date() }
-          : q
-      ))
-      toast({
-        title: 'Success',
-        description: 'Quote sent to customer',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send quote',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleDuplicateQuote = async (quoteId: string) => {
-    try {
-      const originalQuote = quotes.find(q => q.id === quoteId)
-      if (originalQuote) {
-        const duplicatedQuote: Quote = {
-          ...originalQuote,
-          id: Math.random().toString(36).substr(2, 9),
-          status: QuoteStatus.DRAFT,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-        setQuotes(prev => [...prev, duplicatedQuote])
-        toast({
-          title: 'Success',
-          description: 'Quote duplicated successfully',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to duplicate quote',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleDeleteQuote = async (quoteId: string) => {
-    if (window.confirm('Are you sure you want to delete this quote?')) {
-      try {
-        setQuotes(prev => prev.filter(q => q.id !== quoteId))
-        toast({
-          title: 'Success',
-          description: 'Quote deleted successfully',
-        })
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete quote',
-          variant: 'destructive'
-        })
-      }
-    }
-  }
-
-  const handleCreateTask = async (taskData: Partial<Task>) => {
-    try {
-      await createTask(taskData)
-      setShowTaskForm(false)
-      setInitialTaskData(undefined)
-      toast({
-        title: 'Task Created',
-        description: 'Task has been created successfully',
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCreateTaskForQuote = (quote: Quote) => {
-    const dueDate = new Date(quote.validUntil)
-    // If quote is expiring soon, make it high priority
-    const daysUntilExpiry = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    const priority = daysUntilExpiry <= 3 ? TaskPriority.HIGH : 
-                    daysUntilExpiry <= 7 ? TaskPriority.MEDIUM : TaskPriority.LOW
-
-    setInitialTaskData({
-      sourceId: quote.id,
-      sourceType: 'quote',
-      module: TaskModule.QUOTE,
-      title: `Follow up on quote #${quote.id}`,
-      description: `Quote total: ${formatCurrency(quote.total)}, Status: ${quote.status}`,
-      priority,
-      dueDate,
-      link: `/quotes`,
-      customFields: {
-        quoteTotal: quote.total,
-        customerId: quote.customerId,
-        quoteStatus: quote.status
-      }
-    })
-    setShowTaskForm(true)
-  }
-
-  const stats = {
-    total: quotes.length,
-    draft: quotes.filter(q => q.status === 'draft').length,
-    sent: quotes.filter(q => q.status === 'sent').length,
-    accepted: quotes.filter(q => q.status === 'accepted').length,
-    totalValue: quotes.reduce((sum, q) => sum + q.total, 0),
-    acceptedValue: quotes.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.total, 0)
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Task Form Modal */}
-      {showTaskForm && (
-        <TaskForm
-          initialData={initialTaskData}
-          onSave={handleCreateTask}
-          onCancel={() => {
-            setShowTaskForm(false)
-            setInitialTaskData(undefined)
-          }}
-        />
-      )}
-
-      {/* Quote Builder Modal */}
-      {showQuoteBuilder && (
-        <QuoteBuilderComponent
-          quote={editingQuote}
-          customerId={selectedCustomerId}
-          onSave={handleSaveQuote}
-          onCancel={() => {
-            setShowQuoteBuilder(false)
-            setEditingQuote(null)
-          }}
-        />
-      )}
-
-      {/* Quote Detail Modal */}
-      {viewingQuote && (
-        <QuoteDetailModal
-          quote={viewingQuote}
-          onClose={handleCloseView}
-          onEdit={handleEditQuote}
-        />
-      )}
-
-      {/* Page Header */}
-      <div className="ri-page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="ri-page-title">Quote Builder</h1>
-            <p className="ri-page-description">
-              Create and manage customer quotes with advanced pricing rules
-            </p>
-          </div>
-          <Button className="shadow-sm" onClick={handleCreateQuote}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Quote
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="ri-stats-grid">
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Total Quotes</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
-            <p className="text-xs text-blue-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              All quotes
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-900">Pending</CardTitle>
-            <FileText className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-900">{stats.sent}</div>
-            <p className="text-xs text-yellow-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Awaiting response
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-green-100/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Accepted</CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{stats.accepted}</div>
-            <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {stats.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0}% acceptance rate
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Quote Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">
-              {formatCurrency(stats.totalValue)}
-            </div>
-            <p className="text-xs text-purple-600 flex items-center mt-1">
-              <DollarSign className="h-3 w-3 mr-1" />
-              {formatCurrency(stats.acceptedValue)} accepted
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex gap-4">
-        <div className="ri-search-bar">
-          <Search className="ri-search-icon" />
-          <Input
-            placeholder="Search quotes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ri-search-input shadow-sm"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="viewed">Viewed</SelectItem>
-            <SelectItem value="accepted">Accepted</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" className="shadow-sm">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-      </div>
-
-      {/* Quotes Table */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">Quotes ({filteredQuotes.length})</CardTitle>
-          <CardDescription>
-            Manage customer quotes with advanced pricing and bundling
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredQuotes.map((quote) => (
-              <div key={quote.id} className="ri-table-row">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-foreground">Quote #{quote.id}</h3>
-                      <Badge className={cn("ri-badge-status", getStatusColor(quote.status))}>
-                        {quote.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                      <div>
-                        <span className="font-medium">Customer:</span> {quote.customerId}
-                      </div>
-                      <div>
-                        <span className="font-medium">Total:</span> 
-                        <span className="font-bold text-primary ml-1">{formatCurrency(quote.total)}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium">Created:</span> {formatDate(quote.createdAt)}
-                      </div>
-                      <div>
-                        <span className="font-medium">Valid Until:</span> {formatDate(quote.validUntil)}
-                      </div>
-                    </div>
-                    <div className="mt-2 bg-muted/30 p-2 rounded-md">
-                      <p className="text-sm text-muted-foreground">
-                        {quote.items.length} item(s)
-                      </p>
-                      {quote.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          <span className="font-medium">Notes:</span> {quote.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="ri-action-buttons">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleViewQuote(quote)}
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    View
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleEditQuote(quote)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  {quote.status === 'draft' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="shadow-sm"
-                      onClick={() => handleSendQuote(quote.id)}
-                    >
-                      <Send className="h-3 w-3 mr-1" />
-                      Send
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleDuplicateQuote(quote.id)}
-                  >
-                    <Copy className="h-3 w-3 mr-1" />
-                    Copy
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleCreateTaskForQuote(quote)}
-                  >
-                    <ListTodo className="h-3 w-3 mr-1" />
-                    Task
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm text-red-600 hover:text-red-700"
-                    onClick={() => handleDeleteQuote(quote.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {filteredQuotes.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No quotes found</p>
-                <p className="text-sm">Create your first quote to get started</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// Types
 interface QuoteLineItem {
   id: string
-  name: string
+  productId?: string
   description: string
   quantity: number
   unitPrice: number
+  discount: number
+  discountType: 'percentage' | 'fixed'
+  total: number
+  isBundle?: boolean
+  bundleItems?: QuoteLineItem[]
+}
+
+interface PricingRule {
+  id: string
+  name: string
+  type: 'quantity_discount' | 'bundle_discount' | 'customer_discount'
+  conditions: {
+    minQuantity?: number
+    productIds?: string[]
+    customerType?: string
+  }
+  discount: {
+    type: 'percentage' | 'fixed'
+    value: number
+  }
+  isActive: boolean
+}
+
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
   category: string
   isBundle?: boolean
-  discount?: number
-  discountType?: 'percentage' | 'fixed'
-  total: number
+  bundleItems?: { productId: string; quantity: number }[]
 }
 
-interface QuoteData {
-  id: string
-  customerName: string
-  customerEmail: string
-  validUntil: string
-  items: QuoteLineItem[]
-  subtotal: number
-  totalDiscount: number
-  taxRate: number
-  tax: number
-  total: number
-  status: 'draft' | 'pending' | 'accepted' | 'rejected'
+interface QuoteBuilderProps {
+  quote?: any
+  customerId: string
+  onSave: (quoteData: any) => void
+  onCancel: () => void
 }
 
-// Pure functions for pricing calculations
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
+const mockProducts: Product[] = [
+  {
+    id: '1',
+    name: '2024 Forest River Georgetown',
+    description: 'Class A Motorhome with premium features',
+    price: 125000,
+    category: 'motorhome'
+  },
+  {
+    id: '2',
+    name: 'Extended Warranty',
+    description: '3-year comprehensive warranty coverage',
+    price: 2500,
+    category: 'warranty'
+  },
+  {
+    id: '3',
+    name: 'Solar Panel Package',
+    description: '400W solar panel system with inverter',
+    price: 3500,
+    category: 'accessory'
+  },
+  {
+    id: '4',
+    name: 'Premium Package',
+    description: 'Includes extended warranty, solar panels, and premium interior',
+    price: 8000,
+    category: 'bundle',
+    isBundle: true,
+    bundleItems: [
+      { productId: '2', quantity: 1 },
+      { productId: '3', quantity: 1 },
+      { productId: '5', quantity: 1 }
+    ]
+  },
+  {
+    id: '5',
+    name: 'Premium Interior Upgrade',
+    description: 'Leather seating and premium finishes',
+    price: 2200,
+    category: 'upgrade'
   }
-  return Math.random().toString(36).substring(2, 15)
-}
+]
 
-function calculateLineTotal(item: QuoteLineItem): number {
-  const baseTotal = item.quantity * item.unitPrice
-  
-  if (!item.discount || item.discount === 0) {
-    return baseTotal
+const mockPricingRules: PricingRule[] = [
+  {
+    id: '1',
+    name: 'Bulk Accessory Discount',
+    type: 'quantity_discount',
+    conditions: { minQuantity: 3 },
+    discount: { type: 'percentage', value: 10 },
+    isActive: true
+  },
+  {
+    id: '2',
+    name: 'Premium Bundle Discount',
+    type: 'bundle_discount',
+    conditions: { productIds: ['4'] },
+    discount: { type: 'fixed', value: 500 },
+    isActive: true
   }
-  
-  if (item.discountType === 'percentage') {
-    return baseTotal * (1 - item.discount / 100)
-  } else if (item.discountType === 'fixed') {
-    return Math.max(0, baseTotal - item.discount)
-  }
-  
-  return baseTotal
-}
+]
 
-function applyPricingRulesToItems(items: QuoteLineItem[]): QuoteLineItem[] {
-  const processedItems = items.map(item => ({ ...item }))
+export function QuoteBuilder({ quote, customerId, onSave, onCancel }: QuoteBuilderProps) {
+  const { toast } = useToast()
+  const { getAvailableVehicles, getVehicleById } = useInventoryManagement()
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('items')
   
-  // Count accessory items
-  const accessoryItems = processedItems.filter(item => 
-    item.category.toLowerCase() === 'accessory'
-  )
-  
-  // Apply rules
-  processedItems.forEach(item => {
-    // Reset discounts first
-    item.discount = 0
-    item.discountType = 'percentage'
-    
-    // Rule 1: 3+ accessory items get 10% discount
-    if (accessoryItems.length >= 3 && item.category.toLowerCase() === 'accessory') {
-      item.discount = 10
-      item.discountType = 'percentage'
-    }
-    
-    // Rule 2: Bundle items get $500 fixed discount
-    if (item.isBundle) {
-      item.discount = 500
-      item.discountType = 'fixed'
-    }
-    
-    // Recalculate line total
-    item.total = calculateLineTotal(item)
-  })
-  
-  return processedItems
-}
-
-function QuoteBuilderTab() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quotes' | 'builder'>('dashboard')
-  const [quotes] = useState(mockQuoteBuilder.sampleQuotes)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
-  const [showQuoteBuilder, setShowQuoteBuilder] = useState(false)
-  const [selectedQuote, setSelectedQuote] = useState(null)
-  
-  // Quote builder state
-  const [quoteData, setQuoteData] = useState<QuoteData>({
-    id: generateId(),
-    customerName: '',
-    customerEmail: '',
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    items: [],
+  const [quoteData, setQuoteData] = useState({
+    customerId,
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    notes: '',
+    terms: 'Payment due within 30 days. All sales final.',
+    items: [] as QuoteLineItem[],
     subtotal: 0,
     totalDiscount: 0,
-    taxRate: 0.08,
     tax: 0,
-    total: 0,
-    status: 'draft'
+    taxRate: 0.08, // 8% tax rate
+    total: 0
   })
-  
-  const [newItem, setNewItem] = useState({
-    name: '',
+
+  const [selectedProduct, setSelectedProduct] = useState<string>('')
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('')
+  const [newItem, setNewItem] = useState<Partial<QuoteLineItem>>({
     description: '',
     quantity: 1,
     unitPrice: 0,
-    category: 'vehicle',
-    isBundle: false
+    discount: 0,
+    discountType: 'percentage'
   })
 
-  // Helper function for tile clicks
-  function applyQuoteTileFilter(status: 'all' | 'pending' | 'accepted' | 'rejected') {
-    setActiveTab('quotes')
-    setStatusFilter(status)
-  }
+  // Get available vehicles for selection
+  const availableVehicles = getAvailableVehicles()
 
-  // Recalculate totals whenever items or tax rate changes
   useEffect(() => {
-    const subtotal = quoteData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    if (quote) {
+      setQuoteData(prev => ({ ...prev, ...quote }))
+    }
+  }, [quote])
+
+  useEffect(() => {
+    calculateTotals()
+  }, [quoteData.items, quoteData.taxRate])
+
+  const calculateTotals = () => {
+    const subtotal = quoteData.items.reduce((sum, item) => sum + item.total, 0)
     const totalDiscount = quoteData.items.reduce((sum, item) => {
-      const baseTotal = item.quantity * item.unitPrice
-      return sum + (baseTotal - item.total)
+      const itemDiscount = item.discountType === 'percentage' 
+        ? (item.quantity * item.unitPrice * item.discount / 100)
+        : (item.discount * item.quantity)
+      return sum + itemDiscount
     }, 0)
-    const tax = (subtotal - totalDiscount) * quoteData.taxRate
-    const total = (subtotal - totalDiscount) + tax
+    
+    const taxableAmount = subtotal - totalDiscount
+    const tax = taxableAmount * quoteData.taxRate
+    const total = taxableAmount + tax
 
     setQuoteData(prev => ({
       ...prev,
@@ -818,512 +187,773 @@ function QuoteBuilderTab() {
       tax,
       total
     }))
-  }, [quoteData.items, quoteData.taxRate])
+  }
 
-  // Add item handler
-  const handleAddItem = () => {
-    if (!newItem.name || newItem.unitPrice <= 0) return
+  const addLineItem = () => {
+    if (!newItem.description || !newItem.unitPrice) {
+      toast({
+        title: 'Validation Error',
+        description: 'Description and unit price are required',
+        variant: 'destructive'
+      })
+      return
+    }
 
-    setQuoteData(prev => {
-      const newItemWithId: QuoteLineItem = {
-        id: generateId(),
-        ...newItem,
-        total: newItem.quantity * newItem.unitPrice
-      }
-      
-      const updatedItems = [...prev.items, newItemWithId]
-      const processedItems = applyPricingRulesToItems(updatedItems)
-      
-      return {
-        ...prev,
-        items: processedItems
-      }
-    })
+    const item: QuoteLineItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      description: newItem.description,
+      quantity: newItem.quantity || 1,
+      unitPrice: newItem.unitPrice || 0,
+      discount: newItem.discount || 0,
+      discountType: newItem.discountType || 'percentage',
+      total: calculateLineTotal(newItem as QuoteLineItem)
+    }
+
+    setQuoteData(prev => ({
+      ...prev,
+      items: [...prev.items, item]
+    }))
 
     // Reset form
     setNewItem({
-      name: '',
       description: '',
       quantity: 1,
       unitPrice: 0,
-      category: 'vehicle',
-      isBundle: false
+      discount: 0,
+      discountType: 'percentage'
+    })
+    setSelectedProduct('')
+    setShowAddItem(false)
+  }
+
+  const addVehicleToQuote = (vehicleId: string) => {
+    const vehicle = getVehicleById(vehicleId)
+    if (!vehicle) return
+
+    const item: QuoteLineItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      productId: vehicle.id,
+      description: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      quantity: 1,
+      unitPrice: vehicle.price,
+      discount: 0,
+      discountType: 'percentage',
+      total: vehicle.price
+    }
+
+    setQuoteData(prev => ({
+      ...prev,
+      items: [...prev.items, item]
+    }))
+
+    setSelectedVehicle('')
+    
+    toast({
+      title: 'Vehicle Added',
+      description: `${vehicle.year} ${vehicle.make} ${vehicle.model} added to quote`,
     })
   }
 
-  // Remove item handler
-  const handleRemoveItem = (itemId: string) => {
-    setQuoteData(prev => {
-      const updatedItems = prev.items.filter(item => item.id !== itemId)
-      const processedItems = applyPricingRulesToItems(updatedItems)
-      
-      return {
-        ...prev,
-        items: processedItems
+  const addProductToQuote = (productId: string) => {
+    const product = mockProducts.find(p => p.id === productId)
+    if (!product) return
+
+    if (product.isBundle && product.bundleItems) {
+      // Add bundle as a single item with expanded details
+      const bundleItem: QuoteLineItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        productId: product.id,
+        description: product.description,
+        quantity: 1,
+        unitPrice: product.price,
+        discount: 0,
+        discountType: 'percentage',
+        total: product.price,
+        isBundle: true,
+        bundleItems: product.bundleItems.map(bundleItem => {
+          const bundleProduct = mockProducts.find(p => p.id === bundleItem.productId)
+          return {
+            id: Math.random().toString(36).substr(2, 9),
+            productId: bundleItem.productId,
+            description: bundleProduct?.name || '',
+            quantity: bundleItem.quantity,
+            unitPrice: bundleProduct?.price || 0,
+            discount: 0,
+            discountType: 'percentage' as const,
+            total: (bundleProduct?.price || 0) * bundleItem.quantity
+          }
+        })
       }
-    })
-  }
 
-  // Update item handler
-  const handleUpdateItem = (itemId: string, updates: Partial<QuoteLineItem>) => {
-    setQuoteData(prev => {
-      const updatedItems = prev.items.map(item => 
-        item.id === itemId ? { ...item, ...updates } : item
-      )
-      const processedItems = applyPricingRulesToItems(updatedItems)
-      
-      return {
+      setQuoteData(prev => ({
         ...prev,
-        items: processedItems
+        items: [...prev.items, bundleItem]
+      }))
+    } else {
+      // Add regular product
+      const item: QuoteLineItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        productId: product.id,
+        description: product.name,
+        quantity: 1,
+        unitPrice: product.price,
+        discount: 0,
+        discountType: 'percentage',
+        total: product.price
       }
+
+      setQuoteData(prev => ({
+        ...prev,
+        items: [...prev.items, item]
+      }))
+    }
+
+    // Apply pricing rules
+    applyPricingRules()
+  }
+
+  const calculateLineTotal = (item: QuoteLineItem) => {
+    const baseTotal = item.quantity * item.unitPrice
+    const discountAmount = item.discountType === 'percentage' 
+      ? baseTotal * (item.discount / 100)
+      : item.discount * item.quantity
+    return baseTotal - discountAmount
+  }
+
+  const updateLineItem = (itemId: string, updates: Partial<QuoteLineItem>) => {
+    setQuoteData(prev => ({
+      ...prev,
+      items: prev.items.map(item => {
+        if (item.id === itemId) {
+          const updatedItem = { ...item, ...updates }
+          updatedItem.total = calculateLineTotal(updatedItem)
+          return updatedItem
+        }
+        return item
+      })
+    }))
+  }
+
+  const removeLineItem = (itemId: string) => {
+    setQuoteData(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== itemId)
+    }))
+  }
+
+  const applyPricingRules = () => {
+    // Apply quantity discounts
+    const accessoryItems = quoteData.items.filter(item => 
+      mockProducts.find(p => p.id === item.productId)?.category === 'accessory'
+    )
+    
+    if (accessoryItems.length >= 3) {
+      accessoryItems.forEach(item => {
+        updateLineItem(item.id, { discount: 10, discountType: 'percentage' })
+      })
+    }
+
+    // Apply bundle discounts
+    const bundleItems = quoteData.items.filter(item => item.isBundle)
+    bundleItems.forEach(item => {
+      updateLineItem(item.id, { discount: 500, discountType: 'fixed' })
     })
   }
 
-  // Export quote handler
-  const handleExportQuote = () => {
-    console.log('Exporting quote:', quoteData)
-    alert('Quote exported successfully! (Simulated)')
+  const generatePDF = async () => {
+    setLoading(true)
+    try {
+      // Simulate PDF generation
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // In a real implementation, you would use a library like jsPDF or react-pdf
+      const pdfContent = generatePDFContent()
+      
+      // Create a blob and download
+      const blob = new Blob([pdfContent], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `quote-${Date.now()}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: 'PDF Generated',
+        description: 'Quote PDF has been downloaded successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Filter quotes based on status
-  const filteredQuotes = statusFilter === 'all' 
-    ? quotes 
-    : quotes.filter(q => q.status === statusFilter)
+  const generatePDFContent = () => {
+    return `
+QUOTE DOCUMENT
+==============
 
-  // Tile props helper
-  const tileProps = (handler: () => void) => ({
-    role: 'button' as const,
-    tabIndex: 0,
-    onClick: handler,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
-    className: 'shadow-sm border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring'
-  })
+Customer ID: ${quoteData.customerId}
+Valid Until: ${quoteData.validUntil.toLocaleDateString()}
+
+LINE ITEMS:
+-----------
+${quoteData.items.map(item => `
+${item.description}
+Quantity: ${item.quantity} x ${formatCurrency(item.unitPrice)}
+${item.discount > 0 ? `Discount: ${item.discount}${item.discountType === 'percentage' ? '%' : ' fixed'}` : ''}
+Total: ${formatCurrency(item.total)}
+${item.isBundle ? `
+  Bundle Items:
+  ${item.bundleItems?.map(bundleItem => `  - ${bundleItem.description} (${bundleItem.quantity}x)`).join('\n  ') || ''}
+` : ''}
+`).join('\n')}
+
+TOTALS:
+-------
+Subtotal: ${formatCurrency(quoteData.subtotal)}
+Total Discount: ${formatCurrency(quoteData.totalDiscount)}
+Tax (${(quoteData.taxRate * 100).toFixed(1)}%): ${formatCurrency(quoteData.tax)}
+TOTAL: ${formatCurrency(quoteData.total)}
+
+Notes: ${quoteData.notes}
+Terms: ${quoteData.terms}
+    `
+  }
+
+  const handleSave = async () => {
+    if (quoteData.items.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'At least one line item is required',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const quoteToSave = {
+        ...quoteData,
+        customerId: quoteData.customerId || customerId
+      }
+      await onSave(quoteToSave)
+      toast({
+        title: 'Success',
+        description: 'Quote saved successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save quote',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-        <TabsTrigger value="quotes">Quotes</TabsTrigger>
-        <TabsTrigger value="builder">Quote Builder</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="dashboard" className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card 
-            {...tileProps(() => applyQuoteTileFilter('all'))}
-            className="bg-gradient-to-br from-blue-50 to-blue-100/50"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Quotes</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{quotes.length}</div>
-              <p className="text-xs text-muted-foreground">All time</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            {...tileProps(() => applyQuoteTileFilter('pending'))}
-            className="bg-gradient-to-br from-yellow-50 to-yellow-100/50"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {quotes.filter(q => q.status === 'pending').length}
-              </div>
-              <p className="text-xs text-muted-foreground">Awaiting response</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            {...tileProps(() => applyQuoteTileFilter('accepted'))}
-            className="bg-gradient-to-br from-green-50 to-green-100/50"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {quotes.filter(q => q.status === 'accepted').length}
-              </div>
-              <p className="text-xs text-muted-foreground">Closed deals</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            {...tileProps(() => applyQuoteTileFilter('accepted'))}
-            className="bg-gradient-to-br from-purple-50 to-purple-100/50"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${quotes.reduce((sum, q) => sum + q.total, 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">All quotes</p>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="quotes" className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">Quotes</h2>
-            <p className="text-muted-foreground">Manage your quotes and proposals</p>
-          </div>
-          <div className="flex items-center gap-4">
-            {statusFilter !== 'all' && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
-                  Filter: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStatusFilter('all')}
-                >
-                  Clear Filter
-                </Button>
-              </div>
-            )}
-            <Button onClick={() => setShowQuoteBuilder(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Quote
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-blue-500" />
+                {quote ? 'Edit Quote' : 'Create Quote'}
+              </CardTitle>
+              <CardDescription>
+                Build a detailed quote with line items, pricing rules, and bundled products
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="items">Line Items</TabsTrigger>
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="pricing">Pricing Rules</TabsTrigger>
+              <TabsTrigger value="details">Quote Details</TabsTrigger>
+            </TabsList>
 
-        <div className="space-y-4">
-          {filteredQuotes.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No quotes found</p>
-                  <p className="text-sm">
-                    {statusFilter !== 'all' 
-                      ? `No ${statusFilter} quotes available`
-                      : 'Create your first quote to get started'
-                    }
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredQuotes.map((quote) => (
-              <Card key={quote.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">Quote #{quote.quoteNumber}</h3>
-                        <Badge variant={
-                          quote.status === 'ACCEPTED' ? 'default' :
-                          quote.status === 'PENDING' ? 'secondary' :
-                          'destructive'
-                        }>
-                          {quote.status.toLowerCase()}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Customer: {quote.customerName}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Valid until: {new Date(quote.validUntil).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <div className="text-2xl font-bold">
-                        ${quote.total.toLocaleString()}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedQuote(quote)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // Simulate PDF download
-                            console.log('Downloading PDF for quote:', quote.quoteNumber)
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filter indicator */}
-          {statusFilter !== 'all' && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                Filtered by: {statusFilter}
-              </Badge>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setStatusFilter('all')}
-              >
-                Clear Filter
-              </Button>
-            </div>
-          )}
-        </div>
-      </TabsContent>
-
-      <TabsContent value="builder" className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Quote Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quote Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Customer Name</Label>
-                <Input
-                  id="customerName"
-                  value={quoteData.customerName}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, customerName: e.target.value }))}
-                  placeholder="Enter customer name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerEmail">Customer Email</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  value={quoteData.customerEmail}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, customerEmail: e.target.value }))}
-                  placeholder="Enter customer email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="validUntil">Valid Until</Label>
-                <Input
-                  id="validUntil"
-                  type="date"
-                  value={quoteData.validUntil}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, validUntil: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                <Input
-                  id="taxRate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="1"
-                  value={quoteData.taxRate}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Add Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Item</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="itemName">Item Name</Label>
-                <Input
-                  id="itemName"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter item name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="itemDescription">Description</Label>
-                <Input
-                  id="itemDescription"
-                  value={newItem.description}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter description"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unitPrice">Unit Price</Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newItem.unitPrice}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                  />
+            <TabsContent value="items" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Quote Line Items</h3>
+                <div className="flex space-x-2">
+                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Add vehicle from inventory" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableVehicles.map(vehicle => (
+                        <SelectItem key={vehicle.id} value={vehicle.id}>
+                          {vehicle.year} {vehicle.make} {vehicle.model} - {formatCurrency(vehicle.price)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedVehicle && (
+                    <Button onClick={() => addVehicleToQuote(selectedVehicle)} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Vehicle
+                    </Button>
+                  )}
+                  <Button onClick={() => setShowAddItem(true)} size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Custom Item
+                  </Button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={newItem.category} onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vehicle">Vehicle</SelectItem>
-                    <SelectItem value="accessory">Accessory</SelectItem>
-                    <SelectItem value="service">Service</SelectItem>
-                    <SelectItem value="warranty">Warranty</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isBundle"
-                  checked={newItem.isBundle}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, isBundle: e.target.checked }))}
-                />
-                <Label htmlFor="isBundle">Bundle Item ($500 discount)</Label>
-              </div>
-              <Button onClick={handleAddItem} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Quote Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quote Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {quoteData.items.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No items added yet. Add items above to build your quote.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {quoteData.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-sm text-muted-foreground">{item.description}</div>
-                      <div className="text-sm">
-                        {item.quantity} × ${item.unitPrice.toFixed(2)} = ${(item.quantity * item.unitPrice).toFixed(2)}
-                        {item.discount && item.discount > 0 && (
-                          <span className="text-green-600 ml-2">
-                            (-{item.discountType === 'percentage' ? `${item.discount}%` : `$${item.discount}`})
-                          </span>
-                        )}
+              {/* Add Custom Item Form */}
+              {showAddItem && (
+                <Card className="border-dashed">
+                  <CardContent className="pt-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label>Description</Label>
+                        <Input
+                          value={newItem.description || ''}
+                          onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Item description"
+                        />
                       </div>
-                      <Badge variant="outline" className="mt-1">
-                        {item.category}
-                        {item.isBundle && ' • Bundle'}
-                      </Badge>
+                      <div>
+                        <Label>Unit Price</Label>
+                        <Input
+                          type="number"
+                          value={newItem.unitPrice || ''}
+                          onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={newItem.quantity || 1}
+                          onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                          min="1"
+                        />
+                      </div>
+                      <div>
+                        <Label>Discount</Label>
+                        <div className="flex space-x-2">
+                          <Input
+                            type="number"
+                            value={newItem.discount || 0}
+                            onChange={(e) => setNewItem(prev => ({ ...prev, discount: parseFloat(e.target.value) || 0 }))}
+                            placeholder="0"
+                          />
+                          <Select
+                            value={newItem.discountType}
+                            onValueChange={(value: 'percentage' | 'fixed') => setNewItem(prev => ({ ...prev, discountType: value }))}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">%</SelectItem>
+                              <SelectItem value="fixed">$</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="text-right">
-                        <div className="font-medium">${item.total.toFixed(2)}</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <Button variant="outline" onClick={() => setShowAddItem(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={addLineItem}>
+                        Add Item
                       </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              )}
 
-        {/* Quote Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quote Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal (pre-discount):</span>
-                <span>${quoteData.subtotal.toFixed(2)}</span>
+              {/* Line Items List */}
+              <div className="space-y-4">
+                {quoteData.items.map((item, index) => (
+                  <Card key={item.id} className="shadow-sm">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 grid gap-4 md:grid-cols-4">
+                          <div>
+                            <Label>Description</Label>
+                            <Input
+                              value={item.description}
+                              onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                            />
+                            {item.isBundle && (
+                              <Badge className="mt-1 bg-purple-50 text-purple-700 border-purple-200">
+                                <Package className="h-3 w-3 mr-1" />
+                                Bundle
+                              </Badge>
+                            )}
+                          </div>
+                          <div>
+                            <Label>Quantity</Label>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateLineItem(item.id, { quantity: parseInt(e.target.value) || 1 })}
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Unit Price</Label>
+                            <Input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                              step="0.01"
+                            />
+                          </div>
+                          <div>
+                            <Label>Discount</Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                type="number"
+                                value={item.discount}
+                                onChange={(e) => updateLineItem(item.id, { discount: parseFloat(e.target.value) || 0 })}
+                                step="0.01"
+                              />
+                              <Select
+                                value={item.discountType}
+                                onValueChange={(value: 'percentage' | 'fixed') => updateLineItem(item.id, { discountType: value })}
+                              >
+                                <SelectTrigger className="w-16">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="percentage">%</SelectItem>
+                                  <SelectItem value="fixed">$</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3 ml-4">
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">Total</div>
+                            <div className="font-bold text-lg">{formatCurrency(item.total)}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeLineItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Bundle Items */}
+                      {item.isBundle && item.bundleItems && (
+                        <div className="mt-4 pl-4 border-l-2 border-purple-200">
+                          <h4 className="text-sm font-semibold text-purple-700 mb-2">Bundle Contents:</h4>
+                          <div className="space-y-2">
+                            {item.bundleItems.map(bundleItem => (
+                              <div key={bundleItem.id} className="flex items-center justify-between text-sm bg-purple-50 p-2 rounded">
+                                <span>{bundleItem.description}</span>
+                                <span>{bundleItem.quantity}x {formatCurrency(bundleItem.unitPrice)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {quoteData.items.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>No line items added yet</p>
+                    <p className="text-sm">Add products or custom items to build your quote</p>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between text-green-600">
-                <span>Total Discount:</span>
-                <span>-${quoteData.totalDiscount.toFixed(2)}</span>
+
+              {/* Quote Totals */}
+              {quoteData.items.length > 0 && (
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(quoteData.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-red-600">
+                        <span>Total Discount:</span>
+                        <span>-{formatCurrency(quoteData.totalDiscount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tax ({(quoteData.taxRate * 100).toFixed(1)}%):</span>
+                        <span>{formatCurrency(quoteData.tax)}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold border-t pt-2">
+                        <span>Total:</span>
+                        <span>{formatCurrency(quoteData.total)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="products" className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Available Inventory & Products</h3>
+                
+                {/* Available Vehicles Section */}
+                <div className="mb-8">
+                  <h4 className="text-md font-semibold mb-3 text-blue-600">Available Vehicles</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {availableVehicles.map(vehicle => (
+                      <Card key={vehicle.id} className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <h4 className="font-semibold">{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                                  {vehicle.type.replace('_', ' ').toUpperCase()}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">VIN: {vehicle.vin}</p>
+                              <p className="text-sm text-muted-foreground mb-2">Location: {vehicle.location}</p>
+                              <div className="text-lg font-bold text-primary">{formatCurrency(vehicle.price)}</div>
+                              
+                              {vehicle.features.length > 0 && (
+                                <div className="mt-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {vehicle.features.slice(0, 3).map((feature, index) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {feature}
+                                      </Badge>
+                                    ))}
+                                    {vehicle.features.length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{vehicle.features.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() => addVehicleToQuote(vehicle.id)}
+                              size="sm"
+                              className="ml-4"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Available Products Section */}
+                <div>
+                  <h4 className="text-md font-semibold mb-3 text-green-600">Available Products & Services</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {mockProducts.map(product => (
+                    <Card key={product.id} className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className="font-semibold">{product.name}</h4>
+                              {product.isBundle && (
+                                <Badge className="bg-purple-50 text-purple-700 border-purple-200">
+                                  <Package className="h-3 w-3 mr-1" />
+                                  Bundle
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
+                            <div className="text-lg font-bold text-primary">{formatCurrency(product.price)}</div>
+                            
+                            {product.isBundle && product.bundleItems && (
+                              <div className="mt-3 p-2 bg-purple-50 rounded">
+                                <div className="text-xs font-semibold text-purple-700 mb-1">Includes:</div>
+                                {product.bundleItems.map(bundleItem => {
+                                  const bundleProduct = mockProducts.find(p => p.id === bundleItem.productId)
+                                  return (
+                                    <div key={bundleItem.productId} className="text-xs text-purple-600">
+                                      • {bundleProduct?.name} ({bundleItem.quantity}x)
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            onClick={() => addProductToQuote(product.id)}
+                            size="sm"
+                            className="ml-4"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Tax ({(quoteData.taxRate * 100).toFixed(1)}%):</span>
-                <span>${quoteData.tax.toFixed(2)}</span>
+            </TabsContent>
+
+            <TabsContent value="pricing" className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Active Pricing Rules</h3>
+                <div className="space-y-4">
+                  {mockPricingRules.filter(rule => rule.isActive).map(rule => (
+                    <Card key={rule.id} className="shadow-sm">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold">{rule.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {rule.type === 'quantity_discount' && `Min quantity: ${rule.conditions.minQuantity}`}
+                              {rule.type === 'bundle_discount' && 'Applied to bundle products'}
+                              {rule.type === 'customer_discount' && `Customer type: ${rule.conditions.customerType}`}
+                            </p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge className="bg-green-50 text-green-700 border-green-200">
+                                <Percent className="h-3 w-3 mr-1" />
+                                {rule.discount.type === 'percentage' ? `${rule.discount.value}%` : formatCurrency(rule.discount.value)} off
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => applyPricingRules()}
+                          >
+                            <Calculator className="h-4 w-4 mr-1" />
+                            Apply
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total:</span>
-                <span>${quoteData.total.toFixed(2)}</span>
+            </TabsContent>
+
+            <TabsContent value="details" className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="validUntil">Valid Until</Label>
+                  <Input
+                    id="validUntil"
+                    type="date"
+                    value={quoteData.validUntil.toISOString().split('T')[0]}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, validUntil: new Date(e.target.value) }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    value={(quoteData.taxRate * 100).toFixed(2)}
+                    onChange={(e) => setQuoteData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) / 100 || 0 }))}
+                    step="0.01"
+                    min="0"
+                    max="100"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <Button onClick={handleExportQuote} className="w-full">
+
+              {/* Tags */}
+              <div>
+                <Label htmlFor="tags">Tags</Label>
+                <TagSelector
+                  entityId={quote?.id || 'new-quote'}
+                  entityType={TagType.DEAL}
+                  onTagsChange={() => {}}
+                  placeholder="Add quote tags..."
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={quoteData.notes}
+                  onChange={(e) => setQuoteData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Additional notes for the customer..."
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="terms">Terms & Conditions</Label>
+                <Textarea
+                  id="terms"
+                  value={quoteData.terms}
+                  onChange={(e) => setQuoteData(prev => ({ ...prev, terms: e.target.value }))}
+                  placeholder="Terms and conditions..."
+                  rows={4}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Actions */}
+          <div className="flex justify-between items-center pt-6 border-t">
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={generatePDF}
+                disabled={loading || quoteData.items.length === 0}
+              >
                 <Download className="h-4 w-4 mr-2" />
-                Export Quote (PDF)
+                {loading ? 'Generating...' : 'Export PDF'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
-  )
-}
-
-export default function QuoteBuilder() {
-  return (
-    <Routes>
-      <Route path="/" element={<QuotesList />} />
-      <Route path="/builder" element={<QuoteBuilderTab />} />
-      <Route path="/*" element={<QuotesList />} />
-    </Routes>
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={onCancel} disabled={loading}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={loading}>
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Quote
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
