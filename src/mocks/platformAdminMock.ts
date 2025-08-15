@@ -1,5 +1,4 @@
 export const mockPlatformAdmin = {
-  tenantRoles: [
   leadReplyEmail: 'support@notifications.renterinsight.com',
   
   platformSyndicationPartners: [
@@ -41,6 +40,7 @@ export const mockPlatformAdmin = {
     }
   ] as PlatformSyndicationPartner[],
   
+  tenantRoles: [
     { value: 'admin', label: 'Admin', description: 'Full access to all features' },
     { value: 'manager', label: 'Manager', description: 'Manage users and settings' },
     { value: 'sales', label: 'Sales', description: 'Access to CRM and quotes' },
