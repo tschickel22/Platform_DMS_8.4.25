@@ -262,14 +262,25 @@ export default function PropertyListingsSettings() {
     setEditingPartner(null)
   }
 
+  const openAddPartnerForm = () => {
+    setEditingPartner(null)
+    setIsFormOpen(true)
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Syndication Settings</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure listing syndication to partner marketplaces
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium">Syndication Settings</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure listing syndication to partner marketplaces
+            </p>
+          </div>
+          <Button disabled>
+            <Settings className="h-4 w-4 mr-2" />
+            Save Settings
+          </Button>
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -291,57 +302,59 @@ export default function PropertyListingsSettings() {
             Configure listing syndication to partner marketplaces
           </p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingPartner(null)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Partner
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
-              </DialogTitle>
-              <DialogDescription>
-                Configure a syndication partner to export your listings
-              </DialogDescription>
-            </DialogHeader>
-            <SyndicationPartnerForm
-              partner={editingPartner}
-              availablePlatformPartners={platformPartners}
-              globalLeadReplyEmail={leadReplyEmail}
-              onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
-              onCancel={closeForm}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleSaveLeadEmail} disabled={isSaving}>
+          <Settings className="h-4 w-4 mr-2" />
+          {isSaving ? 'Saving...' : 'Save Settings'}
+        </Button>
       </div>
 
       <Tabs defaultValue="partners" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="partners" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            Partners
-          </TabsTrigger>
-          <TabsTrigger value="global" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Global Settings
-          </TabsTrigger>
-          <TabsTrigger value="feeds" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Feed Settings
-          </TabsTrigger>
+          <TabsTrigger value="partners">Partners</TabsTrigger>
+          <TabsTrigger value="global">Global Settings</TabsTrigger>
+          <TabsTrigger value="feeds">Feed Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="partners" className="space-y-6">
           {/* Available Platform Partners */}
           <Card>
             <CardHeader>
-              <CardTitle>Available Platform Partners</CardTitle>
-              <CardDescription>
-                Platform-level syndication partners available for configuration
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Available Syndication Partners
+                  </CardTitle>
+                  <CardDescription>
+                    Platform-level syndication partners with export URLs
+                  </CardDescription>
+                </div>
+                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openAddPartnerForm}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Partner
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingPartner ? 'Edit Syndication Partner' : 'Add Syndication Partner'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Configure a syndication partner to export your listings
+                      </DialogDescription>
+                    </DialogHeader>
+                    <SyndicationPartnerForm
+                      partner={editingPartner}
+                      availablePlatformPartners={platformPartners}
+                      globalLeadReplyEmail={leadReplyEmail}
+                      onSubmit={editingPartner ? handleUpdatePartner : handleCreatePartner}
+                      onCancel={closeForm}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
@@ -352,12 +365,17 @@ export default function PropertyListingsSettings() {
                   return (
                     <div key={platformPartner.platformId} className="border rounded-lg p-4 space-y-4">
                       {/* Partner Header */}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
-                          <Globe className="h-5 w-5 text-primary" />
-                          <h4 className="font-medium">{platformPartner.name}</h4>
+                          <Globe className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <h4 className="font-medium">{platformPartner.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {platformPartner.description}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1">
                           <Badge variant="outline">{platformPartner.defaultExportFormat}</Badge>
                           <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
                             {platformPartner.isActive ? "Available" : "Unavailable"}
@@ -371,49 +389,58 @@ export default function PropertyListingsSettings() {
                       </div>
 
                       {/* Partner Details */}
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>{platformPartner.description}</p>
-                        <div>
-                          <span className="font-medium">Supported Types:</span> {platformPartner.supportedListingTypes.join(', ')}
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Status</span>
+                          <span className={platformPartner.isActive ? "text-green-600" : "text-gray-500"}>
+                            {platformPartner.isActive ? "Active" : "Inactive"}
+                          </span>
                         </div>
-                        <div>
-                          <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Format</span>
+                          <span className="font-medium">{platformPartner.defaultExportFormat}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Types</span>
+                          <span className="font-medium">
+                            {platformPartner.supportedListingTypes.slice(0, 2).join(', ')}
+                            {platformPartner.supportedListingTypes.length > 2 && ' +more'}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Export URL Section */}
-                      <div className="pt-3 border-t space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">Export URL:</Label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openTestFeed(exportUrl)}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Test Feed
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
-                            >
-                              {copiedUrl === platformPartner.platformId ? (
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                              ) : (
-                                <Copy className="h-4 w-4 mr-2" />
-                              )}
-                              {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
-                            </Button>
-                          </div>
+                      {/* Features */}
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium">Features</h5>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="text-xs">Photos</Badge>
+                          <Badge variant="outline" className="text-xs">Lead Routing</Badge>
+                          <Badge variant="outline" className="text-xs">+1 more</Badge>
                         </div>
-                        <div className="p-3 bg-muted rounded text-xs font-mono break-all border">
-                          {exportUrl}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Share this URL with {platformPartner.name} to enable listing syndication
-                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openTestFeed(exportUrl)}
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Test Feed
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(exportUrl, platformPartner.platformId)}
+                        >
+                          {copiedUrl === platformPartner.platformId ? (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          ) : (
+                            <Copy className="h-4 w-4 mr-2" />
+                          )}
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   )
@@ -599,13 +626,13 @@ export default function PropertyListingsSettings() {
             <CardHeader>
               <CardTitle>Feed Configuration</CardTitle>
               <CardDescription>
-                Advanced feed settings and export options
+                Advanced settings for syndication feeds
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-12 text-muted-foreground">
                 <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>Advanced feed settings coming soon</p>
+                <p>Feed configuration options coming soon</p>
               </div>
             </CardContent>
           </Card>
