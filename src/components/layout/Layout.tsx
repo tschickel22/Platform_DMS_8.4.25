@@ -128,7 +128,6 @@ export default function Layout({ children }: LayoutProps) {
       icon: Globe,
       children: [
         { name: 'Property Listings', path: ROUTES.PROPERTY_LISTINGS_ADMIN, icon: Home },
-        { name: 'Brochures', path: ROUTES.BROCHURES, icon: FileText }
       ]
     },
 

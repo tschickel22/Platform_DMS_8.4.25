@@ -163,7 +163,6 @@ function App() {
                       />
 
                       {/* Public Brochure Routes - outside main layout */}
-                      <Route path="/b/:publicId" element={<PublicBrochureView />} />
 
                       {/* -------- GLOBAL FALLBACK -------- */}
                       <Route path="*" element={<Navigate to="/" replace />} />
