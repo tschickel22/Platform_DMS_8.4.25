@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
 import { 
   Copy, 
   Mail, 
@@ -13,291 +13,296 @@ import {
   Facebook, 
   Twitter, 
   Linkedin,
-  QrCode,
-  Share2,
+  QrCode, 
+  Download, 
   ExternalLink,
-  Download,
-  Eye
+  Check,
+  Share
 } from 'lucide-react'
+import { GeneratedBrochure } from '../types'
 import QRCode from 'react-qr-code'
 
 interface ShareBrochureModalProps {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  isOpen?: boolean
-  onClose?: () => void
-  brochure: any
-  company?: { id?: string; name?: string; slug?: string }
+  brochure: GeneratedBrochure
+  onClose: () => void
 }
 
-export function ShareBrochureModal(props: ShareBrochureModalProps) {
-  const open = props.open ?? props.isOpen ?? false
-  const onOpenChange = props.onOpenChange ?? ((o: boolean) => { if (!o) props.onClose?.() })
-  
-  const { toast } = useToast()
-  const [customMessage, setCustomMessage] = useState('')
-  const [showQR, setShowQR] = useState(false)
-  
-  if (!props.brochure) return null
-  
-  // Company info with defaults
-  const companySlug = props.company?.slug ?? 'demo'
-  const companyName = props.company?.name ?? 'Demo RV Dealership'
-  
-  // Generate shareable link
-  const shareableLink = `${window.location.origin}/b/${props.brochure.publicId}`
-  
-  // Extract preview content from brochure
-  const getPreviewImage = () => {
-    // Try to find hero block image first
-    const heroBlock = props.brochure.blocks?.find((block: any) => block.type === 'hero')
-    if (heroBlock?.data?.image) {
-      return heroBlock.data.image
-    }
-    
-    // Try to find first gallery image
-    const galleryBlock = props.brochure.blocks?.find((block: any) => block.type === 'gallery')
-    if (galleryBlock?.data?.images?.[0]) {
-      return galleryBlock.data.images[0]
-    }
-    
-    // Fallback to generated preview
-    return `${window.location.origin}/api/brochure-preview/${props.brochure.publicId}.jpg`
-  }
-  
-  const getPreviewDescription = () => {
-    // Try brochure description first
-    if (props.brochure.description) {
-      return props.brochure.description.length > 200 
-        ? props.brochure.description.substring(0, 200) + '...'
-        : props.brochure.description
-    }
-    
-    // Try hero block description
-    const heroBlock = props.brochure.blocks?.find((block: any) => block.type === 'hero')
-    if (heroBlock?.data?.description) {
-      const desc = heroBlock.data.description
-      return desc.length > 200 ? desc.substring(0, 200) + '...' : desc
-    }
-    
-    // Try first text or features block
-    const textBlock = props.brochure.blocks?.find((block: any) => 
-      ['text', 'features'].includes(block.type) && block.data?.content
-    )
-    if (textBlock?.data?.content) {
-      const content = typeof textBlock.data.content === 'string' 
-        ? textBlock.data.content 
-        : JSON.stringify(textBlock.data.content)
-      return content.length > 200 ? content.substring(0, 200) + '...' : content
-    }
-    
-    // Default description
-    return `Professional brochure from ${companyName}. View our latest inventory and offerings.`
-  }
-  
-  const previewImage = getPreviewImage()
-  const previewDescription = getPreviewDescription()
-  const brochureTitle = props.brochure.title || 'Property Brochure'
-  
+export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProps) {
+  const [copied, setCopied] = useState(false)
+  const [emailRecipient, setEmailRecipient] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [smsRecipient, setSmsRecipient] = useState('')
+  const [smsMessage, setSmsMessage] = useState('')
+
+  const brochureUrl = `${window.location.origin}/b/${brochure.publicId}`
+
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareableLink)
-      toast({
-        title: "Link copied!",
-        description: "The brochure link has been copied to your clipboard.",
-      })
+      await navigator.clipboard.writeText(brochureUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Please copy the link manually.",
-        variant: "destructive"
-      })
+      console.error('Failed to copy link:', error)
     }
   }
-  
+
   const handleEmailShare = () => {
-    const subject = encodeURIComponent(`${brochureTitle} - ${companyName}`)
-    const body = encodeURIComponent(
-      `${customMessage ? customMessage + '\n\n' : ''}I wanted to share this brochure with you:\n\n${brochureTitle}\n\n${previewDescription}\n\nView online: ${shareableLink}\n\nShared from ${companyName}`
-    )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
+    const subject = `Check out this brochure: ${brochure.title}`
+    const body = `${emailMessage}\n\nView the brochure: ${brochureUrl}`
+    const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.open(mailtoUrl)
   }
-  
-  const handleSMSShare = () => {
-    const message = encodeURIComponent(
-      `${customMessage ? customMessage + ' ' : ''}Check out this brochure: ${brochureTitle} - ${shareableLink}`
-    )
-    window.open(`sms:?body=${message}`)
+
+  const handleSmsShare = () => {
+    const message = `${smsMessage} ${brochureUrl}`
+    const smsUrl = `sms:${smsRecipient}?body=${encodeURIComponent(message)}`
+    window.open(smsUrl)
   }
-  
+
   const handleSocialShare = (platform: string) => {
-    const title = encodeURIComponent(`${brochureTitle} - ${companyName}`)
-    const description = encodeURIComponent(previewDescription)
-    const url = encodeURIComponent(shareableLink)
-    const image = encodeURIComponent(previewImage)
+    const text = `Check out this property brochure: ${brochure.title}`
+    const url = brochureUrl
     
-    const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${description}`,
-      twitter: `https://twitter.com/intent/tweet?text=${title}&url=${url}&via=${encodeURIComponent(companyName)}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}&summary=${description}&source=${encodeURIComponent(companyName)}`
+    let shareUrl = ''
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+        break
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        break
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+        break
     }
     
-    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400')
+    }
+  }
+
+  const handleDownload = () => {
+    // In a real implementation, this would generate and download a PDF
+    console.log('Downloading brochure:', brochure.id)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Share Brochure
-          </DialogTitle>
+          <DialogTitle>Share Brochure</DialogTitle>
+          <DialogDescription>
+            Share "{brochure.title}" with customers and prospects
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Brochure Preview */}
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="flex items-start gap-3">
-              {previewImage && (
-                <img 
-                  src={previewImage} 
-                  alt={brochureTitle}
-                  className="w-16 h-16 object-cover rounded"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">{brochureTitle}</h4>
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {previewDescription}
-                </p>
-                <div className="flex gap-1 mt-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {props.brochure.templateName || 'Custom'}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {props.brochure.blocks?.length || 0} sections
-                  </Badge>
+
+        <Tabs defaultValue="link" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="link">Link</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+            <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="qr">QR Code</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="link" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Share Link</CardTitle>
+                <CardDescription>
+                  Copy and share this direct link to your brochure
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Input value={brochureUrl} readOnly className="flex-1" />
+                  <Button onClick={handleCopyLink} variant="outline">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
                 </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Share Link */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Share Link</label>
-            <div className="flex gap-2">
-              <Input 
-                value={shareableLink} 
-                readOnly 
-                className="flex-1"
-              />
-              <Button onClick={handleCopyLink} size="sm">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          {/* Custom Message */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Custom Message (Optional)</label>
-            <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Add a personal message..."
-              className="w-full p-2 border rounded-md resize-none h-20 text-sm"
-            />
-          </div>
-          
-          <Separator />
-          
-          {/* Quick Share Options */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Quick Share</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <Button onClick={handleEmailShare} variant="outline" size="sm">
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
-              <Button onClick={handleSMSShare} variant="outline" size="sm">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                SMS
-              </Button>
-            </div>
-          </div>
-          
-          {/* Social Media */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Social Media</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <Button 
-                onClick={() => handleSocialShare('facebook')} 
-                variant="outline" 
-                size="sm"
-                title="Share on Facebook with preview"
-              >
-                <Facebook className="h-4 w-4 mr-1" />
-                Facebook
-              </Button>
-              <Button 
-                onClick={() => handleSocialShare('twitter')} 
-                variant="outline" 
-                size="sm"
-                title="Share on Twitter with preview"
-              >
-                <Twitter className="h-4 w-4 mr-1" />
-                Twitter
-              </Button>
-              <Button 
-                onClick={() => handleSocialShare('linkedin')} 
-                variant="outline" 
-                size="sm"
-                title="Share on LinkedIn with preview"
-              >
-                <Linkedin className="h-4 w-4 mr-1" />
-                LinkedIn
-              </Button>
-            </div>
-          </div>
-          
-          {/* QR Code */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">QR Code</h4>
-              <Button 
-                onClick={() => setShowQR(!showQR)} 
-                variant="ghost" 
-                size="sm"
-              >
-                <QrCode className="h-4 w-4 mr-1" />
-                {showQR ? 'Hide' : 'Show'} QR
-              </Button>
-            </div>
-            
-            {showQR && (
-              <div className="flex justify-center p-4 bg-white rounded-lg border">
-                <QRCode value={shareableLink} size={128} />
-              </div>
-            )}
-          </div>
-          
-          {/* Rich Social Previews Info */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Rich Social Previews</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-xs text-muted-foreground space-y-2">
-                <p>Share with preview image and description from your brochure content.</p>
-                <div className="space-y-1">
-                  <p><strong>Title:</strong> {brochureTitle} ({brochureTitle.length} chars)</p>
-                  <p><strong>Description:</strong> {previewDescription.substring(0, 50)}... ({previewDescription.length} chars)</p>
-                  <p><strong>Preview Image:</strong> {previewImage.includes('api/brochure-preview') ? \'Generated preview' : \'From brochure content'}</p>
+                <div className="flex items-center space-x-2">
+                  <Button onClick={() => window.open(brochureUrl, '_blank')} variant="outline">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button onClick={handleDownload} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
                 </div>
-                <p className="text-muted-foreground">Social platforms will show your brochure image, title, and description as a rich preview card.</p>
+
+                {/* Social Media */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium">Social Media</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button 
+                      onClick={() => handleSocialShare('facebook')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Facebook className="h-4 w-4 mr-1" />
+                      Facebook
+                    </Button>
+                    <Button 
+                      onClick={() => handleSocialShare('twitter')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Twitter className="h-4 w-4 mr-1" />
+                      Twitter
+                    </Button>
+                    <Button 
+                      onClick={() => handleSocialShare('linkedin')} 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Linkedin className="h-4 w-4 mr-1" />
+                      LinkedIn
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="email" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Email Sharing</CardTitle>
+                <CardDescription>
+                  Send this brochure via email
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="email-recipient">Recipient Email</Label>
+                  <Input
+                    id="email-recipient"
+                    type="email"
+                    value={emailRecipient}
+                    onChange={(e) => setEmailRecipient(e.target.value)}
+                    placeholder="customer@example.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email-message">Message (Optional)</Label>
+                  <Input
+                    id="email-message"
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Hi! I thought you'd be interested in these properties..."
+                  />
+                </div>
+                <Button 
+                  onClick={handleEmailShare}
+                  disabled={!emailRecipient}
+                  className="w-full"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sms" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">SMS Sharing</CardTitle>
+                <CardDescription>
+                  Send this brochure via text message
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="sms-recipient">Phone Number</Label>
+                  <Input
+                    id="sms-recipient"
+                    type="tel"
+                    value={smsRecipient}
+                    onChange={(e) => setSmsRecipient(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sms-message">Message</Label>
+                  <Input
+                    id="sms-message"
+                    value={smsMessage}
+                    onChange={(e) => setSmsMessage(e.target.value)}
+                    placeholder="Check out our latest properties:"
+                  />
+                </div>
+                <Button 
+                  onClick={handleSmsShare}
+                  disabled={!smsRecipient}
+                  className="w-full"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Send SMS
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="qr" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">QR Code</CardTitle>
+                <CardDescription>
+                  Generate a QR code for easy mobile access
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-center">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <QRCode value={brochureUrl} size={200} />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Scan this QR code to view the brochure on mobile devices
+                  </p>
+                  <Button onClick={() => window.print()} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Print QR Code
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Brochure Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Brochure Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Template:</span>
+                <span className="ml-2">{brochure.templateName}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <span className="text-muted-foreground">Properties:</span>
+                <span className="ml-2">{brochure.listingIds.length} listings</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Downloads:</span>
+                <span className="ml-2">{brochure.downloadCount}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Shares:</span>
+                <span className="ml-2">{brochure.shareCount}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button onClick={onClose} variant="outline">
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

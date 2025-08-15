@@ -40,7 +40,6 @@
     "react-big-calendar": "^1.19.4",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
-    "react-helmet-async": "^2.0.5",
     "react-qr-code": "^2.0.18",
     "react-router-dom": "^6.28.0",
     "recharts": "^2.13.3",
