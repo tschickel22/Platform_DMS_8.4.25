@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Package, 
-  Plus, 
   Search, 
+  Plus, 
   Filter, 
   Download, 
   Upload,
@@ -23,11 +23,11 @@ import {
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { VehicleDetail } from './components/VehicleDetail'
 import { InventoryTable } from './components/InventoryTable'
-import { RVInventoryForm } from './forms/RVInventoryForm'
-import { MHInventoryForm } from './forms/MHInventoryForm'
 import { CSVSmartImport } from './components/CSVSmartImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import { ListingHandoffModal } from './components/ListingHandoffModal'
+import { RVInventoryForm } from './forms/RVInventoryForm'
+import { MHInventoryForm } from './forms/MHInventoryForm'
 
 export default function InventoryManagement() {
   const {
@@ -42,75 +42,63 @@ export default function InventoryManagement() {
     setTypeFilter,
     selectedVehicle,
     setSelectedVehicle,
-    showAddForm,
-    setShowAddForm,
-    addVehicle,
+    createVehicle,
     updateVehicle,
     deleteVehicle,
-    exportToCSV,
-    importFromCSV,
-    getFilteredVehicles,
-    getInventoryStats
+    refreshInventory
   } = useInventoryManagement()
 
+  const [showAddForm, setShowAddForm] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [showListingHandoff, setShowListingHandoff] = useState(false)
-  const [handoffVehicle, setHandoffVehicle] = useState(null)
+  const [addFormType, setAddFormType] = useState<'rv' | 'manufactured_home'>('rv')
   const [activeTab, setActiveTab] = useState('overview')
 
-  const stats = getInventoryStats()
-  const filteredVehicles = getFilteredVehicles()
-
-  const handleAddVehicle = async (vehicleData: any) => {
-    try {
-      await addVehicle(vehicleData)
-      setShowAddForm(false)
-    } catch (error) {
-      console.error('Failed to add vehicle:', error)
-    }
+  // Calculate stats
+  const stats = {
+    total: vehicles.length,
+    available: vehicles.filter(v => v.status === 'available').length,
+    sold: vehicles.filter(v => v.status === 'sold').length,
+    service: vehicles.filter(v => v.status === 'service').length,
+    totalValue: vehicles.reduce((sum, v) => sum + (v.salePrice || v.rentPrice || 0), 0)
   }
 
-  const handleUpdateVehicle = async (vehicleData: any) => {
-    try {
-      await updateVehicle(selectedVehicle.id, vehicleData)
-      setSelectedVehicle(null)
-    } catch (error) {
-      console.error('Failed to update vehicle:', error)
-    }
+  const handleAddVehicle = (type: 'rv' | 'manufactured_home') => {
+    setAddFormType(type)
+    setShowAddForm(true)
   }
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    try {
-      await deleteVehicle(vehicleId)
-    } catch (error) {
-      console.error('Failed to delete vehicle:', error)
-    }
+  const handleVehicleCreated = (vehicle: any) => {
+    createVehicle(vehicle)
+    setShowAddForm(false)
+  }
+
+  const handleVehicleUpdated = (vehicle: any) => {
+    updateVehicle(vehicle.id, vehicle)
+    setSelectedVehicle(null)
   }
 
   const handleCreateListing = (vehicle: any) => {
-    setHandoffVehicle(vehicle)
+    setSelectedVehicle(vehicle)
     setShowListingHandoff(true)
-  }
-
-  const handleBarcodeScanned = (data: any) => {
-    console.log('Barcode scanned:', data)
-    setShowBarcodeScanner(false)
-    // Process barcode data and potentially pre-fill form
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-8">
         <p className="text-red-600">Error loading inventory: {error}</p>
+        <Button onClick={refreshInventory} className="mt-4">
+          Try Again
+        </Button>
       </div>
     )
   }
@@ -118,45 +106,75 @@ export default function InventoryManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
           <p className="text-muted-foreground">
             Manage your RV and manufactured home inventory
           </p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowBarcodeScanner(true)}
+          >
             <Package className="h-4 w-4 mr-2" />
             Scan Barcode
           </Button>
-          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+          <Button
+            variant="outline"
+            onClick={() => setShowImportModal(true)}
+          >
             <Upload className="h-4 w-4 mr-2" />
             Import CSV
           </Button>
-          <Button variant="outline" onClick={exportToCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button onClick={() => setShowAddForm(true)}>
+          <Button onClick={() => handleAddVehicle('rv')}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Vehicle
+            Add RV
+          </Button>
+          <Button onClick={() => handleAddVehicle('manufactured_home')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add MH
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Units</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUnits}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.availableUnits} available
-            </p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available</CardTitle>
+            <Package className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.available}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sold</CardTitle>
+            <Package className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.sold}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Service</CardTitle>
+            <Package className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.service}</div>
           </CardContent>
         </Card>
         <Card>
@@ -166,33 +184,6 @@ export default function InventoryManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Inventory value
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">RV Units</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.rvCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Travel trailers & motorhomes
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MH Units</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.mhCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Manufactured homes
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -201,143 +192,189 @@ export default function InventoryManagement() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="rv">RV Inventory</TabsTrigger>
-          <TabsTrigger value="mh">Manufactured Homes</TabsTrigger>
+          <TabsTrigger value="table">Table View</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search inventory..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border rounded-md bg-background"
-              >
-                <option value="all">All Status</option>
-                <option value="available">Available</option>
-                <option value="sold">Sold</option>
-                <option value="reserved">Reserved</option>
-                <option value="service">In Service</option>
-              </select>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 border rounded-md bg-background"
-              >
-                <option value="all">All Types</option>
-                <option value="rv">RV</option>
-                <option value="manufactured_home">Manufactured Home</option>
-              </select>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Search & Filter</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by VIN, make, model..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border rounded-md"
+                  >
+                    <option value="">All Status</option>
+                    <option value="available">Available</option>
+                    <option value="sold">Sold</option>
+                    <option value="service">Service</option>
+                    <option value="reserved">Reserved</option>
+                  </select>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="px-3 py-2 border rounded-md"
+                  >
+                    <option value="">All Types</option>
+                    <option value="rv">RV</option>
+                    <option value="manufactured_home">Manufactured Home</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vehicle Grid */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {vehicles.map((vehicle) => (
+              <Card key={vehicle.id} className="overflow-hidden">
+                <div className="aspect-video bg-muted relative">
+                  {vehicle.media?.primaryPhoto ? (
+                    <img
+                      src={vehicle.media.primaryPhoto}
+                      alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <Package className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <Badge 
+                    className="absolute top-2 right-2"
+                    variant={vehicle.status === 'available' ? 'default' : 'secondary'}
+                  >
+                    {vehicle.status}
+                  </Badge>
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    {vehicle.year} {vehicle.make} {vehicle.model}
+                  </CardTitle>
+                  <CardDescription>
+                    {vehicle.listingType === 'rv' ? 'RV' : 'Manufactured Home'} • 
+                    {vehicle.vin || vehicle.serialNumber}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Sale Price:</span>
+                      <span className="font-medium">
+                        ${vehicle.salePrice?.toLocaleString() || 'N/A'}
+                      </span>
+                    </div>
+                    {vehicle.rentPrice && (
+                      <div className="flex justify-between text-sm">
+                        <span>Rent Price:</span>
+                        <span className="font-medium">
+                          ${vehicle.rentPrice.toLocaleString()}/mo
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span>Location:</span>
+                      <span>{vehicle.location?.city}, {vehicle.location?.state}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedVehicle(vehicle)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCreateListing(vehicle)}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      List
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          {/* Inventory Table */}
-          <InventoryTable
-            vehicles={filteredVehicles}
-            onViewDetails={setSelectedVehicle}
-            onEdit={setSelectedVehicle}
-            onDelete={handleDeleteVehicle}
-            onCreateListing={handleCreateListing}
-          />
-        </TabsContent>
-
-        <TabsContent value="rv" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">RV Inventory</h2>
-            <Button onClick={() => setShowAddForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add RV
-            </Button>
-          </div>
-          <InventoryTable
-            vehicles={filteredVehicles.filter(v => v.listingType === 'rv')}
-            onViewDetails={setSelectedVehicle}
-            onEdit={setSelectedVehicle}
-            onDelete={handleDeleteVehicle}
-            onCreateListing={handleCreateListing}
-          />
-        </TabsContent>
-
-        <TabsContent value="mh" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Manufactured Home Inventory</h2>
-            <Button onClick={() => setShowAddForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Manufactured Home
-            </Button>
-          </div>
-          <InventoryTable
-            vehicles={filteredVehicles.filter(v => v.listingType === 'manufactured_home')}
-            onViewDetails={setSelectedVehicle}
-            onEdit={setSelectedVehicle}
-            onDelete={handleDeleteVehicle}
-            onCreateListing={handleCreateListing}
-          />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          {vehicles.length === 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>Inventory Distribution</CardTitle>
-                <CardDescription>
-                  Breakdown by vehicle type and status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Available RVs</span>
-                    <Badge variant="secondary">{stats.availableRVs}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Available MH</span>
-                    <Badge variant="secondary">{stats.availableMH}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">In Service</span>
-                    <Badge variant="outline">{stats.inService}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Sold This Month</span>
-                    <Badge variant="default">{stats.soldThisMonth}</Badge>
-                  </div>
+              <CardContent className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No inventory found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Get started by adding your first vehicle to inventory
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={() => handleAddVehicle('rv')}>
+                    Add RV
+                  </Button>
+                  <Button onClick={() => handleAddVehicle('manufactured_home')}>
+                    Add Manufactured Home
+                  </Button>
                 </div>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
 
+        <TabsContent value="table">
+          <InventoryTable
+            vehicles={vehicles}
+            onVehicleSelect={setSelectedVehicle}
+            onVehicleUpdate={updateVehicle}
+            onVehicleDelete={deleteVehicle}
+            onCreateListing={handleCreateListing}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Performance Metrics</CardTitle>
+                <CardTitle>Inventory Analytics</CardTitle>
                 <CardDescription>
-                  Key inventory performance indicators
+                  Performance metrics and insights
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Avg Days on Lot</span>
-                    <span className="font-medium">{stats.avgDaysOnLot}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Turn Rate</span>
-                    <span className="font-medium">{stats.turnRate}%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Avg Sale Price</span>
-                    <span className="font-medium">${stats.avgSalePrice.toLocaleString()}</span>
-                  </div>
+                <div className="text-center py-8 text-muted-foreground">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                  <p>Analytics dashboard coming soon</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Location Distribution</CardTitle>
+                <CardDescription>
+                  Inventory by location
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="h-12 w-12 mx-auto mb-4" />
+                  <p>Location analytics coming soon</p>
                 </div>
               </CardContent>
             </Card>
@@ -346,46 +383,32 @@ export default function InventoryManagement() {
       </Tabs>
 
       {/* Modals */}
-      {selectedVehicle && !showAddForm && (
-        <VehicleDetail
-          vehicle={selectedVehicle}
-          onClose={() => setSelectedVehicle(null)}
-          onUpdate={handleUpdateVehicle}
-          onDelete={() => handleDeleteVehicle(selectedVehicle.id)}
-          onCreateListing={() => handleCreateListing(selectedVehicle)}
-        />
-      )}
-
       {showAddForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Add New Vehicle</h2>
-              <Button variant="ghost" onClick={() => setShowAddForm(false)}>
+          <div className="bg-background rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                Add {addFormType === 'rv' ? 'RV' : 'Manufactured Home'}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddForm(false)}
+              >
                 ×
               </Button>
             </div>
-            
-            <Tabs defaultValue="rv">
-              <TabsList className="mb-4">
-                <TabsTrigger value="rv">RV</TabsTrigger>
-                <TabsTrigger value="mh">Manufactured Home</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="rv">
-                <RVInventoryForm
-                  onSubmit={handleAddVehicle}
-                  onCancel={() => setShowAddForm(false)}
-                />
-              </TabsContent>
-              
-              <TabsContent value="mh">
-                <MHInventoryForm
-                  onSubmit={handleAddVehicle}
-                  onCancel={() => setShowAddForm(false)}
-                />
-              </TabsContent>
-            </Tabs>
+            {addFormType === 'rv' ? (
+              <RVInventoryForm
+                onSubmit={handleVehicleCreated}
+                onCancel={() => setShowAddForm(false)}
+              />
+            ) : (
+              <MHInventoryForm
+                onSubmit={handleVehicleCreated}
+                onCancel={() => setShowAddForm(false)}
+              />
+            )}
           </div>
         </div>
       )}
@@ -393,27 +416,49 @@ export default function InventoryManagement() {
       {showImportModal && (
         <CSVSmartImport
           onClose={() => setShowImportModal(false)}
-          onImport={importFromCSV}
+          onImportComplete={(importedVehicles) => {
+            importedVehicles.forEach(vehicle => createVehicle(vehicle))
+            setShowImportModal(false)
+          }}
         />
       )}
 
       {showBarcodeScanner && (
         <BarcodeScanner
           onClose={() => setShowBarcodeScanner(false)}
-          onScanned={handleBarcodeScanned}
+          onScanComplete={(scannedData) => {
+            console.log('Scanned:', scannedData)
+            setShowBarcodeScanner(false)
+          }}
         />
       )}
 
-      {showListingHandoff && handoffVehicle && (
+      {selectedVehicle && !showListingHandoff && (
+        <VehicleDetail
+          vehicle={selectedVehicle}
+          onClose={() => setSelectedVehicle(null)}
+          onUpdate={handleVehicleUpdated}
+          onDelete={(id) => {
+            deleteVehicle(id)
+            setSelectedVehicle(null)
+          }}
+          onCreateListing={() => {
+            setShowListingHandoff(true)
+          }}
+        />
+      )}
+
+      {showListingHandoff && selectedVehicle && (
         <ListingHandoffModal
-          vehicle={handoffVehicle}
+          vehicle={selectedVehicle}
           onClose={() => {
             setShowListingHandoff(false)
-            setHandoffVehicle(null)
+            setSelectedVehicle(null)
           }}
-          onSuccess={() => {
+          onListingCreated={(listing) => {
+            console.log('Listing created:', listing)
             setShowListingHandoff(false)
-            setHandoffVehicle(null)
+            setSelectedVehicle(null)
           }}
         />
       )}
