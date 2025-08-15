@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import { Badge } from '@/components/ui/badge'
 import { 
   Copy, 
@@ -16,7 +18,8 @@ import {
   QrCode, 
   Download, 
   ExternalLink,
-  Check,
+  Download,
+  Loader2
   Share
 } from 'lucide-react'
 import { GeneratedBrochure } from '../types'
