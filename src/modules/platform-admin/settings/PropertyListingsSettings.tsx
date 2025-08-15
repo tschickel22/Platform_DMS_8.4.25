@@ -543,6 +543,32 @@ export default function PropertyListingsSettings() {
                     <div className="text-xs text-muted-foreground">
                       <span className="font-medium">Base Lead Email:</span> {platformPartner.baseLeadEmail}
                     </div>
+                    
+                    {/* Export URL Section */}
+                    <div className="pt-3 border-t space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Export URL:</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(generateExportUrl(platformPartner), platformPartner.platformId)}
+                          className="shrink-0"
+                        >
+                          {copiedUrl === platformPartner.platformId ? (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          ) : (
+                            <Copy className="h-4 w-4 mr-2" />
+                          )}
+                          {copiedUrl === platformPartner.platformId ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
+                      <div className="p-2 bg-muted rounded text-xs font-mono break-all">
+                        {generateExportUrl(platformPartner)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Share this URL with {platformPartner.name} to enable listing syndication
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant={platformPartner.isActive ? "default" : "secondary"}>
