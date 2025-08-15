@@ -27,7 +27,9 @@ import {
   HardHat,
   MapPin,
   Tag,
-  Home
+  Home,
+  Package,
+  BarChart2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
