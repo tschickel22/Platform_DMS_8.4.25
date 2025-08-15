@@ -42,7 +42,7 @@ export default function InventoryManagement() {
   const filteredVehicles = safeVehicles.filter(v => {
     const q = searchTerm.toLowerCase()
     const make = v.make?.toLowerCase() || ''
-    const model = v.model?.toLowerCase() || ''
+  const [showBrochureModal, setShowBrochureModal] = useState(false)
     const vin = v.type === 'RV' ? (v as RVVehicle).vin?.toLowerCase() || '' : (v as MHVehicle).serialNumber?.toLowerCase() || ''
     const matchesSearch = !q || make.includes(q) || model.includes(q) || vin.includes(q)
 
@@ -94,6 +94,11 @@ export default function InventoryManagement() {
 
   const handleStatClick = (key: 'available'|'reserved'|'sold'|'all'|'total') => {
     switch (key) {
+  const handleGenerateBrochure = (vehicles: any[]) => {
+    setSelectedListings(vehicles)
+    setShowBrochureModal(true)
+  }
+
       case 'available': setStatusFilter('InStock'); break
       case 'reserved': setStatusFilter('PreOrder'); break
       case 'sold': setStatusFilter('SoldOut'); break
@@ -117,6 +122,14 @@ export default function InventoryManagement() {
               <Button onClick={handleAddMH} variant="outline"><Plus className="h-4 w-4 mr-2" />Add MH</Button>
               <Button onClick={() => setShowImport(true)} variant="outline"><Upload className="h-4 w-4 mr-2" />Import CSV</Button>
               <Button onClick={() => setShowScanner(true)} variant="outline"><Scan className="h-4 w-4 mr-2" />Scan</Button>
+              <Button 
+                onClick={() => handleGenerateBrochure(filteredVehicles)}
+                variant="outline"
+                size="sm"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Brochure
+              </Button>
             </div>
           </div>
 
@@ -226,6 +239,13 @@ export default function InventoryManagement() {
                   <TabsTrigger value="mh">MH ({safeVehicles.filter(v => v.type === 'MH').length})</TabsTrigger>
                 </TabsList>
 
+                    <Button
+                      onClick={() => handleGenerateBrochure([vehicle])}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
                 <TabsContent value="all" className="mt-4">
                   <InventoryTable vehicles={filteredVehicles} onEdit={handleEdit} onView={handleView} onDelete={deleteVehicle} />
                 </TabsContent>
