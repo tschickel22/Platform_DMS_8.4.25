@@ -8,7 +8,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
+import { Plus, Upload, Scan, Search, DollarSign, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { InventoryTable } from './components/InventoryTable'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import VehicleDetail from './components/VehicleDetail'
@@ -18,7 +18,6 @@ import MHInventoryForm from './forms/MHInventoryForm'
 import { InventoryErrorBoundary } from './components/InventoryErrorBoundary'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { Vehicle, RVVehicle, MHVehicle } from './state/types'
-import { GenerateBrochureModal } from '@/modules/brochures/components/GenerateBrochureModal'
 
 export default function InventoryManagement() {
   const { vehicles, addVehicle, updateVehicle, deleteVehicle, importVehicles } = useInventoryManagement()
@@ -30,6 +29,8 @@ export default function InventoryManagement() {
   const [showScanner, setShowScanner] = useState(false)
   const [editingItem, setEditingItem] = useState<Vehicle | null>(null)
   const [selectedItem, setSelectedItem] = useState<Vehicle | null>(null)
+  const [showBrochureModal, setShowBrochureModal] = useState(false)
+  const [selectedVehicleForBrochure, setSelectedVehicleForBrochure] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
