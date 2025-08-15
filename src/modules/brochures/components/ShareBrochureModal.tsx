@@ -306,7 +306,7 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                   <Download className="h-4 w-4 mr-2" />
                 )}
                 {isDownloading ? 'Generating...' : 'Download PDF'}
-              </div>
+              </Button>
             </div>
           </CardContent>
         </Card>
