@@ -294,9 +294,19 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Downloads:</span>
                 <span className="ml-2">{brochure.downloadCount}</span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Shares:</span>
-                <span className="ml-2">{brochure.shareCount}</span>
+              <Button 
+                onClick={handleDownloadPDF} 
+                variant="outline" 
+                size="sm" 
+                className="flex-1"
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {isDownloading ? 'Generating...' : 'Download PDF'}
               </div>
             </div>
           </CardContent>
