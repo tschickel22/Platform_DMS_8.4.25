@@ -60,7 +60,39 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
   }
 
   const handleSocialShare = (platform: string) => {
-    const text = `Check out this property brochure: ${brochure.title}`
+    // Get brochure description from content blocks
+    const getDescription = () => {
+      if (brochure.description) return brochure.description
+      
+      // Try to extract description from hero block or first text block
+      const heroBlock = brochure.content?.blocks?.find((block: any) => block.type === 'hero')
+      if (heroBlock?.content?.description) return heroBlock.content.description
+      
+      const textBlock = brochure.content?.blocks?.find((block: any) => 
+        block.type === 'text' || block.type === 'features'
+      )
+      if (textBlock?.content?.text) return textBlock.content.text
+      
+      return `Professional brochure for ${brochure.title} - View details and specifications.`
+    }
+    
+    // Get preview image from brochure content
+    const getPreviewImage = () => {
+      // Try hero block image first
+      const heroBlock = brochure.content?.blocks?.find((block: any) => block.type === 'hero')
+      if (heroBlock?.content?.image) return heroBlock.content.image
+      
+      // Try gallery block first image
+      const galleryBlock = brochure.content?.blocks?.find((block: any) => block.type === 'gallery')
+      if (galleryBlock?.content?.images?.[0]) return galleryBlock.content.images[0]
+      
+      // Fallback to a default brochure preview image
+      return `${window.location.origin}/api/brochure-preview/${brochure.id}.jpg`
+    }
+    
+    const description = getDescription()
+    const previewImage = getPreviewImage()
+    const text = encodeURIComponent(`${description.substring(0, 200)}${description.length > 200 ? '...' : ''}`)
     const url = brochureUrl
     
     let shareUrl = ''
@@ -69,11 +101,13 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
         break
       case 'twitter':
+    const title = encodeURIComponent(brochure.title)
+    const image = encodeURIComponent(previewImage)
         shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
         break
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
-        break
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}&picture=${image}`,
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}&via=${encodeURIComponent(companyName.replace(/\s+/g, ''))}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}&summary=${text}&source=${encodeURIComponent(companyName)}`
     }
     
     if (shareUrl) {
@@ -270,11 +304,15 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
               </CardContent>
             </Card>
           </TabsContent>
+            <p className="text-xs text-muted-foreground">
+              Share with preview image and description from your brochure content
+            </p>
         </Tabs>
 
         {/* Brochure Info */}
         <Card>
           <CardHeader>
+                title="Share on Facebook with preview"
             <CardTitle className="text-lg">Brochure Details</CardTitle>
           </CardHeader>
           <CardContent>
@@ -283,6 +321,7 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Template:</span>
                 <span className="ml-2">{brochure.templateName}</span>
               </div>
+                title="Share on Twitter with preview"
               <div>
                 <span className="text-muted-foreground">Properties:</span>
                 <span className="ml-2">{brochure.listingIds.length} listings</span>
@@ -291,17 +330,18 @@ export function ShareBrochureModal({ brochure, onClose }: ShareBrochureModalProp
                 <span className="text-muted-foreground">Downloads:</span>
                 <span className="ml-2">{brochure.downloadCount}</span>
               </div>
+                title="Share on LinkedIn with preview"
               <div>
                 <span className="text-muted-foreground">Shares:</span>
                 <span className="ml-2">{brochure.shareCount}</span>
-              </div>
+              Rich Social Previews
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end">
           <Button onClick={onClose} variant="outline">
-            Close
+            <p>Social platforms will show your brochure image, title, and description as a rich preview card.</p>
           </Button>
         </div>
       </DialogContent>
