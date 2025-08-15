@@ -1,387 +1,422 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
-import { useTenant } from '@/contexts/TenantContext'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import {
-  Menu,
-  LayoutDashboard,
-  Users,
-  DollarSign,
-  FileText,
-  Wrench,
-  Truck,
-  CheckSquare,
-  Percent,
-  Globe,
-  Receipt,
-  Settings,
-  Shield,
-  User,
-  LogOut,
-  ChevronDown,
-  ShieldCheck,
-  ListTodo,
-  Calendar,
-  HardHat,
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Upload,
+  BarChart3,
   MapPin,
-  Tag,
-  Home,
-  Package,
-  BarChart2
+  Calendar,
+  DollarSign,
+  Eye,
+  Edit,
+  Trash2,
+  ExternalLink
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useInventoryManagement } from './hooks/useInventoryManagement'
+import { VehicleDetail } from './components/VehicleDetail'
+import { InventoryTable } from './components/InventoryTable'
+import { RVInventoryForm } from './forms/RVInventoryForm'
+import { MHInventoryForm } from './forms/MHInventoryForm'
+import { CSVSmartImport } from './components/CSVSmartImport'
+import { BarcodeScanner } from './components/BarcodeScanner'
+import { ListingHandoffModal } from './components/ListingHandoffModal'
 
-/**
- * ROUTE CONSTANTS
- * Keep admin paths under a namespace that can't collide with public dynamic routes like "/:companySlug/listings".
- * Your App.tsx should map these admin routes to protected components.
- */
-const ROUTES = {
-  DASHBOARD: '/',
-  CRM: '/crm',
-  DEALS: '/deals',
-  QUOTES: '/quotes',
+export default function InventoryManagement() {
+  const {
+    vehicles,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    typeFilter,
+    setTypeFilter,
+    selectedVehicle,
+    setSelectedVehicle,
+    showAddForm,
+    setShowAddForm,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
+    exportToCSV,
+    importFromCSV,
+    getFilteredVehicles,
+    getInventoryStats
+  } = useInventoryManagement()
 
-  INVENTORY: '/inventory',
-  LAND: '/land',
-  PDI: '/pdi',
-  DELIVERY: '/delivery',
-  WARRANTY: '/inventory/warranty',
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [showListingHandoff, setShowListingHandoff] = useState(false)
+  const [handoffVehicle, setHandoffVehicle] = useState(null)
+  const [activeTab, setActiveTab] = useState('overview')
 
-  // ✅ Admin Property Listings dashboard (must exist in App.tsx)
-  PROPERTY_LISTINGS_ADMIN: '/property/listings',
-  // ✅ Marketing: Brochures
-  BROCHURES: '/brochures',
+  const stats = getInventoryStats()
+  const filteredVehicles = getFilteredVehicles()
 
-  FINANCE: '/finance',
-  AGREEMENTS: '/agreements',
-  CLIENT_APPS: '/client-applications',
-  INVOICES: '/invoices',
-
-  SERVICE: '/service',
-  PORTAL: '/portal',
-
-  REPORTS: '/reports',
-  COMMISSIONS: '/commissions',
-  TAGS: '/tags',
-  TASKS: '/tasks',
-  CALENDAR: '/calendar',
-  CONTRACTORS: '/contractors',
-
-  SETTINGS: '/settings',
-  PLATFORM_ADMIN: '/admin'
-}
-
-interface NavigationItem {
-  name: string
-  path?: string
-  icon: React.ComponentType<any>
-  children?: Array<{
-    name: string
-    path: string
-    icon: React.ComponentType<any>
-  }>
-}
-
-interface LayoutProps {
-  children: React.ReactNode
-}
-
-export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth()
-  const { tenant } = useTenant()
-  const location = useLocation()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [expandedMenus, setExpandedMenus] = useState<string[]>([])
-
-  // ---------- Navigation definition ----------
-  const navigationItems: NavigationItem[] = [
-    { name: 'Dashboard', path: ROUTES.DASHBOARD, icon: LayoutDashboard },
-
-    {
-      name: 'CRM & Sales',
-      icon: Users,
-      children: [
-        { name: 'Prospecting', path: ROUTES.CRM, icon: Users },
-        { name: 'Sales Deals', path: ROUTES.DEALS, icon: DollarSign },
-        { name: 'Quotes', path: ROUTES.QUOTES, icon: FileText }
-      ]
-    },
-
-    {
-      name: 'Inventory & Operations',
-      icon: Package,
-      children: [
-        { name: 'Inventory', path: ROUTES.INVENTORY, icon: Package },
-        { name: 'Land Management', path: ROUTES.LAND, icon: MapPin },
-        { name: 'PDI Checklist', path: ROUTES.PDI, icon: CheckSquare },
-        { name: 'Delivery', path: ROUTES.DELIVERY, icon: Truck },
-        { name: 'Warranty Mgmt', path: ROUTES.WARRANTY, icon: ShieldCheck }
-      ]
-    },
-
-    // ✅ Marketing with the ADMIN Property Listings dashboard
-    {
-      name: 'Marketing',
-      icon: Globe,
-      children: [
-        { name: 'Property Listings', path: ROUTES.PROPERTY_LISTINGS_ADMIN, icon: Home },
-        { name: 'Brochures', path: ROUTES.BROCHURES, icon: FileText }
-      ]
-    },
-
-    {
-      name: 'Finance & Agreements',
-      icon: DollarSign,
-      children: [
-        { name: 'Finance', path: ROUTES.FINANCE, icon: DollarSign },
-        { name: 'Agreements', path: ROUTES.AGREEMENTS, icon: FileText },
-        { name: 'Applications', path: ROUTES.CLIENT_APPS, icon: FileText },
-        { name: 'Invoices', path: ROUTES.INVOICES, icon: Receipt }
-      ]
-    },
-
-    {
-      name: 'Service & Support',
-      icon: Wrench,
-      children: [
-        { name: 'Service Ops', path: ROUTES.SERVICE, icon: Wrench },
-        { name: 'Client Portal', path: ROUTES.PORTAL, icon: Globe }
-      ]
-    },
-
-    {
-      name: 'Management',
-      icon: BarChart2,
-      children: [
-        { name: 'Reports', path: ROUTES.REPORTS, icon: BarChart2 },
-        { name: 'Commissions', path: ROUTES.COMMISSIONS, icon: Percent },
-        { name: 'Tag Manager', path: ROUTES.TAGS, icon: Tag },
-        // 🚫 Removed the duplicate "Property Listings" entry that pointed at "/listings" (public route).
-        { name: 'Task Center', path: ROUTES.TASKS, icon: ListTodo },
-        { name: 'Calendar', path: ROUTES.CALENDAR, icon: Calendar },
-        { name: 'Contractors', path: ROUTES.CONTRACTORS, icon: HardHat }
-      ]
-    },
-
-    {
-      name: 'Administration',
-      icon: Settings,
-      children: [
-        { name: 'Company Settings', path: ROUTES.SETTINGS, icon: Settings },
-        { name: 'Platform Admin', path: ROUTES.PLATFORM_ADMIN, icon: Shield }
-      ]
+  const handleAddVehicle = async (vehicleData: any) => {
+    try {
+      await addVehicle(vehicleData)
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('Failed to add vehicle:', error)
     }
-  ]
-
-  // ---------- Helpers ----------
-  const normalize = (p: string) => p.replace(/\/+$/, '')
-  const isActive = (path: string) => {
-    const current = normalize(location.pathname)
-    const target = normalize(path)
-    return current === target || current.startsWith(target + '/')
   }
 
-  // Auto-expand the group that contains the current route
-  useEffect(() => {
-    const currentPath = normalize(location.pathname)
-    const parent = navigationItems.find(item =>
-      item.children?.some(child => {
-        const target = normalize(child.path)
-        return currentPath === target || currentPath.startsWith(target + '/')
-      })
-    )
-    if (parent && !expandedMenus.includes(parent.name)) {
-      setExpandedMenus(prev => [...prev, parent.name])
+  const handleUpdateVehicle = async (vehicleData: any) => {
+    try {
+      await updateVehicle(selectedVehicle.id, vehicleData)
+      setSelectedVehicle(null)
+    } catch (error) {
+      console.error('Failed to update vehicle:', error)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname])
+  }
 
-  const toggleMenu = (menuName: string) => {
-    setExpandedMenus(prev =>
-      prev.includes(menuName)
-        ? prev.filter(name => name !== menuName)
-        : [...prev, menuName]
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    try {
+      await deleteVehicle(vehicleId)
+    } catch (error) {
+      console.error('Failed to delete vehicle:', error)
+    }
+  }
+
+  const handleCreateListing = (vehicle: any) => {
+    setHandoffVehicle(vehicle)
+    setShowListingHandoff(true)
+  }
+
+  const handleBarcodeScanned = (data: any) => {
+    console.log('Barcode scanned:', data)
+    setShowBarcodeScanner(false)
+    // Process barcode data and potentially pre-fill form
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
-  // ---------- Sidebar ----------
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="flex items-center px-4 py-6">
-        <div className="flex items-center">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">
-              {tenant?.name?.charAt(0) || 'R'}
-            </span>
-          </div>
-          <span className="ml-2 text-lg font-semibold">
-            {tenant?.name || 'Renter Insight'}
-          </span>
-        </div>
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600">Error loading inventory: {error}</p>
       </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1">
-        {navigationItems.map((item) => {
-          if (item.children) {
-            const isExpanded = expandedMenus.includes(item.name)
-            const hasActiveChild = item.children.some(child => isActive(child.path!))
-
-            return (
-              <div key={item.name}>
-                <button
-                  onClick={() => toggleMenu(item.name)}
-                  className={cn(
-                    'w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                    hasActiveChild
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  )}
-                >
-                  <div className="flex items-center">
-                    <item.icon
-                      className={cn(
-                        'mr-3 flex-shrink-0 h-5 w-5',
-                        hasActiveChild ? 'text-primary' : 'text-muted-foreground'
-                      )}
-                    />
-                    {item.name}
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform',
-                      isExpanded ? 'transform rotate-180' : '',
-                      hasActiveChild ? 'text-primary' : 'text-muted-foreground'
-                    )}
-                  />
-                </button>
-
-                {isExpanded && (
-                  <div className="mt-1 space-y-1">
-                    {item.children.map((child) => {
-                      const childActive = isActive(child.path!)
-                      return (
-                        <Link
-                          key={child.path}
-                          to={child.path!}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={cn(
-                            'group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors',
-                            childActive
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                          )}
-                        >
-                          <child.icon
-                            className={cn(
-                              'mr-3 flex-shrink-0 h-4 w-4',
-                              childActive ? 'text-primary-foreground' : 'text-muted-foreground'
-                            )}
-                          />
-                          {child.name}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          } else {
-            const active = isActive(item.path!)
-            return (
-              <Link
-                key={item.path}
-                to={item.path!}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                <item.icon
-                  className={cn(
-                    'mr-3 flex-shrink-0 h-5 w-5',
-                    active ? 'text-primary-foreground' : 'text-muted-foreground'
-                  )}
-                />
-                {item.name}
-              </Link>
-            )
-          }
-        })}
-      </nav>
-
-      {/* User section */}
-      <div className="border-t p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-4 w-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          onClick={logout}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign out
-        </Button>
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow border-r bg-card">
-          <SidebarContent />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
+          <p className="text-muted-foreground">
+            Manage your RV and manufactured home inventory
+          </p>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
+            <Package className="h-4 w-4 mr-2" />
+            Scan Barcode
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Vehicle
+          </Button>
         </div>
       </div>
 
-      {/* Mobile sidebar */}
-      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-64">
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUnits}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.availableUnits} available
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Inventory value
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">RV Units</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.rvCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Travel trailers & motorhomes
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">MH Units</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.mhCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Manufactured homes
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Mobile header */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b bg-card">
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-          </Sheet>
-          <div className="flex items-center">
-            <div className="h-6 w-6 bg-primary rounded flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">
-                {tenant?.name?.charAt(0) || 'R'}
-              </span>
+      {/* Main Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="rv">RV Inventory</TabsTrigger>
+          <TabsTrigger value="mh">Manufactured Homes</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search inventory..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border rounded-md bg-background"
+              >
+                <option value="all">All Status</option>
+                <option value="available">Available</option>
+                <option value="sold">Sold</option>
+                <option value="reserved">Reserved</option>
+                <option value="service">In Service</option>
+              </select>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-3 py-2 border rounded-md bg-background"
+              >
+                <option value="all">All Types</option>
+                <option value="rv">RV</option>
+                <option value="manufactured_home">Manufactured Home</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+          {/* Inventory Table */}
+          <InventoryTable
+            vehicles={filteredVehicles}
+            onViewDetails={setSelectedVehicle}
+            onEdit={setSelectedVehicle}
+            onDelete={handleDeleteVehicle}
+            onCreateListing={handleCreateListing}
+          />
+        </TabsContent>
+
+        <TabsContent value="rv" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">RV Inventory</h2>
+            <Button onClick={() => setShowAddForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add RV
+            </Button>
+          </div>
+          <InventoryTable
+            vehicles={filteredVehicles.filter(v => v.listingType === 'rv')}
+            onViewDetails={setSelectedVehicle}
+            onEdit={setSelectedVehicle}
+            onDelete={handleDeleteVehicle}
+            onCreateListing={handleCreateListing}
+          />
+        </TabsContent>
+
+        <TabsContent value="mh" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Manufactured Home Inventory</h2>
+            <Button onClick={() => setShowAddForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Manufactured Home
+            </Button>
+          </div>
+          <InventoryTable
+            vehicles={filteredVehicles.filter(v => v.listingType === 'manufactured_home')}
+            onViewDetails={setSelectedVehicle}
+            onEdit={setSelectedVehicle}
+            onDelete={handleDeleteVehicle}
+            onCreateListing={handleCreateListing}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Distribution</CardTitle>
+                <CardDescription>
+                  Breakdown by vehicle type and status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Available RVs</span>
+                    <Badge variant="secondary">{stats.availableRVs}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Available MH</span>
+                    <Badge variant="secondary">{stats.availableMH}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">In Service</span>
+                    <Badge variant="outline">{stats.inService}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Sold This Month</span>
+                    <Badge variant="default">{stats.soldThisMonth}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Metrics</CardTitle>
+                <CardDescription>
+                  Key inventory performance indicators
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Avg Days on Lot</span>
+                    <span className="font-medium">{stats.avgDaysOnLot}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Turn Rate</span>
+                    <span className="font-medium">{stats.turnRate}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Avg Sale Price</span>
+                    <span className="font-medium">${stats.avgSalePrice.toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modals */}
+      {selectedVehicle && !showAddForm && (
+        <VehicleDetail
+          vehicle={selectedVehicle}
+          onClose={() => setSelectedVehicle(null)}
+          onUpdate={handleUpdateVehicle}
+          onDelete={() => handleDeleteVehicle(selectedVehicle.id)}
+          onCreateListing={() => handleCreateListing(selectedVehicle)}
+        />
+      )}
+
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Add New Vehicle</h2>
+              <Button variant="ghost" onClick={() => setShowAddForm(false)}>
+                ×
+              </Button>
+            </div>
+            
+            <Tabs defaultValue="rv">
+              <TabsList className="mb-4">
+                <TabsTrigger value="rv">RV</TabsTrigger>
+                <TabsTrigger value="mh">Manufactured Home</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="rv">
+                <RVInventoryForm
+                  onSubmit={handleAddVehicle}
+                  onCancel={() => setShowAddForm(false)}
+                />
+              </TabsContent>
+              
+              <TabsContent value="mh">
+                <MHInventoryForm
+                  onSubmit={handleAddVehicle}
+                  onCancel={() => setShowAddForm(false)}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <CSVSmartImport
+          onClose={() => setShowImportModal(false)}
+          onImport={importFromCSV}
+        />
+      )}
+
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onClose={() => setShowBarcodeScanner(false)}
+          onScanned={handleBarcodeScanned}
+        />
+      )}
+
+      {showListingHandoff && handoffVehicle && (
+        <ListingHandoffModal
+          vehicle={handoffVehicle}
+          onClose={() => {
+            setShowListingHandoff(false)
+            setHandoffVehicle(null)
+          }}
+          onSuccess={() => {
+            setShowListingHandoff(false)
+            setHandoffVehicle(null)
+          }}
+        />
+      )}
     </div>
   )
 }
