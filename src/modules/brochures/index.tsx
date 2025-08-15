@@ -2,7 +2,6 @@
 export { BrochureList } from './pages/BrochureList'
 export { BrochureTemplateEditor } from './pages/BrochureTemplateEditor'
 export { PublicBrochureView } from './pages/PublicBrochureView'
-
 // Export other components that might be needed
 export { BrochureRenderer } from './components/BrochureRenderer'
 export { GenerateBrochureModal } from './components/GenerateBrochureModal'

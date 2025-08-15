@@ -27,9 +27,7 @@ import {
   HardHat,
   MapPin,
   Tag,
-  Home,
-  Package,
-  BarChart2
+  Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -374,17 +372,6 @@ export default function Layout({ children }: LayoutProps) {
                 {tenant?.name?.charAt(0) || 'R'}
               </span>
             </div>
-            <span className="ml-2 font-semibold">
-              {tenant?.name || 'Renter Insight'}
-            </span>
-          </div>
-        </div>
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
     </div>
   )
 }
