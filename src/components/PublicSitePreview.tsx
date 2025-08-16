@@ -92,6 +92,9 @@ function SiteRenderer({ site }: { site: Site }) {
   const { '*': pagePath } = useParams()
   const currentPath = `/${pagePath || ''}`
   
+  // Define primaryColor at the component level
+  const primaryColor = site.brand?.color || site.theme?.primaryColor || '#3b82f6'
+  
   // Find the current page
   const currentPage = site.pages.find(page => page.path === currentPath) || site.pages[0]
   
@@ -107,7 +110,6 @@ function SiteRenderer({ site }: { site: Site }) {
   }
 
   const renderBlock = (block: Block) => {
-    const primaryColor = site.brand?.color || site.theme?.primaryColor || '#3b82f6'
 
     switch (block.type) {
       case 'hero':
