@@ -102,6 +102,10 @@ function App() {
                                   {/* Home */}
                                   <Route path="/" element={<Dashboard />} />
 
+                                  {/* Website Builder Routes */}
+                                  <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
+                                  <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
+
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
@@ -141,10 +145,6 @@ function App() {
                                   <Route path="/tasks/*" element={<TaskCenter />} />
                                   <Route path="/calendar/*" element={<CalendarScheduling />} />
                                   <Route path="/contractors/*" element={<ContractorManagement />} />
-                                  <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
-                                  <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
-                                  <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
-                                  <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
                                   <Route path="/brochures/*" element={
                                     <Routes>
                                       <Route path="/" element={<BrochureList />} />
