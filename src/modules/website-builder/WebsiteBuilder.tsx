@@ -19,6 +19,8 @@ import { useSite } from './hooks/useSite'
 import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
+import { TemplateSelector } from './components/TemplateSelector'
+import { websiteTemplates, createSiteFromTemplate, WebsiteTemplate } from './utils/templates'
 import { PageList } from './components/PageList'
 import { EditorCanvas } from './components/EditorCanvas'
 import { MediaManager } from './components/MediaManager'
@@ -40,6 +42,8 @@ export function WebsiteBuilder({ mode }: WebsiteBuilderProps) {
   const { site, sites, loading, createSite, updateSite } = useSite(siteId)
   const [selectedPage, setSelectedPage] = useState<Page | null>(null)
   const [activeTab, setActiveTab] = useState('pages')
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [isCreatingSite, setIsCreatingSite] = useState(false)
 
   const roles = user?.role ? [user.role] : []
   const companyId = tenant?.id || null
@@ -59,37 +63,72 @@ export function WebsiteBuilder({ mode }: WebsiteBuilderProps) {
     }
   }, [loading, siteId, sites])
 
-  const handleCreateDefaultSite = async () => {
-    const defaultSite = await createSite({
-      name: mode === 'platform' ? 'Platform Website' : `${tenant?.name || 'Company'} Website`,
-      slug: mode === 'platform' ? 'platform-site' : (tenant?.name?.toLowerCase().replace(/\s+/g, '-') || 'company-site'),
-      pages: [
-        {
-          title: 'Home',
-          path: '/',
-          blocks: [],
-          isVisible: true,
-          order: 0
-        }
-      ],
-      nav: {
-        manufacturersMenu: {
-          enabled: false,
-          label: 'Manufacturers',
-          items: [],
-          allowCustom: true
-        }
-      },
-      seo: {
-        siteDefaults: {},
-        pages: {}
-      },
-      tracking: {}
-    })
-
-    if (defaultSite && defaultSite.pages.length > 0) {
-      setSelectedPage(defaultSite.pages[0])
+  const handleSelectTemplate = async (template: WebsiteTemplate) => {
+    setIsCreatingSite(true)
+    try {
+      const siteName = `${template.name} Site`
+      const siteSlug = `${template.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
+      
+      const siteData = createSiteFromTemplate(template, siteName, siteSlug)
+      const newSite = await createSite(siteData)
+      
+      if (newSite && newSite.pages.length > 0) {
+        setSelectedPage(newSite.pages[0])
+      }
+      setShowTemplateSelector(false)
+    } catch (error) {
+      console.error('Failed to create site from template:', error)
+    } finally {
+      setIsCreatingSite(false)
     }
+  }
+
+  const handleStartBlank = async () => {
+    setIsCreatingSite(true)
+    try {
+      const siteName = `New Site ${Date.now()}`
+      const siteSlug = `site-${Date.now()}`
+      
+      const newSite = await createSite({
+        name: siteName,
+        slug: siteSlug,
+        pages: [
+          {
+            title: 'Home',
+            path: '/',
+            blocks: [],
+            isVisible: true,
+            order: 0
+          }
+        ],
+        nav: {
+          manufacturersMenu: {
+            enabled: false,
+            label: 'Manufacturers',
+            items: [],
+            allowCustom: true
+          }
+        },
+        seo: {
+          siteDefaults: {},
+          pages: {}
+        },
+        tracking: {}
+      })
+      
+      if (newSite && newSite.pages.length > 0) {
+        setSelectedPage(newSite.pages[0])
+      }
+      setShowTemplateSelector(false)
+    } catch (error) {
+      console.error('Failed to create blank site:', error)
+    } finally {
+      setIsCreatingSite(false)
+    }
+  }
+
+  const handleCreateDefaultSite = async () => {
+    setShowTemplateSelector(true)
   }
 
   const handleUpdatePage = async (updates: Partial<Page>) => {
@@ -141,6 +180,16 @@ export function WebsiteBuilder({ mode }: WebsiteBuilderProps) {
           <p className="text-muted-foreground">Loading website builder...</p>
         </div>
       </div>
+    )
+  }
+
+  // Show template selector when creating new site
+  if (showTemplateSelector) {
+    return (
+      <TemplateSelector
+        onSelectTemplate={handleSelectTemplate}
+        onStartBlank={handleStartBlank}
+      />
     )
   }
 
