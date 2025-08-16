@@ -12,15 +12,26 @@ export default defineConfig({
   server: {
     proxy: {
       '/.netlify/functions': {
-        target: process.env.VITE_NETLIFY_BASE || 'http://localhost:8888',
+        target: 'http://localhost:8888',
         changeOrigin: true,
-        secure: true,
+        secure: false,
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
-            console.log('Proxy error:', err);
+            console.log('Netlify Functions not available - using fallback');
+            // Fallback response when Netlify dev server is not running
+            if (res && !res.headersSent) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ 
+                error: 'Netlify Functions not available', 
+                message: 'Run "npm run dev:netlify" to start Netlify dev server' 
+              }));
+            }
           });
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying request to:', options.target + req.url);
+            // Only log in development
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Proxying to Netlify Functions:', req.url);
+            }
           });
         }
       }
