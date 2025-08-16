@@ -849,3 +849,5 @@ export function createSiteFromTemplate(template: WebsiteTemplate, siteName: stri
     updatedAt: new Date().toISOString()
   }
 }
+
+export { siteTemplates }
