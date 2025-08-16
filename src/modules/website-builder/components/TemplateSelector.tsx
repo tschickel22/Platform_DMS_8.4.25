@@ -214,7 +214,7 @@ export function TemplateSelector({ onSelectTemplate, onStartBlank }: TemplateSel
 
       {/* Template Preview Modal */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-7xl w-full max-h-[95vh] p-0">
+        <DialogContent className="max-w-7xl w-full max-h-[95vh] p-0" onEscapeKeyDown={handleClosePreview}>
           <DialogHeader className="p-6 border-b">
             <div className="flex items-center justify-between">
               <div>
@@ -234,7 +234,12 @@ export function TemplateSelector({ onSelectTemplate, onStartBlank }: TemplateSel
                   <Plus className="h-4 w-4 mr-2" />
                   Use This Template
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleClosePreview}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleClosePreview}
+                  className="hover:bg-gray-100"
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
