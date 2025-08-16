@@ -814,6 +814,7 @@ export const websiteTemplates: WebsiteTemplate[] = [
 ]
 
 export function getTemplateById(id: string): WebsiteTemplate | null {
+}
 export const siteTemplates = websiteTemplates
 export const defaultTemplates = websiteTemplates
 export { websiteTemplates as templates }
