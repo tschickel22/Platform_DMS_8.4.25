@@ -40,6 +40,7 @@ import TaskCenter from '@/modules/task-center/TaskCenter'
 import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
 import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
 import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-builder'
+import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-builder'
 
 // Property Listings (Admin + Public)
 import PropertyListings from '@/modules/property-listings/PropertyListings'
@@ -141,6 +142,8 @@ function App() {
                                   <Route path="/tasks/*" element={<TaskCenter />} />
                                   <Route path="/calendar/*" element={<CalendarScheduling />} />
                                   <Route path="/contractors/*" element={<ContractorManagement />} />
+                                  <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
+                                  <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
                                   <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
                                   <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
                                   <Route path="/brochures/*" element={
