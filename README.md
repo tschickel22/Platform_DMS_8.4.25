@@ -11,6 +11,7 @@ This repository contains the full modular source for Renter Insight's RV/MH CRM 
 ## How to Use
 
 1. Clone this repo and push to GitHub
+2. Install Netlify CLI globally: `npm install -g netlify-cli`
 2. Import each module folder into Bolt.new
 3. Follow architecture guide in root documentation
 4. Start with renterinsight-core, then attach modules
