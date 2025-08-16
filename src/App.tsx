@@ -46,6 +46,7 @@ import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ListingDetail from '@/modules/property-listings/components/ListingDetail'
 import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
+import PublicSitePreview from '@/components/PublicSitePreview'
 
 logger.info('Application initializing', {
   userAgent: navigator.userAgent,
@@ -71,6 +72,9 @@ function App() {
                 <div className="min-h-screen bg-background">
                   <ErrorBoundary>
                     <Routes>
+                      {/* -------- PUBLIC SITE PREVIEW -------- */}
+                      <Route path="/s/:siteSlug/*" element={<PublicSitePreview />} />
+                      
                       {/* -------- PUBLIC (namespaced) -------- */}
                       <Route path="/public/:companySlug/listings" element={<PublicCatalogView />} />
                       <Route path="/public/:companySlug/l/:token" element={<PublicCatalogView />} />

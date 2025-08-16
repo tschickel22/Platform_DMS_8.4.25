@@ -317,28 +317,22 @@ export class LocalWebsiteService implements IWebsiteService {
       const site = await this.getSite(siteId)
       if (!site) throw new Error('Site not found')
       
-      // Call Netlify function
-      const response = await fetch('/.netlify/functions/publish-site', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-publish-secret': 'demo-secret'
-        },
-        body: JSON.stringify({ site })
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Publish failed: ${response.statusText}`)
+      // For local development, simulate publishing without external service
+      // Store published site data locally
+      const publishedSites = this.getFromStorage('published-sites', {})
+      publishedSites[site.slug] = {
+        ...site,
+        publishedAt: new Date().toISOString(),
+        version: Date.now()
       }
-      
-      const result = await response.json()
+      this.setToStorage('published-sites', publishedSites)
       
       // Create published version
       await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)
       
       return {
         success: true,
-        previewUrl: result.previewUrl || `${window.location.origin}/s/${site.slug}/`,
+        previewUrl: `${window.location.origin}/s/${site.slug}/`,
         publishedAt: new Date().toISOString()
       }
     } catch (error) {
@@ -353,28 +347,44 @@ export class LocalWebsiteService implements IWebsiteService {
   async setDomain(siteId: string, domain: DomainConfig): Promise<{ success: boolean; message: string }> {
     await this.delay(300)
     
+    // For local development, simulate domain mapping without external service
     try {
-      const response = await fetch('/.netlify/functions/set-domain', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-publish-secret': 'demo-secret'
-        },
-        body: JSON.stringify({ siteId, domain })
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Domain mapping failed: ${response.statusText}`)
+      // Generate domain string based on type
+      let domainString = ''
+      switch (domain.type) {
+        case 'subdomain':
+          domainString = `${domain.subdomain}.renterinsight.com`
+          break
+        case 'custom':
+          domainString = domain.customDomain
+          break
+        case 'subdomain_custom':
+          domainString = `${domain.subdomain}.${domain.baseDomain}`
+          break
+        case 'multi_dealer':
+          domainString = `${domain.dealerCode}.${domain.groupDomain}`
+          break
+        default:
+          throw new Error('Invalid domain type')
       }
       
-      const result = await response.json()
+      // Store domain mapping locally
+      const domainMappings = this.getFromStorage('domain-mappings', {})
+      domainMappings[domainString] = {
+        siteId,
+        domain: domainString,
+        type: domain.type,
+        createdAt: new Date().toISOString(),
+        config: domain
+      }
+      this.setToStorage('domain-mappings', domainMappings)
       
       // Update site with domain info
-      await this.updateSite(siteId, { domain: result.domain })
+      await this.updateSite(siteId, { domain: domainString })
       
       return {
         success: true,
-        message: 'Website address saved. DNS may take a few minutes to propagate.'
+        message: 'Website address saved successfully!'
       }
     } catch (error) {
       console.error('Domain mapping error:', error)
