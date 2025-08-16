@@ -1,0 +1,92 @@
+/* Website Builder UI Compatibility Styles */
+
+.website-builder {
+  /* Ensure proper spacing and layout */
+  --wb-spacing-xs: 0.5rem;
+  --wb-spacing-sm: 1rem;
+  --wb-spacing-md: 1.5rem;
+  --wb-spacing-lg: 2rem;
+  --wb-spacing-xl: 3rem;
+}
+
+.wb-drag-handle {
+  cursor: grab;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.wb-drag-handle:hover {
+  opacity: 1;
+}
+
+.wb-drag-handle:active {
+  cursor: grabbing;
+}
+
+.wb-block-preview {
+  pointer-events: none;
+  user-select: none;
+}
+
+.wb-block-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.wb-color-input {
+  min-width: 4rem;
+  padding: 0.25rem;
+}
+
+.wb-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.wb-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .wb-media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .wb-template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Loading states */
+.wb-loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: wb-loading 1.5s infinite;
+}
+
+@keyframes wb-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error states */
+.wb-error-state {
+  border: 2px dashed #ef4444;
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+/* Success states */
+.wb-success-state {
+  border: 2px solid #10b981;
+  background-color: #f0fdf4;
+  color: #059669;
+}

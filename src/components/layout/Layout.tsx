@@ -32,6 +32,7 @@ import {
   Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import MarketingMenuItems from '@/components/menu/MarketingMenuItems'
 
 /**
  * ROUTE CONSTANTS
@@ -286,6 +287,7 @@ export default function Layout({ children }: LayoutProps) {
                         </Link>
                       )
                     })}
+                    {item.name === 'Marketing' && <MarketingMenuItems />}
                   </div>
                 )}
               </div>
