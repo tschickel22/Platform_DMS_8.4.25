@@ -814,8 +814,9 @@ export const websiteTemplates: WebsiteTemplate[] = [
 ]
 
 export function getTemplateById(id: string): WebsiteTemplate | null {
-  return websiteTemplates.find(template => template.id === id) || null
-}
+export const siteTemplates = websiteTemplates
+export const defaultTemplates = websiteTemplates
+export { websiteTemplates as templates }
 
 export function getTemplatesByCategory(category: string): WebsiteTemplate[] {
   return websiteTemplates.filter(template => template.category === category)
