@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Globe, Edit, Trash2, ExternalLink } from 'lucide-react'
 import { useSite } from './hooks/useSite'
-import { siteTemplates } from './utils/templates'
+import { TemplateSelector } from './components/TemplateSelector'
+import { WebsiteTemplate } from './utils/templates'
 import { Site } from './types'
 
 interface WebsiteBuilderShellProps {
@@ -20,7 +21,7 @@ export function WebsiteBuilderShell({ mode }: WebsiteBuilderShellProps) {
   const { sites, loading, createSite, deleteSite } = useSite()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+  const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     slug: ''
@@ -62,19 +63,16 @@ export function WebsiteBuilderShell({ mode }: WebsiteBuilderShellProps) {
 
     // Apply template if selected
     if (selectedTemplate) {
-      const template = siteTemplates.find(t => t.id === selectedTemplate)
-      if (template) {
-        siteData = {
-          ...siteData,
-          pages: template.pages.map((page, index) => ({
-            ...page,
-            id: `page-${Date.now()}-${index}`,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          })),
-          theme: template.theme,
-          nav: template.nav
-        }
+      siteData = {
+        ...siteData,
+        pages: selectedTemplate.pages.map((page, index) => ({
+          ...page,
+          id: `page-${Date.now()}-${index}`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })),
+        theme: selectedTemplate.theme,
+        nav: selectedTemplate.nav
       }
     }
 
@@ -83,7 +81,7 @@ export function WebsiteBuilderShell({ mode }: WebsiteBuilderShellProps) {
       setShowCreateDialog(false)
       setShowTemplateDialog(false)
       setFormData({ name: '', slug: '' })
-      setSelectedTemplate('')
+      setSelectedTemplate(null)
       navigate(`/${mode === 'platform' ? 'platform/website-builder' : 'company/settings/website'}/${newSite.id}`)
     }
   }
@@ -267,62 +265,23 @@ export function WebsiteBuilderShell({ mode }: WebsiteBuilderShellProps) {
 
       {/* Template Selection Dialog */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl w-full max-h-[95vh] p-0">
           <DialogHeader>
-            <DialogTitle>Choose a Template</DialogTitle>
+            <div className="p-6 border-b">
+              <DialogTitle>Choose a Template</DialogTitle>
+            </div>
           </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card 
-              className={`cursor-pointer transition-colors ${
-                selectedTemplate === '' ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setSelectedTemplate('')}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="h-32 bg-muted rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-muted-foreground">Blank</span>
-                </div>
-                <h3 className="font-semibold">Start from Scratch</h3>
-                <p className="text-sm text-muted-foreground">
-                  Build your website from a blank canvas
-                </p>
-              </CardContent>
-            </Card>
-            
-            {siteTemplates.map((template) => (
-              <Card 
-                key={template.id}
-                className={`cursor-pointer transition-colors ${
-                  selectedTemplate === template.id ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
-                }`}
-                onClick={() => setSelectedTemplate(template.id)}
-              >
-                <CardContent className="p-6">
-                  <div className="aspect-video bg-muted rounded-lg mb-4 overflow-hidden">
-                    <img 
-                      src={template.preview} 
-                      alt={template.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h3 className="font-semibold">{template.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {template.description}
-                  </p>
-                  <Badge variant="outline" className="mt-2">
-                    {template.category.replace('_', ' ')}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowTemplateDialog(false)}>
-              Continue
-            </Button>
+          <div className="p-6">
+            <TemplateSelector
+              onSelectTemplate={(template) => {
+                setSelectedTemplate(template)
+                setShowTemplateDialog(false)
+              }}
+              onStartBlank={() => {
+                setSelectedTemplate(null)
+                setShowTemplateDialog(false)
+              }}
+            />
           </div>
         </DialogContent>
       </Dialog>
