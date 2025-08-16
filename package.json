@@ -7,7 +7,7 @@
     "dev:netlify": "netlify dev",
     "dev:full": "concurrently \"netlify dev\" \"vite\"",
     "build": "vite build",
-    "build:public": "echo 'Public site build placeholder'",
+    "build:public": "cd public-site && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
