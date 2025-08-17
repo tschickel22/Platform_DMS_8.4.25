@@ -19,12 +19,7 @@ export function MediaManager({ siteId }: MediaManagerProps) {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
       // Check file size (2MB limit)
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="absolute right-4 top-4"
-            onClick={onClose}
-          >
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: 'File too large',
           description: `${file.name} is larger than 2MB. Please choose a smaller file.`,
