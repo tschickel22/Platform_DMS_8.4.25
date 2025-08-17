@@ -16,13 +16,6 @@ const templateMap: Record<string, WebsiteTemplate> = {
   'general-dealer': generalDealerTemplate
 }
 
-// Map template IDs to their imported data
-const templateMap: Record<string, WebsiteTemplate> = {
-  'rv-dealer-professional': rvDealerProfessionalTemplate,
-  'manufactured-home-dealer': manufacturedHomeDealerTemplate,
-  'luxury-rv-dealer': luxuryRvDealerTemplate,
-  'general-dealer': generalDealerTemplate
-}
 
 interface TemplatePreviewProps {
   template: WebsiteTemplate | null
