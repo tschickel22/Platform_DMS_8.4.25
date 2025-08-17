@@ -30,8 +30,6 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
   if (!template) return null
 
   // Get the full template data from the templates array
-  const fullTemplate = websiteTemplates.find(t => t.id === template.id) || template
-  // Get the full template data from the imported files
   const fullTemplate = templateMap[template.id] || template
 
   if (!currentPage) {
