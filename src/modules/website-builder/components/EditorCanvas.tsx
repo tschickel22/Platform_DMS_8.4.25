@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, GripVertical } from 'lucide-react'
 import { BlockRegistry } from './BlockRegistry'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 
 interface EditorCanvasProps {
   page: Page
@@ -22,9 +20,7 @@ export function EditorCanvas({ page, onUpdatePage }: EditorCanvasProps) {
       id: `block-${Date.now()}`,
       type: blockType,
       content: getDefaultBlockContent(blockType),
-      order: page.blocks.length,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      order: page.blocks.length
     }
 
     const updatedBlocks = [...page.blocks, newBlock]
