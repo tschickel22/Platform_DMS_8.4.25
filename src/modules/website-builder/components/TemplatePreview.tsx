@@ -6,9 +6,6 @@ import { rvDealerProfessionalTemplate } from '../utils/templates-data/rv-dealer-
 import { manufacturedHomeDealerTemplate } from '../utils/templates-data/manufactured-home-dealer'
 import { luxuryRvDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
 import { generalDealerTemplate } from '../utils/templates-data/general-dealer'
-import { manufacturedHomeDealerTemplate } from '../utils/templates-data/manufactured-home-dealer'
-import { luxuryRvDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
-import { generalDealerTemplate } from '../utils/templates-data/general-dealer'
 import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
 
 // Map template IDs to their imported data
