@@ -20,7 +20,12 @@ const presetThemes: Theme[] = [
     id: 'modern-blue',
     name: 'Modern Blue',
     colors: {
-      primary: '#3b82f6',
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
       secondary: '#64748b',
       accent: '#f59e0b',
       background: '#ffffff',

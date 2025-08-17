@@ -33,7 +33,12 @@ export function PublishPanel({ site, onUpdateSite }: PublishPanelProps) {
   const [publishResult, setPublishResult] = useState<PublishResult | null>(null)
   const [showDomainDialog, setShowDomainDialog] = useState(false)
   const [domainConfig, setDomainConfig] = useState<DomainConfig>({
-    type: 'subdomain',
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
     subdomain: site.slug
   })
 

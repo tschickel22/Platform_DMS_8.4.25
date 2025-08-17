@@ -18,7 +18,12 @@ export function TemplateSelector({ onSelectTemplate, onStartBlank }: TemplateSel
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [previewPageIndex, setPreviewPageIndex] = useState(0)
 
-  const categories = [
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
     { value: 'all', label: 'All Templates' },
     { value: 'rv_dealer', label: 'RV Dealers' },
     { value: 'manufactured_home', label: 'Manufactured Homes' },

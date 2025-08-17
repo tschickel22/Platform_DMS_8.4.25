@@ -19,7 +19,12 @@ export function TrackingTagsPanel({ tracking, onUpdateTracking }: TrackingTagsPa
       ...updates
     })
   }
-
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">

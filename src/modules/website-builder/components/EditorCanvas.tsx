@@ -17,11 +17,12 @@ export function EditorCanvas({ page, onUpdatePage }: EditorCanvasProps) {
 
   const handleAddBlock = (blockType: BlockType) => {
     const newBlock: Block = {
-      id: `block-${Date.now()}`,
-      type: blockType,
-      content: getDefaultBlockContent(blockType),
-      order: page.blocks.length
-    }
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
 
     const updatedBlocks = [...page.blocks, newBlock]
     onUpdatePage({ blocks: updatedBlocks })

@@ -21,7 +21,12 @@ export function SeoPanel({ seoMeta, pages, onUpdateSeo }: SeoPanelProps) {
   const updateSiteDefaults = (updates: Partial<SeoMeta['siteDefaults']>) => {
     onUpdateSeo({
       ...seoMeta,
-      siteDefaults: {
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
         ...seoMeta.siteDefaults,
         ...updates
       }
