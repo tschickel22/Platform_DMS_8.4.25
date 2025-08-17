@@ -75,6 +75,7 @@ src/modules/
 !src/modules/property-listings/**
 !src/modules/quote-builder/
 !src/modules/quote-builder/**
+!src/modules/website-builder/
 
 # Ensure core src/ directories are not ignored
 !src/App.tsx
