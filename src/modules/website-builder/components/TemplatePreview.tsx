@@ -2,21 +2,8 @@ import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { rvDealerProfessionalTemplate } from '../utils/templates-data/rv-dealer-professional'
-import { manufacturedHomeDealerTemplate } from '../utils/templates-data/manufactured-home-dealer'
-import { luxuryRVDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
-import { generalDealerTemplate } from '../utils/templates-data/general-dealer'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
-
-// Map template IDs to their imported data
-const templateMap: Record<string, WebsiteTemplate> = {
-  'rv-dealer-professional': rvDealerProfessionalTemplate,
-  'manufactured-home-dealer': manufacturedHomeDealerTemplate,
-  'luxury-rv-dealer': luxuryRVDealerTemplate,
-  'general-dealer': generalDealerTemplate
-}
-
 
 interface TemplatePreviewProps {
   template: WebsiteTemplate | null
@@ -31,9 +18,9 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
   if (!template) return null
 
   // Get the full template data from the templates array
-  const fullTemplate = templateMap[template.id] || template
+  const fullTemplate = websiteTemplates.find(t => t.id === template.id) || template
   const currentPage = fullTemplate.pages[currentPageIndex]
-  const primaryColor = fullTemplate.theme.colors.primary
+  const primaryColor = fullTemplate.theme.primaryColor
 
   if (!currentPage) {
     return null
@@ -416,5 +403,3 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
     </Dialog>
   )
 }
-
-export { TemplatePreview }
