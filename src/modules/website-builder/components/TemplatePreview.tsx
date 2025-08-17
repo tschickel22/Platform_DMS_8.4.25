@@ -2,8 +2,19 @@ import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { rvDealerProfessionalTemplate } from '../utils/templates-data/rv-dealer-professional'
+import { manufacturedHomeDealerTemplate } from '../utils/templates-data/manufactured-home-dealer'
+import { luxuryRvDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
+import { generalDealerTemplate } from '../utils/templates-data/general-dealer'
 import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
+
+// Map template IDs to their imported data
+const templateMap: Record<string, WebsiteTemplate> = {
+  'rv-dealer-professional': rvDealerProfessionalTemplate,
+  'manufactured-home-dealer': manufacturedHomeDealerTemplate,
+  'luxury-rv-dealer': luxuryRvDealerTemplate,
+  'general-dealer': generalDealerTemplate
+}
 
 interface TemplatePreviewProps {
   template: WebsiteTemplate | null
@@ -19,8 +30,8 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
 
   // Get the full template data from the templates array
   const fullTemplate = websiteTemplates.find(t => t.id === template.id) || template
-  const currentPage = fullTemplate.pages[currentPageIndex]
-  const primaryColor = fullTemplate.theme.primaryColor
+  // Get the full template data from the imported files
+  const fullTemplate = templateMap[template.id] || template
 
   if (!currentPage) {
     return null
