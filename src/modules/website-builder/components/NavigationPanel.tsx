@@ -23,12 +23,7 @@ export function NavigationPanel({ navConfig, onUpdateNav }: NavigationPanelProps
   const [editingManufacturer, setEditingManufacturer] = useState<Manufacturer | null>(null)
   const [manufacturerForm, setManufacturerForm] = useState({
     name: '',
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="absolute right-4 top-4"
-            onClick={onClose}
-          >
+    slug: '',
     logoUrl: '',
     externalUrl: '',
     linkType: 'external' as 'inventory' | 'external'
