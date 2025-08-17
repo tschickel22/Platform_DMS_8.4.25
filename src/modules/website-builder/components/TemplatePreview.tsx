@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { WebsiteTemplate } from '../utils/templates'
+import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
 
 interface TemplatePreviewProps {
   template: WebsiteTemplate | null
@@ -17,15 +17,21 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
 
   if (!template) return null
 
-  const currentPage = template.pages[currentPageIndex]
-  const primaryColor = template.theme.primaryColor
+  // Get the full template data from the templates array
+  const fullTemplate = websiteTemplates.find(t => t.id === template.id) || template
+  const currentPage = fullTemplate.pages[currentPageIndex]
+  const primaryColor = fullTemplate.theme.primaryColor
+
+  if (!currentPage) {
+    return null
+  }
 
   const nextPage = () => {
-    setCurrentPageIndex((prev) => (prev + 1) % template.pages.length)
+    setCurrentPageIndex((prev) => (prev + 1) % fullTemplate.pages.length)
   }
 
   const prevPage = () => {
-    setCurrentPageIndex((prev) => (prev - 1 + template.pages.length) % template.pages.length)
+    setCurrentPageIndex((prev) => (prev - 1 + fullTemplate.pages.length) % fullTemplate.pages.length)
   }
 
   const renderBlock = (block: any) => {
@@ -279,14 +285,14 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
           <div className="flex items-center space-x-4">
             <div>
               <DialogTitle className="text-xl font-semibold">
-                {template.name} Preview
+                {fullTemplate.name} Preview
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Navigate through all pages to see the complete template
               </p>
             </div>
             <Badge variant="outline" style={{ color: primaryColor, borderColor: primaryColor }}>
-              {template.category.replace('_', ' ')}
+              {fullTemplate.category.replace('_', ' ')}
             </Badge>
           </div>
           <div className="flex items-center space-x-2">
@@ -309,7 +315,7 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium">Pages</span>
             <div className="flex space-x-2">
-              {template.pages.map((page, index) => (
+              {fullTemplate.pages.map((page, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentPageIndex(index)}
@@ -335,18 +341,18 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
               variant="outline"
               size="sm"
               onClick={prevPage}
-              disabled={template.pages.length <= 1}
+              disabled={fullTemplate.pages.length <= 1}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm text-muted-foreground">
-              {currentPageIndex + 1} of {template.pages.length}
+              {currentPageIndex + 1} of {fullTemplate.pages.length}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={nextPage}
-              disabled={template.pages.length <= 1}
+              disabled={fullTemplate.pages.length <= 1}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -366,7 +372,7 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
                     </span>
                   </div>
                   <div className="flex space-x-8">
-                    {template.pages.map((page, index) => (
+                    {fullTemplate.pages.map((page, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentPageIndex(index)}
