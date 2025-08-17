@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { rvDealerProfessionalTemplate } from '../utils/templates-data/rv-dealer-professional'
 import { manufacturedHomeDealerTemplate } from '../utils/templates-data/manufactured-home-dealer'
-import { luxuryRvDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
+import { luxuryRVDealerTemplate } from '../utils/templates-data/luxury-rv-dealer'
 import { generalDealerTemplate } from '../utils/templates-data/general-dealer'
 import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
 
@@ -12,7 +13,7 @@ import { WebsiteTemplate, websiteTemplates } from '../utils/templates'
 const templateMap: Record<string, WebsiteTemplate> = {
   'rv-dealer-professional': rvDealerProfessionalTemplate,
   'manufactured-home-dealer': manufacturedHomeDealerTemplate,
-  'luxury-rv-dealer': luxuryRvDealerTemplate,
+  'luxury-rv-dealer': luxuryRVDealerTemplate,
   'general-dealer': generalDealerTemplate
 }
 
@@ -31,6 +32,8 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
 
   // Get the full template data from the templates array
   const fullTemplate = templateMap[template.id] || template
+  const currentPage = fullTemplate.pages[currentPageIndex]
+  const primaryColor = fullTemplate.theme.colors.primary
 
   if (!currentPage) {
     return null
