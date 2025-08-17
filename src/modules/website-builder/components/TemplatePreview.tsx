@@ -416,3 +416,5 @@ export function TemplatePreview({ template, isOpen, onClose, onSelectTemplate }:
     </Dialog>
   )
 }
+
+export { TemplatePreview }
