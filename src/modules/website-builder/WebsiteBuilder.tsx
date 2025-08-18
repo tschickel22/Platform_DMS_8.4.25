@@ -1,334 +1,264 @@
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { 
-  FileText, 
-  Image, 
-  Palette, 
-  Navigation, 
-  Search, 
-  BarChart3, 
-  Globe,
-  Settings,
-  Loader2
-} from 'lucide-react'
-import { useSite } from './hooks/useSite'
-import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
-import { useAuth } from '@/contexts/AuthContext'
-import { useTenant } from '@/contexts/TenantContext'
-import { TemplateSelector } from './components/TemplateSelector'
-import { websiteTemplates, createSiteFromTemplate, WebsiteTemplate } from './utils/templates'
-import { PageList } from './components/PageList'
-import { EditorCanvas } from './components/EditorCanvas'
-import { MediaManager } from './components/MediaManager'
-import { ThemePalette } from './components/ThemePalette'
-import { NavigationPanel } from './components/NavigationPanel'
-import { SeoPanel } from './components/SeoPanel'
-import { TrackingTagsPanel } from './components/TrackingTagsPanel'
-import { PublishPanel } from './components/PublishPanel'
-import { Site, Page, Theme, Brand, NavConfig, SeoMeta, Tracking } from './types'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Globe, Settings, Eye } from 'lucide-react'
+import { websiteService } from '@/services/website/service'
+import { Site, SiteTemplate } from './types'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
+import { useToast } from '@/hooks/use-toast'
+import { logger } from '@/utils/logger'
+import TemplateSelector from './components/TemplateSelector'
+import CreateSiteDetailsModal from './components/CreateSiteDetailsModal'
 
-interface WebsiteBuilderProps {
-  mode: 'platform' | 'company'
-}
-
-export function WebsiteBuilder({ mode }: WebsiteBuilderProps) {
-  const { siteId } = useParams<{ siteId: string }>()
-  const { user } = useAuth()
-  const { tenant } = useTenant()
-  const { site, sites, loading, createSite, updateSite } = useSite(siteId)
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null)
-  const [activeTab, setActiveTab] = useState('pages')
+export default function WebsiteBuilder() {
+  const [sites, setSites] = useState<Site[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedTemplate, setSelectedTemplate] = useState<SiteTemplate | null>(null)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
-  const [isCreatingSite, setIsCreatingSite] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [creating, setCreating] = useState(false)
+  
+  const navigate = useNavigate()
+  const { handleError } = useErrorHandler()
+  const { toast } = useToast()
 
-  const roles = user?.role ? [user.role] : []
-  const companyId = tenant?.id || null
-  const caps = computeWebsiteBuilderCaps({ roles, companyId })
-
-  // Auto-select first page when site loads
   useEffect(() => {
-    if (site && site.pages.length > 0 && !selectedPage) {
-      setSelectedPage(site.pages[0])
-    }
-  }, [site, selectedPage])
+    loadSites()
+  }, [])
 
-  // Create default site if none exists
-  useEffect(() => {
-    if (!loading && !siteId && sites.length === 0) {
-      handleCreateDefaultSite()
-    }
-  }, [loading, siteId, sites])
-
-  const handleSelectTemplate = async (template: WebsiteTemplate) => {
-    setIsCreatingSite(true)
+  const loadSites = async () => {
     try {
-      const siteName = `${template.name} Site`
-      const siteSlug = `${template.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
-      
-      const siteData = createSiteFromTemplate(template, siteName, siteSlug)
-      const newSite = await createSite(siteData)
-      
-      if (newSite && newSite.pages.length > 0) {
-        setSelectedPage(newSite.pages[0])
-      }
-      setShowTemplateSelector(false)
+      setLoading(true)
+      const sitesData = await websiteService.getSites()
+      setSites(sitesData)
     } catch (error) {
-      console.error('Failed to create site from template:', error)
+      handleError(error, 'loading sites')
     } finally {
-      setIsCreatingSite(false)
+      setLoading(false)
     }
   }
 
-  const handleStartBlank = async () => {
-    setIsCreatingSite(true)
-    try {
-      const siteName = `New Site ${Date.now()}`
-      const siteSlug = `site-${Date.now()}`
-      
-      const newSite = await createSite({
-        name: siteName,
-        slug: siteSlug,
-        pages: [
-          {
-            title: 'Home',
-            path: '/',
-            blocks: [],
-            isVisible: true,
-            order: 0
-          }
-        ],
-        nav: {
-          manufacturersMenu: {
-            enabled: false,
-            label: 'Manufacturers',
-            items: [],
-            allowCustom: true
-          }
-        },
-        seo: {
-          siteDefaults: {},
-          pages: {}
-        },
-        tracking: {}
-      })
-      
-      if (newSite && newSite.pages.length > 0) {
-        setSelectedPage(newSite.pages[0])
-      }
-      setShowTemplateSelector(false)
-    } catch (error) {
-      console.error('Failed to create blank site:', error)
-    } finally {
-      setIsCreatingSite(false)
-    }
-  }
-
-  const handleCreateDefaultSite = async () => {
+  const handleCreateWebsiteClick = () => {
+    logger.userAction('website_builder_create_clicked')
     setShowTemplateSelector(true)
   }
 
-  const handleUpdatePage = async (updates: Partial<Page>) => {
-    if (!site || !selectedPage) return
+  const handleTemplateSelected = (template: SiteTemplate) => {
+    logger.userAction('template_selected', { templateId: template.id })
+    setSelectedTemplate(template)
+    setShowTemplateSelector(false)
+    setShowDetailsModal(true)
+  }
 
-    const updatedPages = site.pages.map(page =>
-      page.id === selectedPage.id ? { ...page, ...updates } : page
-    )
+  const handleTemplateSelectorCancel = () => {
+    setShowTemplateSelector(false)
+    setSelectedTemplate(null)
+  }
 
-    const updatedSite = await updateSite(site.id, { pages: updatedPages })
-    if (updatedSite) {
-      const updatedPage = updatedSite.pages.find(p => p.id === selectedPage.id)
-      if (updatedPage) {
-        setSelectedPage(updatedPage)
-      }
+  const handleDetailsModalCancel = () => {
+    setShowDetailsModal(false)
+    setSelectedTemplate(null)
+  }
+
+  const handleBackToTemplateSelection = () => {
+    setShowDetailsModal(false)
+    setShowTemplateSelector(true)
+  }
+
+  const handleCreateSite = async (siteData: { name: string; slug: string }) => {
+    if (!selectedTemplate) return
+
+    try {
+      setCreating(true)
+      logger.userAction('website_create_started', { 
+        templateId: selectedTemplate.id,
+        siteName: siteData.name,
+        siteSlug: siteData.slug
+      })
+
+      const newSite = await websiteService.createSite({
+        name: siteData.name,
+        slug: siteData.slug,
+        pages: selectedTemplate.pages || [],
+        theme: selectedTemplate.theme,
+        nav: selectedTemplate.nav,
+        brand: selectedTemplate.brand,
+        seo: selectedTemplate.seo,
+        tracking: selectedTemplate.tracking
+      })
+
+      logger.userAction('website_created', { siteId: newSite.id })
+      
+      toast({
+        title: 'Website Created',
+        description: `${newSite.name} has been created successfully.`
+      })
+
+      // Reset state
+      setShowDetailsModal(false)
+      setSelectedTemplate(null)
+      
+      // Refresh sites list
+      await loadSites()
+      
+      // Navigate to edit the new site
+      navigate(`/platform/website-builder/sites/${newSite.id}/edit`)
+      
+    } catch (error) {
+      logger.userAction('website_create_failed', { 
+        templateId: selectedTemplate.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      handleError(error, 'creating website')
+    } finally {
+      setCreating(false)
     }
   }
 
-  const handleUpdateTheme = async (theme: Theme) => {
-    if (!site) return
-    await updateSite(site.id, { theme })
+  const handleEditSite = (siteId: string) => {
+    navigate(`/platform/website-builder/sites/${siteId}/edit`)
   }
 
-  const handleUpdateBrand = async (brand: Brand) => {
-    if (!site) return
-    await updateSite(site.id, { brand })
+  const handlePreviewSite = (site: Site) => {
+    const previewUrl = `/s/${site.slug}/`
+    window.open(previewUrl, '_blank')
   }
 
-  const handleUpdateNav = async (nav: NavConfig) => {
-    if (!site) return
-    await updateSite(site.id, { nav })
-  }
-
-  const handleUpdateSeo = async (seo: SeoMeta) => {
-    if (!site) return
-    await updateSite(site.id, { seo })
-  }
-
-  const handleUpdateTracking = async (tracking: Tracking) => {
-    if (!site) return
-    await updateSite(site.id, { tracking })
+  const handleSiteSettings = (siteId: string) => {
+    navigate(`/platform/website-builder/sites/${siteId}/settings`)
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading website builder...</p>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Website Builder</h1>
+            <p className="text-muted-foreground">Create and manage websites</p>
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-32 bg-muted rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     )
   }
-
-  // Show template selector when creating new site
-  if (showTemplateSelector) {
-    return (
-      <TemplateSelector
-        onSelectTemplate={handleSelectTemplate}
-        onStartBlank={handleStartBlank}
-      />
-    )
-  }
-
-  if (!site) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No Website Found</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first website to get started
-            </p>
-            <Button onClick={handleCreateDefaultSite}>
-              Create Website
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const tabItems = [
-    { id: 'pages', label: 'Pages', icon: FileText },
-    { id: 'media', label: 'Media', icon: Image },
-    { id: 'theme', label: 'Theme', icon: Palette },
-    { id: 'navigation', label: 'Navigation', icon: Navigation },
-    { id: 'seo', label: 'SEO', icon: Search },
-    { id: 'tracking', label: 'Tracking', icon: BarChart3 },
-    { id: 'publish', label: 'Publish', icon: Globe },
-    ...(caps.canManageHosting ? [{ id: 'hosting', label: 'Hosting', icon: Settings }] : [])
-  ]
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Website Builder</h1>
-          <div className="flex items-center space-x-2 mt-1">
-            <p className="text-muted-foreground">{site.name}</p>
-            <Badge variant="outline">{mode}</Badge>
-          </div>
+          <h1 className="text-3xl font-bold">Website Builder</h1>
+          <p className="text-muted-foreground">
+            Create and manage professional websites for your dealership
+          </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => window.open(`/s/${site.slug}/`, '_blank')}
-          >
-            Preview
-          </Button>
-        </div>
+        <Button onClick={handleCreateWebsiteClick}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Website
+        </Button>
       </div>
 
-      {/* Main Interface */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
-          {tabItems.map(tab => (
-            <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-1">
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <TabsContent value="pages" className="mt-6">
-          {selectedPage ? (
-            <EditorCanvas
-              page={selectedPage}
-              onUpdatePage={handleUpdatePage}
-            />
-          ) : (
-            <PageList
-              siteId={site.id}
-              onPageSelect={setSelectedPage}
-              selectedPageId={selectedPage?.id}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="media" className="mt-6">
-          <MediaManager siteId={site.id} />
-        </TabsContent>
-
-        <TabsContent value="theme" className="mt-6">
-          <ThemePalette
-            theme={site.theme}
-            brand={site.brand}
-            onUpdateTheme={handleUpdateTheme}
-            onUpdateBrand={handleUpdateBrand}
-          />
-        </TabsContent>
-
-        <TabsContent value="navigation" className="mt-6">
-          <NavigationPanel
-            navConfig={site.nav || { manufacturersMenu: { enabled: false, label: 'Manufacturers', items: [], allowCustom: true } }}
-            onUpdateNav={handleUpdateNav}
-          />
-        </TabsContent>
-
-        <TabsContent value="seo" className="mt-6">
-          <SeoPanel
-            seoMeta={site.seo || { siteDefaults: {}, pages: {} }}
-            pages={site.pages}
-            onUpdateSeo={handleUpdateSeo}
-          />
-        </TabsContent>
-
-        <TabsContent value="tracking" className="mt-6">
-          <TrackingTagsPanel
-            tracking={site.tracking || {}}
-            onUpdateTracking={handleUpdateTracking}
-          />
-        </TabsContent>
-
-        <TabsContent value="publish" className="mt-6">
-          <PublishPanel
-            site={site}
-            onUpdateSite={(updates) => updateSite(site.id, updates)}
-          />
-        </TabsContent>
-
-        {caps.canManageHosting && (
-          <TabsContent value="hosting" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hosting Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Settings className="h-12 w-12 mx-auto mb-4" />
-                  <p>Advanced hosting features coming soon</p>
-                  <p className="text-sm">SSL certificates, custom domains, CDN settings</p>
+      {/* Sites Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {sites.map((site) => (
+          <Card key={site.id} className="group hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-lg">{site.name}</CardTitle>
+              <CardDescription>
+                {site.domain || `${site.slug}.renterinsight.com`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Site Preview */}
+                <div className="h-32 bg-muted rounded-lg flex items-center justify-center">
+                  <Globe className="h-8 w-8 text-muted-foreground" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                
+                {/* Site Stats */}
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>{site.pages?.length || 0} pages</span>
+                  <span>Updated {new Date(site.updatedAt).toLocaleDateString()}</span>
+                </div>
+                
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleEditSite(site.id)}
+                  >
+                    Edit
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handlePreviewSite(site)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleSiteSettings(site.id)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        
+        {/* Empty State */}
+        {sites.length === 0 && (
+          <Card className="col-span-full">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Globe className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No websites yet</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                Create your first website to get started with the website builder.
+              </p>
+              <Button onClick={handleCreateWebsiteClick}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Website
+              </Button>
+            </CardContent>
+          </Card>
         )}
-      </Tabs>
+      </div>
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <TemplateSelector
+          onSelectTemplate={handleTemplateSelected}
+          onCancel={handleTemplateSelectorCancel}
+        />
+      )}
+
+      {/* Create Site Details Modal */}
+      {showDetailsModal && selectedTemplate && (
+        <CreateSiteDetailsModal
+          selectedTemplate={selectedTemplate}
+          onCreateSite={handleCreateSite}
+          onBackToTemplateSelection={handleBackToTemplateSelection}
+          onCancel={handleDetailsModalCancel}
+          isCreating={creating}
+        />
+      )}
     </div>
   )
 }
