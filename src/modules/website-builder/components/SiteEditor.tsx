@@ -44,7 +44,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const navigate = useNavigate()
   const { handleError } = useErrorHandler()
   const { toast } = useToast()
-  const tenant = useTenant() // assumes TenantProvider is mounted (per your app)
+  const tenant = useTenant()
 
   const [site, setSite] = useState<Site | null>(null)
   const [currentPage, setCurrentPage] = useState<Page | null>(null)
@@ -65,17 +65,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.previewMode, previewMode)
-  }, [previewMode])
-
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.activeTab, activeTab)
-  }, [activeTab])
-
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.rightOpen, String(rightOpen))
-  }, [rightOpen])
+  useEffect(() => { localStorage.setItem(LS_KEYS.previewMode, previewMode) }, [previewMode])
+  useEffect(() => { localStorage.setItem(LS_KEYS.activeTab, activeTab) }, [activeTab])
+  useEffect(() => { localStorage.setItem(LS_KEYS.rightOpen, String(rightOpen)) }, [rightOpen])
 
   const loadSite = async () => {
     if (!siteId) return
@@ -84,7 +76,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const s = await websiteService.getSite(siteId)
       if (!s) throw new Error('Site not found')
 
-      // Normalize IDs so lists and canvas stay in sync
+      // normalize IDs for pages/blocks
       const pages: Page[] = (s.pages || []).map((p: any, idx: number) => ({
         id: p.id || p.path || `page-${idx}`,
         title: p.title,
@@ -92,8 +84,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         seo: p.seo,
         blocks: (p.blocks || []).map((b: any, i: number) => ({ id: b.id || `block-${i}`, ...b })),
       }))
-      const normalized: Site = { ...s, pages }
 
+      const normalized: Site = { ...s, pages }
       setSite(normalized)
       setCurrentPage(pages[0] || null)
     } catch (error) {
@@ -129,21 +121,19 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     window.open(previewUrl, '_blank')
   }
 
-  // Keep Pages list visible (do not switch tabs on selection)
-  const handlePageSelect = (page: Page) => {
-    setCurrentPage(page)
-  }
+  // Keep Pages list visible (do not switch tabs)
+  const handlePageSelect = (page: Page) => setCurrentPage(page)
 
   const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
     if (!site || !currentPage) return
-    const updatedBlocks = currentPage.blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b))
+    const updatedBlocks = currentPage.blocks.map(b => (b.id === blockId ? { ...b, ...updates } : b))
     const updatedPage = { ...currentPage, blocks: updatedBlocks }
-    const updatedPages = site.pages.map((p) => (p.id === currentPage.id ? updatedPage : p))
+    const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
     setSite({ ...site, pages: updatedPages })
     setCurrentPage(updatedPage)
   }
 
-  // Safe theme for ThemePalette to avoid undefined access
+  // Safe theme to prevent ThemePalette crashes
   const safeTheme = useMemo(() => {
     const t = site?.theme || {}
     return {
@@ -172,6 +162,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     toast({ title: 'Branding Applied', description: 'Company branding has been applied to the site.' })
   }
 
+  // ---- Map site pages to what PageList expects (prevents .filter on undefined) ----
+  const pagesForList = useMemo(() => {
+    const pages = site?.pages || []
+    return pages.map((p) => ({
+      id: (p as any).id || p.path || p.title,
+      name: p.title,
+      slug: (p.path || '/').replace(/^\//, ''),
+      isHomePage: (p.path || '/') === '/',
+      isPublished: false,
+      lastModified: new Date().toISOString(),
+      template: undefined,
+    }))
+  }, [site?.pages])
+
+  const currentPageId = currentPage ? ((currentPage as any).id || currentPage.path || currentPage.title) : null
+
+  const onSelectPageId = (id: string) => {
+    const found = (site?.pages || []).find((p: any) => (p.id || p.path || p.title) === id) || null
+    if (found) setCurrentPage(found)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -187,13 +198,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Site Not Found</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Site Not Found</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              The website you're looking for could not be found.
-            </p>
+            <p className="text-muted-foreground mb-4">The website you're looking for could not be found.</p>
             <Button onClick={handleBackToBuilder}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Website Builder
@@ -228,7 +235,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setRightOpen((v) => !v)}
+              onClick={() => setRightOpen(v => !v)}
               title={rightOpen ? 'Hide Publish Panel' : 'Show Publish Panel'}
             >
               {rightOpen ? <PanelRightClose className="h-4 w-4 mr-2" /> : <PanelRightOpen className="h-4 w-4 mr-2" />}
@@ -282,18 +289,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         <div className="w-80 border-r bg-card overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="h-full">
             <TabsList className="grid w-full grid-cols-4 m-4">
-              <TabsTrigger value="editor" className="text-xs" title="Editor">
-                <Layout className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="pages" className="text-xs" title="Pages">
-                <Globe className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="theme" className="text-xs" title="Theme">
-                <Palette className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="media" className="text-xs" title="Media">
-                <ImageIcon className="h-4 w-4" />
-              </TabsTrigger>
+              <TabsTrigger value="editor" className="text-xs" title="Editor"><Layout className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="pages" className="text-xs" title="Pages"><Globe className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="theme" className="text-xs" title="Theme"><Palette className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="media" className="text-xs" title="Media"><ImageIcon className="h-4 w-4" /></TabsTrigger>
             </TabsList>
 
             <div className="px-4 pb-4">
@@ -308,15 +307,13 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
               <TabsContent value="pages" className="mt-0">
                 <PageList
-                  site={site}
-                  currentPage={currentPage}
-                  onPageSelect={handlePageSelect}
-                  onPageUpdate={(pageId, updates) => {
-                    const updatedPages = site.pages.map((p) =>
-                      p.id === pageId ? { ...p, ...updates } : p
-                    )
-                    setSite({ ...site, pages: updatedPages })
-                  }}
+                  pages={pagesForList}
+                  currentPageId={currentPageId as any}
+                  onSelectPage={onSelectPageId}
+                  onCreatePage={() => {}}
+                  onEditPage={() => {}}
+                  onDeletePage={() => {}}
+                  onDuplicatePage={() => {}}
                 />
               </TabsContent>
 
@@ -362,9 +359,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   <div className="text-center">
                     <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">Select a page to edit</h3>
-                    <p className="text-muted-foreground">
-                      Choose a page from the Pages tab to start editing
-                    </p>
+                    <p className="text-muted-foreground">Choose a page from the Pages tab to start editing</p>
                   </div>
                 </div>
               )}
