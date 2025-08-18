@@ -76,7 +76,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const s = await websiteService.getSite(siteId)
       if (!s) throw new Error('Site not found')
 
-      // normalize IDs for pages/blocks
+      // normalize IDs for pages/blocks (needed for selection + rendering)
       const pages: Page[] = (s.pages || []).map((p: any, idx: number) => ({
         id: p.id || p.path || `page-${idx}`,
         title: p.title,
@@ -121,7 +121,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     window.open(previewUrl, '_blank')
   }
 
-  // Keep Pages list visible (do not switch tabs)
+  // Keep Pages list visible (do NOT auto-switch tabs)
   const handlePageSelect = (page: Page) => setCurrentPage(page)
 
   const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
@@ -162,7 +162,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     toast({ title: 'Branding Applied', description: 'Company branding has been applied to the site.' })
   }
 
-  // ---- Map site pages to what PageList expects (prevents .filter on undefined) ----
+  // ----- Adapt to PageList expectation (defensive) -----
   const pagesForList = useMemo(() => {
     const pages = site?.pages || []
     return pages.map((p) => ({
@@ -324,7 +324,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                       Apply Company Branding
                     </Button>
                   </div>
-                  <ThemePalette theme={safeTheme} onThemeUpdate={handleThemeUpdate} />
+                  {/* pass both a resolved theme and site for maximum compatibility */}
+                  <ThemePalette theme={safeTheme} site={site} onThemeUpdate={handleThemeUpdate} />
                 </div>
               </TabsContent>
 
@@ -350,7 +351,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               {currentPage ? (
                 <EditorCanvas
                   site={site}
-                  page={currentPage}
+                  page={currentPage}          // legacy prop name expected by EditorCanvas
                   previewMode={previewMode}
                   onBlockUpdate={handleBlockUpdate}
                 />
