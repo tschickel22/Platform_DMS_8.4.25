@@ -171,11 +171,12 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
           </h1>
           <p className="text-muted-foreground">
             {mode === 'platform' 
-              ? 'Create and manage websites for the platform'
+          </h1>
               : 'Manage your company website'
             }
           </p>
-          </h1>
+          </p>
+        </div>
           <p className="text-muted-foreground">
             {mode === 'platform' 
               ? 'Create and manage websites for the platform'
