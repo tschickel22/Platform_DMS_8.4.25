@@ -16,7 +16,7 @@ import {
   Monitor,
   Tablet,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
 } from 'lucide-react'
 import { websiteService } from '@/services/website/service'
 import { Site, Page, Block } from '../types'
@@ -27,9 +27,6 @@ import PageList from './PageList'
 import ThemePalette from './ThemePalette'
 import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
-
-// If your project has this hook, it exposes tenant/company branding
-// (It's referenced in other modules like property listings)
 import { useTenant } from '@/contexts/TenantContext'
 
 interface SiteEditorProps {
@@ -47,24 +44,17 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const navigate = useNavigate()
   const { handleError } = useErrorHandler()
   const { toast } = useToast()
-  const tenant = ((): any => {
-    try {
-      // useTenant may throw outside provider in some previews
-      return useTenant?.()
-    } catch {
-      return null
-    }
-  })()
+  const tenant = useTenant() // assumes TenantProvider is mounted (per your app)
 
   const [site, setSite] = useState<Site | null>(null)
   const [currentPage, setCurrentPage] = useState<Page | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>(
-    (localStorage.getItem(LS_KEYS.previewMode) as any) || 'desktop'
+    ((localStorage.getItem(LS_KEYS.previewMode) as 'desktop' | 'tablet' | 'mobile') ?? 'desktop')
   )
   const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media'>(
-    (localStorage.getItem(LS_KEYS.activeTab) as any) || 'pages'
+    ((localStorage.getItem(LS_KEYS.activeTab) as 'editor' | 'pages' | 'theme' | 'media') ?? 'pages')
   )
   const [rightOpen, setRightOpen] = useState<boolean>(
     localStorage.getItem(LS_KEYS.rightOpen) !== 'false'
@@ -94,13 +84,13 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const s = await websiteService.getSite(siteId)
       if (!s) throw new Error('Site not found')
 
-      // Normalize page/block IDs so lists and canvas stay in sync
+      // Normalize IDs so lists and canvas stay in sync
       const pages: Page[] = (s.pages || []).map((p: any, idx: number) => ({
         id: p.id || p.path || `page-${idx}`,
         title: p.title,
         path: p.path,
         seo: p.seo,
-        blocks: (p.blocks || []).map((b: any, i: number) => ({ id: b.id || `block-${i}`, ...b }))
+        blocks: (p.blocks || []).map((b: any, i: number) => ({ id: b.id || `block-${i}`, ...b })),
       }))
       const normalized: Site = { ...s, pages }
 
@@ -139,29 +129,28 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     window.open(previewUrl, '_blank')
   }
 
-  // ✅ Keep Pages list visible: do NOT force-switch tab when selecting a page
+  // Keep Pages list visible (do not switch tabs on selection)
   const handlePageSelect = (page: Page) => {
     setCurrentPage(page)
-    // setActiveTab('editor')  // removed to keep the Pages list visible
   }
 
   const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
     if (!site || !currentPage) return
-    const updatedBlocks = currentPage.blocks.map(b => (b.id === blockId ? { ...b, ...updates } : b))
+    const updatedBlocks = currentPage.blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b))
     const updatedPage = { ...currentPage, blocks: updatedBlocks }
-    const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
+    const updatedPages = site.pages.map((p) => (p.id === currentPage.id ? updatedPage : p))
     setSite({ ...site, pages: updatedPages })
     setCurrentPage(updatedPage)
   }
 
-  // Safe theme to avoid ThemePalette reading undefined
+  // Safe theme for ThemePalette to avoid undefined access
   const safeTheme = useMemo(() => {
     const t = site?.theme || {}
     return {
-      primaryColor: t.primaryColor || '#1d4ed8',
-      secondaryColor: t.secondaryColor || '#f59e0b',
-      fontFamily: t.fontFamily || 'Inter',
-      logoUrl: (t as any).logoUrl || (site as any)?.logoUrl || ''
+      primaryColor: (t as any).primaryColor || '#1d4ed8',
+      secondaryColor: (t as any).secondaryColor || '#f59e0b',
+      fontFamily: (t as any).fontFamily || 'Inter',
+      logoUrl: (t as any).logoUrl || (site as any)?.logoUrl || '',
     }
   }, [site])
 
@@ -170,20 +159,16 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     setSite({ ...site, theme: { ...safeTheme, ...themeUpdates } as any })
   }
 
-  // Apply company branding (if available via Tenant context)
   const applyCompanyBranding = () => {
     if (!site) return
-    const brand = (tenant && (tenant.company?.branding || tenant.branding)) || {}
+    const brand = (tenant?.company?.branding || tenant?.branding || {}) as any
     const updates = {
       primaryColor: brand.primaryColor || safeTheme.primaryColor,
       secondaryColor: brand.secondaryColor || safeTheme.secondaryColor,
       fontFamily: brand.fontFamily || safeTheme.fontFamily,
-      logoUrl: brand.logoUrl || safeTheme.logoUrl
+      logoUrl: brand.logoUrl || safeTheme.logoUrl,
     }
-    setSite({
-      ...site,
-      theme: { ...safeTheme, ...updates } as any,
-    })
+    setSite({ ...site, theme: { ...safeTheme, ...updates } as any })
     toast({ title: 'Branding Applied', description: 'Company branding has been applied to the site.' })
   }
 
@@ -243,7 +228,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setRightOpen(v => !v)}
+              onClick={() => setRightOpen((v) => !v)}
               title={rightOpen ? 'Hide Publish Panel' : 'Show Publish Panel'}
             >
               {rightOpen ? <PanelRightClose className="h-4 w-4 mr-2" /> : <PanelRightOpen className="h-4 w-4 mr-2" />}
@@ -297,10 +282,18 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         <div className="w-80 border-r bg-card overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="h-full">
             <TabsList className="grid w-full grid-cols-4 m-4">
-              <TabsTrigger value="editor" className="text-xs" title="Editor"><Layout className="h-4 w-4" /></TabsTrigger>
-              <TabsTrigger value="pages" className="text-xs" title="Pages"><Globe className="h-4 w-4" /></TabsTrigger>
-              <TabsTrigger value="theme" className="text-xs" title="Theme"><Palette className="h-4 w-4" /></TabsTrigger>
-              <TabsTrigger value="media" className="text-xs" title="Media"><ImageIcon className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="editor" className="text-xs" title="Editor">
+                <Layout className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger value="pages" className="text-xs" title="Pages">
+                <Globe className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger value="theme" className="text-xs" title="Theme">
+                <Palette className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger value="media" className="text-xs" title="Media">
+                <ImageIcon className="h-4 w-4" />
+              </TabsTrigger>
             </TabsList>
 
             <div className="px-4 pb-4">
@@ -319,7 +312,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   currentPage={currentPage}
                   onPageSelect={handlePageSelect}
                   onPageUpdate={(pageId, updates) => {
-                    const updatedPages = site.pages.map(p => (p.id === pageId ? { ...p, ...updates } : p))
+                    const updatedPages = site.pages.map((p) =>
+                      p.id === pageId ? { ...p, ...updates } : p
+                    )
                     setSite({ ...site, pages: updatedPages })
                   }}
                 />
@@ -332,10 +327,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                       Apply Company Branding
                     </Button>
                   </div>
-                  <ThemePalette
-                    theme={safeTheme}
-                    onThemeUpdate={handleThemeUpdate}
-                  />
+                  <ThemePalette theme={safeTheme} onThemeUpdate={handleThemeUpdate} />
                 </div>
               </TabsContent>
 
@@ -361,7 +353,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               {currentPage ? (
                 <EditorCanvas
                   site={site}
-                  page={currentPage}            {/* keep legacy prop name used by EditorCanvas */}
+                  page={currentPage}
                   previewMode={previewMode}
                   onBlockUpdate={handleBlockUpdate}
                 />
@@ -370,7 +362,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   <div className="text-center">
                     <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">Select a page to edit</h3>
-                    <p className="text-muted-foreground">Choose a page from the Pages tab to start editing</p>
+                    <p className="text-muted-foreground">
+                      Choose a page from the Pages tab to start editing
+                    </p>
                   </div>
                 </div>
               )}
