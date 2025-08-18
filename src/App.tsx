@@ -117,8 +117,8 @@ function App() {
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
                                   {/* Inventory & Ops */}
-                                  <Route path="/inventory/*" element={<InventoryManagement />} />
                                   <Route path="/inventory/warranty/*" element={<WarrantyMgmt />} />
+                                  <Route path="/inventory/*" element={<InventoryManagement />} />
                                   <Route path="/land/*" element={<LandManagement />} />
                                   <Route path="/pdi/*" element={<PDIChecklist />} />
                                   <Route path="/delivery/*" element={<DeliveryTracker />} />
