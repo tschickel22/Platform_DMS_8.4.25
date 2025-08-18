@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
 import WebsiteBuilder from './WebsiteBuilder'
+import SiteEditor from './components/SiteEditor'
 
 export function WebsiteBuilderRoutes() {
   const { user } = useAuth()
@@ -25,6 +26,7 @@ export function WebsiteBuilderRoutes() {
   return (
     <Routes>
       <Route path="/" element={<WebsiteBuilder mode="platform" />} />
+      <Route path="/:siteId" element={<SiteEditor mode="platform" />} />
       <Route path="/:siteId" element={<div>Site Editor (Platform Mode)</div>} />
     </Routes>
   )
@@ -50,6 +52,7 @@ export function CompanyWebsiteRoutes() {
   return (
     <Routes>
       <Route path="/" element={<WebsiteBuilder mode="company" />} />
+      <Route path="/:siteId" element={<SiteEditor mode="company" />} />
       <Route path="/:siteId" element={<div>Site Editor (Company Mode)</div>} />
     </Routes>
   )
