@@ -2,26 +2,25 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Globe, Settings, Eye } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Globe, Edit, Trash2, ExternalLink } from 'lucide-react'
 import { websiteService } from '@/services/website/service'
-import { Site, SiteTemplate } from './types'
-import { useErrorHandler } from '@/hooks/useErrorHandler'
+import { Site } from './types'
 import { useToast } from '@/hooks/use-toast'
+import { TemplateSelector } from './components/TemplateSelector'
+import { CreateSiteDetailsModal } from './components/CreateSiteDetailsModal'
 import { logger } from '@/utils/logger'
-import TemplateSelector from './components/TemplateSelector'
-import CreateSiteDetailsModal from './components/CreateSiteDetailsModal'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
 
 export default function WebsiteBuilder() {
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTemplate, setSelectedTemplate] = useState<SiteTemplate | null>(null)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [creating, setCreating] = useState(false)
-  
   const navigate = useNavigate()
-  const { handleError } = useErrorHandler()
   const { toast } = useToast()
+  const { handleError } = useErrorHandler()
 
   useEffect(() => {
     loadSites()
@@ -40,25 +39,13 @@ export default function WebsiteBuilder() {
   }
 
   const handleCreateWebsiteClick = () => {
-    logger.userAction('website_builder_create_clicked')
     setShowTemplateSelector(true)
   }
 
-  const handleTemplateSelected = (template: SiteTemplate) => {
-    logger.userAction('template_selected', { templateId: template.id })
+  const handleTemplateSelected = (template: any) => {
     setSelectedTemplate(template)
     setShowTemplateSelector(false)
     setShowDetailsModal(true)
-  }
-
-  const handleTemplateSelectorCancel = () => {
-    setShowTemplateSelector(false)
-    setSelectedTemplate(null)
-  }
-
-  const handleDetailsModalCancel = () => {
-    setShowDetailsModal(false)
-    setSelectedTemplate(null)
   }
 
   const handleBackToTemplateSelection = () => {
@@ -66,67 +53,86 @@ export default function WebsiteBuilder() {
     setShowTemplateSelector(true)
   }
 
-  const handleCreateSite = async (siteData: { name: string; slug: string }) => {
-    if (!selectedTemplate) return
+  const handleCancelSiteCreation = () => {
+    setSelectedTemplate(null)
+    setShowTemplateSelector(false)
+    setShowDetailsModal(false)
+  }
 
+  const handleCreateSite = async (siteName: string, siteSlug: string) => {
     try {
-      setCreating(true)
-      logger.userAction('website_create_started', { 
-        templateId: selectedTemplate.id,
-        siteName: siteData.name,
-        siteSlug: siteData.slug
-      })
-
+      setLoading(true)
+      
+      // Create site with selected template
       const newSite = await websiteService.createSite({
-        name: siteData.name,
-        slug: siteData.slug,
-        pages: selectedTemplate.pages || [],
-        theme: selectedTemplate.theme,
-        nav: selectedTemplate.nav,
-        brand: selectedTemplate.brand,
-        seo: selectedTemplate.seo,
-        tracking: selectedTemplate.tracking
+        name: siteName.trim(),
+        slug: siteSlug.trim(),
+        pages: selectedTemplate?.pages || [{
+          id: 'home',
+          title: 'Home',
+          path: '/',
+          blocks: [],
+          order: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }],
+        theme: selectedTemplate?.theme || {
+          primaryColor: '#3b82f6',
+          secondaryColor: '#64748b',
+          fontFamily: 'Inter'
+        },
+        nav: selectedTemplate?.nav,
+        brand: selectedTemplate?.brand
       })
 
-      logger.userAction('website_created', { siteId: newSite.id })
+      logger.userAction('website_created', { 
+        siteId: newSite.id, 
+        siteName,
+        templateId: selectedTemplate?.id 
+      })
       
       toast({
-        title: 'Website Created',
-        description: `${newSite.name} has been created successfully.`
+        title: 'Success',
+        description: 'Website created successfully!'
       })
-
+      
       // Reset state
-      setShowDetailsModal(false)
       setSelectedTemplate(null)
+      setShowDetailsModal(false)
       
       // Refresh sites list
       await loadSites()
       
-      // Navigate to edit the new site
-      navigate(`/platform/website-builder/sites/${newSite.id}/edit`)
+      // Navigate to editor
+      navigate(`/platform/website-builder/${newSite.id}`)
       
     } catch (error) {
-      logger.userAction('website_create_failed', { 
-        templateId: selectedTemplate.id,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-      handleError(error, 'creating website')
+      handleError(error, 'create_site')
     } finally {
-      setCreating(false)
+      setLoading(false)
     }
   }
 
-  const handleEditSite = (siteId: string) => {
-    navigate(`/platform/website-builder/sites/${siteId}/edit`)
+  const handleDeleteSite = async (siteId: string) => {
+    if (!confirm('Are you sure you want to delete this website? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      await websiteService.deleteSite(siteId)
+      toast({
+        title: 'Success',
+        description: 'Website deleted successfully'
+      })
+      await loadSites()
+    } catch (error) {
+      handleError(error, 'deleting website')
+    }
   }
 
   const handlePreviewSite = (site: Site) => {
     const previewUrl = `/s/${site.slug}/`
     window.open(previewUrl, '_blank')
-  }
-
-  const handleSiteSettings = (siteId: string) => {
-    navigate(`/platform/website-builder/sites/${siteId}/settings`)
   }
 
   if (loading) {
@@ -160,12 +166,15 @@ export default function WebsiteBuilder() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Website Builder</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Website Builder</h1>
           <p className="text-muted-foreground">
-            Create and manage professional websites for your dealership
+            Create and manage websites for the platform
           </p>
         </div>
-        <Button onClick={handleCreateWebsiteClick}>
+        <Button
+          onClick={handleCreateWebsiteClick}
+          className="ml-auto"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Website
         </Button>
@@ -176,10 +185,17 @@ export default function WebsiteBuilder() {
         {sites.map((site) => (
           <Card key={site.id} className="group hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle className="text-lg">{site.name}</CardTitle>
-              <CardDescription>
-                {site.domain || `${site.slug}.renterinsight.com`}
-              </CardDescription>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg">{site.name}</CardTitle>
+                  <CardDescription>
+                    {site.domain || `${site.slug}.renterinsight.com`}
+                  </CardDescription>
+                </div>
+                <Badge variant={site.published ? 'default' : 'secondary'}>
+                  {site.published ? 'Published' : 'Draft'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -199,8 +215,9 @@ export default function WebsiteBuilder() {
                   <Button 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => handleEditSite(site.id)}
+                    onClick={() => navigate(`/platform/website-builder/${site.id}`)}
                   >
+                    <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
                   <Button 
@@ -208,14 +225,14 @@ export default function WebsiteBuilder() {
                     variant="outline"
                     onClick={() => handlePreviewSite(site)}
                   >
-                    <Eye className="h-4 w-4" />
+                    <ExternalLink className="h-4 w-4" />
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => handleSiteSettings(site.id)}
+                    onClick={() => handleDeleteSite(site.id)}
                   >
-                    <Settings className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -241,11 +258,11 @@ export default function WebsiteBuilder() {
         )}
       </div>
 
-      {/* Template Selector Modal */}
+      {/* Template Selector */}
       {showTemplateSelector && (
         <TemplateSelector
           onSelectTemplate={handleTemplateSelected}
-          onCancel={handleTemplateSelectorCancel}
+          onCancel={() => setShowTemplateSelector(false)}
         />
       )}
 
@@ -255,8 +272,7 @@ export default function WebsiteBuilder() {
           selectedTemplate={selectedTemplate}
           onCreateSite={handleCreateSite}
           onBackToTemplateSelection={handleBackToTemplateSelection}
-          onCancel={handleDetailsModalCancel}
-          isCreating={creating}
+          onCancel={handleCancelSiteCreation}
         />
       )}
     </div>
