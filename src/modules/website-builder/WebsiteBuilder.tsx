@@ -11,7 +11,11 @@ import { useToast } from '@/hooks/use-toast'
 import TemplateSelector from './components/TemplateSelector'
 import { CreateSiteDetailsModal } from './components/CreateSiteDetailsModal'
 
-export default function WebsiteBuilder() {
+interface WebsiteBuilderProps {
+  mode?: 'platform' | 'company'
+}
+
+export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProps) {
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
@@ -85,14 +89,14 @@ export default function WebsiteBuilder() {
       
       // Reload sites and navigate to editor
       await loadSites()
-      navigate(`/platform/website-builder/${newSite.id}`)
+      navigate(`/${mode === 'platform' ? 'platform/website-builder' : 'company/settings/website'}/${newSite.id}`)
     } catch (error) {
       handleError(error, 'creating website')
     }
   }
 
   const handleEditSite = (siteId: string) => {
-    navigate(`/platform/website-builder/${siteId}`)
+    navigate(`/${mode === 'platform' ? 'platform/website-builder' : 'company/settings/website'}/${siteId}`)
   }
 
   const handleDeleteSite = async (siteId: string) => {
@@ -156,8 +160,15 @@ export default function WebsiteBuilder() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Website Builder</h1>
-          <p className="text-muted-foreground">Create and manage websites for the platform</p>
+          <h1 className="text-3xl font-bold">
+            {mode === 'platform' ? 'Website Builder' : 'Company Website Editor'}
+          </h1>
+          <p className="text-muted-foreground">
+            {mode === 'platform' 
+              ? 'Create and manage websites for the platform'
+              : 'Manage your company\'s public website'
+            }
+          </p>
         </div>
         <Button onClick={handleCreateWebsiteClick}>
           <Plus className="h-4 w-4 mr-2" />
@@ -177,7 +188,7 @@ export default function WebsiteBuilder() {
             </p>
             <Button onClick={handleCreateWebsiteClick}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Your First Website
+              {mode === 'platform' ? 'Create Your First Website' : 'Create Company Website'}
             </Button>
           </CardContent>
         </Card>

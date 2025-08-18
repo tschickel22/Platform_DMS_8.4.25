@@ -4,7 +4,7 @@ import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
 import WebsiteBuilderErrorBoundary from './guard/ErrorBoundary'
-import { WebsiteBuilderShell } from './WebsiteBuilderShell'
+import WebsiteBuilder from './WebsiteBuilder'
 import { WebsiteBuilder } from './WebsiteBuilder'
 
 export function WebsiteBuilderRoutes() {
@@ -24,7 +24,7 @@ export function WebsiteBuilderRoutes() {
       <Routes>
         <Route path="/" element={<WebsiteBuilderShell mode="platform" />} />
         <Route path="/:siteId" element={<WebsiteBuilder mode="platform" />} />
-        <Route path="*" element={<Navigate to="/platform/website-builder" replace />} />
+      <Route path="/" element={<WebsiteBuilder mode="platform" />} />
       </Routes>
     </WebsiteBuilderErrorBoundary>
   )
@@ -33,7 +33,7 @@ export function WebsiteBuilderRoutes() {
 export function CompanyWebsiteRoutes() {
   const { user } = useAuth()
   const { tenant } = useTenant()
-  
+      <Route path="/" element={<WebsiteBuilder mode="company" />} />
   const roles = user?.role ? [user.role] : []
   const companyId = tenant?.id || null
   const caps = computeWebsiteBuilderCaps({ roles, companyId })
