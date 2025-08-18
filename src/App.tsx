@@ -49,6 +49,9 @@ import { PublicCatalogView } from '@/modules/property-listings/components/Public
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import PublicSitePreview from '@/components/PublicSitePreview'
 
+// Add console logging to debug routing issues
+console.log('App.tsx: Routes being configured')
+
 logger.info('Application initializing', {
   userAgent: navigator.userAgent,
   url: window.location.href,
@@ -117,10 +120,15 @@ function App() {
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
                                   {/* Inventory & Ops */}
+                                  <Route path="/pdi/*" element={
+                                    <ErrorBoundary>
+                                      {console.log('PDI Route matched - rendering PDIChecklist')}
+                                      <PDIChecklist />
+                                    </ErrorBoundary>
+                                  } />
                                   <Route path="/inventory/warranty/*" element={<WarrantyMgmt />} />
                                   <Route path="/inventory/*" element={<InventoryManagement />} />
                                   <Route path="/land/*" element={<LandManagement />} />
-                                  <Route path="/pdi/*" element={<PDIChecklist />} />
                                   <Route path="/delivery/*" element={<DeliveryTracker />} />
 
                                   {/* Marketing → Property Listings (ADMIN) */}
