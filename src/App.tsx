@@ -119,14 +119,17 @@ function App() {
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
-                                  {/* Inventory & Ops */}
+                                  {/* Inventory & Ops - Order matters: specific routes before wildcards */}
                                   <Route path="/pdi/*" element={
                                     <ErrorBoundary>
-                                      {console.log('PDI Route matched - rendering PDIChecklist')}
                                       <PDIChecklist />
                                     </ErrorBoundary>
                                   } />
-                                  <Route path="/inventory/warranty/*" element={<WarrantyMgmt />} />
+                                  <Route path="/inventory/warranty/*" element={
+                                    <ErrorBoundary>
+                                      <WarrantyMgmt />
+                                    </ErrorBoundary>
+                                  } />
                                   <Route path="/inventory/*" element={<InventoryManagement />} />
                                   <Route path="/land/*" element={<LandManagement />} />
                                   <Route path="/delivery/*" element={<DeliveryTracker />} />
