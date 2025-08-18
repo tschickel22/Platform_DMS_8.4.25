@@ -63,7 +63,6 @@ export default function PageList({
   const currentPage = pages.find(p => p.id === currentPageId)
   const editingPage = pages.find(p => p.id === editingPageId)
 
-  const [isDirty, setIsDirty] = useState(false)
   const startEditing = (page: PageListItem) => {
     setEditingPageId(page.id)
     setEditForm({
