@@ -103,11 +103,6 @@ export default function PageList({
                 <Button size="sm" variant="outline" onClick={onCreatePage} className="mt-2">
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Page
-  const handleMediaClick = (mediaItem: Media) => {
-    if (mode === 'picker' && onImageSelect) {
-      onImageSelect(mediaItem.url)
-    }
-  }
                 </Button>
               )}
             </CardContent>
@@ -138,69 +133,51 @@ export default function PageList({
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
                         /{page.slug}
-        {mode === 'manager' && (
-          <div className="mb-4">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => handleUpload(e.target.files)}
-              className="hidden"
-              id="media-upload"
-            />
-            <label
-              htmlFor="media-upload"
-              className={`block w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors ${
-                uploading ? 'opacity-50 pointer-events-none' : ''
-              }`}
-            >
-              {uploading ? (
-                <div className="text-sm text-muted-foreground">Uploading...</div>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  Click to upload images or drag and drop
-                </div>
-              )}
-            </label>
-          </div>
-        )}
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation()
-                          onEditPage(page.id)
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Settings
-              className={`relative group border rounded-lg overflow-hidden ${
-                mode === 'picker' ? 'cursor-pointer hover:border-blue-500' : ''
-              }`}
-              onClick={() => handleMediaClick(item)}
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation()
-                          onDuplicatePage(page.id)
-                        }}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Duplicate
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectPage(page.id)
+                      }}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        onEditPage(page.id)
+                      }}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation()
+                        onDuplicatePage(page.id)
+                      }}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      {!page.isHomePage && (
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeletePage(page.id)
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
                         </DropdownMenuItem>
-                        {!page.isHomePage && (
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDeletePage(page.id)
-              {mode === 'manager' && (
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(item.id)
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              )}
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardContent>
             </Card>
@@ -211,15 +188,9 @@ export default function PageList({
       {/* Quick Stats */}
       {pages.length > 0 && (
         <div className="text-xs text-muted-foreground pt-2 border-t">
-            {mode === 'manager' && (
-              <p className="text-xs">Upload some images to get started</p>
-            )}
           {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.isPublished).length} published
         </div>
       )}
     </div>
   )
 }
-        {mode === 'picker' && (
-          <p className="text-xs text-muted-foreground">Click an image to select it</p>
-        )}
