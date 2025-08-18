@@ -15,10 +15,6 @@ interface WebsiteBuilderProps {
   mode?: 'platform' | 'company'
 }
 
-interface WebsiteBuilderProps {
-  mode?: 'platform' | 'company'
-}
-
 export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProps) {
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,7 +63,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
     setShowDetailsModal(false)
   }
 
-  const handleCreateSite = async (siteData: { name: string; slug: string }) => {
+  const handleCreateSite = async (siteData: { name: string; subdomain?: string; templateId: string; template?: any }) => {
     try {
       if (!selectedTemplate) {
         throw new Error('No template selected')
@@ -75,7 +71,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
 
       const newSite = await websiteService.createSite({
         name: siteData.name,
-        slug: siteData.slug,
+        slug: siteData.subdomain || siteData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
         template: selectedTemplate,
         pages: selectedTemplate.pages || [],
         theme: selectedTemplate.theme,
@@ -169,14 +165,6 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
           <h1 className="text-3xl font-bold">
             {mode === 'platform' ? 'Website Builder' : 'Company Website Editor'}
           </h1>
-          <p className="text-muted-foreground">
-            {mode === 'platform' 
-          </h1>
-              : 'Manage your company website'
-            }
-          </p>
-          </p>
-        </div>
           <p className="text-muted-foreground">
             {mode === 'platform' 
               ? 'Create and manage websites for the platform'
