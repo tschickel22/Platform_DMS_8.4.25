@@ -6,43 +6,43 @@ import MediaManager from './MediaManager'
 
 interface ImagePickerButtonProps {
   onImageSelect: (url: string) => void
-  children: React.ReactNode
-  variant?: 'default' | 'outline' | 'ghost'
+  buttonText?: string
+  variant?: 'default' | 'outline' | 'secondary' | 'ghost'
   size?: 'default' | 'sm' | 'lg'
-  className?: string
+  siteId?: string
 }
 
-export function ImagePickerButton({ 
-  onImageSelect, 
-  children, 
+export function ImagePickerButton({
+  onImageSelect,
+  buttonText = 'Choose Image',
   variant = 'outline',
-  size = 'sm',
-  className 
+  size = 'default',
+  siteId
 }: ImagePickerButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const handleImageSelect = (media: { url: string }) => {
-    onImageSelect(media.url)
+  const handleImageSelect = (url: string) => {
+    onImageSelect(url)
     setIsOpen(false)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size} className={className}>
+        <Button variant={variant} size={size} className="w-full">
           <Image className="h-4 w-4 mr-2" />
-          {children}
+          {buttonText}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Choose Image</DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh]">
-          <MediaManager 
-            siteId="current" 
-            onSelect={handleImageSelect}
-            selectionMode={true}
+        <div className="overflow-y-auto">
+          <MediaManager
+            siteId={siteId || 'default'}
+            onImageSelect={handleImageSelect}
+            mode="picker"
           />
         </div>
       </DialogContent>

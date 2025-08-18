@@ -39,6 +39,7 @@ interface PageListProps {
   onEditPage: (pageId: string) => void
   onDeletePage: (pageId: string) => void
   onDuplicatePage: (pageId: string) => void
+  onPageUpdate?: (pageId: string, updates: any) => void
 }
 
 export default function PageList({
@@ -48,8 +49,58 @@ export default function PageList({
   onCreatePage,
   onEditPage,
   onDeletePage,
-  onDuplicatePage
+  onDuplicatePage,
+  onPageUpdate
 }: PageListProps) {
+  const [editingPageId, setEditingPageId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    path: '',
+    seoTitle: '',
+    seoDescription: ''
+  })
+
+  const currentPage = pages.find(p => p.id === currentPageId)
+  const editingPage = pages.find(p => p.id === editingPageId)
+
+  const startEditing = (page: PageListItem) => {
+    setEditingPageId(page.id)
+    setEditForm({
+      title: page.name,
+      path: page.slug.startsWith('/') ? page.slug : `/${page.slug}`,
+      seoTitle: page.seo?.title || '',
+      seoDescription: page.seo?.description || ''
+    })
+  }
+
+  const saveEditing = () => {
+    if (!editingPageId || !onPageUpdate) return
+    
+    // Validate slug
+    let path = editForm.path.trim()
+    if (!path.startsWith('/')) {
+      path = `/${path}`
+    }
+    
+    // Remove spaces and special characters from slug
+    path = path.replace(/[^a-zA-Z0-9\-_\/]/g, '-').replace(/--+/g, '-')
+    
+    onPageUpdate(editingPageId, {
+      title: editForm.title,
+      path: path,
+      seo: {
+        title: editForm.seoTitle,
+        description: editForm.seoDescription
+      }
+    })
+    
+    setEditingPageId(null)
+  }
+
+  const cancelEditing = () => {
+    setEditingPageId(null)
+  }
+
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredPages = pages.filter(page =>
@@ -70,11 +121,174 @@ export default function PageList({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Pages</h3>
-        <Button size="sm" onClick={onCreatePage}>
-          <Plus className="h-4 w-4 mr-2" />
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Pages</CardTitle>
+            <Button variant="outline" size="sm" onClick={onCreatePage}>
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {pages.map((page) => (
+              <div
+                key={page.id}
+                className={cn(
+                  "p-3 border rounded-lg cursor-pointer transition-colors",
+                  currentPageId === page.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                )}
+                onClick={() => onSelectPage(page.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {page.isHomePage && <Home className="h-3 w-3 text-blue-600" />}
+                    <span className="text-sm font-medium">{page.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEditing(page)
+                      }}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    {!page.isHomePage && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeletePage(page.id)
+                        }}
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {page.slug || '/'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Page SEO Editor */}
+      {currentPage && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Page SEO</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Editing: {currentPage.name}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="seo-title" className="text-xs">SEO Title</Label>
+              <Input
+                id="seo-title"
+                value={currentPage.seo?.title || ''}
+                onChange={(e) => {
+                  if (onPageUpdate) {
+                    onPageUpdate(currentPage.id, {
+                      seo: { ...currentPage.seo, title: e.target.value }
+                    })
+                  }
+                }}
+                placeholder="Page title for search engines"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="seo-description" className="text-xs">SEO Description</Label>
+              <Textarea
+                id="seo-description"
+                value={currentPage.seo?.description || ''}
+                onChange={(e) => {
+                  if (onPageUpdate) {
+                    onPageUpdate(currentPage.id, {
+                      seo: { ...currentPage.seo, description: e.target.value }
+                    })
+                  }
+                }}
+                placeholder="Brief description for search results"
+                className="text-xs min-h-[60px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Page Edit Modal */}
+      {editingPage && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Edit Page</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="page-title" className="text-xs">Page Title</Label>
+              <Input
+                id="page-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="Page title"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-slug" className="text-xs">Page URL</Label>
+              <Input
+                id="page-slug"
+                value={editForm.path}
+                onChange={(e) => setEditForm({ ...editForm, path: e.target.value })}
+                placeholder="/page-url"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-seo-title" className="text-xs">SEO Title</Label>
+              <Input
+                id="page-seo-title"
+                value={editForm.seoTitle}
+                onChange={(e) => setEditForm({ ...editForm, seoTitle: e.target.value })}
+                placeholder="SEO title"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-seo-description" className="text-xs">SEO Description</Label>
+              <Textarea
+                id="page-seo-description"
+                value={editForm.seoDescription}
+                onChange={(e) => setEditForm({ ...editForm, seoDescription: e.target.value })}
+                placeholder="SEO description"
+                className="text-xs min-h-[50px]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveEditing} className="flex-1">
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={cancelEditing} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
           Add Page
         </Button>
       </div>

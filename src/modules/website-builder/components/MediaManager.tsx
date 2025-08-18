@@ -1,389 +1,191 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Upload, 
-  Image, 
+  Plus, 
+  Search, 
   FileText, 
-  Trash2, 
-  Search,
-  Grid,
-  List,
-  Download,
-  Eye
+  Home, 
+  Settings, 
+  Eye, 
+  Edit, 
+  Trash2,
+  MoreVertical
 } from 'lucide-react'
-import { websiteService } from '@/services/website/service'
-import { Media } from '../types'
-import { useErrorHandler } from '@/hooks/useErrorHandler'
-import { useToast } from '@/hooks/use-toast'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-interface MediaManagerProps {
-  siteId: string
-  onMediaSelect?: (media: { url: string; name: string; type: string }) => void
-  mode?: 'manager' | 'picker'
-  onSelectMedia?: (media: Media) => void
-  selectedMediaId?: string
-  allowMultiSelect?: boolean
+interface Page {
+  id: string
+  name: string
+  slug: string
+  isHomePage: boolean
+  isPublished: boolean
+  lastModified: string
+  template?: string
 }
 
-export default function MediaManager({ siteId, onMediaSelect, mode = 'manager' }: MediaManagerProps) {
-  siteId, 
-  onSelectMedia, 
-  selectedMediaId,
-  allowMultiSelect = false 
-}: MediaManagerProps) {
-  const [media, setMedia] = useState<Media[]>([])
-  const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
+interface PageListProps {
+  pages: Page[]
+  currentPageId?: string
+  onSelectPage: (pageId: string) => void
+  onCreatePage: () => void
+  onEditPage: (pageId: string) => void
+  onDeletePage: (pageId: string) => void
+  onDuplicatePage: (pageId: string) => void
+}
+
+export default function PageList({
+  pages,
+  currentPageId,
+  onSelectPage,
+  onCreatePage,
+  onEditPage,
+  onDeletePage,
+  onDuplicatePage
+}: PageListProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [selectedMedia, setSelectedMedia] = useState<string[]>([])
-  const { handleError } = useErrorHandler()
-  const { toast } = useToast()
 
-  useEffect(() => {
-    loadMedia()
-  }, [siteId])
-
-  const loadMedia = async () => {
-    try {
-      setLoading(true)
-      const mediaData = await websiteService.getMedia(siteId)
-      setMedia(mediaData)
-    } catch (error) {
-      handleError(error, 'loading media')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
-
-    setUploading(true)
-    try {
-      for (const file of Array.from(files)) {
-        // Validate file type
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-          toast({
-            title: 'Invalid File Type',
-            description: `${file.name} is not a supported media type`,
-            variant: 'destructive'
-          })
-          continue
-        }
-
-        // Validate file size (2MB limit)
-        if (file.size > 2 * 1024 * 1024) {
-          toast({
-            title: 'File Too Large',
-            description: `${file.name} exceeds the 2MB size limit`,
-            variant: 'destructive'
-          })
-          continue
-        }
-
-        const uploadedMedia = await websiteService.uploadMedia(siteId, file)
-        setMedia(prev => [uploadedMedia, ...prev])
-      }
-  const handleMediaClick = (mediaItem: Media) => {
-    if (mode === 'picker' && onMediaSelect) {
-      onMediaSelect({
-        url: mediaItem.url,
-        name: mediaItem.name,
-        type: mediaItem.type
-      })
-    }
-  }
-
-
-      toast({
-        title: 'Upload Complete',
-        description: `${files.length} file(s) uploaded successfully`
-      })
-    } catch (error) {
-      handleError(error, 'uploading media')
-    } finally {
-      setUploading(false)
-      // Reset file input
-      event.target.value = ''
-    }
-  }
-
-  const handleDeleteMedia = async (mediaId: string) => {
-    if (!confirm('Are you sure you want to delete this media file?')) return
-
-    try {
-      await websiteService.deleteMedia(siteId, mediaId)
-      setMedia(prev => prev.filter(m => m.id !== mediaId))
-      setSelectedMedia(prev => prev.filter(id => id !== mediaId))
-      
-      toast({
-        title: 'Media Deleted',
-        description: 'The media file has been deleted successfully'
-      })
-    } catch (error) {
-      handleError(error, 'deleting media')
-    }
-  }
-
-  const handleMediaClick = (mediaItem: Media) => {
-    if (allowMultiSelect) {
-      setSelectedMedia(prev => 
-        prev.includes(mediaItem.id)
-          ? prev.filter(id => id !== mediaItem.id)
-          : [...prev, mediaItem.id]
-      )
-    } else {
-      if (onSelectMedia) {
-        onSelectMedia(mediaItem)
-      }
-    }
-  }
-
-  const filteredMedia = media.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPages = pages.filter(page =>
+    page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    page.slug.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  const getPageIcon = (page: Page) => {
+    if (page.isHomePage) return <Home className="h-4 w-4" />
+    return <FileText className="h-4 w-4" />
   }
-
-  const getMediaIcon = (type: string) => {
-    if (type.startsWith('image/')) return Image
-    if (type.startsWith('video/')) return FileText
-    return FileText
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Media Library</h3>
-        </div>
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="aspect-square bg-muted rounded mb-2"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <CardTitle className="text-sm">
-          {mode === 'picker' ? 'Choose Image' : 'Media Library'}
-        </CardTitle>
-    )
-  }
+  // Auto-select first page if none selected and pages exist
+  React.useEffect(() => {
+    if (!currentPageId && pages.length > 0) {
+      onSelectPage(pages[0].id)
+    }
+  }, [currentPageId, pages, onSelectPage])
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Media Library</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-          >
-            {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => document.getElementById('media-upload')?.click()}
-            disabled={uploading}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {uploading ? 'Uploading...' : 'Upload'}
-          </Button>
-        </div>
+        <h3 className="text-lg font-semibold">Pages</h3>
+        <Button size="sm" onClick={onCreatePage}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Page
+        </Button>
       </div>
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search media..."
+          placeholder="Search pages..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Hidden file input */}
-      <input
-        id="media-upload"
-        type="file"
-        multiple
-        accept="image/*,video/*"
-        onChange={handleFileUpload}
-        className="hidden"
-      />
-
-      {/* Media Grid/List */}
-      {filteredMedia.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <Image className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No media files</h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              Upload images and videos to use in your website. Supported formats: JPG, PNG, GIF, MP4, WebM.
-            </p>
-            <Button onClick={() => document.getElementById('media-upload')?.click()}>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Your First Media
-            </Button>
-          </CardContent>
-        </Card>
-      ) : viewMode === 'grid' ? (
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredMedia.map((item) => {
-            const isSelected = selectedMediaId === item.id || selectedMedia.includes(item.id)
-            const MediaIcon = getMediaIcon(item.type)
-            
-            return (
-              <Card 
-                key={item.id} 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  isSelected ? 'ring-2 ring-primary' : ''
-                }`}
-                onClick={() => handleMediaClick(item)}
-              >
-                <CardContent className="p-4">
-                  <div className="aspect-square bg-muted rounded mb-2 flex items-center justify-center overflow-hidden">
-                    {item.type.startsWith('image/') ? (
-                      <img 
-                        src={item.url} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <MediaIcon className="h-8 w-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium truncate" title={item.name}>
-                      {item.name}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs">
-                        {item.type.split('/')[1]?.toUpperCase()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatFileSize(item.size)}
-                      </span>
+      {/* Pages List */}
+      <div className="space-y-2">
+        {filteredPages.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {searchTerm ? 'No pages match your search' : 'No pages yet'}
+              </p>
+              {!searchTerm && (
+                <Button size="sm" variant="outline" onClick={onCreatePage} className="mt-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Page
+  const handleMediaClick = (mediaItem: Media) => {
+    if (mode === 'picker' && onImageSelect) {
+      onImageSelect(mediaItem.url)
+    }
+  }
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredPages.map((page) => (
+            <Card 
+              key={page.id} 
+              className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                currentPageId === page.id ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => onSelectPage(page.id)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="text-muted-foreground">
+                      {getPageIcon(page)}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.open(item.url, '_blank')
-                      }}
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const link = document.createElement('a')
-                        link.href = item.url
-                        link.download = item.name
-                        link.click()
-                      }}
-                    >
-                      <Download className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteMedia(item.id)
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredMedia.map((item) => {
-            const isSelected = selectedMediaId === item.id || selectedMedia.includes(item.id)
-            const MediaIcon = getMediaIcon(item.type)
-            
-            return (
-              <Card 
-                key={item.id}
-                className={`cursor-pointer transition-all hover:shadow-sm ${
-                  isSelected ? 'ring-2 ring-primary' : ''
-                }`}
-                onClick={() => handleMediaClick(item)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{page.name}</h4>
+                        {page.isHomePage && (
+                          <Badge variant="secondary" className="text-xs">
+                            Home
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        /{page.slug}
         {mode === 'manager' && (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <div className="mb-4">
             <input
               type="file"
               multiple
               accept="image/*"
-              onChange={(e) => handleUpload(Array.from(e.target.files || []))}
+              onChange={(e) => handleUpload(e.target.files)}
               className="hidden"
               id="media-upload"
             />
-            <label htmlFor="media-upload" className="cursor-pointer">
-              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm text-gray-600">Click to upload images</p>
-              <p className="text-xs text-gray-500">PNG, JPG up to 2MB</p>
+            <label
+              htmlFor="media-upload"
+              className={`block w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors ${
+                uploading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+            >
+              {uploading ? (
+                <div className="text-sm text-muted-foreground">Uploading...</div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Click to upload images or drag and drop
+                </div>
+              )}
             </label>
           </div>
         )}
-                      <p className="font-medium truncate">{item.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {item.type.split('/')[1]?.toUpperCase()}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatFileSize(item.size)}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(item.uploadedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          onEditPage(page.id)
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Settings
               className={`relative group border rounded-lg overflow-hidden ${
-                mode === 'picker' ? 'cursor-pointer hover:border-primary' : ''
+                mode === 'picker' ? 'cursor-pointer hover:border-blue-500' : ''
               }`}
               onClick={() => handleMediaClick(item)}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
+                        <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation()
-                          window.open(item.url, '_blank')
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                          onDuplicatePage(page.id)
+                        }}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        {!page.isHomePage && (
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDeletePage(page.id)
               {mode === 'manager' && (
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
                   <Button
@@ -395,33 +197,29 @@ export default function MediaManager({ siteId, onMediaSelect, mode = 'manager' }
                       handleDelete(item.id)
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </Button>
                 </div>
               )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteMedia(item.id)
-                        }}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-            <p className="text-sm">
-              {mode === 'picker' ? 'No images available' : 'No media files yet'}
-            </p>
-            <p className="text-xs">
-              {mode === 'picker' ? 'Upload images in the Media tab' : 'Upload images to get started'}
-            </p>
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Quick Stats */}
+      {pages.length > 0 && (
+        <div className="text-xs text-muted-foreground pt-2 border-t">
+            {mode === 'manager' && (
+              <p className="text-xs">Upload some images to get started</p>
+            )}
+          {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.isPublished).length} published
         </div>
       )}
     </div>
   )
 }
+        {mode === 'picker' && (
+          <p className="text-xs text-muted-foreground">Click an image to select it</p>
+        )}
