@@ -1,3 +1,5 @@
+// src/modules/website-builder/utils/templates.ts
+
 // Enhanced website templates with complete page structures
 import { rvDealerProfessionalTemplate } from './templates-data/rv-dealer-professional'
 import { manufacturedHomeDealerTemplate } from './templates-data/manufactured-home-dealer'
@@ -50,6 +52,7 @@ export interface TemplateBlockDefinition {
   order: number
 }
 
+// ---- Aggregate all template definitions here ----
 export const websiteTemplates: WebsiteTemplate[] = [
   rvDealerProfessionalTemplate,
   manufacturedHomeDealerTemplate,
@@ -57,19 +60,37 @@ export const websiteTemplates: WebsiteTemplate[] = [
   generalDealerTemplate
 ]
 
-export function getTemplateById(id: string): WebsiteTemplate | null {
-  return websiteTemplates.find(template => template.id === id) || null
+// Back-compat: some modules import { getWebsiteTemplates }
+export function getWebsiteTemplates(): WebsiteTemplate[] {
+  return websiteTemplates
 }
 
+// Back-compat: some modules import { getTemplate }
+export function getTemplate(id: string): WebsiteTemplate | null {
+  return getTemplateById(id)
+}
+
+export function getTemplateById(id: string): WebsiteTemplate | null {
+  return websiteTemplates.find((template) => template.id === id) || null
+}
+
+export function getTemplatesByCategory(
+  category: WebsiteTemplate['category']
+): WebsiteTemplate[] {
+  return websiteTemplates.filter((t) => t.category === category)
+}
+
+// Helpful aliases (retain existing imports elsewhere)
 export const siteTemplates = websiteTemplates
 export const defaultTemplates = websiteTemplates
 export { websiteTemplates as templates }
 
-export function getTemplatesByCategory(category: string): WebsiteTemplate[] {
-  return websiteTemplates.filter(template => template.category === category)
-}
-
-export function createSiteFromTemplate(template: WebsiteTemplate, siteName: string, siteSlug: string): any {
+// Utility to instantiate a site object from a template
+export function createSiteFromTemplate(
+  template: WebsiteTemplate,
+  siteName: string,
+  siteSlug: string
+): any {
   return {
     name: siteName,
     slug: siteSlug,
