@@ -304,3 +304,6 @@ export function TemplateSelector({ onSelectTemplate, onStartBlank }: TemplateSel
     </>
   )
 }
+
+
+export default TemplateSelector
