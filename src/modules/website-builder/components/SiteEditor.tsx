@@ -1,11 +1,25 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Save, Globe, Smartphone, Monitor } from 'lucide-react'
+import {
+  ArrowLeft,
+  Eye,
+  Save,
+  Palette,
+  Layout,
+  Image as ImageIcon,
+  Globe,
+  Smartphone,
+  Monitor,
+  Tablet,
+  PanelRightOpen,
+  PanelRightClose
+} from 'lucide-react'
 import { websiteService } from '@/services/website/service'
-import { Site, Page } from '../types'
+import { Site, Page, Block } from '../types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { useToast } from '@/hooks/use-toast'
 import EditorCanvas from './EditorCanvas'
@@ -14,8 +28,18 @@ import ThemePalette from './ThemePalette'
 import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
 
+// If your project has this hook, it exposes tenant/company branding
+// (It's referenced in other modules like property listings)
+import { useTenant } from '@/contexts/TenantContext'
+
 interface SiteEditorProps {
   mode?: 'platform' | 'company'
+}
+
+const LS_KEYS = {
+  previewMode: 'wb.previewMode',
+  rightOpen: 'wb.rightSidebarOpen',
+  activeTab: 'wb.activeTab',
 }
 
 export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
@@ -23,18 +47,45 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const navigate = useNavigate()
   const { handleError } = useErrorHandler()
   const { toast } = useToast()
+  const tenant = ((): any => {
+    try {
+      // useTenant may throw outside provider in some previews
+      return useTenant?.()
+    } catch {
+      return null
+    }
+  })()
 
   const [site, setSite] = useState<Site | null>(null)
   const [currentPage, setCurrentPage] = useState<Page | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media'>('editor')
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>(
+    (localStorage.getItem(LS_KEYS.previewMode) as any) || 'desktop'
+  )
+  const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media'>(
+    (localStorage.getItem(LS_KEYS.activeTab) as any) || 'pages'
+  )
+  const [rightOpen, setRightOpen] = useState<boolean>(
+    localStorage.getItem(LS_KEYS.rightOpen) !== 'false'
+  )
 
   useEffect(() => {
-    loadSite()
+    if (siteId) loadSite()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEYS.previewMode, previewMode)
+  }, [previewMode])
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEYS.activeTab, activeTab)
+  }, [activeTab])
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEYS.rightOpen, String(rightOpen))
+  }, [rightOpen])
 
   const loadSite = async () => {
     if (!siteId) return
@@ -43,7 +94,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const s = await websiteService.getSite(siteId)
       if (!s) throw new Error('Site not found')
 
-      // normalize pages/blocks to ensure IDs exist
+      // Normalize page/block IDs so lists and canvas stay in sync
       const pages: Page[] = (s.pages || []).map((p: any, idx: number) => ({
         id: p.id || p.path || `page-${idx}`,
         title: p.title,
@@ -51,12 +102,12 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         seo: p.seo,
         blocks: (p.blocks || []).map((b: any, i: number) => ({ id: b.id || `block-${i}`, ...b }))
       }))
-
       const normalized: Site = { ...s, pages }
+
       setSite(normalized)
       setCurrentPage(pages[0] || null)
-    } catch (err) {
-      handleError(err, 'loading site')
+    } catch (error) {
+      handleError(error, 'loading site')
       const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
       navigate(basePath)
     } finally {
@@ -69,9 +120,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     try {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
-      toast({ title: 'Saved', description: 'Your changes have been saved.' })
-    } catch (err) {
-      handleError(err, 'saving site')
+      toast({ title: 'Changes Saved', description: 'Your website changes have been saved.' })
+    } catch (error) {
+      handleError(error, 'saving changes')
     } finally {
       setSaving(false)
     }
@@ -82,28 +133,58 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     navigate(basePath)
   }
 
-  // Adapt data to PageList's expected props
-  const pagesForList = useMemo(() => {
-    const pages = site?.pages || []
-    return pages.map((p) => ({
-      id: (p as any).id || p.path || p.title,
-      name: p.title,
-      slug: (p.path || '/').replace(/^\//, ''),
-      isHomePage: (p.path || '/') === '/',
-      isPublished: false,
-      lastModified: new Date().toISOString(),
-      template: undefined
-    }))
-  }, [site?.pages])
+  const handlePreview = () => {
+    if (!site) return
+    const previewUrl = `/s/${site.slug}/`
+    window.open(previewUrl, '_blank')
+  }
 
-  const currentPageId =
-    currentPage ? ((currentPage as any).id || currentPage.path || currentPage.title) : null
+  // ✅ Keep Pages list visible: do NOT force-switch tab when selecting a page
+  const handlePageSelect = (page: Page) => {
+    setCurrentPage(page)
+    // setActiveTab('editor')  // removed to keep the Pages list visible
+  }
 
-  const onSelectPageId = (id: string) => {
-    const found =
-      (site?.pages || []).find((p: any) => (p.id || p.path || p.title) === id) || null
-    setCurrentPage(found)
-    setActiveTab('editor')
+  const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
+    if (!site || !currentPage) return
+    const updatedBlocks = currentPage.blocks.map(b => (b.id === blockId ? { ...b, ...updates } : b))
+    const updatedPage = { ...currentPage, blocks: updatedBlocks }
+    const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
+    setSite({ ...site, pages: updatedPages })
+    setCurrentPage(updatedPage)
+  }
+
+  // Safe theme to avoid ThemePalette reading undefined
+  const safeTheme = useMemo(() => {
+    const t = site?.theme || {}
+    return {
+      primaryColor: t.primaryColor || '#1d4ed8',
+      secondaryColor: t.secondaryColor || '#f59e0b',
+      fontFamily: t.fontFamily || 'Inter',
+      logoUrl: (t as any).logoUrl || (site as any)?.logoUrl || ''
+    }
+  }, [site])
+
+  const handleThemeUpdate = (themeUpdates: any) => {
+    if (!site) return
+    setSite({ ...site, theme: { ...safeTheme, ...themeUpdates } as any })
+  }
+
+  // Apply company branding (if available via Tenant context)
+  const applyCompanyBranding = () => {
+    if (!site) return
+    const brand = (tenant && (tenant.company?.branding || tenant.branding)) || {}
+    const updates = {
+      primaryColor: brand.primaryColor || safeTheme.primaryColor,
+      secondaryColor: brand.secondaryColor || safeTheme.secondaryColor,
+      fontFamily: brand.fontFamily || safeTheme.fontFamily,
+      logoUrl: brand.logoUrl || safeTheme.logoUrl
+    }
+    setSite({
+      ...site,
+      theme: { ...safeTheme, ...updates } as any,
+    })
+    toast({ title: 'Branding Applied', description: 'Company branding has been applied to the site.' })
   }
 
   if (loading) {
@@ -139,44 +220,69 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="h-screen bg-background flex flex-col">
+      {/* Top Bar */}
+      <div className="border-b bg-card px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
             <Button variant="ghost" size="sm" onClick={handleBackToBuilder}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
             <div>
               <h1 className="text-xl font-semibold">{site.name}</h1>
-              <div className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {site.slug}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com
-              </div>
+                {site.isPublished && <Badge variant="default" className="ml-2">Published</Badge>}
+              </p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
+            {/* Right sidebar toggle */}
             <Button
-              variant={previewMode === 'desktop' ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
-              onClick={() => setPreviewMode('desktop')}
+              onClick={() => setRightOpen(v => !v)}
+              title={rightOpen ? 'Hide Publish Panel' : 'Show Publish Panel'}
             >
-              <Monitor className="h-4 w-4" />
+              {rightOpen ? <PanelRightClose className="h-4 w-4 mr-2" /> : <PanelRightOpen className="h-4 w-4 mr-2" />}
+              {rightOpen ? 'Hide Panel' : 'Show Panel'}
             </Button>
-            <Button
-              variant={previewMode === 'tablet' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPreviewMode('tablet')}
-            >
-              <Globe className="h-4 w-4" />
+
+            {/* Preview Mode Toggle */}
+            <div className="flex items-center border rounded-md ml-1">
+              <Button
+                variant={previewMode === 'desktop' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('desktop')}
+                className="rounded-r-none"
+              >
+                <Monitor className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={previewMode === 'tablet' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('tablet')}
+                className="rounded-none border-x"
+              >
+                <Tablet className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={previewMode === 'mobile' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('mobile')}
+                className="rounded-l-none"
+              >
+                <Smartphone className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Button variant="outline" onClick={handlePreview}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
             </Button>
-            <Button
-              variant={previewMode === 'mobile' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPreviewMode('mobile')}
-            >
-              <Smartphone className="h-4 w-4" />
-            </Button>
+
             <Button onClick={handleSave} disabled={saving}>
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save'}
@@ -190,48 +296,47 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         {/* Left Sidebar */}
         <div className="w-80 border-r bg-card overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="h-full">
-            <TabsList className="grid w-full grid-cols-3 m-4">
-              <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
-              <TabsTrigger value="pages" className="text-xs">Pages</TabsTrigger>
-              <TabsTrigger value="theme" className="text-xs">Theme</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 m-4">
+              <TabsTrigger value="editor" className="text-xs" title="Editor"><Layout className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="pages" className="text-xs" title="Pages"><Globe className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="theme" className="text-xs" title="Theme"><Palette className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="media" className="text-xs" title="Media"><ImageIcon className="h-4 w-4" /></TabsTrigger>
             </TabsList>
 
             <div className="px-4 pb-4">
               <TabsContent value="editor" className="mt-0">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Page Editor</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {currentPage ? (
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">{currentPage.title}</div>
-                        {/* (optional) list of blocks here */}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Select a page to edit</div>
-                    )}
+                  <CardHeader><CardTitle className="text-sm">Page Editor</CardTitle></CardHeader>
+                  <CardContent className="text-sm text-muted-foreground">
+                    {currentPage ? `${currentPage.blocks?.length || 0} blocks` : 'Select a page to start editing'}
                   </CardContent>
                 </Card>
               </TabsContent>
 
               <TabsContent value="pages" className="mt-0">
                 <PageList
-                  pages={pagesForList}
-                  currentPageId={currentPageId as any}
-                  onSelectPage={onSelectPageId}
-                  onCreatePage={() => {}}
-                  onEditPage={() => {}}
-                  onDeletePage={() => {}}
-                  onDuplicatePage={() => {}}
+                  site={site}
+                  currentPage={currentPage}
+                  onPageSelect={handlePageSelect}
+                  onPageUpdate={(pageId, updates) => {
+                    const updatedPages = site.pages.map(p => (p.id === pageId ? { ...p, ...updates } : p))
+                    setSite({ ...site, pages: updatedPages })
+                  }}
                 />
               </TabsContent>
 
               <TabsContent value="theme" className="mt-0">
-                <ThemePalette
-                  theme={site.theme}
-                  onThemeUpdate={(t) => setSite({ ...site, theme: t })}
-                />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={applyCompanyBranding}>
+                      Apply Company Branding
+                    </Button>
+                  </div>
+                  <ThemePalette
+                    theme={safeTheme}
+                    onThemeUpdate={handleThemeUpdate}
+                  />
+                </div>
               </TabsContent>
 
               <TabsContent value="media" className="mt-0">
@@ -253,25 +358,38 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   : 'w-full max-w-6xl h-full'
               } rounded-lg overflow-hidden`}
             >
-              <EditorCanvas
-                site={site}
-                currentPage={currentPage}
-                previewMode={previewMode}
-              />
+              {currentPage ? (
+                <EditorCanvas
+                  site={site}
+                  page={currentPage}            {/* keep legacy prop name used by EditorCanvas */}
+                  previewMode={previewMode}
+                  onBlockUpdate={handleBlockUpdate}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Select a page to edit</h3>
+                    <p className="text-muted-foreground">Choose a page from the Pages tab to start editing</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-80 border-l bg-card overflow-y-auto">
-          <div className="p-4">
-            <PublishPanel
-              site={site}
-              onSiteUpdate={(updates) => setSite({ ...site, ...updates })}
-              mode={mode}
-            />
+        {/* Right Sidebar (toggleable) */}
+        {rightOpen && (
+          <div className="w-80 border-l bg-card overflow-y-auto">
+            <div className="p-4">
+              <PublishPanel
+                site={site}
+                onSiteUpdate={(updates) => setSite({ ...site, ...updates })}
+                mode={mode}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
