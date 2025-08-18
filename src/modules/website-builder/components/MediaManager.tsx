@@ -21,12 +21,14 @@ import { useToast } from '@/hooks/use-toast'
 
 interface MediaManagerProps {
   siteId: string
+  onMediaSelect?: (media: { url: string; name: string; type: string }) => void
+  mode?: 'manager' | 'picker'
   onSelectMedia?: (media: Media) => void
   selectedMediaId?: string
   allowMultiSelect?: boolean
 }
 
-export default function MediaManager({ 
+export default function MediaManager({ siteId, onMediaSelect, mode = 'manager' }: MediaManagerProps) {
   siteId, 
   onSelectMedia, 
   selectedMediaId,
@@ -87,6 +89,16 @@ export default function MediaManager({
         const uploadedMedia = await websiteService.uploadMedia(siteId, file)
         setMedia(prev => [uploadedMedia, ...prev])
       }
+  const handleMediaClick = (mediaItem: Media) => {
+    if (mode === 'picker' && onMediaSelect) {
+      onMediaSelect({
+        url: mediaItem.url,
+        name: mediaItem.name,
+        type: mediaItem.type
+      })
+    }
+  }
+
 
       toast({
         title: 'Upload Complete',
@@ -166,7 +178,9 @@ export default function MediaManager({
             </Card>
           ))}
         </div>
-      </div>
+        <CardTitle className="text-sm">
+          {mode === 'picker' ? 'Choose Image' : 'Media Library'}
+        </CardTitle>
     )
   }
 
@@ -323,21 +337,23 @@ export default function MediaManager({
                   isSelected ? 'ring-2 ring-primary' : ''
                 }`}
                 onClick={() => handleMediaClick(item)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {item.type.startsWith('image/') ? (
-                        <img 
-                          src={item.url} 
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <MediaIcon className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
+        {mode === 'manager' && (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleUpload(Array.from(e.target.files || []))}
+              className="hidden"
+              id="media-upload"
+            />
+            <label htmlFor="media-upload" className="cursor-pointer">
+              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm text-gray-600">Click to upload images</p>
+              <p className="text-xs text-gray-500">PNG, JPG up to 2MB</p>
+            </label>
+          </div>
+        )}
                       <p className="font-medium truncate">{item.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
@@ -351,7 +367,10 @@ export default function MediaManager({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+              className={`relative group border rounded-lg overflow-hidden ${
+                mode === 'picker' ? 'cursor-pointer hover:border-primary' : ''
+              }`}
+              onClick={() => handleMediaClick(item)}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -365,16 +384,21 @@ export default function MediaManager({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const link = document.createElement('a')
-                          link.href = item.url
-                          link.download = item.name
-                          link.click()
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+              {mode === 'manager' && (
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(item.id)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -389,8 +413,12 @@ export default function MediaManager({
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            )
+            <p className="text-sm">
+              {mode === 'picker' ? 'No images available' : 'No media files yet'}
+            </p>
+            <p className="text-xs">
+              {mode === 'picker' ? 'Upload images in the Media tab' : 'Upload images to get started'}
+            </p>
           })}
         </div>
       )}
