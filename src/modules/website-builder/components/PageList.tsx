@@ -41,7 +41,7 @@ interface PageListProps {
   onDuplicatePage: (pageId: string) => void
 }
 
-  onPageSelect: (pageId: string) => void
+export default function PageList({
   pages,
   currentPageId,
   onSelectPage,
@@ -63,10 +63,10 @@ interface PageListProps {
   }
   // Auto-select first page if none selected and pages exist
   React.useEffect(() => {
-    if (!selectedPageId && pages.length > 0) {
-      onPageSelect(pages[0].id)
+    if (!currentPageId && pages.length > 0) {
+      onSelectPage(pages[0].id)
     }
-  }, [selectedPageId, pages, onPageSelect])
+  }, [currentPageId, pages, onSelectPage])
 
   return (
     <div className="space-y-4">
@@ -108,13 +108,13 @@ interface PageListProps {
             </CardContent>
           </Card>
         ) : (
-              className={`cursor-pointer transition-colors hover:bg-accent/50 ${
+          filteredPages.map((page) => (
             <Card 
               key={page.id} 
               className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                 currentPageId === page.id ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => onPageSelect(page.id)}
+              onClick={() => onSelectPage(page.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
