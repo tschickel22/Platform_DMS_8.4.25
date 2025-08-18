@@ -49,123 +49,23 @@ export default function PageList({
   onEditPage,
   onDeletePage,
   onDuplicatePage
-    const isSelected = selectedBlockId === block.id
-    const bagKey = 'props' in block ? 'props' : ('data' in block ? 'data' : null)
-    const bag = bagKey ? (block as any)[bagKey] : {}
-
 }: PageListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const filteredPages = pages.filter(page =>
-          <section 
-            key={block.id} 
-            className={cn(
-              "relative bg-gray-900 text-white min-h-[400px] cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
-            {bag.backgroundImage && (
+    page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    page.slug.toLowerCase().includes(searchTerm.toLowerCase())
   )
-import { debounce } from '@/lib/utils'
-                style={{ backgroundImage: `url(${bag.backgroundImage})` }}
+
   const getPageIcon = (page: Page) => {
     if (page.isHomePage) return <Home className="h-4 w-4" />
     return <FileText className="h-4 w-4" />
   }
-  // Auto-select first page if none selected and pages exist
-  React.useEffect(() => {
-                {bag.title && (
-                  <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                    <span
-                      contentEditable={!!onBlockUpdate}
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleInlineEdit(block.id, 'title', e.currentTarget.textContent || '')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          e.currentTarget.blur()
-                        }
-                      }}
-                      className={onBlockUpdate ? 'outline-none focus:bg-white/10 rounded px-1' : ''}
-                    >
-                      {bag.title}
-                    </span>
-    e.stopPropagation()
-    if (onSelectBlock) {
-                {bag.subtitle && (
-                  <p className="text-xl md:text-2xl mb-8 text-gray-200">
-                    <span
-                      contentEditable={!!onBlockUpdate}
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleInlineEdit(block.id, 'subtitle', e.currentTarget.textContent || '')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          e.currentTarget.blur()
-                        }
-                      }}
-                      className={onBlockUpdate ? 'outline-none focus:bg-white/10 rounded px-1' : ''}
-                    >
-                      {bag.subtitle}
-                    </span>
 
-  const handleInlineEdit = (blockId: string, field: string, value: string) => {
-                {bag.ctaText && (
-    
-    const block = activePage.blocks.find(b => b.id === blockId)
-    if (!block) return
-                    onClick={() => bag.ctaLink && (window.location.href = bag.ctaLink)}
-    const bagKey = 'props' in block ? 'props' : ('data' in block ? 'data' : null)
-                    <span
-                      contentEditable={!!onBlockUpdate}
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleInlineEdit(block.id, 'ctaText', e.currentTarget.textContent || '')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          e.currentTarget.blur()
-                        }
-                      }}
-                      className={onBlockUpdate ? 'outline-none focus:bg-white/10 rounded px-1' : ''}
-                    >
-                      {bag.ctaText}
-                    </span>
-    
-    const bag = (block as any)[bagKey] || {}
-    const updatedBag = { ...bag, [field]: value }
-    
-    onBlockUpdate(blockId, { [bagKey]: updatedBag })
-  }
-
-    }
-
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-16 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
+  return (
     <div className="space-y-4">
       {/* Header */}
-                className={`prose prose-lg max-w-none ${bag.alignment || 'text-left'}`}
-                contentEditable={!!onBlockUpdate}
-                suppressContentEditableWarning
-                onBlur={(e) => {
-                  const content = e.currentTarget.innerHTML
-                  handleInlineEdit(block.id, 'html' in bag ? 'html' : 'text', content)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    e.currentTarget.blur()
-                  }
-                }}
-                className={onBlockUpdate ? 'outline-none focus:bg-gray-50 rounded p-2' : ''}
-                dangerouslySetInnerHTML={{ __html: bag.html || bag.text || '' }}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Pages</h2>
         <Button size="sm" onClick={onCreatePage}>
           <Plus className="h-4 w-4 mr-2" />
           Add Page
@@ -173,39 +73,15 @@ import { debounce } from '@/lib/utils'
       </div>
 
       <div className="relative">
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-16 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-              <div className={`text-${bag.alignment || 'center'}`}>
+          placeholder="Search pages..."
           value={searchTerm}
-                  src={bag.src || bag.imageUrl} 
-                  alt={bag.alt || ''} 
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
         />
       </div>
-                {bag.caption && (
-                  <p className="mt-4 text-gray-600 text-sm">
-                    <span
-                      contentEditable={!!onBlockUpdate}
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleInlineEdit(block.id, 'caption', e.currentTarget.textContent || '')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          e.currentTarget.blur()
-                        }
-                      }}
-                      className={onBlockUpdate ? 'outline-none focus:bg-gray-100 rounded px-1' : ''}
-                    >
-                      {bag.caption}
-                    </span>
-                  </p>
+
       <div className="space-y-2">
         {filteredPages.length === 0 ? (
           <Card className="border-dashed">
@@ -213,35 +89,12 @@ import { debounce } from '@/lib/utils'
               <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground">
                 {searchTerm ? 'No pages match your search' : 'No pages yet'}
+              </p>
               {!searchTerm && (
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-16 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            style={{ backgroundColor: `${primaryColor}10` }}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
+                <Button size="sm" onClick={onCreatePage} className="mt-2">
                   <Plus className="h-4 w-4 mr-2" />
-              {bag.title && (
-                <h2 className="text-3xl font-bold mb-4">
-                  <span
-                    contentEditable={!!onBlockUpdate}
-                    suppressContentEditableWarning
-                    onBlur={(e) => handleInlineEdit(block.id, 'title', e.currentTarget.textContent || '')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        e.currentTarget.blur()
-                      }
-                    }}
-                    className={onBlockUpdate ? 'outline-none focus:bg-white/20 rounded px-1' : ''}
-                  >
-                    {bag.title}
-                  </span>
-                </h2>
+                  Create your first page
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -316,154 +169,21 @@ import { debounce } from '@/lib/utils'
                               e.stopPropagation()
                               onDeletePage(page.id)
                             }}
-              {bag.description && (
-                <p className="text-lg text-gray-600 mb-8">
-                  <span
-                    contentEditable={!!onBlockUpdate}
-                    suppressContentEditableWarning
-                    onBlur={(e) => handleInlineEdit(block.id, 'description', e.currentTarget.textContent || '')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        e.currentTarget.blur()
-                      }
-                    }}
-                    className={onBlockUpdate ? 'outline-none focus:bg-white/20 rounded px-1' : ''}
-                  >
-                    {bag.description}
-                  </span>
-                </p>
+                            className="text-destructive"
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
-              {bag.buttonText && (
+                            Delete
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
-                  onClick={() => bag.buttonLink && (window.location.href = bag.buttonLink)}
+                    </DropdownMenu>
                   </div>
-                  <span
-                    contentEditable={!!onBlockUpdate}
-                    suppressContentEditableWarning
-                    onBlur={(e) => handleInlineEdit(block.id, 'buttonText', e.currentTarget.textContent || '')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        e.currentTarget.blur()
-                      }
-                    }}
-                    className={onBlockUpdate ? 'outline-none focus:bg-white/10 rounded px-1' : ''}
-                  >
-                    {bag.buttonText}
-                  </span>
+                </div>
               </CardContent>
             </Card>
           ))
         )}
       </div>
-
-      case 'heading':
-        return (
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-8 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 
-                className={`text-3xl font-bold ${bag.alignment === 'center' ? 'text-center' : bag.alignment === 'right' ? 'text-right' : 'text-left'}`}
-                contentEditable={!!onBlockUpdate}
-                suppressContentEditableWarning
-                onBlur={(e) => handleInlineEdit(block.id, 'text', e.currentTarget.textContent || '')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    e.currentTarget.blur()
-                  }
-                }}
-                className={onBlockUpdate ? 'outline-none focus:bg-gray-50 rounded px-2 py-1' : ''}
-              >
-                {bag.text || bag.title || 'Heading'}
-              </h2>
-            </div>
-          </section>
-        )
-
-      case 'paragraph':
-        return (
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-8 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <p 
-                className={`text-lg leading-relaxed ${bag.alignment === 'center' ? 'text-center' : bag.alignment === 'right' ? 'text-right' : 'text-left'}`}
-                contentEditable={!!onBlockUpdate}
-                suppressContentEditableWarning
-                onBlur={(e) => handleInlineEdit(block.id, 'text', e.currentTarget.textContent || '')}
-                className={onBlockUpdate ? 'outline-none focus:bg-gray-50 rounded px-2 py-1' : ''}
-              >
-                {bag.text || 'Paragraph text'}
-              </p>
-            </div>
-          <div 
-            key={block.id} 
-            className={cn(
-              "py-8 px-4 bg-yellow-50 border border-yellow-200 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
-        )
-
-      case 'button':
-        return (
-          <section 
-            key={block.id} 
-            className={cn(
-              "py-8 cursor-pointer transition-all",
-              isSelected && "ring-2 ring-blue-500 ring-offset-2"
-            )}
-            data-block-id={block.id}
-            onClick={(e) => handleBlockClick(block.id, e)}
-          >
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <button 
-      onClick={() => onSelectBlock && onSelectBlock('')} // Deselect when clicking empty space
-                className="px-6 py-3 font-semibold rounded-lg transition-colors"
-                style={{ 
-                  backgroundColor: bag.variant === 'outline' ? 'transparent' : primaryColor, 
-                  color: bag.variant === 'outline' ? primaryColor : 'white',
-                  border: bag.variant === 'outline' ? `2px solid ${primaryColor}` : 'none'
-                }}
-                onClick={() => bag.href && (window.location.href = bag.href)}
-              >
-                <span
-                  contentEditable={!!onBlockUpdate}
-                  suppressContentEditableWarning
-                  onBlur={(e) => handleInlineEdit(block.id, 'label', e.currentTarget.textContent || '')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      e.currentTarget.blur()
-                    }
-                  }}
-                  className={onBlockUpdate ? 'outline-none focus:bg-white/10 rounded px-1' : ''}
-                >
-                  {bag.label || bag.text || 'Button'}
-                </span>
-              </button>
-            </div>
-          </section>
-        )
 
       {/* Quick Stats */}
       {pages.length > 0 && (
