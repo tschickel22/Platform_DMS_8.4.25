@@ -1,133 +1,104 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 
-interface Template {
+// Lightweight structural type so we don't depend on exact utils path
+export type WebsiteTemplateLite = {
   id: string
   name: string
-  description: string
-  preview?: string
+  description?: string
+  previewImage?: string
   category?: string
 }
 
 interface CreateSiteDetailsModalProps {
-  isOpen: boolean
-  selectedTemplate: Template
+  template?: WebsiteTemplateLite | null
+  onCreateSite: (args: {
+    name: string
+    subdomain?: string
+    templateId: string
+    template?: WebsiteTemplateLite
+  }) => void
+  onBackToTemplates: () => void
   onCancel: () => void
-  onBackToTemplateSelection: () => void
-  onCreateSite: (data: { name: string; slug: string; template: Template }) => void
 }
 
 export function CreateSiteDetailsModal({
-  isOpen,
-  selectedTemplate,
-  onCancel,
-  onBackToTemplateSelection,
-  onCreateSite
+  template,
+  onCreateSite,
+  onBackToTemplates,
+  onCancel
 }: CreateSiteDetailsModalProps) {
-  const [siteName, setSiteName] = useState('')
-  const [siteSlug, setSiteSlug] = useState('')
+  const [name, setName] = useState('')
+  const [subdomain, setSubdomain] = useState('')
 
-  // Auto-generate slug from name
-  const handleNameChange = (value: string) => {
-    setSiteName(value)
-    const slug = value
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim()
-    setSiteSlug(slug)
-  }
+  // Reset defaults whenever the selected template changes
+  useEffect(() => {
+    setName(template?.name ? `${template.name} Site` : '')
+    setSubdomain('')
+  }, [template?.id])
+
+  const isValid = Boolean(template && (name?.trim().length ?? 0) > 0)
 
   const handleCreate = () => {
-    if (!siteName.trim() || !siteSlug.trim()) {
-      return
-    }
-
+    if (!template) return
     onCreateSite({
-      name: siteName.trim(),
-      slug: siteSlug.trim(),
-      template: selectedTemplate
+      name: name.trim() || `${template.name} Site`,
+      subdomain: subdomain.trim() || undefined,
+      templateId: template.id,
+      template
     })
   }
 
-  const isValid = siteName.trim().length > 0 && siteSlug.trim().length > 0
-
   return (
-    <Dialog open={isOpen} onOpenChange={onCancel}>
-      <DialogContent className="max-w-md">
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel() }}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Website</DialogTitle>
+          <DialogTitle>
+            {template?.name ? `Create site from "${template.name}"` : 'Select a template to continue'}
+          </DialogTitle>
           <DialogDescription>
-            Enter the details for your new website
+            {template?.description ?? 'Choose a template to start your site. You can customize everything later.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Selected Template Preview */}
+        <div className="grid gap-4">
           <Card>
-            <CardContent className="pt-4">
-              <div className="text-sm text-muted-foreground mb-2">Selected Template:</div>
-              <div className="font-medium">{selectedTemplate.name}</div>
-              <div className="text-sm text-muted-foreground">{selectedTemplate.description}</div>
+            <CardContent className="pt-6 grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="site-name">Site name</Label>
+                <Input
+                  id="site-name"
+                  placeholder={template?.name ? `${template.name} Site` : 'My New Website'}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={!template}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="subdomain">Subdomain (optional)</Label>
+                <Input
+                  id="subdomain"
+                  placeholder="e.g. demo"
+                  value={subdomain}
+                  onChange={(e) => setSubdomain(e.target.value)}
+                  disabled={!template}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Website Details Form */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="siteName">Website Name</Label>
-              <Input
-                id="siteName"
-                value={siteName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="My Awesome Website"
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="siteSlug">Website Address</Label>
-              <Input
-                id="siteSlug"
-                value={siteSlug}
-                onChange={(e) => setSiteSlug(e.target.value)}
-                placeholder="my-awesome-website"
-                className="mt-1"
-              />
-              <div className="text-xs text-muted-foreground mt-1">
-                Used in the website URL (letters, numbers, and hyphens only)
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
           <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={onBackToTemplateSelection}
-            >
-              Change Template
-            </Button>
-            
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                onClick={onCancel}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!isValid}
-              >
-                Create Website
-              </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onBackToTemplates}>Back</Button>
+              <Button variant="ghost" onClick={onCancel}>Cancel</Button>
             </div>
+            <Button onClick={handleCreate} disabled={!isValid}>
+              Create Website
+            </Button>
           </div>
         </div>
       </DialogContent>

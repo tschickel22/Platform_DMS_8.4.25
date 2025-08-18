@@ -15,6 +15,10 @@ interface WebsiteBuilderProps {
   mode?: 'platform' | 'company'
 }
 
+interface WebsiteBuilderProps {
+  mode?: 'platform' | 'company'
+}
+
 export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProps) {
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
@@ -89,14 +93,16 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
       
       // Reload sites and navigate to editor
       await loadSites()
-      navigate(`/${mode === 'platform' ? 'platform/website-builder' : 'company/settings/website'}/${newSite.id}`)
+      const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
+      navigate(`${basePath}/${newSite.id}`)
     } catch (error) {
       handleError(error, 'creating website')
     }
   }
 
   const handleEditSite = (siteId: string) => {
-    navigate(`/${mode === 'platform' ? 'platform/website-builder' : 'company/settings/website'}/${siteId}`)
+    const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
+    navigate(`${basePath}/${siteId}`)
   }
 
   const handleDeleteSite = async (siteId: string) => {
@@ -166,13 +172,20 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
           <p className="text-muted-foreground">
             {mode === 'platform' 
               ? 'Create and manage websites for the platform'
+              : 'Manage your company website'
+            }
+          </p>
+          </h1>
+          <p className="text-muted-foreground">
+            {mode === 'platform' 
+              ? 'Create and manage websites for the platform'
               : 'Manage your company\'s public website'
             }
           </p>
         </div>
         <Button onClick={handleCreateWebsiteClick}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Website
+          {mode === 'platform' ? 'Create Website' : 'Create Company Website'}
         </Button>
       </div>
 
