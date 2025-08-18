@@ -1,11 +1,9 @@
 import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
+import { Routes, Route } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
-import WebsiteBuilderErrorBoundary from './guard/ErrorBoundary'
+import { computeWebsiteBuilderCaps } from '@/shared/featureFlags'
 import WebsiteBuilder from './WebsiteBuilder'
-import { WebsiteBuilder } from './WebsiteBuilder'
 
 export function WebsiteBuilderRoutes() {
   const { user } = useAuth()
@@ -16,39 +14,43 @@ export function WebsiteBuilderRoutes() {
   const caps = computeWebsiteBuilderCaps({ roles, companyId })
 
   if (!caps.visibleInPlatformMenu) {
-    return <Navigate to="/" replace />
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have permission to access the Website Builder.</p>
+      </div>
+    )
   }
 
   return (
-    <WebsiteBuilderErrorBoundary>
-      <Routes>
-        <Route path="/" element={<WebsiteBuilderShell mode="platform" />} />
-        <Route path="/:siteId" element={<WebsiteBuilder mode="platform" />} />
+    <Routes>
       <Route path="/" element={<WebsiteBuilder mode="platform" />} />
-      </Routes>
-    </WebsiteBuilderErrorBoundary>
+      <Route path="/:siteId" element={<div>Site Editor (Platform Mode)</div>} />
+    </Routes>
   )
 }
 
 export function CompanyWebsiteRoutes() {
   const { user } = useAuth()
   const { tenant } = useTenant()
-      <Route path="/" element={<WebsiteBuilder mode="company" />} />
+  
   const roles = user?.role ? [user.role] : []
   const companyId = tenant?.id || null
   const caps = computeWebsiteBuilderCaps({ roles, companyId })
 
   if (!caps.visibleInCompanyMenu) {
-    return <Navigate to="/" replace />
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have permission to access the Website Editor.</p>
+      </div>
+    )
   }
 
   return (
-    <WebsiteBuilderErrorBoundary>
-      <Routes>
-        <Route path="/" element={<WebsiteBuilderShell mode="company" />} />
-        <Route path="/:siteId" element={<WebsiteBuilder mode="company" />} />
-        <Route path="*" element={<Navigate to="/company/settings/website" replace />} />
-      </Routes>
-    </WebsiteBuilderErrorBoundary>
+    <Routes>
+      <Route path="/" element={<WebsiteBuilder mode="company" />} />
+      <Route path="/:siteId" element={<div>Site Editor (Company Mode)</div>} />
+    </Routes>
   )
 }
