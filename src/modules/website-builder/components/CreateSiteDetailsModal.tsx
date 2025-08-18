@@ -3,195 +3,136 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, X, Globe } from 'lucide-react'
-import { SiteTemplate } from '../types'
+import { Card, CardContent } from '@/components/ui/card'
 
-interface CreateSiteDetailsModalProps {
-  selectedTemplate: SiteTemplate
-  onCreateSite: (siteData: { name: string; slug: string }) => Promise<void>
-  onBackToTemplateSelection: () => void
-  onCancel: () => void
-  isCreating: boolean
+interface Template {
+  id: string
+  name: string
+  description: string
+  preview?: string
+  category?: string
 }
 
-export default function CreateSiteDetailsModal({
+interface CreateSiteDetailsModalProps {
+  isOpen: boolean
+  selectedTemplate: Template
+  onCancel: () => void
+  onBackToTemplateSelection: () => void
+  onCreateSite: (data: { name: string; slug: string; template: Template }) => void
+}
+
+export function CreateSiteDetailsModal({
+  isOpen,
   selectedTemplate,
-  onCreateSite,
-  onBackToTemplateSelection,
   onCancel,
-  isCreating
+  onBackToTemplateSelection,
+  onCreateSite
 }: CreateSiteDetailsModalProps) {
   const [siteName, setSiteName] = useState('')
   const [siteSlug, setSiteSlug] = useState('')
-  const [errors, setErrors] = useState<{ name?: string; slug?: string }>({})
 
   // Auto-generate slug from name
   const handleNameChange = (value: string) => {
     setSiteName(value)
-    if (!siteSlug || siteSlug === generateSlug(siteName)) {
-      setSiteSlug(generateSlug(value))
-    }
-    // Clear name error when user starts typing
-    if (errors.name) {
-      setErrors(prev => ({ ...prev, name: undefined }))
-    }
-  }
-
-  const handleSlugChange = (value: string) => {
-    const cleanSlug = generateSlug(value)
-    setSiteSlug(cleanSlug)
-    // Clear slug error when user starts typing
-    if (errors.slug) {
-      setErrors(prev => ({ ...prev, slug: undefined }))
-    }
-  }
-
-  const generateSlug = (name: string): string => {
-    return name
+    const slug = value
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .trim()
+    setSiteSlug(slug)
   }
 
-  const validateForm = (): boolean => {
-    const newErrors: { name?: string; slug?: string } = {}
-
-    if (!siteName.trim()) {
-      newErrors.name = 'Website name is required'
-    }
-
-    if (!siteSlug.trim()) {
-      newErrors.slug = 'Website address is required'
-    } else if (!/^[a-z0-9-]+$/.test(siteSlug)) {
-      newErrors.slug = 'Website address can only contain lowercase letters, numbers, and hyphens'
-    } else if (siteSlug.length < 3) {
-      newErrors.slug = 'Website address must be at least 3 characters'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
+  const handleCreate = () => {
+    if (!siteName.trim() || !siteSlug.trim()) {
       return
     }
 
-    await onCreateSite({
+    onCreateSite({
       name: siteName.trim(),
-      slug: siteSlug.trim()
+      slug: siteSlug.trim(),
+      template: selectedTemplate
     })
   }
 
+  const isValid = siteName.trim().length > 0 && siteSlug.trim().length > 0
+
   return (
-    <Dialog open={true} onOpenChange={() => !isCreating && onCancel()}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={isOpen} onOpenChange={onCancel}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Website</DialogTitle>
           <DialogDescription>
-            Enter your website details to create your new site
+            Enter the details for your new website
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Selected Template Preview */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Selected Template</CardTitle>
-              <CardDescription>
-                {selectedTemplate.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <div className="h-16 w-24 bg-muted rounded-lg flex items-center justify-center">
-                  <Globe className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div>
-                  <h4 className="font-semibold">{selectedTemplate.name}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTemplate.pages?.length || 0} pages included
-                  </p>
-                </div>
-              </div>
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground mb-2">Selected Template:</div>
+              <div className="font-medium">{selectedTemplate.name}</div>
+              <div className="text-sm text-muted-foreground">{selectedTemplate.description}</div>
             </CardContent>
           </Card>
 
-          {/* Site Details Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          {/* Website Details Form */}
+          <div className="space-y-4">
+            <div>
               <Label htmlFor="siteName">Website Name</Label>
               <Input
                 id="siteName"
                 value={siteName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="My Dealership Website"
-                disabled={isCreating}
+                placeholder="My Awesome Website"
+                className="mt-1"
               />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
-              )}
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="siteSlug">Website Address</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  id="siteSlug"
-                  value={siteSlug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="my-dealership"
-                  disabled={isCreating}
-                />
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  .renterinsight.com
-                </span>
+              <Input
+                id="siteSlug"
+                value={siteSlug}
+                onChange={(e) => setSiteSlug(e.target.value)}
+                placeholder="my-awesome-website"
+                className="mt-1"
+              />
+              <div className="text-xs text-muted-foreground mt-1">
+                Used in the website URL (letters, numbers, and hyphens only)
               </div>
-              {errors.slug && (
-                <p className="text-sm text-destructive">{errors.slug}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                This will be your website's address. You can set up a custom domain later.
-              </p>
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-4">
+          {/* Action Buttons */}
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={onBackToTemplateSelection}
+            >
+              Change Template
+            </Button>
+            
+            <div className="space-x-2">
               <Button
-                type="button"
                 variant="outline"
-                onClick={onBackToTemplateSelection}
-                disabled={isCreating}
+                onClick={onCancel}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Change Template
+                Cancel
               </Button>
-              
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onCancel}
-                  disabled={isCreating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isCreating}
-                >
-                  {isCreating ? 'Creating...' : 'Create Website'}
-                </Button>
-              </div>
+              <Button
+                onClick={handleCreate}
+                disabled={!isValid}
+              >
+                Create Website
+              </Button>
             </div>
-          </form>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
+
+export default CreateSiteDetailsModal
