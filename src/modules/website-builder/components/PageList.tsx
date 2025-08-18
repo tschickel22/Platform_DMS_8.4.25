@@ -41,7 +41,7 @@ interface PageListProps {
   onDuplicatePage: (pageId: string) => void
 }
 
-export default function PageList({
+  onPageSelect: (pageId: string) => void
   pages,
   currentPageId,
   onSelectPage,
@@ -61,6 +61,12 @@ export default function PageList({
     if (page.isHomePage) return <Home className="h-4 w-4" />
     return <FileText className="h-4 w-4" />
   }
+  // Auto-select first page if none selected and pages exist
+  React.useEffect(() => {
+    if (!selectedPageId && pages.length > 0) {
+      onPageSelect(pages[0].id)
+    }
+  }, [selectedPageId, pages, onPageSelect])
 
   return (
     <div className="space-y-4">
@@ -102,13 +108,13 @@ export default function PageList({
             </CardContent>
           </Card>
         ) : (
-          filteredPages.map((page) => (
+              className={`cursor-pointer transition-colors hover:bg-accent/50 ${
             <Card 
               key={page.id} 
               className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                 currentPageId === page.id ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => onSelectPage(page.id)}
+              onClick={() => onPageSelect(page.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -144,7 +150,9 @@ export default function PageList({
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
