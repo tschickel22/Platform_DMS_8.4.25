@@ -87,7 +87,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
       const normalized: Site = { ...s, pages }
       setSite(normalized)
-      setCurrentPage(pages[0] || null)
+      setCurrentPage(pages[0] || null) // ensure preview shows on load
     } catch (error) {
       handleError(error, 'loading site')
       const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
@@ -121,7 +121,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     window.open(previewUrl, '_blank')
   }
 
-  // Keep Pages list visible (do NOT auto-switch tabs)
+  // Keep Pages list visible unless you choose to switch; PageList selection can switch to Editor.
   const handlePageSelect = (page: Page) => setCurrentPage(page)
 
   const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
@@ -162,7 +162,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     toast({ title: 'Branding Applied', description: 'Company branding has been applied to the site.' })
   }
 
-  // ----- Adapt to PageList expectation (defensive) -----
+  // ----- PageList compatibility (new + old prop APIs) -----
   const pagesForList = useMemo(() => {
     const pages = site?.pages || []
     return pages.map((p) => ({
@@ -180,7 +180,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const onSelectPageId = (id: string) => {
     const found = (site?.pages || []).find((p: any) => (p.id || p.path || p.title) === id) || null
-    if (found) setCurrentPage(found)
+    if (found) {
+      setCurrentPage(found)
+      setActiveTab('editor') // feel free to remove if you want the list to remain focused
+    }
   }
 
   if (loading) {
@@ -306,14 +309,19 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               </TabsContent>
 
               <TabsContent value="pages" className="mt-0">
+                {/* Pass both prop styles so either PageList implementation works */}
                 <PageList
                   pages={pagesForList}
                   currentPageId={currentPageId as any}
                   onSelectPage={onSelectPageId}
-                  onCreatePage={() => {}}
-                  onEditPage={() => {}}
-                  onDeletePage={() => {}}
-                  onDuplicatePage={() => {}}
+                  // legacy props:
+                  site={site as any}
+                  currentPage={currentPage as any}
+                  onPageSelect={(p: any) => { setCurrentPage(p); setActiveTab('editor') }}
+                  onPageUpdate={(pageId: string, updates: any) => {
+                    const updatedPages = site.pages.map(p => (p.id === pageId ? { ...p, ...updates } : p))
+                    setSite({ ...site, pages: updatedPages })
+                  }}
                 />
               </TabsContent>
 
@@ -351,7 +359,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               {currentPage ? (
                 <EditorCanvas
                   site={site}
-                  page={currentPage}          // legacy prop name expected by EditorCanvas
+                  currentPage={currentPage}   // <-- what EditorCanvas in your app expects
+                  page={currentPage}          // <-- also provide legacy "page" just in case
                   previewMode={previewMode}
                   onBlockUpdate={handleBlockUpdate}
                 />
