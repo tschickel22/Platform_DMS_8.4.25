@@ -30,10 +30,8 @@ interface Page {
   lastModified: string
   template?: string
 }
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
 
 interface PageListProps {
-  const [isDirty, setIsDirty] = useState(false)
   pages: Page[]
   currentPageId?: string
   onSelectPage: (pageId: string) => void
@@ -41,24 +39,9 @@ interface PageListProps {
   onEditPage: (pageId: string) => void
   onDeletePage: (pageId: string) => void
   onDuplicatePage: (pageId: string) => void
+  onPageUpdate?: (pageId: string, updates: any) => void
 }
-  // Auto-save with debounce
-  useEffect(() => {
-    if (!isDirty || !site) return
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        await websiteService.updateSite(site.id, site)
-        setIsDirty(false)
-        // Silent auto-save, no toast
-      } catch (err) {
-        console.warn('Auto-save failed:', err)
-        // Don't show error toast for auto-save failures
-      }
-    }, 1500)
-
-    return () => clearTimeout(timeoutId)
-  }, [site, isDirty])
 export default function PageList({
   pages,
   currentPageId,
@@ -66,24 +49,70 @@ export default function PageList({
   onCreatePage,
   onEditPage,
   onDeletePage,
-  onDuplicatePage
+  onDuplicatePage,
+  onPageUpdate
 }: PageListProps) {
+  const [editingPageId, setEditingPageId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    path: '',
+    seoTitle: '',
+    seoDescription: ''
+  })
+
+  const currentPage = pages.find(p => p.id === currentPageId)
+  const editingPage = pages.find(p => p.id === editingPageId)
+
+  const [isDirty, setIsDirty] = useState(false)
+  const startEditing = (page: PageListItem) => {
+    setEditingPageId(page.id)
+    setEditForm({
+      title: page.name,
+      path: page.slug.startsWith('/') ? page.slug : `/${page.slug}`,
+      seoTitle: page.seo?.title || '',
+      seoDescription: page.seo?.description || ''
+    })
+  }
+
+  const saveEditing = () => {
+    if (!editingPageId || !onPageUpdate) return
+    
+    // Validate slug
+    let path = editForm.path.trim()
+    if (!path.startsWith('/')) {
+      path = `/${path}`
+    }
+    
+    // Remove spaces and special characters from slug
+    path = path.replace(/[^a-zA-Z0-9\-_\/]/g, '-').replace(/--+/g, '-')
+    
+    onPageUpdate(editingPageId, {
+      title: editForm.title,
+      path: path,
+      seo: {
+        title: editForm.seoTitle,
+        description: editForm.seoDescription
+      }
+    })
+    
+    setEditingPageId(null)
+  }
+
+  const cancelEditing = () => {
+    setEditingPageId(null)
+  }
+
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredPages = pages.filter(page =>
     page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     page.slug.toLowerCase().includes(searchTerm.toLowerCase())
-        createdAt: p.createdAt || new Date().toISOString(),
-        updatedAt: p.updatedAt || new Date().toISOString(),
   )
 
   const getPageIcon = (page: Page) => {
     if (page.isHomePage) return <Home className="h-4 w-4" />
     return <FileText className="h-4 w-4" />
   }
-      setIsDirty(false)
-import BlockInspector from './BlockInspector'
-import { generateId } from '@/lib/utils'
   // Auto-select first page if none selected and pages exist
   React.useEffect(() => {
     if (!currentPageId && pages.length > 0) {
@@ -93,11 +122,174 @@ import { generateId } from '@/lib/utils'
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Pages</h3>
-        <Button size="sm" onClick={onCreatePage}>
-          <Plus className="h-4 w-4 mr-2" />
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Pages</CardTitle>
+            <Button variant="outline" size="sm" onClick={onCreatePage}>
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {pages.map((page) => (
+              <div
+                key={page.id}
+                className={cn(
+                  "p-3 border rounded-lg cursor-pointer transition-colors",
+                  currentPageId === page.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                )}
+                onClick={() => onSelectPage(page.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {page.isHomePage && <Home className="h-3 w-3 text-blue-600" />}
+                    <span className="text-sm font-medium">{page.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEditing(page)
+                      }}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    {!page.isHomePage && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeletePage(page.id)
+                        }}
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {page.slug || '/'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Page SEO Editor */}
+      {currentPage && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Page SEO</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Editing: {currentPage.name}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="seo-title" className="text-xs">SEO Title</Label>
+              <Input
+                id="seo-title"
+                value={currentPage.seo?.title || ''}
+                onChange={(e) => {
+                  if (onPageUpdate) {
+                    onPageUpdate(currentPage.id, {
+                      seo: { ...currentPage.seo, title: e.target.value }
+                    })
+                  }
+                }}
+                placeholder="Page title for search engines"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="seo-description" className="text-xs">SEO Description</Label>
+              <Textarea
+                id="seo-description"
+                value={currentPage.seo?.description || ''}
+                onChange={(e) => {
+                  if (onPageUpdate) {
+                    onPageUpdate(currentPage.id, {
+                      seo: { ...currentPage.seo, description: e.target.value }
+                    })
+                  }
+                }}
+                placeholder="Brief description for search results"
+                className="text-xs min-h-[60px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Page Edit Modal */}
+      {editingPage && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Edit Page</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="page-title" className="text-xs">Page Title</Label>
+              <Input
+                id="page-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="Page title"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-slug" className="text-xs">Page URL</Label>
+              <Input
+                id="page-slug"
+                value={editForm.path}
+                onChange={(e) => setEditForm({ ...editForm, path: e.target.value })}
+                placeholder="/page-url"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-seo-title" className="text-xs">SEO Title</Label>
+              <Input
+                id="page-seo-title"
+                value={editForm.seoTitle}
+                onChange={(e) => setEditForm({ ...editForm, seoTitle: e.target.value })}
+                placeholder="SEO title"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="page-seo-description" className="text-xs">SEO Description</Label>
+              <Textarea
+                id="page-seo-description"
+                value={editForm.seoDescription}
+                onChange={(e) => setEditForm({ ...editForm, seoDescription: e.target.value })}
+                placeholder="SEO description"
+                className="text-xs min-h-[50px]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveEditing} className="flex-1">
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={cancelEditing} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
           Add Page
         </Button>
       </div>
@@ -176,7 +368,6 @@ import { generateId } from '@/lib/utils'
                           onClick={(e) => {
                             e.stopPropagation()
                           }}
-      setIsDirty(false)
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
@@ -185,218 +376,8 @@ import { generateId } from '@/lib/utils'
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation()
                           onEditPage(page.id)
-  const handleSiteUpdate = (updates: Partial<Site>) => {
-    if (!site) return
-    setSite({ ...site, ...updates })
-    setIsDirty(true)
-  }
-
-  const handlePageUpdate = (pageId: string, updates: Partial<Page>) => {
-    if (!site) return
-    
-    const updatedPages = site.pages.map(p => 
-      p.id === pageId 
-        ? { ...p, ...updates, updatedAt: new Date().toISOString() }
-        : p
-    )
-    
-    setSite({ ...site, pages: updatedPages })
-    setIsDirty(true)
-    
-    // Update current page if it's the one being edited
-    if (currentPage?.id === pageId) {
-      setCurrentPage({ ...currentPage, ...updates, updatedAt: new Date().toISOString() })
-    }
-  }
-
-  const handleBlockUpdate = (blockId: string, updates: Partial<Block>) => {
-    if (!site || !currentPage) return
-    
-    const updatedBlocks = currentPage.blocks.map(b => 
-      b.id === blockId ? { ...b, ...updates } : b
-    )
-    
-    const updatedPage = { ...currentPage, blocks: updatedBlocks }
-    setCurrentPage(updatedPage)
-    
-    const updatedPages = site.pages.map(p => 
-      p.id === currentPage.id ? updatedPage : p
-    )
-    
-    setSite({ ...site, pages: updatedPages })
-    setIsDirty(true)
-  }
-
-  const handleCreatePage = () => {
-    if (!site) return
-    
-    const newPage: Page = {
-      id: generateId(),
-      title: 'New Page',
-      path: `/page-${site.pages.length + 1}`,
-      blocks: [],
-      seo: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    const updatedPages = [...site.pages, newPage]
-    setSite({ ...site, pages: updatedPages })
-    setCurrentPage(newPage)
-                {isDirty && <span className="ml-2 text-amber-600">• Unsaved changes</span>}
-    setIsDirty(true)
-    setActiveTab('editor')
-  }
-
-  const handleDeletePage = (pageId: string) => {
-    if (!site) return
-    
-    const updatedPages = site.pages.filter(p => p.id !== pageId)
-    setSite({ ...site, pages: updatedPages })
-    
-    // If we deleted the current page, select the first remaining page
-    if (currentPage?.id === pageId) {
-      setCurrentPage(updatedPages[0] || null)
-      setSelectedBlockId(null)
-    }
-    
-    setIsDirty(true)
-  }
-
-  const handleAddBlock = (type: string) => {
-    if (!currentPage) return
-    
-    const newBlock: Block = {
-      id: generateId(),
-      type,
-      order: currentPage.blocks.length,
-      props: getDefaultBlockProps(type)
-    }
-    
-    const updatedBlocks = [...currentPage.blocks, newBlock]
-    handlePageUpdate(currentPage.id, { blocks: updatedBlocks })
-    setSelectedBlockId(newBlock.id)
-  }
-
-  const getDefaultBlockProps = (type: string) => {
-    switch (type) {
-      case 'hero':
-        return {
-            <TabsList className="grid w-full grid-cols-4 m-4">
-          subtitle: 'Hero subtitle text',
-          ctaText: 'Get Started',
-          ctaLink: '#'
-              <TabsTrigger value="media" className="text-xs">Media</TabsTrigger>
-        }
-      case 'heading':
-        return {
-          text: 'Heading Text',
-                <div className="space-y-4">
-                  {/* Block List */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm">Blocks</CardTitle>
-                        <Button variant="outline" size="sm" onClick={() => handleAddBlock('paragraph')}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {currentPage ? (
-                        <div className="space-y-2">
-                          {currentPage.blocks.length === 0 ? (
-                            <div className="text-xs text-muted-foreground text-center py-4">
-                              No blocks yet. Add some content!
-                            </div>
-                          ) : (
-                            currentPage.blocks
-                              .sort((a, b) => (a.order || 0) - (b.order || 0))
-                              .map((block) => (
-                                <div
-                                  key={block.id}
-                                  className={`p-2 border rounded cursor-pointer transition-colors text-xs ${
-                                    selectedBlockId === block.id
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  onClick={() => setSelectedBlockId(block.id)}
-                                >
-                                  <div className="font-medium capitalize">{block.type}</div>
-                                  <div className="text-muted-foreground truncate">
-                                    {(() => {
-                                      const bagKey = 'props' in block ? 'props' : ('data' in block ? 'data' : null)
-                                      const bag = bagKey ? (block as any)[bagKey] : {}
-                                      return bag.title || bag.text || bag.label || 'Block content'
-                                    })()}
-                                  </div>
-                                </div>
-                              ))
-                          )}
-                          
-                          {/* Quick Add Buttons */}
-                          <div className="pt-2 border-t">
-                            <div className="text-xs text-muted-foreground mb-2">Quick Add:</div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <Button variant="outline" size="sm" onClick={() => handleAddBlock('heading')} className="text-xs">
-                                Heading
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleAddBlock('paragraph')} className="text-xs">
-                                Text
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleAddBlock('image')} className="text-xs">
-                                Image
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleAddBlock('button')} className="text-xs">
-                                Button
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">Select a page to edit</div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Block Inspector */}
-                  {selectedBlock && (
-                    <BlockInspector
-                      block={selectedBlock}
-                      onChange={(updates) => handleBlockUpdate(selectedBlockId!, updates)}
-                      onPickImage={(url) => {
-                        const bagKey = 'props' in selectedBlock ? 'props' : ('data' in selectedBlock ? 'data' : null)
-                        if (bagKey) {
-                          const bag = (selectedBlock as any)[bagKey] || {}
-                          const field = 'imageUrl' in bag ? 'imageUrl' : 'src' in bag ? 'src' : 'backgroundImage'
-                          handleBlockUpdate(selectedBlockId!, { [bagKey]: { ...bag, [field]: url } })
-                        }
-                      }}
-                    />
-                  )}
-                </div>
-        return {
-          src: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800',
-          alt: 'Image',
-          alignment: 'center'
-        }
-      case 'cta':
-        return {
-                  onCreatePage={handleCreatePage}
-                  onEditPage={(pageId) => {
-                    onSelectPageId(pageId)
-                    setActiveTab('editor')
-                  }}
-                  onDeletePage={handleDeletePage}
-          buttonLink: '#'
-                  onPageUpdate={handlePageUpdate}
-        }
-      default:
-        return {}
-    }
-  }
                         }}>
-                  onThemeUpdate={(t) => handleSiteUpdate({ theme: t })}
+                          <Edit className="h-4 w-4 mr-2" />
                           Edit Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {
@@ -412,7 +393,6 @@ import { generateId } from '@/lib/utils'
                               e.stopPropagation()
                               onDeletePage(page.id)
                             }}
-      seo: p.seo || {}
                             className="text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -422,22 +402,14 @@ import { generateId } from '@/lib/utils'
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                page={currentPage} // backward compatibility
                 </div>
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                onBlockUpdate={handleBlockUpdate}
-    setSelectedBlockId(null) // Clear block selection when switching pages
               </CardContent>
             </Card>
           ))
-  const selectedBlock = selectedBlockId && currentPage 
-    ? currentPage.blocks.find(b => b.id === selectedBlockId) 
-    : null
         )}
       </div>
 
-              onSiteUpdate={handleSiteUpdate}
+      {/* Quick Stats */}
       {pages.length > 0 && (
         <div className="text-xs text-muted-foreground pt-2 border-t">
           {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.isPublished).length} published
