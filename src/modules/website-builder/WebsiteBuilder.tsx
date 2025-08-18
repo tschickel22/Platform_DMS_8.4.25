@@ -262,3 +262,5 @@ export default function WebsiteBuilder() {
     </div>
   )
 }
+
+export { WebsiteBuilder }
