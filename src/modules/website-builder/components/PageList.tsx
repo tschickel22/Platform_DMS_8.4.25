@@ -1,263 +1,197 @@
 import React, { useState } from 'react'
-import { Page } from '../types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff } from 'lucide-react'
-import { usePages } from '../hooks/useSite'
+import { 
+  Plus, 
+  Search, 
+  FileText, 
+  Home, 
+  Settings, 
+  Eye, 
+  Edit, 
+  Trash2,
+  MoreVertical
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+interface Page {
+  id: string
+  name: string
+  slug: string
+  isHomePage: boolean
+  isPublished: boolean
+  lastModified: string
+  template?: string
+}
 
 interface PageListProps {
-  siteId: string
-  onPageSelect: (page: Page) => void
-  selectedPageId?: string
+  pages: Page[]
+  currentPageId?: string
+  onSelectPage: (pageId: string) => void
+  onCreatePage: () => void
+  onEditPage: (pageId: string) => void
+  onDeletePage: (pageId: string) => void
+  onDuplicatePage: (pageId: string) => void
 }
 
-interface PageFormData {
-  title: string
-  path: string
-  isVisible: boolean
-}
+export default function PageList({
+  pages,
+  currentPageId,
+  onSelectPage,
+  onCreatePage,
+  onEditPage,
+  onDeletePage,
+  onDuplicatePage
+}: PageListProps) {
+  const [searchTerm, setSearchTerm] = useState('')
 
-export function PageList({ siteId, onPageSelect, selectedPageId }: PageListProps) {
-  const { pages, loading, createPage, updatePage, deletePage, reorderPages } = usePages(siteId)
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingPage, setEditingPage] = useState<Page | null>(null)
-  const [formData, setFormData] = useState<PageFormData>({
-    title: '',
-    path: '',
-    isVisible: true
-  })
+  const filteredPages = pages.filter(page =>
+    page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    page.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
-  const handleCreatePage = async () => {
-    if (!formData.title.trim()) return
-
-    const newPage = await createPage({
-      title: formData.title,
-      path: formData.path || `/${formData.title.toLowerCase().replace(/\s+/g, '-')}`,
-      blocks: [],
-      isVisible: formData.isVisible,
-      order: pages.length
-    })
-
-    if (newPage) {
-      setShowCreateDialog(false)
-      setFormData({ title: '', path: '', isVisible: true })
-      onPageSelect(newPage)
-    }
-  }
-
-  const handleUpdatePage = async () => {
-    if (!editingPage || !formData.title.trim()) return
-
-    const updatedPage = await updatePage(editingPage.id, {
-      title: formData.title,
-      path: formData.path,
-      isVisible: formData.isVisible
-    })
-
-    if (updatedPage) {
-      setEditingPage(null)
-      setFormData({ title: '', path: '', isVisible: true })
-    }
-  }
-
-  const handleDeletePage = async (page: Page) => {
-    if (confirm(`Are you sure you want to delete "${page.title}"?`)) {
-      await deletePage(page.id)
-    }
-  }
-
-  const openEditDialog = (page: Page) => {
-    setEditingPage(page)
-    setFormData({
-      title: page.title,
-      path: page.path,
-      isVisible: page.isVisible
-    })
-  }
-
-  const handleDragEnd = async (result: any) => {
-    if (!result.destination) return
-
-    const items = Array.from(pages)
-    const [reorderedItem] = items.splice(result.source.index, 1)
-    items.splice(result.destination.index, 0, reorderedItem)
-
-    const pageIds = items.map(page => page.id)
-    await reorderPages(pageIds)
-  }
-
-  if (loading && pages.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-muted rounded-md" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
+  const getPageIcon = (page: Page) => {
+    if (page.isHomePage) return <Home className="h-4 w-4" />
+    return <FileText className="h-4 w-4" />
   }
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Pages</h3>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Page
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Page</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Page Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="About Us"
-                />
-              </div>
-              <div>
-                <Label htmlFor="path">Page Path</Label>
-                <Input
-                  id="path"
-                  value={formData.path}
-                  onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
-                  placeholder="/about"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="visible"
-                  checked={formData.isVisible}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isVisible: checked }))}
-                />
-                <Label htmlFor="visible">Visible in navigation</Label>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreatePage}>
-                  Create Page
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button size="sm" onClick={onCreatePage}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Page
+        </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search pages..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Pages List */}
       <div className="space-y-2">
-        {pages.map((page) => (
-          <Card 
-            key={page.id} 
-            className={`cursor-pointer transition-colors ${
-              selectedPageId === page.id ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
-            }`}
-            onClick={() => onPageSelect(page)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-medium">{page.title}</h4>
-                      {page.isVisible ? (
-                        <Eye className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{page.path}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">
-                    {page.blocks.length} blocks
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openEditDialog(page)
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeletePage(page)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+        {filteredPages.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {searchTerm ? 'No pages match your search' : 'No pages yet'}
+              </p>
+              {!searchTerm && (
+                <Button size="sm" variant="outline" onClick={onCreatePage} className="mt-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Page
+                </Button>
+              )}
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          filteredPages.map((page) => (
+            <Card 
+              key={page.id} 
+              className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                currentPageId === page.id ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => onSelectPage(page.id)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="text-muted-foreground">
+                      {getPageIcon(page)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{page.name}</h4>
+                        {page.isHomePage && (
+                          <Badge variant="secondary" className="text-xs">
+                            Home
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        /{page.slug}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Modified {new Date(page.lastModified).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge variant={page.isPublished ? 'default' : 'secondary'} className="text-xs">
+                      {page.isPublished ? 'Published' : 'Draft'}
+                    </Badge>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          onEditPage(page.id)
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          onDuplicatePage(page.id)
+                        }}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        {!page.isHomePage && (
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDeletePage(page.id)
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      {/* Edit Page Dialog */}
-      <Dialog open={!!editingPage} onOpenChange={(open) => !open && setEditingPage(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Page</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Page Title</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-path">Page Path</Label>
-              <Input
-                id="edit-path"
-                value={formData.path}
-                onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-visible"
-                checked={formData.isVisible}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isVisible: checked }))}
-              />
-              <Label htmlFor="edit-visible">Visible in navigation</Label>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setEditingPage(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdatePage}>
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Quick Stats */}
+      {pages.length > 0 && (
+        <div className="text-xs text-muted-foreground pt-2 border-t">
+          {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.isPublished).length} published
+        </div>
+      )}
     </div>
   )
 }
