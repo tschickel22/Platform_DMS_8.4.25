@@ -57,6 +57,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  // This answers the preview's postMessage request with the live site object.
+  useEffect(() => {
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type !== 'wb2:site-preview:request') return
+      if (!site) return
+      if (data.slug && data.slug !== site.slug) return
+
+      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
+      try {
+        (evt.source as WindowProxy | null)?.postMessage(payload, '*')
+      } catch {
+        // fallback broadcast
+        window.postMessage(payload, '*')
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [site])
+
   // PostMessage bridge to respond to preview requests
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
@@ -204,39 +225,24 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const handleBackToBuilder = () => {
     const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
-    navigate(basePath)
-  }
-
-  const handleAddComponent = (blockData: any, meta?: any) => {
-    if (!site || !currentPage) return
-
-    try {
-      const newBlock = {
-        id: `block-${Date.now()}`,
-        type: blockData?.type,
-        order: currentPage.blocks?.length || 0,
-        content: blockData?.content ?? blockData?.defaultContent ?? {}
+      // Snapshot to storage under SLUG, not id
+      const previewData = {
+        ...site,
+        pages: site.pages || [],
+        lastPreviewUpdate: new Date().toISOString(),
       }
+      const key = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(key, JSON.stringify(previewData))
+      sessionStorage.setItem(key, JSON.stringify(previewData)) // same-origin fallback
 
-      const updatedPage: Page = {
-        ...currentPage,
-        blocks: [...(currentPage.blocks || []), newBlock]
-      }
+      // Also pass data via URL so cross-origin preview can render even without storage
+      const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
+      const previewUrl = `/s/${site.slug}/?data=${encoded}`
 
-      const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
-      const updatedSite = { ...site, pages: updatedPages }
+      // IMPORTANT: keep window.opener so postMessage can work
+      window.open(previewUrl, '_blank')
 
-      setSite(updatedSite)
-      setCurrentPage(updatedPage)
-
-      // Keep preview storage hot as you edit
-      writePreview(updatedSite)
-
-      toast({
-        title: 'Component Added',
-        description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
-      })
-      console.log('Preview URL:', `/s/${site.slug}/`)
+      toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
     } catch (error) {
       console.error('Error adding component:', error)
       toast({

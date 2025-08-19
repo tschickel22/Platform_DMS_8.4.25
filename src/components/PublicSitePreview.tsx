@@ -160,50 +160,6 @@ function SiteRenderer({ site }: { site: Site }) {
   )
 }
 
-function tryGet(storage: Storage, key: string) {
-  try {
-    const v = storage.getItem(key)
-    return v ? JSON.parse(v) : null
-  } catch {
-    return null
-  }
-}
-
-function findSiteData(slug: string): Site | null {
-  // 1) URL ?data=<base64 json>
-  try {
-    const params = new URLSearchParams(window.location.search)
-    const encoded = params.get('data')
-    if (encoded) {
-      const json = decodeURIComponent(atob(encoded))
-      const data = JSON.parse(json)
-      if (data?.slug === slug || data?.site?.slug === slug) {
-        return (data.site ?? data) as Site
-      }
-    }
-  } catch {/* ignore */}
-
-  // 2) Local/session storage – multiple possible keys
-  const keys = [
-    `wb2:preview-site:${slug}`,
-    `wb:preview-site:${slug}`,      // legacy
-    `wb2:preview:${slug}`,         // variant
-    `wb2:published-site:${slug}`   // single published
-  ]
-
-  for (const k of keys) {
-    const v = tryGet(localStorage, k) ?? tryGet(sessionStorage, k)
-    if (v) return v as Site
-  }
-
-  // 3) Map form: wb2:published-sites -> { [slug]: Site }
-  const map = (tryGet(localStorage, 'wb2:published-sites') ??
-               tryGet(sessionStorage, 'wb2:published-sites')) as Record<string, Site> | null
-  if (map && map[slug]) return map[slug]
-
-  return null
-}
-
 export default function PublicSitePreview() {
   const { siteSlug } = useParams()
   const [site, setSite] = useState<Site | null>(null)
@@ -217,9 +173,10 @@ export default function PublicSitePreview() {
       return
     }
 
-    // Try to load site data in order of preference
     const loadSiteData = async () => {
       try {
+        console.log('🔍 Loading site data for slug:', siteSlug)
+
         // 1. Try ?data= query param (base64 → decodeURIComponent → JSON.parse)
         const params = new URLSearchParams(window.location.search)
         const encoded = params.get('data')
@@ -326,7 +283,7 @@ export default function PublicSitePreview() {
     }
 
     loadSiteData()
-  }, [siteSlug])
+  }, [siteSlug, site])
 
   if (loading) {
     return (
