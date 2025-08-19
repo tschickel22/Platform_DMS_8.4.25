@@ -1,14 +1,11 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Edit, Trash2, Plus, GripVertical } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Edit, Trash2, Plus, Image, Type, MousePointer, Layout } from 'lucide-react'
 import { Site, Page, Block } from '../types'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
-import RichTextEditor from './RichTextEditor'
+import BlockEditorModal from './BlockEditorModal'
 
 interface EditorCanvasProps {
   site: Site
@@ -93,6 +90,10 @@ function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalPr
           </div>
         )
 
+      case 'text':
+        return (
+          <div className="space-y-4">
+            <div>
               <Label htmlFor="content">Content</Label>
               <RichTextEditor
                 content={editingContent.html || editingContent.text || ''}
@@ -312,7 +313,22 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
 export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpdate }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
   const { toast } = useToast()
+
+  if (!currentPage) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Layout className="h-16 w-16 mx-auto text-muted-foreground" />
+          <div>
+            <h3 className="text-lg font-medium">No page selected</h3>
+            <p className="text-muted-foreground">Select a page from the sidebar to start editing</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Safely get blocks from current page
   const blocks = currentPage?.blocks || []
@@ -321,31 +337,37 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
     setEditingBlock(block)
   }
 
-  const handleSaveBlock = async (blockData: Partial<Block>) => {
-    if (!editingBlock || !currentPage || !site) return
-
+  const handleSaveBlock = async (newContent: any) => {
+    if (!editingBlock) return
+    
     try {
-      const updatedBlock = { ...editingBlock, ...blockData }
-      const updatedBlocks = blocks.map(b => b.id === editingBlock.id ? updatedBlock : b)
-      const updatedPage = { ...currentPage, blocks: updatedBlocks }
-      const updatedPages = site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
-      const updatedSite = { ...site, pages: updatedPages }
-
-      await websiteService.updateSite(site.id, updatedSite)
+      await websiteService.updateBlock(
+        site.id,
+        currentPage.id,
+        editingBlock.id,
+        { content: newContent }
+      )
       
+      // Update local state
       if (onSiteUpdate) {
+        const updatedBlocks = blocks.map(b => 
+          b.id === editingBlock.id ? { ...b, content: newContent } : b
+        )
+        const updatedPage = { ...currentPage, blocks: updatedBlocks }
+        const updatedPages = site.pages.map(p => 
+          p.id === currentPage.id ? updatedPage : p
+        )
+        const updatedSite = { ...site, pages: updatedPages }
         onSiteUpdate(updatedSite)
       }
-
-      toast({
-        title: 'Block Updated',
-        description: 'Your changes have been saved successfully.'
-      })
+      
+      toast({ title: 'Block updated successfully' })
+      setEditingBlock(null)
     } catch (error) {
-      console.error('Error saving block:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save changes. Please try again.',
+      console.error('Failed to update block:', error)
+      toast({ 
+        title: 'Failed to update block',
+        description: 'Please try again',
         variant: 'destructive'
       })
     }
@@ -637,10 +659,12 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
       <div 
         key={block.id}
         className="relative group border-2 border-transparent hover:border-blue-300 transition-colors"
+        onMouseEnter={() => setHoveredBlockId(block.id)}
+        onMouseLeave={() => setHoveredBlockId(null)}
       >
         {/* Edit Overlay */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <div className="flex gap-2">
+        {hoveredBlockId === block.id && (
+          <div className="absolute top-2 right-2 z-10 flex gap-2">
             <Button
               size="sm"
               variant="secondary"
@@ -658,21 +682,10 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        )}
 
         {/* Block Content */}
         {blockContent}
-      </div>
-    )
-  }
-
-  if (!currentPage) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <h3 className="text-lg font-medium mb-2">No Page Selected</h3>
-          <p>Select a page from the Pages tab to start editing</p>
-        </div>
       </div>
     )
   }
@@ -681,46 +694,16 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
   const sortedBlocks = [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full flex flex-col">
       {/* Page Header */}
-      <div className="bg-white border-b p-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">{currentPage.title}</h2>
-          <p className="text-sm text-muted-foreground">{currentPage.path}</p>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => setShowAddBlockMenu(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Block
-        </Button>
-      </div>
-
-      {/* Page Content */}
-      <div className="bg-white">
-        {sortedBlocks.length === 0 ? (
-          <div className="h-96 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Empty Page</h3>
-              <p className="mb-4">This page doesn't have any content blocks yet.</p>
-              <Button onClick={() => setShowAddBlockMenu(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Block
-              </Button>
-            </div>
+      <div className="flex-shrink-0 bg-white border-b p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">{currentPage.title}</h2>
+            <p className="text-sm text-muted-foreground">{currentPage.path}</p>
           </div>
-        ) : (
-          sortedBlocks.map(renderBlock)
-        )}
-      </div>
-
-      {/* Add Block Button at Bottom */}
-      {sortedBlocks.length > 0 && (
-        <div className="p-8 text-center border-t bg-gray-50">
           <Button
-            variant="outline"
+            size="sm"
             onClick={() => setShowAddBlockMenu(true)}
             className="flex items-center gap-2"
           >
@@ -728,20 +711,51 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
             Add Block
           </Button>
         </div>
-      )}
+      </div>
 
-      {/* Modals */}
+      {/* Canvas Content */}
+      <div className="flex-1 overflow-y-auto bg-gray-50">
+        {sortedBlocks.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-gray-200 rounded-lg flex items-center justify-center">
+                <Plus className="h-8 w-8 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium">No blocks yet</h3>
+                <p className="text-muted-foreground mb-4">Start building your page by adding content blocks</p>
+                <Button onClick={() => setShowAddBlockMenu(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Block
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white">
+            {sortedBlocks.map(renderBlock)}
+            
+            {/* Add Block Button at Bottom */}
+            <div className="p-8 text-center border-t bg-gray-50">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddBlockMenu(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Block
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Universal Block Editor Modal */}
       <BlockEditorModal
         block={editingBlock}
         isOpen={!!editingBlock}
         onClose={() => setEditingBlock(null)}
         onSave={handleSaveBlock}
-      />
-
-      <AddBlockMenu
-        isOpen={showAddBlockMenu}
-        onClose={() => setShowAddBlockMenu(false)}
-        onAddBlock={handleAddBlock}
       />
     </div>
   )
