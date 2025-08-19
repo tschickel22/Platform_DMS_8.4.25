@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react'
-import { Site, Page, Block } from '../types'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Edit, Image, Type, Layout, Plus, Trash2 } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Edit, Trash2, Plus, GripVertical } from 'lucide-react'
+import { Site, Page, Block } from '../types'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
 
@@ -14,141 +15,469 @@ interface EditorCanvasProps {
   currentPage: Page | null
   previewMode: 'desktop' | 'tablet' | 'mobile'
   onSiteUpdate?: (site: Site) => void
-  onPageUpdate?: (page: Page) => void
 }
 
-interface EditingBlock {
-  blockId: string
-  type: 'text' | 'image' | 'hero' | 'cta'
-  content: any
+interface BlockEditorModalProps {
+  block: Block | null
+  isOpen: boolean
+  onClose: () => void
+  onSave: (blockData: Partial<Block>) => void
 }
 
-export default function EditorCanvas({ 
-  site, 
-  currentPage, 
-  previewMode,
-  onSiteUpdate,
-  onPageUpdate 
-}: EditorCanvasProps) {
-  const [editingBlock, setEditingBlock] = useState<EditingBlock | null>(null)
-  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalProps) {
+  const [formData, setFormData] = useState<any>({})
+
+  React.useEffect(() => {
+    if (block) {
+      setFormData(block.content || {})
+    }
+  }, [block])
+
+  const handleSave = () => {
+    onSave({ content: formData })
+    onClose()
+  }
+
+  if (!block) return null
+
+  const renderEditor = () => {
+    switch (block.type) {
+      case 'hero':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter hero title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="subtitle">Subtitle</Label>
+              <Input
+                id="subtitle"
+                value={formData.subtitle || ''}
+                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                placeholder="Enter hero subtitle"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ctaText">Button Text</Label>
+              <Input
+                id="ctaText"
+                value={formData.ctaText || ''}
+                onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
+                placeholder="Enter button text"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ctaLink">Button Link</Label>
+              <Input
+                id="ctaLink"
+                value={formData.ctaLink || ''}
+                onChange={(e) => setFormData({ ...formData, ctaLink: e.target.value })}
+                placeholder="Enter button link"
+              />
+            </div>
+            <div>
+              <Label htmlFor="backgroundImage">Background Image URL</Label>
+              <Input
+                id="backgroundImage"
+                value={formData.backgroundImage || ''}
+                onChange={(e) => setFormData({ ...formData, backgroundImage: e.target.value })}
+                placeholder="Enter image URL"
+              />
+            </div>
+          </div>
+        )
+
+      case 'text':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="html">Content (HTML)</Label>
+              <Textarea
+                id="html"
+                value={formData.html || formData.text || ''}
+                onChange={(e) => setFormData({ ...formData, html: e.target.value })}
+                placeholder="Enter your content"
+                rows={8}
+              />
+            </div>
+            <div>
+              <Label htmlFor="alignment">Text Alignment</Label>
+              <Select
+                value={formData.alignment || 'left'}
+                onValueChange={(value) => setFormData({ ...formData, alignment: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )
+
+      case 'image':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="src">Image URL</Label>
+              <Input
+                id="src"
+                value={formData.src || ''}
+                onChange={(e) => setFormData({ ...formData, src: e.target.value })}
+                placeholder="Enter image URL"
+              />
+            </div>
+            <div>
+              <Label htmlFor="alt">Alt Text</Label>
+              <Input
+                id="alt"
+                value={formData.alt || ''}
+                onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
+                placeholder="Enter alt text for accessibility"
+              />
+            </div>
+            <div>
+              <Label htmlFor="caption">Caption</Label>
+              <Input
+                id="caption"
+                value={formData.caption || ''}
+                onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
+                placeholder="Enter image caption"
+              />
+            </div>
+            <div>
+              <Label htmlFor="alignment">Alignment</Label>
+              <Select
+                value={formData.alignment || 'center'}
+                onValueChange={(value) => setFormData({ ...formData, alignment: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )
+
+      case 'cta':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter CTA title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter CTA description"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="buttonText">Button Text</Label>
+              <Input
+                id="buttonText"
+                value={formData.buttonText || ''}
+                onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })}
+                placeholder="Enter button text"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buttonLink">Button Link</Label>
+              <Input
+                id="buttonLink"
+                value={formData.buttonLink || ''}
+                onChange={(e) => setFormData({ ...formData, buttonLink: e.target.value })}
+                placeholder="Enter button link"
+              />
+            </div>
+          </div>
+        )
+
+      default:
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="content">Content</Label>
+              <Textarea
+                id="content"
+                value={JSON.stringify(formData, null, 2)}
+                onChange={(e) => {
+                  try {
+                    setFormData(JSON.parse(e.target.value))
+                  } catch {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                rows={10}
+              />
+            </div>
+          </div>
+        )
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit {block.type} Block</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
+          {renderEditor()}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface AddBlockMenuProps {
+  isOpen: boolean
+  onClose: () => void
+  onAddBlock: (blockType: string) => void
+}
+
+function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
+  const blockTypes = [
+    { type: 'hero', name: 'Hero Section', description: 'Large banner with title and call-to-action' },
+    { type: 'text', name: 'Text Block', description: 'Rich text content' },
+    { type: 'image', name: 'Image', description: 'Single image with caption' },
+    { type: 'gallery', name: 'Image Gallery', description: 'Multiple images in a grid' },
+    { type: 'cta', name: 'Call to Action', description: 'Highlighted section with button' },
+    { type: 'contact', name: 'Contact Form', description: 'Contact information and form' },
+    { type: 'inventory', name: 'Inventory Showcase', description: 'Display featured inventory items' },
+    { type: 'landHome', name: 'Land & Home Packages', description: 'Showcase land and home packages' }
+  ]
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add New Block</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 max-h-96 overflow-y-auto">
+          {blockTypes.map((blockType) => (
+            <button
+              key={blockType.type}
+              onClick={() => {
+                onAddBlock(blockType.type)
+                onClose()
+              }}
+              className="flex items-start gap-3 p-4 text-left border rounded-lg hover:bg-accent transition-colors"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Plus className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium">{blockType.name}</h3>
+                <p className="text-sm text-muted-foreground">{blockType.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpdate }: EditorCanvasProps) {
+  const [editingBlock, setEditingBlock] = useState<Block | null>(null)
+  const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
   const { toast } = useToast()
 
-  const handleBlockEdit = useCallback((block: Block) => {
-    setEditingBlock({
-      blockId: block.id,
-      type: block.type as any,
-      content: { ...block.content }
-    })
-  }, [])
+  // Safely get blocks from current page
+  const blocks = currentPage?.blocks || []
 
-  const handleBlockSave = useCallback(async (updatedContent: any) => {
-    if (!editingBlock || !currentPage) return
+  const handleEditBlock = (block: Block) => {
+    setEditingBlock(block)
+  }
+
+  const handleSaveBlock = async (blockData: Partial<Block>) => {
+    if (!editingBlock || !currentPage || !site) return
 
     try {
-      const updatedBlocks = currentPage.blocks.map(block =>
-        block.id === editingBlock.blockId
-          ? { ...block, content: updatedContent }
-          : block
-      )
-
+      const updatedBlock = { ...editingBlock, ...blockData }
+      const updatedBlocks = blocks.map(b => b.id === editingBlock.id ? updatedBlock : b)
       const updatedPage = { ...currentPage, blocks: updatedBlocks }
-      
-      // Update via service
-      await websiteService.updatePage(site.id, currentPage.id, { blocks: updatedBlocks })
-      
-      // Update local state
-      if (onPageUpdate) {
-        onPageUpdate(updatedPage)
-      }
+      const updatedPages = site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
+      const updatedSite = { ...site, pages: updatedPages }
+
+      await websiteService.updateSite(site.id, updatedSite)
       
       if (onSiteUpdate) {
-        const updatedSite = {
-          ...site,
-          pages: site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
-        }
         onSiteUpdate(updatedSite)
       }
 
-      setEditingBlock(null)
-      toast({ title: 'Block updated', description: 'Your changes have been saved.' })
+      toast({
+        title: 'Block Updated',
+        description: 'Your changes have been saved successfully.'
+      })
     } catch (error) {
-      console.error('Failed to save block:', error)
-      toast({ 
-        title: 'Save failed', 
+      console.error('Error saving block:', error)
+      toast({
+        title: 'Error',
         description: 'Failed to save changes. Please try again.',
         variant: 'destructive'
       })
     }
-  }, [editingBlock, currentPage, site, onPageUpdate, onSiteUpdate, toast])
+  }
 
-  const handleAddBlock = useCallback(async (type: string, afterBlockId?: string) => {
-    if (!currentPage) return
+  const handleDeleteBlock = async (blockId: string) => {
+    if (!currentPage || !site) return
 
     try {
-      const newBlock: Omit<Block, 'id'> = {
-        type,
-        content: getDefaultBlockContent(type),
-        order: currentPage.blocks.length
-      }
+      const updatedBlocks = blocks.filter(b => b.id !== blockId)
+      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      const updatedPages = site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
+      const updatedSite = { ...site, pages: updatedPages }
 
-      const createdBlock = await websiteService.createBlock(site.id, currentPage.id, newBlock)
+      await websiteService.updateSite(site.id, updatedSite)
       
-      const updatedPage = {
-        ...currentPage,
-        blocks: [...currentPage.blocks, createdBlock]
+      if (onSiteUpdate) {
+        onSiteUpdate(updatedSite)
       }
 
-      if (onPageUpdate) {
-        onPageUpdate(updatedPage)
-      }
-
-      toast({ title: 'Block added', description: `New ${type} block added to page.` })
-    } catch (error) {
-      console.error('Failed to add block:', error)
-      toast({ 
-        title: 'Add failed', 
-        description: 'Failed to add block. Please try again.',
-        variant: 'destructive'
+      toast({
+        title: 'Block Deleted',
+        description: 'The block has been removed from the page.'
       })
-    }
-  }, [currentPage, site.id, onPageUpdate, toast])
-
-  const handleDeleteBlock = useCallback(async (blockId: string) => {
-    if (!currentPage) return
-
-    try {
-      await websiteService.deleteBlock(site.id, currentPage.id, blockId)
-      
-      const updatedPage = {
-        ...currentPage,
-        blocks: currentPage.blocks.filter(b => b.id !== blockId)
-      }
-
-      if (onPageUpdate) {
-        onPageUpdate(updatedPage)
-      }
-
-      toast({ title: 'Block deleted', description: 'Block has been removed from the page.' })
     } catch (error) {
-      console.error('Failed to delete block:', error)
-      toast({ 
-        title: 'Delete failed', 
+      console.error('Error deleting block:', error)
+      toast({
+        title: 'Error',
         description: 'Failed to delete block. Please try again.',
         variant: 'destructive'
       })
     }
-  }, [currentPage, site.id, onPageUpdate, toast])
+  }
+
+  const handleAddBlock = async (blockType: string) => {
+    if (!currentPage || !site) return
+
+    try {
+      const newBlock: Block = {
+        id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: blockType,
+        order: blocks.length,
+        content: getDefaultBlockContent(blockType)
+      }
+
+      const updatedBlocks = [...blocks, newBlock]
+      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      const updatedPages = site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
+      const updatedSite = { ...site, pages: updatedPages }
+
+      await websiteService.updateSite(site.id, updatedSite)
+      
+      if (onSiteUpdate) {
+        onSiteUpdate(updatedSite)
+      }
+
+      toast({
+        title: 'Block Added',
+        description: `New ${blockType} block has been added to the page.`
+      })
+    } catch (error) {
+      console.error('Error adding block:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to add block. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const getDefaultBlockContent = (blockType: string) => {
+    switch (blockType) {
+      case 'hero':
+        return {
+          title: 'Welcome to Our Dealership',
+          subtitle: 'Find your perfect RV or manufactured home',
+          ctaText: 'Browse Inventory',
+          ctaLink: '/inventory',
+          backgroundImage: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1200'
+        }
+      case 'text':
+        return {
+          html: '<h2>About Us</h2><p>We are a leading dealership specializing in RVs and manufactured homes.</p>',
+          alignment: 'left'
+        }
+      case 'image':
+        return {
+          src: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=800',
+          alt: 'Placeholder image',
+          caption: '',
+          alignment: 'center'
+        }
+      case 'cta':
+        return {
+          title: 'Ready to Get Started?',
+          description: 'Contact us today to learn more about our inventory and services.',
+          buttonText: 'Contact Us',
+          buttonLink: '/contact'
+        }
+      case 'contact':
+        return {
+          title: 'Contact Us',
+          description: 'Get in touch with our team',
+          phone: '(555) 123-4567',
+          email: 'info@dealership.com',
+          address: '123 Main St, City, State 12345'
+        }
+      case 'inventory':
+        return {
+          title: 'Featured Inventory',
+          items: []
+        }
+      case 'landHome':
+        return {
+          title: 'Land & Home Packages',
+          packages: []
+        }
+      default:
+        return {}
+    }
+  }
 
   const renderBlock = (block: Block) => {
-    const isHovered = hoveredBlockId === block.id
     const primaryColor = site.theme?.primaryColor || '#3b82f6'
 
     const blockContent = (() => {
       switch (block.type) {
         case 'hero':
           return (
-            <section className="relative bg-gray-900 text-white min-h-[400px] flex items-center justify-center">
+            <section className="relative bg-gray-900 text-white min-h-[400px] flex items-center">
               {block.content.backgroundImage && (
                 <div 
                   className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -157,10 +486,12 @@ export default function EditorCanvas({
                   <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                 </div>
               )}
-              <div className="relative text-center px-6">
-                <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                  {block.content.title || 'Hero Title'}
-                </h1>
+              <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+                {block.content.title && (
+                  <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                    {block.content.title}
+                  </h1>
+                )}
                 {block.content.subtitle && (
                   <p className="text-xl md:text-2xl mb-8 text-gray-200">
                     {block.content.subtitle}
@@ -168,7 +499,7 @@ export default function EditorCanvas({
                 )}
                 {block.content.ctaText && (
                   <button 
-                    className="px-8 py-3 text-lg font-semibold rounded-lg"
+                    className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
                     style={{ backgroundColor: primaryColor, color: 'white' }}
                   >
                     {block.content.ctaText}
@@ -181,12 +512,10 @@ export default function EditorCanvas({
         case 'text':
           return (
             <section className="py-16">
-              <div className="max-w-4xl mx-auto px-6">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div 
-                  className="prose prose-lg max-w-none"
-                  dangerouslySetInnerHTML={{ 
-                    __html: block.content.html || block.content.text || '<p>Add your text content here...</p>' 
-                  }}
+                  className={`prose prose-lg max-w-none text-${block.content.alignment || 'left'}`}
+                  dangerouslySetInnerHTML={{ __html: block.content.html || block.content.text || '' }}
                 />
               </div>
             </section>
@@ -195,24 +524,17 @@ export default function EditorCanvas({
         case 'image':
           return (
             <section className="py-16">
-              <div className="max-w-7xl mx-auto px-6 text-center">
-                {block.content.src ? (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className={`text-${block.content.alignment || 'center'}`}>
                   <img 
                     src={block.content.src} 
                     alt={block.content.alt || ''} 
-                    className="max-w-full h-auto rounded-lg shadow-lg mx-auto"
+                    className="max-w-full h-auto rounded-lg shadow-lg"
                   />
-                ) : (
-                  <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <Image className="h-12 w-12 mx-auto mb-2" />
-                      <p>Click to add image</p>
-                    </div>
-                  </div>
-                )}
-                {block.content.caption && (
-                  <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
-                )}
+                  {block.content.caption && (
+                    <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
+                  )}
+                </div>
               </div>
             </section>
           )
@@ -220,416 +542,209 @@ export default function EditorCanvas({
         case 'cta':
           return (
             <section className="py-16" style={{ backgroundColor: `${primaryColor}10` }}>
-              <div className="max-w-4xl mx-auto px-6 text-center">
-                <h2 className="text-3xl font-bold mb-4">
-                  {block.content.title || 'Call to Action Title'}
-                </h2>
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold mb-4">{block.content.title}</h2>
+                )}
                 {block.content.description && (
                   <p className="text-lg text-gray-600 mb-8">{block.content.description}</p>
                 )}
-                <button 
-                  className="px-8 py-3 text-lg font-semibold rounded-lg"
-                  style={{ backgroundColor: primaryColor, color: 'white' }}
-                >
-                  {block.content.buttonText || 'Get Started'}
-                </button>
+                {block.content.buttonText && (
+                  <button 
+                    className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
+                    style={{ backgroundColor: primaryColor, color: 'white' }}
+                  >
+                    {block.content.buttonText}
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+
+        case 'contact':
+          return (
+            <section className="py-16 bg-gray-50">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div>
+                    {block.content.description && (
+                      <p className="text-lg text-gray-600 mb-6">{block.content.description}</p>
+                    )}
+                    <div className="space-y-4">
+                      {block.content.phone && (
+                        <div className="flex items-center">
+                          <span className="font-semibold mr-2">Phone:</span>
+                          <span>{block.content.phone}</span>
+                        </div>
+                      )}
+                      {block.content.email && (
+                        <div className="flex items-center">
+                          <span className="font-semibold mr-2">Email:</span>
+                          <span>{block.content.email}</span>
+                        </div>
+                      )}
+                      {block.content.address && (
+                        <div className="flex items-start">
+                          <span className="font-semibold mr-2">Address:</span>
+                          <span>{block.content.address}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="space-y-4">
+                      <input 
+                        type="text" 
+                        placeholder="Your Name" 
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                      />
+                      <input 
+                        type="email" 
+                        placeholder="Your Email" 
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                      />
+                      <textarea 
+                        placeholder="Your Message" 
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                      ></textarea>
+                      <button 
+                        className="w-full px-6 py-3 font-semibold rounded-md transition-colors"
+                        style={{ backgroundColor: primaryColor, color: 'white' }}
+                      >
+                        Send Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           )
 
         default:
           return (
-            <div className="py-8 px-6 bg-yellow-50 border border-yellow-200 text-center">
-              <p className="text-yellow-800">Unknown block type: {block.type}</p>
+            <div className="py-8 px-4 bg-yellow-50 border border-yellow-200">
+              <p className="text-center text-yellow-800">
+                Unknown block type: {block.type}
+              </p>
             </div>
           )
       }
     })()
 
     return (
-      <div
+      <div 
         key={block.id}
-        className={`relative group ${isHovered ? 'ring-2 ring-blue-500' : ''}`}
-        onMouseEnter={() => setHoveredBlockId(block.id)}
-        onMouseLeave={() => setHoveredBlockId(null)}
+        className="relative group border-2 border-transparent hover:border-blue-300 transition-colors"
       >
-        {blockContent}
-        
         {/* Edit Overlay */}
-        {isHovered && (
-          <div className="absolute top-2 right-2 flex gap-2 bg-white shadow-lg rounded-md p-1">
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <div className="flex gap-2">
             <Button
               size="sm"
-              variant="ghost"
-              onClick={() => handleBlockEdit(block)}
-              className="h-8 w-8 p-0"
+              variant="secondary"
+              onClick={() => handleEditBlock(block)}
+              className="bg-white shadow-md hover:bg-gray-50"
             >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               onClick={() => handleDeleteBlock(block.id)}
-              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              className="bg-white shadow-md hover:bg-gray-50 text-red-600 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        )}
+        </div>
+
+        {/* Block Content */}
+        {blockContent}
       </div>
     )
   }
 
   if (!currentPage) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
-          <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Select a page to start editing</p>
+          <h3 className="text-lg font-medium mb-2">No Page Selected</h3>
+          <p>Select a page from the Pages tab to start editing</p>
         </div>
       </div>
     )
   }
 
-  const sortedBlocks = [...currentPage.blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
+  // Sort blocks by order
+  const sortedBlocks = [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Page Content */}
-      <div className="min-h-full">
-        {sortedBlocks.map(renderBlock)}
-        
-        {/* Add Block Button */}
-        <div className="py-8 text-center border-t border-dashed border-gray-300">
-          <AddBlockMenu onAddBlock={handleAddBlock} />
+      {/* Page Header */}
+      <div className="bg-white border-b p-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">{currentPage.title}</h2>
+          <p className="text-sm text-muted-foreground">{currentPage.path}</p>
         </div>
+        <Button
+          size="sm"
+          onClick={() => setShowAddBlockMenu(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Block
+        </Button>
       </div>
 
-      {/* Block Editor Modal */}
+      {/* Page Content */}
+      <div className="bg-white">
+        {sortedBlocks.length === 0 ? (
+          <div className="h-96 flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-2">Empty Page</h3>
+              <p className="mb-4">This page doesn't have any content blocks yet.</p>
+              <Button onClick={() => setShowAddBlockMenu(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Block
+              </Button>
+            </div>
+          </div>
+        ) : (
+          sortedBlocks.map(renderBlock)
+        )}
+      </div>
+
+      {/* Add Block Button at Bottom */}
+      {sortedBlocks.length > 0 && (
+        <div className="p-8 text-center border-t bg-gray-50">
+          <Button
+            variant="outline"
+            onClick={() => setShowAddBlockMenu(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Block
+          </Button>
+        </div>
+      )}
+
+      {/* Modals */}
       <BlockEditorModal
-        editingBlock={editingBlock}
-        onSave={handleBlockSave}
-        onCancel={() => setEditingBlock(null)}
-        siteId={site.id}
+        block={editingBlock}
+        isOpen={!!editingBlock}
+        onClose={() => setEditingBlock(null)}
+        onSave={handleSaveBlock}
+      />
+
+      <AddBlockMenu
+        isOpen={showAddBlockMenu}
+        onClose={() => setShowAddBlockMenu(false)}
+        onAddBlock={handleAddBlock}
       />
     </div>
   )
-}
-
-// Add Block Menu Component
-function AddBlockMenu({ onAddBlock }: { onAddBlock: (type: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const blockTypes = [
-    { type: 'hero', label: 'Hero Section', icon: Layout },
-    { type: 'text', label: 'Text Content', icon: Type },
-    { type: 'image', label: 'Image', icon: Image },
-    { type: 'cta', label: 'Call to Action', icon: Plus }
-  ]
-
-  return (
-    <div className="relative">
-      <Button
-        variant="outline"
-        onClick={() => setIsOpen(!isOpen)}
-        className="border-dashed"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Add Block
-      </Button>
-      
-      {isOpen && (
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white shadow-lg rounded-lg border p-2 z-10">
-          <div className="grid grid-cols-2 gap-2 min-w-[200px]">
-            {blockTypes.map(({ type, label, icon: Icon }) => (
-              <Button
-                key={type}
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  onAddBlock(type)
-                  setIsOpen(false)
-                }}
-                className="flex flex-col items-center gap-1 h-auto py-3"
-              >
-                <Icon className="h-5 w-5" />
-                <span className="text-xs">{label}</span>
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Block Editor Modal Component
-function BlockEditorModal({ 
-  editingBlock, 
-  onSave, 
-  onCancel,
-  siteId 
-}: { 
-  editingBlock: EditingBlock | null
-  onSave: (content: any) => void
-  onCancel: () => void
-  siteId: string
-}) {
-  const [content, setContent] = useState<any>({})
-  const [uploading, setUploading] = useState(false)
-  const { toast } = useToast()
-
-  React.useEffect(() => {
-    if (editingBlock) {
-      setContent({ ...editingBlock.content })
-    }
-  }, [editingBlock])
-
-  const handleImageUpload = async (file: File) => {
-    try {
-      setUploading(true)
-      const media = await websiteService.uploadMedia(siteId, file)
-      setContent({ ...content, src: media.url })
-      toast({ title: 'Image uploaded', description: 'Image has been uploaded successfully.' })
-    } catch (error) {
-      console.error('Upload failed:', error)
-      toast({ 
-        title: 'Upload failed', 
-        description: 'Failed to upload image. Please try again.',
-        variant: 'destructive'
-      })
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const renderEditor = () => {
-    if (!editingBlock) return null
-
-    switch (editingBlock.type) {
-      case 'hero':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Title</label>
-              <Input
-                value={content.title || ''}
-                onChange={(e) => setContent({ ...content, title: e.target.value })}
-                placeholder="Enter hero title"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Subtitle</label>
-              <Input
-                value={content.subtitle || ''}
-                onChange={(e) => setContent({ ...content, subtitle: e.target.value })}
-                placeholder="Enter hero subtitle"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Button Text</label>
-              <Input
-                value={content.ctaText || ''}
-                onChange={(e) => setContent({ ...content, ctaText: e.target.value })}
-                placeholder="Enter button text"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Button Link</label>
-              <Input
-                value={content.ctaLink || ''}
-                onChange={(e) => setContent({ ...content, ctaLink: e.target.value })}
-                placeholder="Enter button link"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Background Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleImageUpload(file)
-                }}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                disabled={uploading}
-              />
-              {content.backgroundImage && (
-                <img src={content.backgroundImage} alt="Background" className="mt-2 h-20 object-cover rounded" />
-              )}
-            </div>
-          </div>
-        )
-
-      case 'text':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Content</label>
-              <Textarea
-                value={content.text || content.html || ''}
-                onChange={(e) => setContent({ ...content, text: e.target.value, html: e.target.value })}
-                placeholder="Enter your text content"
-                rows={8}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                You can use HTML tags for formatting
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Alignment</label>
-              <select
-                value={content.alignment || 'left'}
-                onChange={(e) => setContent({ ...content, alignment: e.target.value })}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-          </div>
-        )
-
-      case 'image':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleImageUpload(file)
-                }}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                disabled={uploading}
-              />
-              {content.src && (
-                <img src={content.src} alt="Preview" className="mt-2 max-h-40 object-cover rounded" />
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Alt Text</label>
-              <Input
-                value={content.alt || ''}
-                onChange={(e) => setContent({ ...content, alt: e.target.value })}
-                placeholder="Describe the image"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Caption</label>
-              <Input
-                value={content.caption || ''}
-                onChange={(e) => setContent({ ...content, caption: e.target.value })}
-                placeholder="Optional image caption"
-              />
-            </div>
-          </div>
-        )
-
-      case 'cta':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Title</label>
-              <Input
-                value={content.title || ''}
-                onChange={(e) => setContent({ ...content, title: e.target.value })}
-                placeholder="Enter CTA title"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <Textarea
-                value={content.description || ''}
-                onChange={(e) => setContent({ ...content, description: e.target.value })}
-                placeholder="Enter CTA description"
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Button Text</label>
-              <Input
-                value={content.buttonText || ''}
-                onChange={(e) => setContent({ ...content, buttonText: e.target.value })}
-                placeholder="Enter button text"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Button Link</label>
-              <Input
-                value={content.buttonLink || ''}
-                onChange={(e) => setContent({ ...content, buttonLink: e.target.value })}
-                placeholder="Enter button link"
-              />
-            </div>
-          </div>
-        )
-
-      default:
-        return <div>No editor available for this block type</div>
-    }
-  }
-
-  return (
-    <Dialog open={!!editingBlock} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Edit {editingBlock?.type} Block
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="py-4">
-          {renderEditor()}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={() => onSave(content)} disabled={uploading}>
-            {uploading ? 'Uploading...' : 'Save Changes'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// Helper function to get default content for new blocks
-function getDefaultBlockContent(type: string) {
-  switch (type) {
-    case 'hero':
-      return {
-        title: 'Welcome to Our Dealership',
-        subtitle: 'Find your perfect RV or manufactured home',
-        ctaText: 'Browse Inventory',
-        ctaLink: '/inventory'
-      }
-    case 'text':
-      return {
-        text: '<h2>About Us</h2><p>Add your content here...</p>',
-        html: '<h2>About Us</h2><p>Add your content here...</p>',
-        alignment: 'left'
-      }
-    case 'image':
-      return {
-        src: '',
-        alt: '',
-        caption: ''
-      }
-    case 'cta':
-      return {
-        title: 'Ready to Get Started?',
-        description: 'Contact us today to learn more about our services.',
-        buttonText: 'Contact Us',
-        buttonLink: '/contact'
-      }
-    default:
-      return {}
-  }
 }
