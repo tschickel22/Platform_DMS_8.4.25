@@ -45,9 +45,28 @@ export class LocalWebsiteService implements IWebsiteService {
     await this.delay()
     const sites = await this.getSites()
     
+    // Normalize pages/blocks to guarantee stable IDs for editor + page list
+    const pagesWithIds = (siteData.pages || []).map((p: any, idx: number) => ({
+      id: p.id || `page-${idx}`,
+      title: p.title,
+      path: p.path,
+      order: p.order || idx,
+      seo: p.seo,
+      createdAt: p.createdAt || new Date().toISOString(),
+      updatedAt: p.updatedAt || new Date().toISOString(),
+      blocks: (p.blocks || []).map((b: any, i: number) => ({ 
+        id: b.id || `block-${i}`, 
+        type: b.type || 'text',
+        order: b.order || i,
+        content: b.content || {},
+        ...b 
+      }))
+    }))
+
     const newSite: Site = {
       ...siteData,
       id: generateId(),
+      pages: pagesWithIds,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

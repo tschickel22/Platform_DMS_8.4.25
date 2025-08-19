@@ -81,8 +81,11 @@ export interface Page {
   id: string
   title: string
   path: string
+  order: number
   blocks: Block[]
   isVisible: boolean
+  createdAt: string
+  updatedAt: string
   order: number
   seo?: {
     title?: string
