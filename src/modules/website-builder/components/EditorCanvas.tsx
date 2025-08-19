@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Layers } from 'lucide-react'
 import { ComponentLibrary } from './ComponentLibrary'
 import { Site, Page, Block } from '../types'
-import ComponentLibrary from './ComponentLibrary'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
 import RichTextEditor from './RichTextEditor'
