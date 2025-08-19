@@ -21,7 +21,6 @@ interface EditorCanvasProps {
   onUpdatePage?: (updates: Partial<Page>) => void
   onSiteUpdate?: (site: Site) => void
 }
-  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
 
 
 interface BlockEditorModalProps {
@@ -325,6 +324,7 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
 export default function EditorCanvas({ site, currentPage, previewMode, onUpdatePage, onSiteUpdate }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
+  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null)
