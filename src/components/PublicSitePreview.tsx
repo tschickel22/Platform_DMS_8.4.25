@@ -14,90 +14,29 @@ interface Site {
   tracking?: Tracking
 }
 
-interface Page {
-  id: string
-  title: string
-  path: string
-  blocks: Block[]
-  seo?: PageSeo
-}
-
-interface Block {
-  id: string
-  type: string
-  content: any
-  order: number
-}
-
-interface Theme {
-  primaryColor: string
-  secondaryColor: string
-  fontFamily: string
-}
-
+interface Page { id: string; title: string; path: string; blocks: Block[]; seo?: PageSeo }
+interface Block { id: string; type: string; content: any; order: number }
+interface Theme { primaryColor: string; secondaryColor: string; fontFamily: string }
 interface NavConfig {
-  manufacturersMenu: {
-    enabled: boolean
-    label: string
-    items: Manufacturer[]
-  }
+  manufacturersMenu: { enabled: boolean; label: string; items: Manufacturer[] }
   showLandHomeMenu?: boolean
   landHomeLabel?: string
 }
-
-interface Manufacturer {
-  id: string
-  name: string
-  slug: string
-  logoUrl?: string
-  externalUrl?: string
-  enabled: boolean
-  linkType: 'inventory' | 'external'
-}
-
+interface Manufacturer { id: string; name: string; slug: string; logoUrl?: string; externalUrl?: string; enabled: boolean; linkType: 'inventory' | 'external' }
 interface SeoMeta {
-  siteDefaults: {
-    title?: string
-    description?: string
-    ogImageUrl?: string
-    robots?: string
-    canonicalBase?: string
-  }
-  pages: Record<string, {
-    title?: string
-    description?: string
-    ogImageUrl?: string
-    robots?: string
-    canonicalPath?: string
-  }>
+  siteDefaults: { title?: string; description?: string; ogImageUrl?: string; robots?: string; canonicalBase?: string }
+  pages: Record<string, { title?: string; description?: string; ogImageUrl?: string; robots?: string; canonicalPath?: string }>
 }
-
-interface PageSeo {
-  title?: string
-  description?: string
-  ogImageUrl?: string
-  robots?: string
-  canonicalPath?: string
-}
-
-interface Tracking {
-  ga4Id?: string
-  gtagId?: string
-  gtmId?: string
-  headHtml?: string
-  bodyEndHtml?: string
-}
+interface PageSeo { title?: string; description?: string; ogImageUrl?: string; robots?: string; canonicalPath?: string }
+interface Tracking { ga4Id?: string; gtagId?: string; gtmId?: string; headHtml?: string; bodyEndHtml?: string }
 
 function SiteRenderer({ site }: { site: Site }) {
   const { '*': pagePath } = useParams()
-  const currentPath = `/${pagePath || ''}`
-  
-  // Define primaryColor at the component level
+  // normalize leading slash; empty path -> '/'
+  const currentPath = `/${(pagePath || '').replace(/^\/+/, '')}`
   const primaryColor = site.brand?.color || site.theme?.primaryColor || '#3b82f6'
-  
-  // Find the current page
-  const currentPage = site.pages.find(page => page.path === currentPath) || site.pages[0]
-  
+  const currentPage = site.pages.find(p => p.path === currentPath) || site.pages[0]
+
   if (!currentPage) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -110,33 +49,28 @@ function SiteRenderer({ site }: { site: Site }) {
   }
 
   const renderBlock = (block: Block) => {
-
     switch (block.type) {
       case 'hero':
         return (
           <section key={block.id} className="relative bg-gray-900 text-white">
-            {block.content.backgroundImage && (
-              <div 
+            {block.content?.backgroundImage && (
+              <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{ backgroundImage: `url(${block.content.backgroundImage})` }}
               >
-                <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+                <div className="absolute inset-0 bg-black/50" />
               </div>
             )}
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
               <div className="text-center">
-                {block.content.title && (
-                  <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                    {block.content.title}
-                  </h1>
+                {block.content?.title && (
+                  <h1 className="text-4xl md:text-6xl font-bold mb-6">{block.content.title}</h1>
                 )}
-                {block.content.subtitle && (
-                  <p className="text-xl md:text-2xl mb-8 text-gray-200">
-                    {block.content.subtitle}
-                  </p>
+                {block.content?.subtitle && (
+                  <p className="text-xl md:text-2xl mb-8 text-gray-200">{block.content.subtitle}</p>
                 )}
-                {block.content.ctaText && (
-                  <button 
+                {block.content?.ctaText && (
+                  <button
                     className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
                     style={{ backgroundColor: primaryColor, color: 'white' }}
                     onClick={() => block.content.ctaLink && (window.location.href = block.content.ctaLink)}
@@ -148,54 +82,49 @@ function SiteRenderer({ site }: { site: Site }) {
             </div>
           </section>
         )
-
       case 'text':
         return (
           <section key={block.id} className="py-16">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div 
-                className={`prose prose-lg max-w-none ${block.content.alignment || 'text-left'}`}
-                dangerouslySetInnerHTML={{ __html: block.content.html || block.content.text || '' }}
+              <div
+                className={`prose prose-lg max-w-none ${block.content?.alignment || 'text-left'}`}
+                dangerouslySetInnerHTML={{ __html: block.content?.html || block.content?.text || '' }}
               />
             </div>
           </section>
         )
-
       case 'image':
         return (
           <section key={block.id} className="py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className={`text-${block.content.alignment || 'center'}`}>
-                <img 
-                  src={block.content.src} 
-                  alt={block.content.alt || ''} 
-                  className="max-w-full h-auto rounded-lg shadow-lg"
-                />
-                {block.content.caption && (
+              <div className={`text-${block.content?.alignment || 'center'}`}>
+                {block.content?.src && (
+                  <img
+                    src={block.content.src}
+                    alt={block.content?.alt || ''}
+                    className="max-w-full h-auto rounded-lg shadow-lg"
+                  />
+                )}
+                {block.content?.caption && (
                   <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
                 )}
               </div>
             </div>
           </section>
         )
-
       default:
         return (
           <div key={block.id} className="py-8 px-4 bg-yellow-50 border border-yellow-200">
-            <p className="text-center text-yellow-800">
-              Unknown block type: {block.type}
-            </p>
+            <p className="text-center text-yellow-800">Unknown block type: {block.type}</p>
           </div>
         )
     }
   }
 
-  // Sort blocks by order
-  const sortedBlocks = [...currentPage.blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
+  const sortedBlocks = [...(currentPage.blocks || [])].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -216,9 +145,7 @@ function SiteRenderer({ site }: { site: Site }) {
                   className={`text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium ${
                     page.path === currentPath ? 'border-b-2' : ''
                   }`}
-                  style={{ 
-                    borderColor: page.path === currentPath ? primaryColor : 'transparent'
-                  }}
+                  style={{ borderColor: page.path === currentPath ? primaryColor : 'transparent' }}
                 >
                   {page.title}
                 </a>
@@ -228,12 +155,53 @@ function SiteRenderer({ site }: { site: Site }) {
         </div>
       </nav>
 
-      {/* Page Content */}
-      <main>
-        {sortedBlocks.map(renderBlock)}
-      </main>
+      <main>{sortedBlocks.map(renderBlock)}</main>
     </div>
   )
+}
+
+function tryGet(storage: Storage, key: string) {
+  try {
+    const v = storage.getItem(key)
+    return v ? JSON.parse(v) : null
+  } catch {
+    return null
+  }
+}
+
+function findSiteData(slug: string): Site | null {
+  // 1) URL ?data=<base64 json>
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const encoded = params.get('data')
+    if (encoded) {
+      const json = decodeURIComponent(atob(encoded))
+      const data = JSON.parse(json)
+      if (data?.slug === slug || data?.site?.slug === slug) {
+        return (data.site ?? data) as Site
+      }
+    }
+  } catch {/* ignore */}
+
+  // 2) Local/session storage – multiple possible keys
+  const keys = [
+    `wb2:preview-site:${slug}`,
+    `wb:preview-site:${slug}`,      // legacy
+    `wb2:preview:${slug}`,         // variant
+    `wb2:published-site:${slug}`   // single published
+  ]
+
+  for (const k of keys) {
+    const v = tryGet(localStorage, k) ?? tryGet(sessionStorage, k)
+    if (v) return v as Site
+  }
+
+  // 3) Map form: wb2:published-sites -> { [slug]: Site }
+  const map = (tryGet(localStorage, 'wb2:published-sites') ??
+               tryGet(sessionStorage, 'wb2:published-sites')) as Record<string, Site> | null
+  if (map && map[slug]) return map[slug]
+
+  return null
 }
 
 export default function PublicSitePreview() {
@@ -243,52 +211,52 @@ export default function PublicSitePreview() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadSite = async () => {
-      try {
-        if (!siteSlug) {
-          throw new Error('No site specified')
-        }
+    if (!siteSlug) {
+      setError('No site specified')
+      setLoading(false)
+      return
+    }
 
-        console.log('Loading site for slug:', siteSlug)
+    // First, local attempts (same-origin)
+    const local = findSiteData(siteSlug)
+    if (local) {
+      console.log('✅ Loaded preview/published data for site slug:', siteSlug)
+      setSite(local)
+      setLoading(false)
+      return
+    }
 
-        // Try to load preview data first (for live editing preview)
-        let siteData = null
-        try {
-          const previewKey = `wb2:preview-site:${siteSlug}`
-          const previewData = localStorage.getItem(previewKey)
-          if (previewData) {
-            siteData = JSON.parse(previewData)
-            console.log('✅ Loaded preview data for site slug:', siteSlug)
-            console.log('Preview data:', siteData)
-          } else {
-            console.log('❌ No preview data found for key:', previewKey)
-          }
-        } catch (error) {
-          console.warn('❌ Failed to load preview data:', error)
-        }
-        
-        // Fallback to published sites
-        if (!siteData) {
-          const publishedSites = JSON.parse(localStorage.getItem('wb2:published-sites') || '{}')
-          siteData = publishedSites[siteSlug]
-          console.log('Loaded published data for site:', siteSlug)
-        }
-        
-        if (siteData) {
-          setSite(siteData)
-        } else {
-          console.error('❌ No site data found for slug:', siteSlug)
-          throw new Error(`Website '${siteSlug}' not found. Make sure you're previewing from the website builder.`)
-        }
-      } catch (err) {
-        console.error('Error loading site:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load website')
-      } finally {
+    // If opened from the builder on another origin, ask the opener/parent for data.
+    const handleMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type === 'wb2:site-preview:response' && data?.slug === siteSlug && data?.site) {
+        console.log('✅ Received site data via postMessage')
+        setSite(data.site as Site)
         setLoading(false)
       }
     }
 
-    loadSite()
+    window.addEventListener('message', handleMessage)
+
+    // Send a request to whoever opened us
+    const request = { type: 'wb2:site-preview:request', slug: siteSlug }
+    try { window.opener?.postMessage(request, '*') } catch {}
+    try { if (window.parent && window.parent !== window) window.parent.postMessage(request, '*') } catch {}
+
+    // Fallback timeout -> show error if nothing arrives
+    const t = window.setTimeout(() => {
+      if (!site) {
+        setError(
+          `Website '${siteSlug}' not found. Open the preview from the Website Builder so it can pass the data across origins.`
+        )
+        setLoading(false)
+      }
+    }, 1500)
+
+    return () => {
+      window.removeEventListener('message', handleMessage)
+      window.clearTimeout(t)
+    }
   }, [siteSlug])
 
   if (loading) {
@@ -309,8 +277,8 @@ export default function PublicSitePreview() {
           <div className="text-6xl mb-4">🚫</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Website Not Found</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
           >
             Try Again
