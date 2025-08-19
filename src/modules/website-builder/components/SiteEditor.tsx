@@ -152,9 +152,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       
       
       // Mirror to preview storage for real-time updates
-      const previewKey = `wb2:preview-site:${site.slug}`
-      localStorage.setItem(previewKey, JSON.stringify(site))
-      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      const savePreviewKey = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(savePreviewKey, JSON.stringify(site))
+      sessionStorage.setItem(savePreviewKey, JSON.stringify(site))
       
 
       // Keep preview storage in sync on save
