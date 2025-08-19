@@ -365,10 +365,12 @@ export function RichTextEditor({ content, onChange, placeholder, showAdvancedToo
 
       {/* Editor Content */}
       <div className="min-h-[200px]">
-        className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px]"
-          editor={editor} 
-          className="prose prose-sm max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:p-4"
-        />
+        <div className="border rounded-md">
+          <EditorContent
+            editor={editor}
+            className="prose prose-sm max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:p-4"
+          />
+        </div>
       </div>
     </div>
   )
