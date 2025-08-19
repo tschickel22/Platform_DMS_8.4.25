@@ -102,6 +102,31 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     setCurrentPage(updatedPage)
   }
 
+  const handlePreview = () => {
+    if (!site) return
+    
+    // Save current state to localStorage for preview
+    try {
+      const previewData = {
+        ...site,
+        pages: site.pages || [],
+        lastPreviewUpdate: new Date().toISOString()
+      }
+      localStorage.setItem(`wb2:preview-site:${site.id}`, JSON.stringify(previewData))
+      
+      // Open preview in new tab
+      const previewUrl = `/s/${site.slug}/`
+      window.open(previewUrl, '_blank', 'noopener,noreferrer')
+      
+      toast({ 
+        title: 'Preview Opened', 
+        description: 'Your site preview has opened in a new tab.' 
+      })
+    } catch (error) {
+      handleError(error, 'opening preview')
+    }
+  }
+
   const handleBackToBuilder = () => {
     const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
     navigate(basePath)
@@ -226,6 +251,15 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreview}
+              className="flex items-center gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              Preview
+            </Button>
             <Button
               variant={previewMode === 'desktop' ? 'default' : 'outline'}
               size="sm"

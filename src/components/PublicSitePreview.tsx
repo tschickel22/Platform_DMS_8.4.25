@@ -249,9 +249,25 @@ export default function PublicSitePreview() {
           throw new Error('No site specified')
         }
 
-        // Try to load from local storage first (for development)
-        const publishedSites = JSON.parse(localStorage.getItem('wb2:published-sites') || '{}')
-        const siteData = publishedSites[siteSlug]
+        // Try to load preview data first (for live editing preview)
+        let siteData = null
+        try {
+          const previewKey = `wb2:preview-site:${siteSlug}`
+          const previewData = localStorage.getItem(previewKey)
+          if (previewData) {
+            siteData = JSON.parse(previewData)
+            console.log('Loaded preview data for site:', siteSlug)
+          }
+        } catch (error) {
+          console.warn('Failed to load preview data:', error)
+        }
+        
+        // Fallback to published sites
+        if (!siteData) {
+          const publishedSites = JSON.parse(localStorage.getItem('wb2:published-sites') || '{}')
+          siteData = publishedSites[siteSlug]
+          console.log('Loaded published data for site:', siteSlug)
+        }
         
         if (siteData) {
           setSite(siteData)
