@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Plus, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Edit, Trash2, Copy, GripVertical } from 'lucide-react'
+import { Edit, Trash2, Copy, Plus, GripVertical } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,8 +21,6 @@ interface EditorCanvasProps {
   onUpdatePage?: (updates: Partial<Page>) => void
   onSiteUpdate?: (site: Site) => void
 }
-  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
-
 
 interface BlockEditorModalProps {
   block: Block | null
@@ -907,41 +905,11 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
 
         {/* Add Block Button */}
         <div className="p-4 border-t bg-gray-50">
-          <Button 
-            className="w-full"
-            onClick={() => setShowComponentLibrary(true)}
-          >
+          <Button onClick={() => setShowAddBlockMenu(true)} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Add Block
           </Button>
         </div>
-
-        {/* Component Library Modal */}
-        {showComponentLibrary && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-lg font-semibold">Add Component</h2>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowComponentLibrary(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="p-4 overflow-y-auto max-h-[calc(80vh-80px)]">
-                <ComponentLibrary
-                  onSelectComponent={(component) => {
-                    // Handle component selection
-                    console.log('Selected component:', component)
-                    setShowComponentLibrary(false)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Block Editor Modal */}
