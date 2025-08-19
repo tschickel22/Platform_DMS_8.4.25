@@ -269,7 +269,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               </TabsContent>
 
               <TabsContent value="components" className="mt-0">
-                <ComponentLibrary
+                <ComponentLibrary onAddComponent={handleAddComponent} />
                   onAddBlock={(blockData) => {
                     if (!currentPage) {
                       toast({ 

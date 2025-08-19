@@ -31,7 +31,7 @@ interface ComponentTemplate {
 }
 
 interface ComponentLibraryProps {
-  onAddComponent: (blockData: any) => void
+  onAddComponent: (component: ComponentTemplate) => void
   onClose: () => void
 }
 
@@ -371,7 +371,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
                       onAddComponent(component.blockData)
-                      onClose()
+                        onAddComponent(component)
                     }}
                   >
                     <CardContent className="p-4">
