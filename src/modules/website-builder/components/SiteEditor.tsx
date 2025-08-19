@@ -73,9 +73,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // Update current page if it was modified
     if (currentPage) {
       const updatedPage = updatedSite.pages.find(p => p.id === currentPage.id)
-      if (updatedPage) {
-        setCurrentPage(updatedPage)
-      }
+      if (updatedPage) setCurrentPage(updatedPage)
     }
   }
 
@@ -98,7 +96,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   }
 
   // Add component from the library to the current page
-  const handleAddComponent = async (component: any, meta?: { templateId: string; name: string; category: string }) => {
+  const handleAddComponent = (
+    blockData: any,
+    meta?: { templateId: string; name: string; category: string }
+  ) => {
     if (!site || !currentPage) {
       toast({
         title: 'Error',
@@ -109,31 +110,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
 
     try {
-      // Create a new block from the component template
       const newBlock = {
         id: `block-${Date.now()}`,
-        type: component.type,
+        type: blockData?.type,
         order: currentPage.blocks?.length || 0,
-        content: component.content ?? component.defaultContent ?? {}
+        content: blockData?.content ?? blockData?.defaultContent ?? {}
       }
 
-      // Add the block to the current page
-      const updatedBlocks = [...(currentPage.blocks || []), newBlock]
-      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      const updatedPage: Page = {
+        ...currentPage,
+        blocks: [...(currentPage.blocks || []), newBlock]
+      }
 
-      // Update the site with the new page data
-      const updatedPages = site.pages.map(page =>
-        page.id === currentPage.id ? updatedPage : page
-      )
+      const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
       const updatedSite = { ...site, pages: updatedPages }
 
       setSite(updatedSite)
       setCurrentPage(updatedPage)
 
-      const name = meta?.name || component.name || component.type || 'Component'
       toast({
         title: 'Component Added',
-        description: `${name} has been added to your page`,
+        description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
       })
     } catch (error) {
       console.error('Error adding component:', error)
@@ -317,7 +314,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <TabsContent value="components" className="mt-0">
                 <ComponentLibrary
                   onAddComponent={handleAddComponent}
-                  onClose={() => setActiveTab('editor')}  {/* ← one-line change */}
+                  onClose={() => setActiveTab('editor')}  /* one-line close to Editor tab */
                 />
               </TabsContent>
 
