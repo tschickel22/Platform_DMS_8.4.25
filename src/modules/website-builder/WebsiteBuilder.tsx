@@ -236,9 +236,31 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePreviewSite(site)}
+                      onClick={() => {
+                        // Store preview data and open with same format as working preview
+                        try {
+                          const previewData = {
+                            ...site,
+                            pages: site.pages || [],
+                            lastPreviewUpdate: new Date().toISOString(),
+                          }
+                          const key = `wb2:preview-site:${site.slug}`
+                          localStorage.setItem(key, JSON.stringify(previewData))
+                          sessionStorage.setItem(key, JSON.stringify(previewData))
+                          
+                          // Use same URL format as working preview
+                          const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
+                          const previewUrl = `/s/${site.slug}/?data=${encoded}`
+                          
+                          window.open(previewUrl, '_blank')
+                        } catch (error) {
+                          console.error('Preview error:', error)
+                        }
+                      }}
+                      className="flex items-center gap-2"
                     >
                       <Eye className="h-4 w-4" />
+                      Preview
                     </Button>
                     
                     <Button
