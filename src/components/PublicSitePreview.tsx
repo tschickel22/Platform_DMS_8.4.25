@@ -217,46 +217,115 @@ export default function PublicSitePreview() {
       return
     }
 
-    // First, local attempts (same-origin)
-    const local = findSiteData(siteSlug)
-    if (local) {
-      console.log('✅ Loaded preview/published data for site slug:', siteSlug)
-      setSite(local)
-      setLoading(false)
-      return
-    }
+    // Try to load site data in order of preference
+    const loadSiteData = async () => {
+      try {
+        // 1. Try ?data= query param (base64 → decodeURIComponent → JSON.parse)
+        const params = new URLSearchParams(window.location.search)
+        const encoded = params.get('data')
+        if (encoded) {
+          try {
+            const json = decodeURIComponent(atob(encoded))
+            const data = JSON.parse(json)
+            console.log('✅ Loaded site data from URL query param')
+            setSite(data as Site)
+            setLoading(false)
+            return
+          } catch (error) {
+            console.warn('Failed to parse URL data:', error)
+          }
+        }
 
-    // If opened from the builder on another origin, ask the opener/parent for data.
-    const handleMessage = (evt: MessageEvent) => {
-      const data = evt.data as any
-      if (data?.type === 'wb2:site-preview:response' && data?.slug === siteSlug && data?.site) {
-        console.log('✅ Received site data via postMessage')
-        setSite(data.site as Site)
+        // 2. Try sessionStorage.getItem('wb2:preview-site:<slug>')
+        const sessionKey = `wb2:preview-site:${siteSlug}`
+        try {
+          const sessionData = sessionStorage.getItem(sessionKey)
+          if (sessionData) {
+            const data = JSON.parse(sessionData)
+            console.log('✅ Loaded site data from sessionStorage')
+            setSite(data as Site)
+            setLoading(false)
+            return
+          }
+        } catch (error) {
+          console.warn('Failed to load from sessionStorage:', error)
+        }
+
+        // 3. Try localStorage.getItem('wb2:preview-site:<slug>')
+        const localKey = `wb2:preview-site:${siteSlug}`
+        try {
+          const localData = localStorage.getItem(localKey)
+          if (localData) {
+            const data = JSON.parse(localData)
+            console.log('✅ Loaded site data from localStorage')
+            setSite(data as Site)
+            setLoading(false)
+            return
+          }
+        } catch (error) {
+          console.warn('Failed to load from localStorage:', error)
+        }
+
+        // 4. Otherwise: postMessage to request data
+        console.log('No local data found, requesting via postMessage...')
+        
+        const handleMessage = (evt: MessageEvent) => {
+          const data = evt.data as any
+          if (data?.type === 'wb2:site-preview:response' && data?.slug === siteSlug && data?.site) {
+            console.log('✅ Received site data via postMessage')
+            setSite(data.site as Site)
+            setLoading(false)
+            window.removeEventListener('message', handleMessage)
+          }
+        }
+
+        window.addEventListener('message', handleMessage)
+
+        // Send request to window.opener, window.parent, and window
+        const request = { type: 'wb2:site-preview:request', slug: siteSlug }
+        try { 
+          if (window.opener) {
+            window.opener.postMessage(request, '*')
+            console.log('Sent postMessage request to window.opener')
+          }
+        } catch (error) {
+          console.warn('Failed to send to window.opener:', error)
+        }
+        
+        try { 
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(request, '*')
+            console.log('Sent postMessage request to window.parent')
+          }
+        } catch (error) {
+          console.warn('Failed to send to window.parent:', error)
+        }
+        
+        try {
+          window.postMessage(request, '*')
+          console.log('Sent postMessage request to window')
+        } catch (error) {
+          console.warn('Failed to send to window:', error)
+        }
+
+        // Fallback timeout -> show error if nothing arrives
+        setTimeout(() => {
+          if (!site) {
+            setError(
+              `Website '${siteSlug}' not found. Open the preview from the Website Builder so it can pass the data across origins.`
+            )
+            setLoading(false)
+          }
+        }, 1500)
+
+      } catch (error) {
+        console.error('Error loading site data:', error)
+        setError('Failed to load website data')
         setLoading(false)
       }
     }
 
-    window.addEventListener('message', handleMessage)
-
-    // Send a request to whoever opened us
-    const request = { type: 'wb2:site-preview:request', slug: siteSlug }
-    try { window.opener?.postMessage(request, '*') } catch {}
-    try { if (window.parent && window.parent !== window) window.parent.postMessage(request, '*') } catch {}
-
-    // Fallback timeout -> show error if nothing arrives
-    const t = window.setTimeout(() => {
-      if (!site) {
-        setError(
-          `Website '${siteSlug}' not found. Open the preview from the Website Builder so it can pass the data across origins.`
-        )
-        setLoading(false)
-      }
-    }, 1500)
-
-    return () => {
-      window.removeEventListener('message', handleMessage)
-      window.clearTimeout(t)
-    }
+    loadSiteData()
   }, [siteSlug])
 
   if (loading) {
