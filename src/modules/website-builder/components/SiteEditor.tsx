@@ -13,6 +13,7 @@ import PageList from './PageList'
 import ThemePalette from './ThemePalette'
 import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
+import ComponentLibrary from './ComponentLibrary'
 
 interface SiteEditorProps {
   mode?: 'platform' | 'company'
@@ -29,7 +30,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media'>('editor')
+  const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media' | 'components'>('editor')
 
   useEffect(() => {
     loadSite()
@@ -208,6 +209,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
               <TabsTrigger value="pages" className="text-xs">Pages</TabsTrigger>
               <TabsTrigger value="theme" className="text-xs">Theme</TabsTrigger>
+              <TabsTrigger value="components" className="text-xs">Library</TabsTrigger>
               <TabsTrigger value="media" className="text-xs">Media</TabsTrigger>
             </TabsList>
 
@@ -216,20 +218,28 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle>Page Editor</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {currentPage ? (
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">{currentPage.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {(currentPage.blocks || []).length} blocks
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Page Editor</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {currentPage ? (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">{currentPage.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {currentPage.blocks?.length || 0} blocks
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Click on any content block to edit it
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Select a page to edit</div>
-                    )}
-                  </CardContent>
-                </Card>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Select a page to edit</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="pages" className="mt-0">
@@ -254,8 +264,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 />
               </TabsContent>
 
-              <TabsContent value="media" className="mt-0">
-                <MediaManager siteId={site.id} />
+              <TabsContent value="components" className="mt-0">
+                <ComponentLibrary
+                  onAddBlock={(blockData) => {
+                    if (!currentPage || !site) return
+                    
+                    const newBlock = {
+                      ...blockData,
+                      id: `block-${Date.now()}`,
+                      order: (currentPage.blocks?.length || 0)
+                    }
+                    
+                    const updatedBlocks = [...(currentPage.blocks || []), newBlock]
+                    const updatedPage = { ...currentPage, blocks: updatedBlocks }
+                    const updatedPages = site.pages.map(p => 
+                      p.id === currentPage.id ? updatedPage : p
+                    )
+                    
+                    setSite({ ...site, pages: updatedPages })
+                    setCurrentPage(updatedPage)
+                  }}
+                />
               </TabsContent>
             </div>
           </Tabs>
@@ -289,11 +318,24 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <PublishPanel
               site={site}
               onSiteUpdate={(updates) => {
-                const updatedSite = { ...site, ...updates }
-                setSite(updatedSite)
-              }}
-              mode={mode}
-            />
+            <Tabs defaultValue="publish" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="publish">Publish</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="publish" className="mt-4">
+                <PublishPanel
+                  site={site}
+                  onSiteUpdate={(updates) => setSite({ ...site, ...updates })}
+                  mode={mode}
+                />
+              </TabsContent>
+              
+              <TabsContent value="media" className="mt-4">
+                <MediaManager siteId={site.id} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
