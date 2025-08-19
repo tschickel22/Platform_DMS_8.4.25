@@ -218,28 +218,32 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle>Page Editor</CardTitle>
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Page Editor</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {currentPage ? (
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">{currentPage.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {currentPage.blocks?.length || 0} blocks
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Click on any content block to edit it
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">Select a page to edit</div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Page Editor</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {currentPage ? (
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium">{currentPage.title}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {currentPage.blocks?.length || 0} blocks
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Click on any content block to edit it
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Select a page to edit</div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="pages" className="mt-0">
@@ -315,9 +319,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         {/* Right Sidebar */}
         <div className="w-80 border-l bg-card overflow-y-auto">
           <div className="p-4">
-            <PublishPanel
-              site={site}
-              onSiteUpdate={(updates) => {
             <Tabs defaultValue="publish" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="publish">Publish</TabsTrigger>
