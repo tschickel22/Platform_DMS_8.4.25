@@ -230,7 +230,14 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <ArrowLeft className="h-4 w-4 mr-2" />Back
             </Button>
             <div>
-              <h1 className="text-xl font-semibold">{site.name}</h1>
+              <input
+                type="text"
+                value={site.name}
+                onChange={(e) => setSite({ ...site, name: e.target.value })}
+                onBlur={handleSave}
+                className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 -mx-1"
+                placeholder="Enter site name"
+              />
               <div className="text-sm text-muted-foreground">
                 {site.slug}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com
               </div>
