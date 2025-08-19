@@ -32,27 +32,31 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media' | 'components'>('editor')
 
-  // ---- helpers --------------------------------------------------------------
-  const previewKeyFor = (slug: string) => `wb2:preview-site:${slug}`
-
+  // --- helpers ----------------------------------------------------------------
   const writePreview = (s: Site) => {
     try {
-      const key = previewKeyFor(s.slug)
+      const key = `wb2:preview-site:${s.slug}`
       const json = JSON.stringify(s)
-      try { sessionStorage.setItem(key, json) } catch {}
       try { localStorage.setItem(key, json) } catch {}
+      try { sessionStorage.setItem(key, json) } catch {}
     } catch {}
   }
 
-  const encodeForQuery = (obj: unknown) => {
-    try { return btoa(encodeURIComponent(JSON.stringify(obj))) } catch { return '' }
-  }
-  // --------------------------------------------------------------------------
-
+  // Listen for preview requests (one listener only)
   useEffect(() => {
-    loadSite()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteId])
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type !== 'wb2:site-preview:request' || !site) return
+      if (data.slug && data.slug !== site.slug) return
+      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
+      try { (evt.source as WindowProxy | null)?.postMessage(payload, '*') } catch { window.postMessage(payload, '*') }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [site])
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => { loadSite() /* eslint-disable-next-line */ }, [siteId])
 
   const loadSite = async () => {
     if (!siteId) return
@@ -61,6 +65,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const s = await websiteService.getSite(siteId)
       if (!s) throw new Error('Site not found')
 
+      // normalize pages/blocks to ensure IDs exist
       const pages: Page[] = (s.pages || []).map((p: any, idx: number) => ({
         id: p.id || `page-${idx}`,
         title: p.title,
@@ -75,6 +80,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       const normalized: Site = { ...s, pages }
       setSite(normalized)
       setCurrentPage(pages[0] || null)
+      writePreview(normalized)
     } catch (err) {
       handleError(err, 'loading site')
       const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
@@ -84,31 +90,22 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
-  // Keep preview storage synchronized whenever site changes
-  useEffect(() => {
-    if (site) writePreview(site)
-  }, [site])
-
-  // Single responder for preview postMessage requests
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const data = evt.data as any
-      if (!site) return
-      if (data?.type !== 'wb2:site-preview:request') return
-      if (data.slug && data.slug !== site.slug) return
-      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
-      try { (evt.source as WindowProxy | null)?.postMessage(payload, '*') } catch { window.postMessage(payload, '*') }
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [site])
-
   const handleSiteUpdate = (updatedSite: Site) => {
     setSite(updatedSite)
     if (currentPage) {
       const updatedPage = updatedSite.pages.find(p => p.id === currentPage.id)
       if (updatedPage) setCurrentPage(updatedPage)
     }
+    writePreview(updatedSite)
+  }
+
+  const handleUpdatePage = (updatedPage: Page) => {
+    if (!site) return
+    const updatedPages = site.pages.map(p => (p.id === updatedPage.id ? updatedPage : p))
+    const updatedSite = { ...site, pages: updatedPages }
+    setSite(updatedSite)
+    setCurrentPage(updatedPage)
+    writePreview(updatedSite)
   }
 
   const handleSave = async () => {
@@ -128,28 +125,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const handlePreview = () => {
     if (!site) return
     try {
-      // Persist snapshot
       writePreview(site)
-
-      // Also pass via URL for cross-origin cases
-      const encoded = encodeForQuery({ ...site, lastPreviewUpdate: new Date().toISOString() })
-      const url = `/s/${site.slug}/?data=${encoded}`
-
-      // Open and proactively seed the window a few times (handles race conditions)
-      const win = window.open(url, '_blank')
-      const seed = () => {
-        try {
-          win?.postMessage({ type: 'wb2:site-preview:response', slug: site.slug, site }, '*')
-        } catch {}
-      }
-      // try for ~2 seconds
-      const tries = 6
-      let count = 0
-      const id = window.setInterval(() => {
-        if (!win || win.closed || count >= tries) { window.clearInterval(id); return }
-        seed(); count += 1
-      }, 350)
-
+      // also pass data via URL for cross-origin safety
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ ...site, lastPreviewUpdate: new Date().toISOString() })))
+      window.open(`/s/${site.slug}/?data=${encoded}`, '_blank')
       toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
     } catch (error) {
       handleError(error, 'opening preview')
@@ -161,21 +140,13 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     navigate(basePath)
   }
 
-  // Update a whole page (used by canvas)
-  const handleUpdatePage = (updatedPage: Page) => {
-    if (!site) return
-    const updatedPages = site.pages.map(p => (p.id === updatedPage.id ? updatedPage : p))
-    const updatedSite = { ...site, pages: updatedPages }
-    setSite(updatedSite)
-    setCurrentPage(updatedPage)
-  }
-
-  // ComponentLibrary -> add a block
+  // Add component from the library to the current page
   const handleAddComponent = (blockData: any, meta?: { templateId: string; name: string; category: string }) => {
     if (!site || !currentPage) {
       toast({ title: 'Error', description: 'Please select a page first', variant: 'destructive' })
       return
     }
+
     try {
       const newBlock = {
         id: `block-${Date.now()}`,
@@ -183,18 +154,28 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         order: currentPage.blocks?.length || 0,
         content: blockData?.content ?? blockData?.defaultContent ?? {}
       }
+
       const updatedPage: Page = { ...currentPage, blocks: [...(currentPage.blocks || []), newBlock] }
-      handleUpdatePage(updatedPage)
-      toast({ title: 'Component Added', description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page` })
+      const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
+      const updatedSite = { ...site, pages: updatedPages }
+
+      setSite(updatedSite)
+      setCurrentPage(updatedPage)
+      writePreview(updatedSite)
+
+      toast({
+        title: 'Component Added',
+        description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
+      })
     } catch (error) {
       handleError(error, 'adding component')
     }
   }
 
-  // Adapt data to PageList format
+  // Adapt data to PageList's expected props
   const pagesForList = useMemo(() => {
     const pgs = site?.pages || []
-    return pgs.map(p => ({
+    return pgs.map((p) => ({
       id: p.id,
       name: p.title,
       slug: (p.path || '/').replace(/^\//, ''),
@@ -208,7 +189,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const currentPageId = currentPage ? currentPage.id : null
 
   const onSelectPageId = (id: string) => {
-    const found = (site?.pages || []).find(p => p.id === id) || null
+    const found = (site?.pages || []).find((p: any) => p.id === id) || null
     setCurrentPage(found)
     setActiveTab('editor')
   }
@@ -217,7 +198,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading website editor...</p>
         </div>
       </div>
@@ -244,17 +225,29 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={handleBackToBuilder}><ArrowLeft className="h-4 w-4 mr-2" />Back</Button>
+            <Button variant="ghost" size="sm" onClick={handleBackToBuilder}>
+              <ArrowLeft className="h-4 w-4 mr-2" />Back
+            </Button>
             <div>
               <h1 className="text-xl font-semibold">{site.name}</h1>
-              <div className="text-sm text-muted-foreground">{site.slug}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com</div>
+              <div className="text-sm text-muted-foreground">
+                {site.slug}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePreview} className="flex items-center gap-2"><Globe className="h-4 w-4" />Preview</Button>
-            <Button variant={previewMode === 'desktop' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('desktop')}><Monitor className="h-4 w-4" /></Button>
-            <Button variant={previewMode === 'tablet' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('tablet')}><Globe className="h-4 w-4" /></Button>
-            <Button variant={previewMode === 'mobile' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('mobile')}><Smartphone className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={handlePreview} className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />Preview
+            </Button>
+            <Button variant={previewMode === 'desktop' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('desktop')}>
+              <Monitor className="h-4 w-4" />
+            </Button>
+            <Button variant={previewMode === 'tablet' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('tablet')}>
+              <Globe className="h-4 w-4" />
+            </Button>
+            <Button variant={previewMode === 'mobile' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('mobile')}>
+              <Smartphone className="h-4 w-4" />
+            </Button>
             <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? 'Saving...' : 'Save'}</Button>
           </div>
         </div>
@@ -288,7 +281,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                               <div className="text-xs text-muted-foreground">{currentPage.blocks?.length || 0} blocks</div>
                               <div className="text-xs text-muted-foreground">Click on any content block to edit it</div>
                             </div>
-                          ) : <div className="text-sm text-muted-foreground">Select a page to edit</div>}
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Select a page to edit</div>
+                          )}
                         </CardContent>
                       </Card>
                     </div>
@@ -311,7 +306,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <TabsContent value="theme" className="mt-0">
                 <ThemePalette
                   theme={site.theme}
-                  onThemeUpdate={(t) => setSite({ ...site, theme: t })}
+                  onThemeUpdate={(t) => {
+                    const updatedSite = { ...site, theme: t }
+                    setSite(updatedSite)
+                    writePreview(updatedSite)
+                  }}
                 />
               </TabsContent>
 
@@ -329,11 +328,15 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         {/* Center Canvas */}
         <div className="flex-1 bg-gray-50 overflow-hidden">
           <div className="h-full flex items-center justify-center p-6">
-            <div className={`bg-white shadow-lg transition-all duration-300 ${
-              previewMode === 'mobile' ? 'w-[375px] h-[667px]'
-              : previewMode === 'tablet' ? 'w-[768px] h-[1024px]'
-              : 'w-full max-w-6xl h-full'
-            } rounded-lg overflow-hidden`}>
+            <div
+              className={`bg-white shadow-lg transition-all duration-300 ${
+                previewMode === 'mobile'
+                  ? 'w-[375px] h-[667px]'
+                  : previewMode === 'tablet'
+                  ? 'w-[768px] h-[1024px]'
+                  : 'w-full max-w-6xl h-full'
+              } rounded-lg overflow-hidden`}
+            >
               <EditorCanvas
                 site={site}
                 currentPage={currentPage}
@@ -353,9 +356,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 <TabsTrigger value="publish">Publish</TabsTrigger>
                 <TabsTrigger value="media">Media</TabsTrigger>
               </TabsList>
+
               <TabsContent value="publish" className="mt-4">
                 <PublishPanel site={site} onSiteUpdate={(updates) => setSite({ ...site, ...updates })} mode={mode} />
               </TabsContent>
+
               <TabsContent value="media" className="mt-4">
                 <MediaManager siteId={site.id} />
               </TabsContent>
