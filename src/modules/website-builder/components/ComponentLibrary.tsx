@@ -374,7 +374,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     role="button"
                     tabIndex={0}
-                    onClick={() => handleChoose(component)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      console.log('Component clicked:', component.name)
+                      handleChoose(component)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') handleChoose(component)
                     }}
@@ -399,6 +404,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                             alt={component.name}
                             className="w-full h-20 object-cover rounded border"
                             onError={(e) => {
+                              e.preventDefault()
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
                             }}
