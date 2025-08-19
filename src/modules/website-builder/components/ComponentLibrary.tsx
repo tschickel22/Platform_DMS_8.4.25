@@ -3,41 +3,39 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
+import {
   Search,
   Type,
-  Image,
+  Image as ImageIcon,
   Layout,
   MousePointer,
   Grid,
   Star,
   Users,
   Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Play,
-  BarChart3
+  Phone
 } from 'lucide-react'
 
 interface ComponentTemplate {
   id: string
   name: string
   description: string
-  category: string
+  category: 'hero' | 'text' | 'media' | 'cta' | 'contact' | 'features' | 'social'
   icon: React.ComponentType<any>
   preview: string
   blockData: any
 }
 
 interface ComponentLibraryProps {
-  onAddComponent: (component: ComponentTemplate) => void
-  onClose: () => void
+  /** Parent expects the normalized block data to append to the current page */
+  onAddComponent: (blockData: any, meta?: { templateId: string; name: string; category: string }) => void
+  /** Optional: close the library after choosing */
+  onClose?: () => void
 }
 
 export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState<'all' | ComponentTemplate['category']>('all')
 
   const componentTemplates: ComponentTemplate[] = [
     // Hero Components
@@ -112,7 +110,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       }
     },
 
-    // Image Components
+    // Image / Media Components
     {
       id: 'image-gallery',
       name: 'Image Gallery',
@@ -149,7 +147,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       name: 'Single Image',
       description: 'Single image with optional caption',
       category: 'media',
-      icon: Image,
+      icon: ImageIcon,
       preview: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'image',
@@ -231,7 +229,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         type: 'contact',
         content: {
           title: 'Send us a Message',
-          description: 'We\'ll get back to you within 24 hours',
+          description: "We'll get back to you within 24 hours",
           showForm: true,
           formFields: ['name', 'email', 'phone', 'message']
         }
@@ -302,26 +300,31 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
     }
   ]
 
-  const categories = [
+  const categories: Array<{ id: 'all' | ComponentTemplate['category']; name: string; icon: React.ComponentType<any> }> = [
     { id: 'all', name: 'All Components', icon: Grid },
     { id: 'hero', name: 'Hero Sections', icon: Layout },
     { id: 'text', name: 'Text & Content', icon: Type },
-    { id: 'media', name: 'Images & Media', icon: Image },
+    { id: 'media', name: 'Images & Media', icon: ImageIcon },
     { id: 'cta', name: 'Call to Action', icon: MousePointer },
     { id: 'contact', name: 'Contact', icon: Phone },
     { id: 'features', name: 'Features', icon: Star },
     { id: 'social', name: 'Social Proof', icon: Users }
   ]
 
-  const filteredComponents = componentTemplates.filter(component => {
-    const matchesSearch = searchTerm === '' || 
-      component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.description.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesCategory = selectedCategory === 'all' || component.category === selectedCategory
-    
+  const filteredComponents = componentTemplates.filter((c) => {
+    const matchesSearch =
+      !searchTerm ||
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesCategory = selectedCategory === 'all' || c.category === selectedCategory
     return matchesSearch && matchesCategory
   })
+
+  const handleChoose = (tpl: ComponentTemplate) => {
+    onAddComponent(tpl.blockData, { templateId: tpl.id, name: tpl.name, category: tpl.category })
+    onClose?.()
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -354,7 +357,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
             <div className="flex-1 p-4">
               {/* Search */}
               <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search components..."
                   value={searchTerm}
@@ -366,12 +369,14 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
               {/* Components Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto">
                 {filteredComponents.map((component) => (
-                  <Card 
-                    key={component.id} 
+                  <Card
+                    key={component.id}
                     className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      onAddComponent(component.blockData)
-                        onAddComponent(component)
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleChoose(component)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleChoose(component)
                     }}
                   >
                     <CardContent className="p-4">
@@ -386,11 +391,11 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                           </Badge>
                         </div>
                       </div>
-                      
+
                       {component.preview && (
                         <div className="mb-3">
-                          <img 
-                            src={component.preview} 
+                          <img
+                            src={component.preview}
                             alt={component.name}
                             className="w-full h-20 object-cover rounded border"
                             onError={(e) => {
@@ -400,7 +405,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                           />
                         </div>
                       )}
-                      
+
                       <p className="text-xs text-muted-foreground">
                         {component.description}
                       </p>
