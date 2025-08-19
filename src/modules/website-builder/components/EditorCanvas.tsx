@@ -325,7 +325,6 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
   const [showComponentLibrary, setShowComponentLibrary] = useState(false)
-  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null)
   const { toast } = useToast()
