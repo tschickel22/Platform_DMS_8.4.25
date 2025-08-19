@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { Edit, Trash2, Copy, Plus, GripVertical } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,6 +17,7 @@ interface EditorCanvasProps {
   site: Site
   currentPage: Page | null
   previewMode: 'desktop' | 'tablet' | 'mobile'
+  onUpdatePage?: (updates: Partial<Page>) => void
   onSiteUpdate?: (site: Site) => void
 }
 
@@ -317,7 +319,7 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
   )
 }
 
-export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpdate }: EditorCanvasProps) {
+export default function EditorCanvas({ site, currentPage, previewMode, onUpdatePage }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
   const [showComponentLibrary, setShowComponentLibrary] = useState(false)
@@ -481,6 +483,31 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
       default:
         return {}
     }
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination || !currentPage || !onUpdatePage) {
+      return
+    }
+
+    const { source, destination } = result
+    
+    if (source.index === destination.index) {
+      return
+    }
+
+    // Reorder blocks
+    const reorderedBlocks = Array.from(currentPage.blocks)
+    const [removed] = reorderedBlocks.splice(source.index, 1)
+    reorderedBlocks.splice(destination.index, 0, removed)
+
+    // Update order property
+    const updatedBlocks = reorderedBlocks.map((block, index) => ({
+      ...block,
+      order: index
+    }))
+
+    onUpdatePage({ blocks: updatedBlocks })
   }
 
   const renderBlock = (block: Block) => {
@@ -742,18 +769,20 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
   const sortedBlocks = [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   return (
-    <div className="h-full overflow-y-auto">
-      {/* Toolbar */}
-      <div className="sticky top-0 z-20 bg-white border-b p-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{currentPage.name}</h2>
-        <Button
-          onClick={() => setShowAddBlockMenu(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Block
-        </Button>
-      </div>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="h-full overflow-y-auto">
+        <div className="bg-white">
+          {sortedBlocks.length === 0 ? (
+            <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <div className="text-6xl mb-4">🎨</div>
+                <h3 className="text-lg font-medium mb-2">Start Building</h3>
+                <p className="mb-4">Add your first content block to get started</p>
+                <Button onClick={handleAddBlock}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Block
+                </Button>
+              </div>
 
       {/* Page Content */}
       <div className="bg-white">
@@ -767,47 +796,80 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
                 Add Your First Block
               </Button>
             </div>
-          </div>
-        ) : (
-          sortedBlocks.map(renderBlock)
-        )}
-      </div>
+          ) : (
+            <Droppable droppableId="blocks">
+              {(provided) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                >
+                  {sortedBlocks.map((block, index) => (
+                    <Draggable key={block.id} draggableId={block.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`relative group border-2 transition-all duration-200 ${
+                            snapshot.isDragging 
+                              ? 'border-blue-500 shadow-lg bg-blue-50' 
+                              : hoveredBlock === block.id 
+                                ? 'border-blue-300' 
+                                : 'border-transparent'
+                          }`}
+                          onMouseEnter={() => setHoveredBlock(block.id)}
+                          onMouseLeave={() => setHoveredBlock(null)}
+                        >
+                          {/* Drag Handle */}
+                          <div
+                            {...provided.dragHandleProps}
+                            className={`absolute left-2 top-2 z-20 p-1 rounded bg-white shadow-sm border cursor-grab active:cursor-grabbing transition-opacity ${
+                              hoveredBlock === block.id || snapshot.isDragging ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          >
+                            <GripVertical className="h-4 w-4 text-gray-500" />
+                          </div>
 
-      {/* Add Block Button at Bottom */}
-      {sortedBlocks.length > 0 && (
-        <div className="p-8 text-center border-t bg-gray-50">
-          <Button
-            variant="outline"
-            onClick={() => setShowAddBlockMenu(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
+                          {/* Block Controls */}
+                          {(hoveredBlock === block.id || snapshot.isDragging) && (
+                            <div className="absolute top-2 right-2 z-10 flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setEditingBlock(block)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleCopyBlock(block.id)}
+                                className="h-8 w-8 p-0"
+                              >
+            </Droppable>
+          )}
+        </div>
+                              >
+        {/* Add Block Button */}
+        <div className="p-4 border-t bg-gray-50">
+          <Button onClick={handleAddBlock} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
             Add Block
           </Button>
         </div>
-      )}
-
-      {/* Modals */}
-      <BlockEditorModal
-        block={editingBlock}
-        isOpen={!!editingBlock}
-        onClose={() => setEditingBlock(null)}
-        onSave={handleSaveBlock}
-      />
-
-      <AddBlockMenu
-        isOpen={showAddBlockMenu}
-        onClose={() => setShowAddBlockMenu(false)}
-        onAddBlock={handleAddBlock}
-      />
-
-      {/* Component Library Modal */}
-      {showComponentLibrary && (
-        <ComponentLibrary
-          onAddComponent={handleAddBlock}
-          onClose={() => setShowComponentLibrary(false)}
-        />
-      )}
-    </div>
+                            {renderBlock(block)}
+        {/* Add Block Menu */}
+        {showAddMenu && (
+          <AddBlockMenu
+            position={addMenuPosition}
+            onAddBlock={(blockType) => {
+              console.log('Add block:', blockType)
+              setShowAddMenu(false)
+            }}
+            onClose={() => setShowAddMenu(false)}
+          />
+        )}
+      </div>
+    </DragDropContext>
   )
 }

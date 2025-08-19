@@ -90,6 +90,18 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
+  const handleUpdatePage = (updates: Partial<Page>) => {
+    if (!site || !currentPage) return
+    
+    const updatedPage = { ...currentPage, ...updates }
+    const updatedPages = site.pages.map(page => 
+      page.id === currentPage.id ? updatedPage : page
+    )
+    
+    setSite({ ...site, pages: updatedPages })
+    setCurrentPage(updatedPage)
+  }
+
   const handleBackToBuilder = () => {
     const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
     navigate(basePath)
@@ -341,6 +353,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 site={site}
                 currentPage={currentPage}
                 previewMode={previewMode}
+                onUpdatePage={handleUpdatePage}
                 onSiteUpdate={handleSiteUpdate}
               />
             </div>
