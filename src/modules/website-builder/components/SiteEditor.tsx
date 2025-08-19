@@ -109,17 +109,41 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const handlePreview = () => {
     // Store current site data for preview
-    if (site) {
-      try {
-        const previewKey = `wb2:preview-site:${site.slug}`
+    try {
+      const previewKey = `wb2:preview-site:${site.slug}`
+      const siteDataToStore = JSON.stringify(site)
+      localStorage.setItem(previewKey, siteDataToStore)
+      console.log('✅ Successfully stored preview data for key:', previewKey)
+      console.log('📊 Stored data size:', siteDataToStore.length, 'characters')
+      
+      // Verify the data was stored
+      const verification = localStorage.getItem(previewKey)
+      if (verification) {
+        console.log('✅ Verification: Data successfully retrieved from storage')
+      } else {
+        console.error('❌ Verification failed: No data found after storage')
+      }
+    } catch (error) {
+      console.error('❌ Failed to store preview data:', error)
+      toast({
+        title: 'Preview Error',
+        description: 'Failed to prepare preview data. Please try again.',
+        variant: 'destructive'
+      })
+      return
+    }
         localStorage.setItem(previewKey, JSON.stringify(site))
         console.log('Stored preview data for site:', site.slug, site)
       } catch (error) {
+    console.log('🌐 Opening preview URL:', previewUrl)
         console.error('Failed to store preview data:', error)
       }
     }
     
     if (!site) return
+    
+    console.log('🔍 Preview button clicked for site:', site.slug)
+    console.log('📦 Site data being stored:', site)
     
     // Save current state to localStorage for preview
     try {
