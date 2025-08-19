@@ -32,6 +32,26 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media' | 'components'>('editor')
 
+  // --- helpers ---------------------------------------------------------------
+  const writePreview = (s: Site) => {
+    try {
+      const key = `wb2:preview-site:${s.slug}`
+      const json = JSON.stringify(s)
+      try { localStorage.setItem(key, json) } catch {}
+      try { sessionStorage.setItem(key, json) } catch {}
+    } catch {}
+  }
+
+  const encodeForQuery = (obj: unknown) => {
+    try {
+      return btoa(encodeURIComponent(JSON.stringify(obj)))
+    } catch {
+      return ''
+    }
+  }
+
+  // --------------------------------------------------------------------------
+
   useEffect(() => {
     loadSite()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,11 +102,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     try {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
-      
-      // Also update preview data when saving
-      const previewKey = `wb2:preview-site:${site.slug}`
-      localStorage.setItem(previewKey, JSON.stringify(site))
-      
+
+      // Keep preview storage in sync on save
+      writePreview(site)
+
       toast({ title: 'Saved', description: 'Your changes have been saved.' })
     } catch (err) {
       handleError(err, 'saving site')
@@ -97,42 +116,36 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const handleUpdatePage = (updates: Partial<Page>) => {
     if (!site || !currentPage) return
-    
+
     const updatedPage = { ...currentPage, ...updates }
-    const updatedPages = site.pages.map(page => 
+    const updatedPages = site.pages.map(page =>
       page.id === currentPage.id ? updatedPage : page
     )
-    
-    setSite({ ...site, pages: updatedPages })
+
+    const updatedSite = { ...site, pages: updatedPages }
+    setSite(updatedSite)
     setCurrentPage(updatedPage)
   }
 
   const handlePreview = () => {
     if (!site) return
-    
-    console.log('🔍 Preview button clicked for site:', site.slug)
-    console.log('📦 Site data being stored:', site)
-    
-    // Save current state to localStorage for preview
-    try {
-      const previewData = {
-        ...site,
-        pages: site.pages || [],
-        lastPreviewUpdate: new Date().toISOString()
-      }
-      localStorage.setItem(`wb2:preview-site:${site.id}`, JSON.stringify(previewData))
-      
-      // Open preview in new tab
-      const previewUrl = `/s/${site.slug}/`
-      window.open(previewUrl, '_blank', 'noopener,noreferrer')
-      
-      toast({ 
-        title: 'Preview Opened', 
-        description: 'Your site preview has opened in a new tab.' 
-      })
-    } catch (error) {
-      handleError(error, 'opening preview')
+
+    // Always persist a fresh snapshot under the SLUG key
+    const previewData = {
+      ...site,
+      pages: site.pages || [],
+      lastPreviewUpdate: new Date().toISOString()
     }
+    writePreview(previewData as Site)
+
+    // Also include a ?data= fallback for cross-origin cases
+    const encoded = encodeForQuery(previewData)
+    const previewUrl = encoded
+      ? `/s/${site.slug}/?data=${encoded}`
+      : `/s/${site.slug}/`
+
+    window.open(previewUrl, '_blank', 'noopener,noreferrer')
+    toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
   }
 
   const handleBackToBuilder = () => {
@@ -172,18 +185,15 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
       setSite(updatedSite)
       setCurrentPage(updatedPage)
-      
-      // Update preview data immediately
-      const previewKey = `wb2:preview-site:${site.slug}`
-      localStorage.setItem(previewKey, JSON.stringify(updatedSite))
+
+      // Keep preview storage hot as you edit
+      writePreview(updatedSite)
 
       toast({
         title: 'Component Added',
         description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
       })
-      console.log('Preview data stored for site slug:', site.slug)
       console.log('Preview URL:', `/s/${site.slug}/`)
-      console.log('Storage key:', previewKey)
     } catch (error) {
       console.error('Error adding component:', error)
       toast({
@@ -193,6 +203,32 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       })
     }
   }
+
+  // Keep preview storage synchronized whenever the whole site object changes
+  useEffect(() => {
+    if (site) writePreview(site)
+  }, [site])
+
+  // 🔌 Respond to preview window (cross-origin safe)
+  useEffect(() => {
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type !== 'wb2:site-preview:request') return
+      if (!site) return
+      if (data.slug && site.slug && data.slug !== site.slug) return
+
+      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
+      try {
+        // reply directly to the requester if possible
+        ;(evt.source as WindowProxy | null)?.postMessage(payload, '*')
+      } catch {
+        // fallback: broadcast
+        window.postMessage(payload, '*')
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [site])
 
   // Adapt data to PageList's expected props
   const pagesForList = useMemo(() => {
