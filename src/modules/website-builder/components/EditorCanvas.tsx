@@ -1,196 +1,288 @@
-import React, { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  Search, 
-  FileText, 
-  Home, 
-  Settings, 
-  Eye, 
-  Edit, 
-  Trash2,
-  MoreVertical
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import React from 'react'
+import { Site, Page, Block } from '../types'
 
-interface Page {
-  id: string
-  name: string
-  slug: string
-  isHomePage: boolean
-  isPublished: boolean
-  lastModified: string
-  template?: string
+interface EditorCanvasProps {
+  site: Site | null
+  currentPage: Page | null
+  previewMode: 'desktop' | 'tablet' | 'mobile'
+  onBlockSelect?: (block: Block) => void
+  selectedBlockId?: string | null
 }
 
-interface PageListProps {
-  pages: Page[]
-  currentPageId?: string
-  onSelectPage: (pageId: string) => void
-  onCreatePage: () => void
-  onEditPage: (pageId: string) => void
-  onDeletePage: (pageId: string) => void
-  onDuplicatePage: (pageId: string) => void
-}
-
-export default function PageList({
-  pages,
-  currentPageId,
-  onSelectPage,
-  onCreatePage,
-  onEditPage,
-  onDeletePage,
-  onDuplicatePage
-}: PageListProps) {
-  const [searchTerm, setSearchTerm] = useState('')
-  const filteredPages = pages.filter(page =>
-    page.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    page.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const getPageIcon = (page: Page) => {
-    if (page.isHomePage) return <Home className="h-4 w-4" />
-    return <FileText className="h-4 w-4" />
+export default function EditorCanvas({
+  site,
+  currentPage,
+  previewMode,
+  onBlockSelect,
+  selectedBlockId
+}: EditorCanvasProps) {
+  if (!site || !currentPage) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-gray-400 mb-2">No page selected</div>
+          <div className="text-sm text-gray-500">Select a page to start editing</div>
+        </div>
+      </div>
+    )
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Pages</h2>
-        <Button size="sm" onClick={onCreatePage}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Page
-        </Button>
-      </div>
+  const getCanvasWidth = () => {
+    switch (previewMode) {
+      case 'mobile':
+        return 'max-w-sm'
+      case 'tablet':
+        return 'max-w-2xl'
+      default:
+        return 'max-w-full'
+    }
+  }
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search pages..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+  const renderBlock = (block: Block) => {
+    const isSelected = selectedBlockId === block.id
+    // Get theme colors for consistent styling
+    const primaryColor = site?.theme?.primaryColor || '#3b82f6'
+    const secondaryColor = site?.theme?.secondaryColor || '#64748b'
+    
 
-      <div className="space-y-2">
-        {filteredPages.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {searchTerm ? 'No pages match your search' : 'No pages yet'}
-              </p>
-              {!searchTerm && (
-                <Button size="sm" onClick={onCreatePage} className="mt-2">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create your first page
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          filteredPages.map((page) => (
-            <Card 
-              key={page.id} 
-              className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                currentPageId === page.id ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => onSelectPage(page.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 flex-1">
-                    <div className="text-muted-foreground">
-                      {getPageIcon(page)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium truncate">{page.name}</h4>
-                        {page.isHomePage && (
-                          <Badge variant="secondary" className="text-xs">
-                            Home
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        /{page.slug}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Modified {new Date(page.lastModified).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge variant={page.isPublished ? 'default' : 'secondary'} className="text-xs">
-                      {page.isPublished ? 'Published' : 'Draft'}
-                    </Badge>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                          }}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation()
-                          onEditPage(page.id)
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation()
-                          onDuplicatePage(page.id)
-                        }}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        {!page.isHomePage && (
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDeletePage(page.id)
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+    const blockContent = (() => {
+      switch (block.type) {
+        case 'hero':
+          return (
+            <section className="relative bg-gray-900 text-white py-24">
+              {block.content.backgroundImage && (
+                <div 
+                  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${block.content.backgroundImage})` }}
+                >
+                  <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+              )}
+              <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center">
+                  {block.content.title && (
+                    <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                      {block.content.title}
+                    </h1>
+                  )}
+                  {block.content.subtitle && (
+                    <p className="text-xl md:text-2xl mb-8 text-gray-200">
+                      {block.content.subtitle}
+                    </p>
+                  )}
+                  {block.content.ctaText && (
+                    <button 
+                      className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
+                      style={{ backgroundColor: primaryColor, color: 'white' }}
+                    >
+                      {block.content.ctaText}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
+          )
 
-      {/* Quick Stats */}
-      {pages.length > 0 && (
-        <div className="text-xs text-muted-foreground pt-2 border-t">
-          {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.isPublished).length} published
+        case 'text':
+          return (
+            <section className="py-16">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div 
+                  className={`prose prose-lg max-w-none ${block.content.alignment || 'text-left'}`}
+                  dangerouslySetInnerHTML={{ __html: block.content.html || block.content.text || '' }}
+                />
+              </div>
+            </section>
+          )
+
+        case 'image':
+          return (
+            <section className="py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className={`text-${block.content.alignment || 'center'}`}>
+                  <img 
+                    src={block.content.src} 
+                    alt={block.content.alt || ''} 
+                    className="max-w-full h-auto rounded-lg shadow-lg"
+                  />
+                  {block.content.caption && (
+                    <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
+                  )}
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'gallery':
+          return (
+            <section className="py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(block.content.images || []).map((image: any, index: number) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={image.src} 
+                        alt={image.alt || ''} 
+                        className="w-full h-64 object-cover rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
+                      />
+                      {image.caption && (
+                        <p className="mt-2 text-sm text-gray-600">{image.caption}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'cta':
+          return (
+            <section className="py-16" style={{ backgroundColor: `${primaryColor}10` }}>
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold mb-4">{block.content.title}</h2>
+                )}
+                {block.content.description && (
+                  <p className="text-lg text-gray-600 mb-8">{block.content.description}</p>
+                )}
+                {block.content.buttonText && (
+                  <button 
+                    className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
+                    style={{ backgroundColor: primaryColor, color: 'white' }}
+                  >
+                    {block.content.buttonText}
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+
+        case 'inventory':
+          return (
+            <section className="py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {(block.content.items || []).map((item: any, index: number) => (
+                    <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="p-6">
+                        <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                        <p className="text-2xl font-bold mb-4" style={{ color: primaryColor }}>
+                          ${item.price?.toLocaleString()}
+                        </p>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          {item.specs && Object.entries(item.specs).map(([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                              <span>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )
+
+        default:
+          return (
+            <div className="py-8 px-4 bg-yellow-50 border border-yellow-200">
+              <p className="text-center text-yellow-800">
+                Unknown block type: {block.type}
+              </p>
+            </div>
+          )
+      }
+    })()
+
+    return (
+      <div
+        key={block.id}
+        className={`relative group cursor-pointer transition-all ${
+          isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : 'hover:ring-1 hover:ring-gray-300'
+        }`}
+        onClick={() => onBlockSelect?.(block)}
+      >
+        {blockContent}
+        
+        {/* Edit overlay */}
+        <div className={`absolute inset-0 bg-blue-500 bg-opacity-10 transition-opacity ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}>
+          <div className="absolute top-2 left-2">
+            <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+              {block.type}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  // Sort blocks by order
+  const sortedBlocks = [...(currentPage.blocks || [])].sort((a, b) => (a.order || 0) - (b.order || 0))
+
+  return (
+    <div className="flex-1 bg-gray-50 overflow-auto">
+      <div className="p-8">
+        <div className={`mx-auto bg-white shadow-lg transition-all duration-300 ${getCanvasWidth()}`}>
+          {/* Site Navigation Preview */}
+          <nav className="bg-white shadow-sm border-b px-6 py-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                {site.brand?.logoUrl ? (
+                  <img src={site.brand.logoUrl} alt={site.name} className="h-8 w-auto" />
+                ) : (
+                  <span className="text-xl font-bold" style={{ color: site.theme?.primaryColor || '#3b82f6' }}>
+                    {site.name}
+                  </span>
+                )}
+              </div>
+              <div className="flex space-x-6">
+                {site.pages?.map(page => (
+                  <a
+                    key={page.id}
+                    href="#"
+                    className={`text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium ${
+                      page.id === currentPage.id ? 'border-b-2' : ''
+                    }`}
+                    style={{ borderColor: page.id === currentPage.id ? site.theme?.primaryColor || '#3b82f6' : 'transparent' }}
+                  >
+                    {page.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          {/* Page Content */}
+          <main className="min-h-screen">
+            {sortedBlocks.length > 0 ? (
+              sortedBlocks.map(renderBlock)
+            ) : (
+              <div className="flex items-center justify-center py-32">
+                <div className="text-center">
+                  <div className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No content yet</h3>
+                  <p className="text-gray-500">Add blocks to start building your page</p>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
     </div>
   )
 }
