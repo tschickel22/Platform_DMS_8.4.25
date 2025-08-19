@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,13 +29,32 @@ interface ComponentTemplate {
 interface ComponentLibraryProps {
   /** Parent expects the normalized block data to append to the current page */
   onAddComponent: (blockData: any, meta?: { templateId: string; name: string; category: string }) => void
-  /** Optional: close the library after choosing */
+  /** Optional: parent close callback */
   onClose?: () => void
 }
 
 export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<'all' | ComponentTemplate['category']>('all')
+  const [selectedCategory, setSelectedCategory] =
+    useState<'all' | ComponentTemplate['category']>('all')
+
+  // Self-managed visibility so Close works even if parent didn't pass onClose
+  const [isOpen, setIsOpen] = useState(true)
+  const handleClose = () => {
+    setIsOpen(false)
+    onClose?.()
+  }
+
+  // Close on Esc
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  if (!isOpen) return null
 
   const componentTemplates: ComponentTemplate[] = [
     // Hero Components
@@ -45,7 +64,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Large centered hero with title, subtitle, and CTA',
       category: 'hero',
       icon: Layout,
-      preview: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'hero',
         content: {
@@ -53,7 +73,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           subtitle: 'Find your perfect RV or manufactured home',
           ctaText: 'Browse Inventory',
           ctaLink: '/inventory',
-          backgroundImage: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=1200',
+          backgroundImage:
+            'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=1200',
           alignment: 'center'
         }
       }
@@ -64,7 +85,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Hero with content on left, image on right',
       category: 'hero',
       icon: Layout,
-      preview: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'hero',
         content: {
@@ -73,7 +95,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           ctaText: 'Learn More',
           ctaLink: '/about',
           layout: 'split',
-          image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800'
+          image:
+            'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800'
         }
       }
     },
@@ -104,7 +127,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       blockData: {
         type: 'text',
         content: {
-          html: '<p>Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.</p>',
+          html:
+            '<p>Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.</p>',
           alignment: 'left'
         }
       }
@@ -117,24 +141,28 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Grid of images with captions',
       category: 'media',
       icon: Grid,
-      preview: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'gallery',
         content: {
           title: 'Our Inventory',
           images: [
             {
-              src: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'RV Image 1',
               caption: 'Travel Trailers'
             },
             {
-              src: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'RV Image 2',
               caption: 'Motorhomes'
             },
             {
-              src: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'Manufactured Home',
               caption: 'Manufactured Homes'
             }
@@ -148,11 +176,13 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Single image with optional caption',
       category: 'media',
       icon: ImageIcon,
-      preview: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'image',
         content: {
-          src: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=800',
+          src:
+            'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=800',
           alt: 'Featured Image',
           caption: 'Add your image caption here',
           alignment: 'center'
@@ -172,7 +202,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         type: 'cta',
         content: {
           title: 'Ready to Find Your Perfect Home?',
-          description: 'Browse our extensive inventory of RVs and manufactured homes',
+          description:
+            'Browse our extensive inventory of RVs and manufactured homes',
           buttonText: 'View Inventory',
           buttonLink: '/inventory',
           alignment: 'center'
@@ -190,7 +221,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         type: 'cta',
         content: {
           title: 'Stay Updated',
-          description: 'Get notified about new inventory and special offers',
+          description:
+            'Get notified about new inventory and special offers',
           buttonText: 'Subscribe',
           buttonLink: '#newsletter',
           showEmailInput: true
@@ -252,7 +284,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
             {
               icon: 'star',
               title: 'Quality Guaranteed',
-              description: 'All our vehicles undergo thorough inspection'
+              description:
+                'All our vehicles undergo thorough inspection'
             },
             {
               icon: 'users',
@@ -284,13 +317,15 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           testimonials: [
             {
               name: 'John Smith',
-              text: 'Excellent service and quality RVs. Highly recommended!',
+              text:
+                'Excellent service and quality RVs. Highly recommended!',
               rating: 5,
               location: 'Austin, TX'
             },
             {
               name: 'Sarah Johnson',
-              text: 'Found the perfect manufactured home for our family.',
+              text:
+                'Found the perfect manufactured home for our family.',
               rating: 5,
               location: 'Dallas, TX'
             }
@@ -300,7 +335,11 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
     }
   ]
 
-  const categories: Array<{ id: 'all' | ComponentTemplate['category']; name: string; icon: React.ComponentType<any> }> = [
+  const categories: Array<{
+    id: 'all' | ComponentTemplate['category']
+    name: string
+    icon: React.ComponentType<any>
+  }> = [
     { id: 'all', name: 'All Components', icon: Grid },
     { id: 'hero', name: 'Hero Sections', icon: Layout },
     { id: 'text', name: 'Text & Content', icon: Type },
@@ -322,16 +361,28 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
   })
 
   const handleChoose = (tpl: ComponentTemplate) => {
-    onAddComponent(tpl.blockData, { templateId: tpl.id, name: tpl.name, category: tpl.category })
-    onClose?.()
+    onAddComponent(tpl.blockData, {
+      templateId: tpl.id,
+      name: tpl.name,
+      category: tpl.category
+    })
+    handleClose()
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      // Close when clicking backdrop (but not inside the card)
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) handleClose()
+      }}
+    >
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Component Library</CardTitle>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={handleClose}>Close</Button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="flex">
@@ -377,7 +428,6 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      console.log('Component clicked:', component.name)
                       handleChoose(component)
                     }}
                     onKeyDown={(e) => {
@@ -404,7 +454,6 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                             alt={component.name}
                             className="w-full h-20 object-cover rounded border"
                             onError={(e) => {
-                              e.preventDefault()
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
                             }}
