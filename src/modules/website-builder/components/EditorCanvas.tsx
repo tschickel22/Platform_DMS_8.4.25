@@ -21,6 +21,7 @@ interface EditorCanvasProps {
   onUpdatePage?: (updates: Partial<Page>) => void
   onSiteUpdate?: (site: Site) => void
 }
+  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
 
 
 interface BlockEditorModalProps {
