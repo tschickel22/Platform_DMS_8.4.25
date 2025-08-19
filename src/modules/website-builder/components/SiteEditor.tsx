@@ -57,6 +57,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  // This answers the preview's postMessage request with the live site object.
+  useEffect(() => {
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type !== 'wb2:site-preview:request') return
+      if (!site) return
+      if (data.slug && data.slug !== site.slug) return
+
+      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
+      try {
+        (evt.source as WindowProxy | null)?.postMessage(payload, '*')
+      } catch {
+        // fallback broadcast
+        window.postMessage(payload, '*')
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [site])
+
   // PostMessage bridge for preview communication
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
@@ -124,6 +145,12 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
       
+      // Mirror to sessionStorage for preview sync
+      const previewKey = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(previewKey, JSON.stringify(site))
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
+      
       // Mirror to preview storage for real-time updates
       const previewKey = `wb2:preview-site:${site.slug}`
       localStorage.setItem(previewKey, JSON.stringify(site))
@@ -140,20 +167,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       setSaving(false)
     }
   }
-
-  const handleUpdatePage = (updates: Partial<Page>) => {
-    if (!site || !currentPage) return
-
-    const updatedPage = { ...currentPage, ...updates }
-    const updatedPages = site.pages.map(page =>
-      page.id === currentPage.id ? updatedPage : page
-    )
-
-    const updatedSite = { ...site, pages: updatedPages }
-    setSite(updatedSite)
-    setCurrentPage(updatedPage)
-  }
-
   const handlePreview = () => {
     if (!site) return
 
