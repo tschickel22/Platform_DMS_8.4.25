@@ -3,12 +3,12 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Edit, Trash2, Plus, GripVertical } from 'lucide-react'
 import { Site, Page, Block } from '../types'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
+import RichTextEditor from './RichTextEditor'
 
 interface EditorCanvasProps {
   site: Site
@@ -93,17 +93,15 @@ function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalPr
           </div>
         )
 
-      case 'text':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="html">Content (HTML)</Label>
-              <Textarea
-                id="html"
-                value={formData.html || formData.text || ''}
-                onChange={(e) => setFormData({ ...formData, html: e.target.value })}
-                placeholder="Enter your content"
-                rows={8}
+              <Label htmlFor="content">Content</Label>
+              <RichTextEditor
+                content={editingContent.html || editingContent.text || ''}
+                onChange={(html) => setEditingContent({
+                  ...editingContent,
+                  html,
+                  text: html
+                })}
+                placeholder="Enter your text content..."
               />
             </div>
             <div>
