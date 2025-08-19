@@ -249,6 +249,8 @@ export default function PublicSitePreview() {
           throw new Error('No site specified')
         }
 
+        console.log('Loading site for slug:', siteSlug)
+
         // Try to load preview data first (for live editing preview)
         let siteData = null
         try {
@@ -272,47 +274,8 @@ export default function PublicSitePreview() {
         if (siteData) {
           setSite(siteData)
         } else {
-          // Fallback: create a demo site for preview
-          const demoSite: Site = {
-            id: 'demo-site',
-            name: 'Demo Website',
-            slug: siteSlug,
-            theme: {
-              primaryColor: '#3b82f6',
-              secondaryColor: '#64748b',
-              fontFamily: 'Inter'
-            },
-            pages: [
-              {
-                id: 'home',
-                title: 'Home',
-                path: '/',
-                blocks: [
-                  {
-                    id: 'hero-1',
-                    type: 'hero',
-                    order: 0,
-                    content: {
-                      title: 'Welcome to Our Dealership',
-                      subtitle: 'Find your perfect RV or manufactured home',
-                      ctaText: 'Browse Inventory',
-                      ctaLink: '/inventory'
-                    }
-                  },
-                  {
-                    id: 'text-1',
-                    type: 'text',
-                    order: 1,
-                    content: {
-                      html: '<h2>About Us</h2><p>We are a leading dealership specializing in RVs and manufactured homes. Our team is dedicated to helping you find the perfect home for your lifestyle.</p>',
-                      alignment: 'center'
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-          setSite(demoSite)
+          console.error('❌ No site data found for slug:', siteSlug)
+          throw new Error(`Website '${siteSlug}' not found. Make sure you're previewing from the website builder.`)
         }
       } catch (err) {
         console.error('Error loading site:', err)

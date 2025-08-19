@@ -82,6 +82,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     try {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
+      
+      // Also update preview data when saving
+      const previewKey = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(previewKey, JSON.stringify(site))
+      
       toast({ title: 'Saved', description: 'Your changes have been saved.' })
     } catch (err) {
       handleError(err, 'saving site')
@@ -103,6 +108,17 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   }
 
   const handlePreview = () => {
+    // Store current site data for preview
+    if (site) {
+      try {
+        const previewKey = `wb2:preview-site:${site.slug}`
+        localStorage.setItem(previewKey, JSON.stringify(site))
+        console.log('Stored preview data for site:', site.slug, site)
+      } catch (error) {
+        console.error('Failed to store preview data:', error)
+      }
+    }
+    
     if (!site) return
     
     // Save current state to localStorage for preview
@@ -164,6 +180,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
       setSite(updatedSite)
       setCurrentPage(updatedPage)
+      
+      // Update preview data immediately
+      const previewKey = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(previewKey, JSON.stringify(updatedSite))
 
       toast({
         title: 'Component Added',
