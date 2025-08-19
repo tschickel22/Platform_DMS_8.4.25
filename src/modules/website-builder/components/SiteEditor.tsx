@@ -189,7 +189,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         title: 'Component Added',
         description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
       })
-      
       console.log('Preview data stored for site slug:', site.slug)
       console.log('Preview URL:', `/s/${site.slug}/`)
       console.log('Storage key:', previewKey)
