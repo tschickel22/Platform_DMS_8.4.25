@@ -98,30 +98,62 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   }
 
   // Add component from the library to the current page
-  const handleAddComponent = (componentData: any) => {
+  const handleAddComponent = async (component: any) => {
+    console.log('handleAddComponent called with:', component)
+    
     if (!site || !currentPage) {
+      console.log('No site or currentPage available')
       toast({
-        title: 'No Page Selected',
+        title: 'Error',
         description: 'Please select a page first',
         variant: 'destructive'
       })
       return
     }
 
-    const newBlock = {
-      id: `block-${Date.now()}`,
-      order: (currentPage.blocks?.length || 0),
-      ...componentData
-    }
+    try {
+      console.log('Adding component to page:', currentPage.title)
+      
+      // Create a new block from the component template
+      const newBlock = {
+        id: `block-${Date.now()}`,
+        type: component.type,
+        order: (currentPage.blocks?.length || 0),
+        content: component.defaultContent || {}
+      }
 
-    const updatedPage: Page = {
-      ...currentPage,
-      blocks: [...(currentPage.blocks || []), newBlock]
-    }
+      console.log('Created new block:', newBlock)
 
-    const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
-    setSite({ ...site, pages: updatedPages })
-    setCurrentPage(updatedPage)
+      // Add the block to the current page
+      const updatedBlocks = [...(currentPage.blocks || []), newBlock]
+      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      
+      // Update the site with the new page data
+      const updatedPages = site.pages.map(page => 
+        page.id === currentPage.id ? updatedPage : page
+      )
+      
+      const updatedSite = { ...site, pages: updatedPages }
+      
+      console.log('Updating site state')
+      setSite(updatedSite)
+      setCurrentPage(updatedPage)
+      
+      toast({
+        title: 'Component Added',
+        description: `${component.name} has been added to your page`,
+      })
+      
+      console.log('Component added successfully')
+      
+    } catch (error) {
+      console.error('Error adding component:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to add component to page',
+        variant: 'destructive'
+      })
+    }
   }
 
   // Adapt data to PageList's expected props
