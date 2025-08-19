@@ -57,27 +57,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
-  // PostMessage bridge for preview communication
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const data = evt.data as any
-      if (data?.type !== 'wb2:site-preview:request') return
-      if (!site) return
-      if (data.slug && data.slug !== site.slug) return
-
-      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
-      try {
-        (evt.source as WindowProxy | null)?.postMessage(payload, '*')
-      } catch {
-        // fallback broadcast
-        window.postMessage(payload, '*')
-      }
-    }
-
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [site])
-
   const loadSite = async () => {
     if (!siteId) return
     try {
@@ -123,12 +102,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     try {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
-      
-      // Mirror to preview storage for real-time updates
-      const previewKey = `wb2:preview-site:${site.slug}`
-      localStorage.setItem(previewKey, JSON.stringify(site))
-      sessionStorage.setItem(previewKey, JSON.stringify(site))
-      
 
       // Keep preview storage in sync on save
       writePreview(site)
@@ -181,6 +154,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
+  const handleAddComponent = (blockData: any, meta?: any) => {
+    if (!site || !currentPage) return
+
     try {
       const newBlock = {
         id: `block-${Date.now()}`,
@@ -216,6 +192,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         variant: 'destructive'
       })
     }
+  }
+
+  const handleBackToBuilder = () => {
+    const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
+    navigate(basePath)
   }
 
   // Keep preview storage synchronized whenever the whole site object changes
