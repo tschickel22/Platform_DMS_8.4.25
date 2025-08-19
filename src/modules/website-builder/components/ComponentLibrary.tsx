@@ -427,7 +427,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                   <p className="text-sm">Try adjusting your search or category filter</p>
                 </div>
               )}
-            <Button variant="outline" onClick={onClose}>Close</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
