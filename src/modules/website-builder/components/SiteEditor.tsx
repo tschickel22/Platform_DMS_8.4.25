@@ -57,27 +57,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
-  // This answers the preview's postMessage request with the live site object.
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const data = evt.data as any
-      if (data?.type !== 'wb2:site-preview:request') return
-      if (!site) return
-      if (data.slug && data.slug !== site.slug) return
-
-      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
-      try {
-        (evt.source as WindowProxy | null)?.postMessage(payload, '*')
-      } catch {
-        // fallback broadcast
-        window.postMessage(payload, '*')
-      }
-    }
-
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [site])
-
   // PostMessage bridge to respond to preview requests
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
@@ -201,6 +180,14 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       toast({ title: 'Saved', description: 'Your changes have been saved.' })
     } catch (err) {
       handleError(err, 'saving site')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePreview = () => {
+    if (!site) return
+    try {
       // Snapshot to storage under SLUG, not id
       const previewData = {
         ...site,
@@ -219,30 +206,40 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       window.open(previewUrl, '_blank')
 
       toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
+    } catch (error) {
       handleError(error, 'opening preview')
     }
   }
 
   const handleBackToBuilder = () => {
     const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
-      // Snapshot to storage under SLUG, not id
-      const previewData = {
-        ...site,
-        pages: site.pages || [],
-        lastPreviewUpdate: new Date().toISOString(),
+    navigate(basePath)
+  }
+
+  const handleUpdatePage = (updatedPage: Page) => {
+    if (!site) return
+    const updatedPages = site.pages.map(p => p.id === updatedPage.id ? updatedPage : p)
+    const updatedSite = { ...site, pages: updatedPages }
+    setSite(updatedSite)
+    setCurrentPage(updatedPage)
+  }
+
+  const handleAddComponent = (componentType: string) => {
+    if (!currentPage || !site) return
+    try {
+      // Create a new block for the component
+      const newBlock = {
+        id: `block-${Date.now()}`,
+        type: componentType,
+        content: {},
+        styles: {}
       }
-      const key = `wb2:preview-site:${site.slug}`
-      localStorage.setItem(key, JSON.stringify(previewData))
-      sessionStorage.setItem(key, JSON.stringify(previewData)) // same-origin fallback
 
-      // Also pass data via URL so cross-origin preview can render even without storage
-      const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
-      const previewUrl = `/s/${site.slug}/?data=${encoded}`
+      const updatedBlocks = [...(currentPage.blocks || []), newBlock]
+      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      handleUpdatePage(updatedPage)
 
-      // IMPORTANT: keep window.opener so postMessage can work
-      window.open(previewUrl, '_blank')
-
-      toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
+      toast({ title: 'Component Added', description: `${componentType} component has been added to the page.` })
     } catch (error) {
       console.error('Error adding component:', error)
       toast({
