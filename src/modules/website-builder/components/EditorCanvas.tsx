@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Edit, Trash2, Copy, Plus, GripVertical } from 'lucide-react'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Edit, Trash2, Plus, GripVertical, Copy, Layers } from 'lucide-react'
@@ -319,11 +320,12 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
   )
 }
 
-export default function EditorCanvas({ site, currentPage, previewMode, onUpdatePage }: EditorCanvasProps) {
+export default function EditorCanvas({ site, currentPage, previewMode, onUpdatePage, onSiteUpdate }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
   const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+  const [hoveredBlock, setHoveredBlock] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Safely get blocks from current page
@@ -425,6 +427,48 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
         description: 'Failed to add block. Please try again.',
         variant: 'destructive'
       })
+    }
+  }
+
+  const handleDuplicateBlock = async (block: Block) => {
+    if (!currentPage || !site) return
+
+    try {
+      const newBlock: Block = {
+        ...block,
+        id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        order: blocks.length
+      }
+
+      const updatedBlocks = [...blocks, newBlock]
+      const updatedPage = { ...currentPage, blocks: updatedBlocks }
+      const updatedPages = site.pages.map(p => p.id === currentPage.id ? updatedPage : p)
+      const updatedSite = { ...site, pages: updatedPages }
+
+      await websiteService.updateSite(site.id, updatedSite)
+      
+      if (onSiteUpdate) {
+        onSiteUpdate(updatedSite)
+      }
+
+      toast({
+        title: 'Block Duplicated',
+        description: 'Block has been duplicated successfully.'
+      })
+    } catch (error) {
+      console.error('Error duplicating block:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate block. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const handleCopyBlock = (blockId: string) => {
+    const block = blocks.find(b => b.id === blockId)
+    if (block) {
+      handleDuplicateBlock(block)
     }
   }
 
@@ -778,23 +822,11 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
                 <div className="text-6xl mb-4">🎨</div>
                 <h3 className="text-lg font-medium mb-2">Start Building</h3>
                 <p className="mb-4">Add your first content block to get started</p>
-                <Button onClick={handleAddBlock}>
+                <Button onClick={() => setShowAddBlockMenu(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Block
                 </Button>
               </div>
-
-      {/* Page Content */}
-      <div className="bg-white">
-        {sortedBlocks.length === 0 ? (
-          <div className="h-96 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Empty Page</h3>
-              <p className="mb-4">This page doesn't have any content blocks yet.</p>
-              <Button onClick={() => setShowAddBlockMenu(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Block
-              </Button>
             </div>
           ) : (
             <Droppable droppableId="blocks">
@@ -846,30 +878,54 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
                                 onClick={() => handleCopyBlock(block.id)}
                                 className="h-8 w-8 p-0"
                               >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteBlock(block.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+
+                          {renderBlock(block)}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
             </Droppable>
           )}
         </div>
-                              >
+
         {/* Add Block Button */}
         <div className="p-4 border-t bg-gray-50">
-          <Button onClick={handleAddBlock} className="w-full">
+          <Button onClick={() => setShowAddBlockMenu(true)} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Add Block
           </Button>
         </div>
-                            {renderBlock(block)}
-        {/* Add Block Menu */}
-        {showAddMenu && (
-          <AddBlockMenu
-            position={addMenuPosition}
-            onAddBlock={(blockType) => {
-              console.log('Add block:', blockType)
-              setShowAddMenu(false)
-            }}
-            onClose={() => setShowAddMenu(false)}
-          />
-        )}
       </div>
+
+      {/* Block Editor Modal */}
+      <BlockEditorModal
+        block={editingBlock}
+        isOpen={!!editingBlock}
+        onClose={() => setEditingBlock(null)}
+        onSave={handleSaveBlock}
+      />
+
+      {/* Add Block Menu */}
+      <AddBlockMenu
+        isOpen={showAddBlockMenu}
+        onClose={() => setShowAddBlockMenu(false)}
+        onAddBlock={handleAddBlock}
+      />
     </DragDropContext>
   )
 }
