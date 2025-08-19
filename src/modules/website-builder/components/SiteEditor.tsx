@@ -271,55 +271,17 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <TabsContent value="components" className="mt-0">
                 <ComponentLibrary
                   onAddBlock={(blockData) => {
-                  onAddComponent={(component) => {
-                    try {
-                      if (!currentPage) {
-                        toast({ 
-                          title: 'No Page Selected', 
-                          description: 'Please select a page first',
-                          variant: 'destructive' 
-                        })
-                        return
-                      }
-                      
-                      // Create new block from component template
-                      const newBlock = {
-                        id: `block-${Date.now()}`,
-                        type: component.blockType,
-                        content: component.defaultContent,
-                        order: (currentPage.blocks?.length || 0)
-                      }
-                      
-                      // Add block to current page
-                      const updatedPage = {
-                        ...currentPage,
-                        blocks: [...(currentPage.blocks || []), newBlock]
-                      }
-                      
-                      // Update site with new page data
-                      const updatedSite = {
-                        ...site,
-                        pages: site.pages.map(p => 
-                          p.id === currentPage.id ? updatedPage : p
-                        )
-                      }
-                      
-                      setSite(updatedSite)
-                      setCurrentPage(updatedPage)
-                      
+                    if (!currentPage) {
                       toast({ 
-                        title: 'Component Added', 
-                        description: `${component.name} has been added to your page` 
-                      })
-                    } catch (error) {
-                      console.error('Error adding component:', error)
-                      toast({ 
-                        title: 'Error', 
-                        description: 'Failed to add component',
+                        title: 'No Page Selected', 
+                        description: 'Please select a page first',
                         variant: 'destructive' 
                       })
+                      return
                     }
-                  }}
+                    
+                    const newBlock = {
+                      ...blockData,
                       id: `block-${Date.now()}`,
                       order: (currentPage.blocks?.length || 0)
                     }
