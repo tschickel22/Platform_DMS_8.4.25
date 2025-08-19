@@ -57,6 +57,27 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  // PostMessage bridge for preview communication
+  useEffect(() => {
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data as any
+      if (data?.type !== 'wb2:site-preview:request') return
+      if (!site) return
+      if (data.slug && data.slug !== site.slug) return
+
+      const payload = { type: 'wb2:site-preview:response', slug: site.slug, site }
+      try {
+        (evt.source as WindowProxy | null)?.postMessage(payload, '*')
+      } catch {
+        // fallback broadcast
+        window.postMessage(payload, '*')
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [site])
+
   const loadSite = async () => {
     if (!siteId) return
     try {
@@ -102,6 +123,12 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     try {
       setSaving(true)
       await websiteService.updateSite(site.id, site)
+      
+      // Mirror to preview storage for real-time updates
+      const previewKey = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(previewKey, JSON.stringify(site))
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
 
       // Keep preview storage in sync on save
       writePreview(site)
@@ -130,42 +157,29 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const handlePreview = () => {
     if (!site) return
 
-    // Always persist a fresh snapshot under the SLUG key
-    const previewData = {
-      ...site,
-      pages: site.pages || [],
-      lastPreviewUpdate: new Date().toISOString()
+    try {
+      // Snapshot to storage under SLUG, not id
+      const previewData = {
+        ...site,
+        pages: site.pages || [],
+        lastPreviewUpdate: new Date().toISOString(),
+      }
+      const key = `wb2:preview-site:${site.slug}`
+      localStorage.setItem(key, JSON.stringify(previewData))
+      sessionStorage.setItem(key, JSON.stringify(previewData)) // same-origin fallback
+
+      // Also pass data via URL so cross-origin preview can render even without storage
+      const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
+      const previewUrl = `/s/${site.slug}/?data=${encoded}`
+
+      // IMPORTANT: keep window.opener so postMessage can work
+      window.open(previewUrl, '_blank')
+
+      toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
+    } catch (error) {
+      handleError(error, 'opening preview')
     }
-    writePreview(previewData as Site)
-
-    // Also include a ?data= fallback for cross-origin cases
-    const encoded = encodeForQuery(previewData)
-    const previewUrl = encoded
-      ? `/s/${site.slug}/?data=${encoded}`
-      : `/s/${site.slug}/`
-
-    window.open(previewUrl, '_blank', 'noopener,noreferrer')
-    toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
   }
-
-  const handleBackToBuilder = () => {
-    const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
-    navigate(basePath)
-  }
-
-  // Add component from the library to the current page
-  const handleAddComponent = (
-    blockData: any,
-    meta?: { templateId: string; name: string; category: string }
-  ) => {
-    if (!site || !currentPage) {
-      toast({
-        title: 'Error',
-        description: 'Please select a page first',
-        variant: 'destructive'
-      })
-      return
-    }
 
     try {
       const newBlock = {
