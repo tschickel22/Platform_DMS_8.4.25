@@ -98,11 +98,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   }
 
   // Add component from the library to the current page
-  const handleAddComponent = async (component: any) => {
-    console.log('handleAddComponent called with:', component)
-    
+  const handleAddComponent = async (component: any, meta?: { templateId: string; name: string; category: string }) => {
     if (!site || !currentPage) {
-      console.log('No site or currentPage available')
       toast({
         title: 'Error',
         description: 'Please select a page first',
@@ -112,40 +109,32 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
 
     try {
-      console.log('Adding component to page:', currentPage.title)
-      
       // Create a new block from the component template
       const newBlock = {
         id: `block-${Date.now()}`,
         type: component.type,
-        order: (currentPage.blocks?.length || 0),
-        content: component.defaultContent || {}
+        order: currentPage.blocks?.length || 0,
+        content: component.content ?? component.defaultContent ?? {}
       }
-
-      console.log('Created new block:', newBlock)
 
       // Add the block to the current page
       const updatedBlocks = [...(currentPage.blocks || []), newBlock]
       const updatedPage = { ...currentPage, blocks: updatedBlocks }
-      
+
       // Update the site with the new page data
-      const updatedPages = site.pages.map(page => 
+      const updatedPages = site.pages.map(page =>
         page.id === currentPage.id ? updatedPage : page
       )
-      
       const updatedSite = { ...site, pages: updatedPages }
-      
-      console.log('Updating site state')
+
       setSite(updatedSite)
       setCurrentPage(updatedPage)
-      
+
+      const name = meta?.name || component.name || component.type || 'Component'
       toast({
         title: 'Component Added',
-        description: `${component.name} has been added to your page`,
+        description: `${name} has been added to your page`,
       })
-      
-      console.log('Component added successfully')
-      
     } catch (error) {
       console.error('Error adding component:', error)
       toast({
@@ -326,7 +315,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               </TabsContent>
 
               <TabsContent value="components" className="mt-0">
-                <ComponentLibrary onAddComponent={handleAddComponent} />
+                <ComponentLibrary
+                  onAddComponent={handleAddComponent}
+                  onClose={() => setActiveTab('editor')}  {/* ← one-line change */}
+                />
               </TabsContent>
 
               <TabsContent value="media" className="mt-0">
