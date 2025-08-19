@@ -97,26 +97,51 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     navigate(basePath)
   }
 
+  // Add component from the library to the current page
+  const handleAddComponent = (componentData: any) => {
+    if (!site || !currentPage) {
+      toast({
+        title: 'No Page Selected',
+        description: 'Please select a page first',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    const newBlock = {
+      id: `block-${Date.now()}`,
+      order: (currentPage.blocks?.length || 0),
+      ...componentData
+    }
+
+    const updatedPage: Page = {
+      ...currentPage,
+      blocks: [...(currentPage.blocks || []), newBlock]
+    }
+
+    const updatedPages = site.pages.map(p => (p.id === currentPage.id ? updatedPage : p))
+    setSite({ ...site, pages: updatedPages })
+    setCurrentPage(updatedPage)
+  }
+
   // Adapt data to PageList's expected props
   const pagesForList = useMemo(() => {
-    const pages = site?.pages || []
-    return pages.map((p) => ({
+    const pgs = site?.pages || []
+    return pgs.map((p) => ({
       id: p.id,
       name: p.title,
       slug: (p.path || '/').replace(/^\//, ''),
       isHomePage: (p.path || '/') === '/',
       isPublished: false,
       lastModified: new Date().toISOString(),
-      template: undefined,
+      template: undefined
     }))
   }, [site?.pages])
 
-  const currentPageId =
-    currentPage ? currentPage.id : null
+  const currentPageId = currentPage ? currentPage.id : null
 
   const onSelectPageId = (id: string) => {
-    const found =
-      (site?.pages || []).find((p: any) => p.id === id) || null
+    const found = (site?.pages || []).find((p: any) => p.id === id) || null
     setCurrentPage(found)
     setActiveTab('editor')
   }
@@ -205,7 +230,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         {/* Left Sidebar */}
         <div className="w-80 border-r bg-card overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="h-full">
-            <TabsList className="grid w-full grid-cols-4 m-4">
+            <TabsList className="grid w-full grid-cols-5 m-4">
               <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
               <TabsTrigger value="pages" className="text-xs">Pages</TabsTrigger>
               <TabsTrigger value="theme" className="text-xs">Theme</TabsTrigger>
@@ -270,32 +295,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
               <TabsContent value="components" className="mt-0">
                 <ComponentLibrary onAddComponent={handleAddComponent} />
-                  onAddBlock={(blockData) => {
-                    if (!currentPage) {
-                      toast({ 
-                        title: 'No Page Selected', 
-                        description: 'Please select a page first',
-                        variant: 'destructive' 
-                      })
-                      return
-                    }
-                    
-                    const newBlock = {
-                      ...blockData,
-                      id: `block-${Date.now()}`,
-                      order: (currentPage.blocks?.length || 0)
-                    }
-                    
-                    const updatedBlocks = [...(currentPage.blocks || []), newBlock]
-                    const updatedPage = { ...currentPage, blocks: updatedBlocks }
-                    const updatedPages = site.pages.map(p => 
-                      p.id === currentPage.id ? updatedPage : p
-                    )
-                    
-                    setSite({ ...site, pages: updatedPages })
-                    setCurrentPage(updatedPage)
-                  }}
-                />
+              </TabsContent>
+
+              <TabsContent value="media" className="mt-0">
+                <MediaManager siteId={site.id} />
               </TabsContent>
             </div>
           </Tabs>
@@ -331,7 +334,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 <TabsTrigger value="publish">Publish</TabsTrigger>
                 <TabsTrigger value="media">Media</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="publish" className="mt-4">
                 <PublishPanel
                   site={site}
@@ -339,7 +342,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   mode={mode}
                 />
               </TabsContent>
-              
+
               <TabsContent value="media" className="mt-4">
                 <MediaManager siteId={site.id} />
               </TabsContent>
