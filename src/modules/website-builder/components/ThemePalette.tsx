@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +58,9 @@ const fontOptions = [
 
 export default function ThemePalette({ theme, onThemeUpdate }: ThemePaletteProps) {
   const [customColors, setCustomColors] = useState({
+  const [customPrimaryColor, setCustomPrimaryColor] = useState(theme?.primaryColor || '#2563eb')
+  const [customSecondaryColor, setCustomSecondaryColor] = useState(theme?.secondaryColor || '#64748b')
+  const [customFontFamily, setCustomFontFamily] = useState(theme?.fontFamily || 'Inter')
     primary: theme?.primaryColor || '#3b82f6',
     secondary: theme?.secondaryColor || '#64748b'
   })
@@ -91,8 +97,26 @@ export default function ThemePalette({ theme, onThemeUpdate }: ThemePaletteProps
     const newTheme: Theme = {
       ...currentTheme,
       fontFamily
+  const fontOptions = [
+    { value: 'Inter', label: 'Inter' },
+    { value: 'Roboto', label: 'Roboto' },
+    { value: 'Open Sans', label: 'Open Sans' },
+    { value: 'Montserrat', label: 'Montserrat' },
+    { value: 'Lato', label: 'Lato' },
+    { value: 'Poppins', label: 'Poppins' }
+  ]
+
     }
     onThemeUpdate(newTheme)
+  }
+
+  const handleCustomColorChange = () => {
+    const customTheme: Theme = {
+      primaryColor: customPrimaryColor,
+      secondaryColor: customSecondaryColor,
+      fontFamily: customFontFamily
+    }
+    applyTheme(customTheme)
   }
 
   return (
@@ -102,33 +126,44 @@ export default function ThemePalette({ theme, onThemeUpdate }: ThemePaletteProps
           <Palette className="h-5 w-5" />
           Theme & Style
         </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        {/* Preset Themes */}
-        <div>
-          <Label className="text-sm font-medium mb-3 block">Preset Themes</Label>
-          <div className="grid grid-cols-1 gap-2">
-            {presetThemes.map((preset) => (
-              <Button
-                key={preset.name}
-                variant="outline"
-                size="sm"
-                onClick={() => handlePresetSelect(preset)}
-                className="justify-start h-auto p-3"
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex gap-1">
-                    <div
-                      className="w-4 h-4 rounded-full border"
-                      style={{ backgroundColor: preset.primaryColor }}
-                    />
-                    <div
-                      className="w-4 h-4 rounded-full border"
-                      style={{ backgroundColor: preset.secondaryColor }}
-                    />
-                  </div>
-                  <span className="text-sm">{preset.name}</span>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Theme & Style</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="presets" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="presets">Presets</TabsTrigger>
+              <TabsTrigger value="custom">Custom</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="presets" className="space-y-3 mt-4">
+              <div>
+                <h4 className="text-sm font-medium mb-3">Preset Themes</h4>
+                <div className="space-y-2">
+                  {presetThemes.map((preset) => (
+                    <Button
+                      key={preset.name}
+                      variant="outline"
+                      className="w-full justify-start h-auto p-3"
+                      onClick={() => applyTheme(preset.theme)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                          <div 
+                            className="w-4 h-4 rounded-full border"
+                            style={{ backgroundColor: preset.theme.primaryColor }}
+                          />
+                          <div 
+                            className="w-4 h-4 rounded-full border"
+                            style={{ backgroundColor: preset.theme.secondaryColor }}
+                          />
+                        </div>
+                        <span className="text-sm">{preset.name}</span>
+                      </div>
+                    </Button>
+                  ))}
                 </div>
               </Button>
             ))}
@@ -226,11 +261,84 @@ export default function ThemePalette({ theme, onThemeUpdate }: ThemePaletteProps
               className="px-4 py-2 rounded-md text-white text-sm font-medium"
               style={{ backgroundColor: currentTheme.primaryColor }}
             >
-              Sample Button
-            </button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="custom" className="space-y-4 mt-4">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="primary-color" className="text-sm font-medium">
+                    Primary Color
+                  </Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="primary-color"
+                      type="color"
+                      value={customPrimaryColor}
+                      onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                      className="w-12 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      type="text"
+                      value={customPrimaryColor}
+                      onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                      className="flex-1"
+                      placeholder="#2563eb"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="secondary-color" className="text-sm font-medium">
+                    Secondary Color
+                  </Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="secondary-color"
+                      type="color"
+                      value={customSecondaryColor}
+                      onChange={(e) => setCustomSecondaryColor(e.target.value)}
+                      className="w-12 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      type="text"
+                      value={customSecondaryColor}
+                      onChange={(e) => setCustomSecondaryColor(e.target.value)}
+                      className="flex-1"
+                      placeholder="#64748b"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="font-family" className="text-sm font-medium">
+                    Font Family
+                  </Label>
+                  <select
+                    id="font-family"
+                    value={customFontFamily}
+                    onChange={(e) => setCustomFontFamily(e.target.value)}
+                    className="w-full mt-1 p-2 border rounded-md bg-background"
+                  >
+                    {fontOptions.map((font) => (
+                      <option key={font.value} value={font.value}>
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <Button 
+                  onClick={handleCustomColorChange}
+                  className="w-full"
+                >
+                  Apply Custom Theme
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

@@ -321,6 +321,7 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
   const [showComponentLibrary, setShowComponentLibrary] = useState(false)
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Safely get blocks from current page
@@ -675,32 +676,53 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
     return (
       <div 
         key={block.id}
-        className="relative group border-2 border-transparent hover:border-blue-300 transition-colors"
+        className="relative group border-2 border-transparent hover:border-blue-300 transition-all duration-200"
+        onMouseEnter={() => setHoveredBlockId(block.id)}
+        onMouseLeave={() => setHoveredBlockId(null)}
       >
-        {/* Edit Overlay */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => handleEditBlock(block)}
-              className="bg-white shadow-md hover:bg-gray-50"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => handleDeleteBlock(block.id)}
-              className="bg-white shadow-md hover:bg-gray-50 text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
         {/* Block Content */}
         {blockContent}
+
+        {/* Enhanced Edit overlay */}
+        {hoveredBlockId === block.id && (
+          <div className="absolute inset-0 bg-blue-500/5 border-2 border-blue-500 pointer-events-none">
+            <div className="absolute top-2 right-2 flex gap-2 pointer-events-auto">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 px-2 bg-white shadow-md hover:bg-gray-50"
+                onClick={() => handleEditBlock(block)}
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 px-2 bg-white shadow-md hover:bg-gray-50"
+                onClick={() => handleDuplicateBlock(block)}
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8 px-2 shadow-md"
+                onClick={() => handleDeleteBlock(block.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            
+            {/* Block type indicator */}
+            <div className="absolute top-2 left-2 pointer-events-none">
+              <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                {block.type.charAt(0).toUpperCase() + block.type.slice(1)} Block
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
