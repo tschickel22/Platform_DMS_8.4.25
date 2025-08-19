@@ -112,7 +112,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     if (site) {
       try {
         const previewKey = `wb2:preview-site:${site.slug}`
-      const previewKey = `wb2:preview-site:${site.slug}`
+        localStorage.setItem(previewKey, JSON.stringify(site))
         console.log('Stored preview data for site:', site.slug, site)
       } catch (error) {
         console.error('Failed to store preview data:', error)
@@ -188,8 +188,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       toast({
         title: 'Component Added',
         description: `${meta?.name ?? blockData?.type ?? 'Component'} has been added to your page`
+      })
+      
       console.log('Preview data stored for site slug:', site.slug)
-      console.log('Preview URL:', previewUrl)
+      console.log('Preview URL:', `/s/${site.slug}/`)
       console.log('Storage key:', previewKey)
     } catch (error) {
       console.error('Error adding component:', error)

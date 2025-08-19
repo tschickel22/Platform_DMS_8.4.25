@@ -258,10 +258,13 @@ export default function PublicSitePreview() {
           const previewData = localStorage.getItem(previewKey)
           if (previewData) {
             siteData = JSON.parse(previewData)
-            console.log('Loaded preview data for site:', siteSlug)
+            console.log('✅ Loaded preview data for site slug:', siteSlug)
+            console.log('Preview data:', siteData)
+          } else {
+            console.log('❌ No preview data found for key:', previewKey)
           }
         } catch (error) {
-          console.warn('Failed to load preview data:', error)
+          console.warn('❌ Failed to load preview data:', error)
         }
         
         // Fallback to published sites
