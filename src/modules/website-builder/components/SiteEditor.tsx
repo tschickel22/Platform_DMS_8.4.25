@@ -13,7 +13,7 @@ import PageList from './PageList'
 import ThemePalette from './ThemePalette'
 import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
-import ComponentLibrary from './ComponentLibrary'
+import { ComponentLibrary } from './ComponentLibrary'
 
 interface SiteEditorProps {
   mode?: 'platform' | 'company'
