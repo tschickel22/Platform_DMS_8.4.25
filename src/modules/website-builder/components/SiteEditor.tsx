@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Save, Globe, Smartphone, Monitor } from 'lucide-react'
+import { ArrowLeft, Save, Globe, Smartphone, Monitor, ChevronRight, ChevronLeft } from 'lucide-react'
 import { websiteService } from '@/services/website/service'
 import { Site, Page } from '../types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -31,6 +31,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media' | 'components'>('editor')
+  const [rightSidebarVisible, setRightSidebarVisible] = useState(true)
 
   // --- helpers ----------------------------------------------------------------
   const writePreview = (s: Site) => {
@@ -248,6 +249,14 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <Button variant={previewMode === 'mobile' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('mobile')}>
               <Smartphone className="h-4 w-4" />
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRightSidebarVisible(!rightSidebarVisible)}
+              title={rightSidebarVisible ? 'Hide sidebar for larger preview' : 'Show sidebar'}
+            >
+              {rightSidebarVisible ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
             <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? 'Saving...' : 'Save'}</Button>
           </div>
         </div>
@@ -326,7 +335,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         </div>
 
         {/* Center Canvas */}
-        <div className="flex-1 bg-gray-50 overflow-hidden">
+        <div className={`flex-1 bg-gray-50 overflow-hidden transition-all duration-300 ${rightSidebarVisible ? '' : 'mr-0'}`}>
           <div className="h-full flex items-center justify-center p-6">
             <div
               className={`bg-white shadow-lg transition-all duration-300 ${
@@ -334,7 +343,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   ? 'w-[375px] h-[667px]'
                   : previewMode === 'tablet'
                   ? 'w-[768px] h-[1024px]'
-                  : 'w-full max-w-6xl h-full'
+                  : rightSidebarVisible 
+                    ? 'w-full max-w-6xl h-full'
+                    : 'w-full max-w-7xl h-full'
               } rounded-lg overflow-hidden`}
             >
               <EditorCanvas
@@ -349,7 +360,9 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 border-l bg-card overflow-y-auto">
+        <div className={`transition-all duration-300 border-l bg-card overflow-y-auto ${
+          rightSidebarVisible ? 'w-80' : 'w-0 border-l-0'
+        }`}>
           <div className="p-4">
             <Tabs defaultValue="publish" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
