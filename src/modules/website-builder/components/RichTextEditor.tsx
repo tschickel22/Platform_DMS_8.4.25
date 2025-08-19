@@ -1,8 +1,12 @@
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import { FontFamily } from '@tiptap/extension-font-family'
-import { TextAlign } from '@tiptap/extension-text-align'
+import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Undo, Redo, Type, Palette, Link, Underline, Strikethrough, Code } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
   Bold,
@@ -25,10 +29,16 @@ interface RichTextEditorProps {
   content: string
   onChange: (content: string) => void
   placeholder?: string
+  showAdvancedTools?: boolean
   className?: string
 }
 
-export function RichTextEditor({ content, onChange, placeholder, className }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder, showAdvancedTools = false }: RichTextEditorProps) {
+  const [linkUrl, setLinkUrl] = useState('')
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [selectedColor, setSelectedColor] = useState('#000000')
+  const [selectedFontSize, setSelectedFontSize] = useState('16')
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -52,6 +62,36 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   if (!editor) {
     return null
   }
+
+  const addLink = () => {
+    if (linkUrl) {
+      editor.chain().focus().setLink({ href: linkUrl }).run()
+      setLinkUrl('')
+      setShowLinkDialog(false)
+    }
+  }
+
+  const removeLink = () => {
+    editor.chain().focus().unsetLink().run()
+  }
+
+  const applyColor = (color: string) => {
+    editor.chain().focus().setColor(color).run()
+    setSelectedColor(color)
+  }
+
+  const applyFontSize = (size: string) => {
+    editor.chain().focus().setFontSize(`${size}px`).run()
+    setSelectedFontSize(size)
+  }
+
+  const presetColors = [
+    '#000000', '#374151', '#6B7280', '#9CA3AF',
+    '#EF4444', '#F97316', '#EAB308', '#22C55E',
+    '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'
+  ]
+
+  const fontSizes = ['12', '14', '16', '18', '20', '24', '28', '32', '36', '48']
 
   const ToolbarButton = ({ 
     onClick, 
@@ -84,7 +124,7 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   return (
     <div className={cn("border rounded-lg overflow-hidden", className)}>
       {/* Toolbar */}
-      <div className="border-b bg-muted/50 p-2 flex items-center gap-1 flex-wrap">
+      <div className="border-b p-2 flex items-center gap-1 flex-wrap bg-gray-50">
         {/* Text Formatting */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -99,6 +139,32 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
           isActive={editor.isActive('italic')}
           title="Italic"
         >
+        
+        {showAdvancedTools && (
+          <>
+            <Button
+              variant={editor.isActive('underline') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+            >
+              <Underline className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={editor.isActive('strike') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+            >
+              <Strikethrough className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={editor.isActive('code') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleCode().run()}
+            >
+              <Code className="h-4 w-4" />
+            </Button>
+          </>
+        )}
           <Italic className="h-4 w-4" />
         </ToolbarButton>
 
@@ -145,6 +211,112 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
           isActive={editor.isActive('orderedList')}
           title="Numbered List"
         >
+        {showAdvancedTools && (
+          <>
+            <div className="w-px h-6 bg-border mx-1" />
+
+            {/* Headings */}
+            <Select
+              value={
+                editor.isActive('heading', { level: 1 }) ? 'h1' :
+                editor.isActive('heading', { level: 2 }) ? 'h2' :
+                editor.isActive('heading', { level: 3 }) ? 'h3' :
+                'paragraph'
+              }
+              onValueChange={(value) => {
+                if (value === 'paragraph') {
+                  editor.chain().focus().setParagraph().run()
+                } else {
+                  const level = parseInt(value.replace('h', ''))
+                  editor.chain().focus().toggleHeading({ level }).run()
+                }
+              }}
+            >
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paragraph">Text</SelectItem>
+                <SelectItem value="h1">H1</SelectItem>
+                <SelectItem value="h2">H2</SelectItem>
+                <SelectItem value="h3">H3</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Font Size */}
+            <Select value={selectedFontSize} onValueChange={applyFontSize}>
+              <SelectTrigger className="w-16 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fontSizes.map(size => (
+                  <SelectItem key={size} value={size}>{size}px</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Text Color */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                  <div 
+                    className="w-4 h-4 rounded border"
+                    style={{ backgroundColor: selectedColor }}
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48">
+                <div className="grid grid-cols-4 gap-2">
+                  {presetColors.map(color => (
+                    <button
+                      key={color}
+                      className="w-8 h-8 rounded border-2 border-gray-200 hover:border-gray-400"
+                      style={{ backgroundColor: color }}
+                      onClick={() => applyColor(color)}
+                    />
+                  ))}
+                </div>
+                <div className="mt-3">
+                  <Label htmlFor="custom-color">Custom Color</Label>
+                  <Input
+                    id="custom-color"
+                    type="color"
+                    value={selectedColor}
+                    onChange={(e) => applyColor(e.target.value)}
+                    className="w-full h-8 mt-1"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Link */}
+            <Popover open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={editor.isActive('link') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Link className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-3">
+                  <Label htmlFor="link-url">Link URL</Label>
+                  <Input
+                    id="link-url"
+                    placeholder="https://example.com"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={addLink}>Add Link</Button>
+                    <Button size="sm" variant="outline" onClick={removeLink}>Remove</Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
 
@@ -208,7 +380,7 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
 
       {/* Editor Content */}
       <div className="min-h-[200px]">
-        <EditorContent 
+        className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px]"
           editor={editor} 
           className="prose prose-sm max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:p-4"
         />
