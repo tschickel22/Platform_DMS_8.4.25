@@ -22,7 +22,6 @@ interface EditorCanvasProps {
 interface BlockEditorModalProps {
   block: Block | null
   isOpen: boolean
-  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   onClose: () => void
   onSave: (blockData: Partial<Block>) => void
 }
@@ -321,6 +320,7 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
 export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpdate }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
+  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const { toast } = useToast()
 
   // Safely get blocks from current page
@@ -472,6 +472,11 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
           title: 'Land & Home Packages',
           packages: []
         }
+      case 'gallery':
+        return {
+          title: 'Image Gallery',
+          images: []
+        }
       default:
         return {}
     }
@@ -541,6 +546,31 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
                   {block.content.caption && (
                     <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
                   )}
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'gallery':
+          return (
+            <section className="py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(block.content.images || []).map((image: any, index: number) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={image.src} 
+                        alt={image.alt || ''} 
+                        className="w-full h-64 object-cover rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
+                      />
+                      {image.caption && (
+                        <p className="mt-2 text-sm text-gray-600">{image.caption}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
@@ -688,24 +718,15 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
 
   // Sort blocks by order
   const sortedBlocks = [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0))
-  const handleAddBlock = (blockData?: any) => {
+
   return (
     <div className="h-full overflow-y-auto">
-    const defaultBlock = {
-      type: 'text',
-      content: {
-        html: '<p>New text block. Click edit to customize.</p>',
-        alignment: 'left'
-      }
+      {/* Toolbar */}
+      <div className="sticky top-0 z-20 bg-white border-b p-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{currentPage.name}</h2>
+        <Button
           onClick={() => setShowAddBlockMenu(true)}
           className="flex items-center gap-2"
-    const newBlock: Block = {
-      id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      order: blocks.length,
-      ...defaultBlock,
-      ...blockData
-    }
-
         >
           <Plus className="h-4 w-4" />
           Add Block
@@ -716,54 +737,9 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
       <div className="bg-white">
         {sortedBlocks.length === 0 ? (
           <div className="h-96 flex items-center justify-center text-muted-foreground">
-    const blockStyles = block.styles || {}
-    
-    // Convert styles to CSS
-    const cssStyles: React.CSSProperties = {
-      padding: blockStyles.padding ? 
-        `${blockStyles.padding.top || 16}px ${blockStyles.padding.right || 16}px ${blockStyles.padding.bottom || 16}px ${blockStyles.padding.left || 16}px` :
-        '16px',
-      margin: blockStyles.margin ? 
-        `${blockStyles.margin.top || 0}px 0 ${blockStyles.margin.bottom || 0}px 0` :
-        '0',
-      backgroundColor: blockStyles.backgroundColor || 'transparent',
-      borderRadius: blockStyles.borderRadius || '0px',
-      borderWidth: blockStyles.borderWidth || '0px',
-      borderStyle: blockStyles.borderWidth && parseInt(blockStyles.borderWidth) > 0 ? 'solid' : 'none',
-      borderColor: blockStyles.borderColor || '#e5e7eb',
-      boxShadow: blockStyles.boxShadow || 'none'
-    }
             <div className="text-center">
               <h3 className="text-lg font-medium mb-2">Empty Page</h3>
               <p className="mb-4">This page doesn't have any content blocks yet.</p>
-  const handleBlockDuplicate = async (blockId: string) => {
-    if (!site || !currentPage || !onSiteUpdate) return
-
-    const blockToDuplicate = blocks.find(block => block.id === blockId)
-        style={cssStyles}
-    if (!blockToDuplicate) return
-
-    const newBlock = {
-      ...blockToDuplicate,
-      id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      order: (blockToDuplicate.order || 0) + 1
-    }
-
-    const updatedBlocks = [...blocks, newBlock].sort((a, b) => (a.order || 0) - (b.order || 0))
-    const updatedPages = site.pages.map(page =>
-      page.id === currentPage.id ? { ...page, blocks: updatedBlocks } : page
-    )
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => handleBlockDuplicate(block.id)}
-              className="h-8 w-8 p-0"
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-
-    onSiteUpdate({ pages: updatedPages })
-  }
               <Button onClick={() => setShowAddBlockMenu(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Block
@@ -772,9 +748,9 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
           </div>
         ) : (
           sortedBlocks.map(renderBlock)
-              <Button onClick={() => setShowComponentLibrary(true)}>
+        )}
       </div>
-                Add Component
+
       {/* Add Block Button at Bottom */}
       {sortedBlocks.length > 0 && (
         <div className="p-8 text-center border-t bg-gray-50">
@@ -786,9 +762,9 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
             <Plus className="h-4 w-4" />
             Add Block
           </Button>
-              <Button onClick={() => setShowComponentLibrary(true)} variant="outline">
+        </div>
       )}
-                Add Component
+
       {/* Modals */}
       <BlockEditorModal
         block={editingBlock}
@@ -813,27 +789,3 @@ export default function EditorCanvas({ site, currentPage, previewMode, onSiteUpd
     </div>
   )
 }
-      case 'gallery':
-        return (
-          <section className="py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {block.content.title && (
-                <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(block.content.images || []).map((image: any, index: number) => (
-                  <div key={index} className="relative group">
-                    <img 
-                      src={image.src} 
-                      alt={image.alt || ''} 
-                      className="w-full h-64 object-cover rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
-                    />
-                    {image.caption && (
-                      <p className="mt-2 text-sm text-gray-600">{image.caption}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )
