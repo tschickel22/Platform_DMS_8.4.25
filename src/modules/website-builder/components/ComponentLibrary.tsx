@@ -32,7 +32,7 @@ interface ComponentTemplate {
 
 interface ComponentLibraryProps {
   onAddComponent: (blockData: any) => void
-  onAddComponent: (component: ComponentTemplate) => void
+  onClose: () => void
 }
 
 export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryProps) {
@@ -393,6 +393,10 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                             src={component.preview} 
                             alt={component.name}
                             className="w-full h-20 object-cover rounded border"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
                           />
                         </div>
                       )}
@@ -402,22 +406,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                       </p>
                     </CardContent>
                   </Card>
-              onClick={() => {
-                try {
-                  onAddComponent(component)
-                } catch (error) {
-                  console.error('Error adding component:', error)
-                }
-              }}
+                ))}
               </div>
 
               {filteredComponents.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Grid className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.style.display = 'none'
-                      }}
                   <p>No components found</p>
                   <p className="text-sm">Try adjusting your search or category filter</p>
                 </div>
