@@ -283,7 +283,6 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                             lastPreviewUpdate: new Date().toISOString(),
                           }
                           const key = `wb2:preview-site:${site.slug}`
-                <div className="flex items-center gap-2 flex-wrap">
                           sessionStorage.setItem(key, JSON.stringify(previewData))
                           
                           // Use same URL format as working preview
