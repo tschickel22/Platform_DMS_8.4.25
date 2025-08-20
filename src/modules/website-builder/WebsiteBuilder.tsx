@@ -301,7 +301,6 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                     </Button>
                     
                     <Button
-                  <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleCloneSite(site)}
