@@ -96,14 +96,16 @@ export function TemplatePreview({ template, pageIndex = 0 }: TemplatePreviewProp
       }
 
       case 'text': {
-        const html = block?.content?.html ?? ''
         return (
           <section key={key} className="py-16">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div
-                className={`prose prose-lg max-w-none ${textAlignClass(block?.content?.alignment)}`}
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
+              <div className={`prose prose-lg max-w-none ${textAlignClass(block?.content?.alignment)}`}>
+                {block?.content?.title && <h2>{block.content.title}</h2>}
+                {block?.content?.body &&
+                  block.content.body.split('\n').map((line: string, i: number) => (
+                    <p key={i}>{line}</p>
+                  ))}
+              </div>
             </div>
           </section>
         )

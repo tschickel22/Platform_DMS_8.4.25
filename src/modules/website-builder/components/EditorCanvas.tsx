@@ -229,7 +229,8 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
         }
       case 'text':
         return {
-          html: '<h2>About Us</h2><p>We are a leading dealership specializing in RVs and manufactured homes.</p>',
+          title: 'About Us',
+          body: 'We are a leading dealership specializing in RVs and manufactured homes.',
           alignment: 'left'
         }
       case 'image':
