@@ -12,7 +12,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "knip:deps": "knip --production --dependencies --fix --silent",
-    "knip:files": "knip --production --files --fix --allow-remove-files --silent"
+    "knip:files": "knip --production --files --fix --allow-remove-files --silent",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
