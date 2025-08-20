@@ -2,17 +2,12 @@ import React, { useState } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Edit, Trash2, Copy, Plus, GripVertical } from 'lucide-react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Layers } from 'lucide-react'
+import { Edit, Trash2, Copy, Plus, GripVertical, Star, Users, Shield } from 'lucide-react'
 import { ComponentLibrary } from './ComponentLibrary'
+import BlockEditorModal from './BlockEditorModal'
 import { Site, Page, Block } from '../types'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
-import RichTextEditor from './RichTextEditor'
 
 interface EditorCanvasProps {
   site: Site
@@ -22,254 +17,6 @@ interface EditorCanvasProps {
   onSiteUpdate?: (site: Site) => void
 }
 
-interface BlockEditorModalProps {
-  block: Block | null
-  isOpen: boolean
-  onClose: () => void
-  onSave: (blockData: Partial<Block>) => void
-}
-
-function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalProps) {
-  const [formData, setFormData] = useState<any>({})
-  const [editingContent, setEditingContent] = useState<any>({})
-
-  React.useEffect(() => {
-    if (block) {
-      setFormData(block.content || {})
-      setEditingContent(block.content || {})
-    }
-  }, [block])
-
-  const handleSave = () => {
-    onSave({ content: formData })
-    onClose()
-  }
-
-  if (!block) return null
-
-  const renderEditor = () => {
-    switch (block.type) {
-      case 'hero':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter hero title"
-              />
-            </div>
-            <div>
-              <Label htmlFor="subtitle">Subtitle</Label>
-              <Input
-                id="subtitle"
-                value={formData.subtitle || ''}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                placeholder="Enter hero subtitle"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ctaText">Button Text</Label>
-              <Input
-                id="ctaText"
-                value={formData.ctaText || ''}
-                onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
-                placeholder="Enter button text"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ctaLink">Button Link</Label>
-              <Input
-                id="ctaLink"
-                value={formData.ctaLink || ''}
-                onChange={(e) => setFormData({ ...formData, ctaLink: e.target.value })}
-                placeholder="Enter button link"
-              />
-            </div>
-            <div>
-              <Label htmlFor="backgroundImage">Background Image URL</Label>
-              <Input
-                id="backgroundImage"
-                value={formData.backgroundImage || ''}
-                onChange={(e) => setFormData({ ...formData, backgroundImage: e.target.value })}
-                placeholder="Enter image URL"
-              />
-            </div>
-          </div>
-        )
-
-      case 'text':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="content">Content</Label>
-              <RichTextEditor
-                content={editingContent.html || editingContent.text || ''}
-                onChange={(html) => setEditingContent({
-                  ...editingContent,
-                  html,
-                  text: html
-                })}
-                placeholder="Enter your text content..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="alignment">Text Alignment</Label>
-              <Select
-                value={formData.alignment || 'left'}
-                onValueChange={(value) => setFormData({ ...formData, alignment: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )
-
-      case 'image':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="src">Image URL</Label>
-              <Input
-                id="src"
-                value={formData.src || ''}
-                onChange={(e) => setFormData({ ...formData, src: e.target.value })}
-                placeholder="Enter image URL"
-              />
-            </div>
-            <div>
-              <Label htmlFor="alt">Alt Text</Label>
-              <Input
-                id="alt"
-                value={formData.alt || ''}
-                onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
-                placeholder="Enter alt text for accessibility"
-              />
-            </div>
-            <div>
-              <Label htmlFor="caption">Caption</Label>
-              <Input
-                id="caption"
-                value={formData.caption || ''}
-                onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
-                placeholder="Enter image caption"
-              />
-            </div>
-            <div>
-              <Label htmlFor="alignment">Alignment</Label>
-              <Select
-                value={formData.alignment || 'center'}
-                onValueChange={(value) => setFormData({ ...formData, alignment: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )
-
-      case 'cta':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter CTA title"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter CTA description"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="buttonText">Button Text</Label>
-              <Input
-                id="buttonText"
-                value={formData.buttonText || ''}
-                onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })}
-                placeholder="Enter button text"
-              />
-            </div>
-            <div>
-              <Label htmlFor="buttonLink">Button Link</Label>
-              <Input
-                id="buttonLink"
-                value={formData.buttonLink || ''}
-                onChange={(e) => setFormData({ ...formData, buttonLink: e.target.value })}
-                placeholder="Enter button link"
-              />
-            </div>
-          </div>
-        )
-
-      default:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                value={JSON.stringify(formData, null, 2)}
-                onChange={(e) => {
-                  try {
-                    setFormData(JSON.parse(e.target.value))
-                  } catch {
-                    // Invalid JSON, ignore
-                  }
-                }}
-                rows={10}
-              />
-            </div>
-          </div>
-        )
-    }
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Edit {block.type} Block</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6">
-          {renderEditor()}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              Save Changes
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 interface AddBlockMenuProps {
   isOpen: boolean
@@ -728,6 +475,70 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'features': {
+          const iconMap: Record<string, React.ComponentType<any>> = {
+            star: Star,
+            users: Users,
+            shield: Shield
+          }
+          return (
+            <section className="py-16 bg-gray-50">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid gap-8 md:grid-cols-3">
+                  {(block.content.features || []).map((feature: any, index: number) => {
+                    const Icon = iconMap[feature.icon as keyof typeof iconMap] || Star
+                    return (
+                      <div key={index} className="text-center p-6">
+                        <Icon className="h-8 w-8 mx-auto mb-4" style={{ color: primaryColor }} />
+                        {feature.title && <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>}
+                        {feature.description && <p className="text-gray-600">{feature.description}</p>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+          )
+        }
+
+        case 'testimonials':
+          return (
+            <section className="py-16 bg-gray-50">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid gap-8 md:grid-cols-2">
+                  {(block.content.testimonials || []).map((t: any, index: number) => (
+                    <div key={index} className="bg-white p-6 rounded-lg shadow">
+                      {t.text && <p className="text-gray-600 mb-4">{t.text}</p>}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          {t.name && <p className="font-semibold">{t.name}</p>}
+                          {t.location && <p className="text-sm text-gray-500">{t.location}</p>}
+                        </div>
+                        {t.rating && (
+                          <div className="flex">
+                            {Array.from({ length: t.rating }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className="h-5 w-5 text-yellow-400"
+                                fill="currentColor"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
