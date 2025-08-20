@@ -86,7 +86,6 @@ export interface Page {
   isVisible: boolean
   createdAt: string
   updatedAt: string
-  order: number
   seo?: {
     title?: string
     description?: string
@@ -94,8 +93,6 @@ export interface Page {
     robots?: string
     canonicalPath?: string
   }
-  createdAt: string
-  updatedAt: string
 }
 
 export interface Site {
