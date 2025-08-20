@@ -112,14 +112,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     })
   }
 
-  const getDefaultDomain = () => {
-    const baseDomain = mode === 'platform' ? 'platform.renterinsight.com' : 'renterinsight.com'
-    return `${site.slug}.${baseDomain}`
-  }
-
-  const currentDomain = site.domain || getDefaultDomain()
-  const previewUrl = site.previewUrl || `https://${currentDomain}`
-
   return (
     <Card>
       <CardHeader>
