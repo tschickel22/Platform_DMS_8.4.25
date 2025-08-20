@@ -2,8 +2,7 @@ import React, { useState } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Edit, Trash2, Copy, Plus, GripVertical } from 'lucide-react'
-import { ComponentLibrary } from './ComponentLibrary'
+import { Edit, Trash2, Copy, Plus, GripVertical, Star, Users, Shield } from 'lucide-react'
 import { Site, Page, Block } from '../types'
 import { websiteService } from '@/services/website/service'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +15,7 @@ interface EditorCanvasProps {
   onUpdatePage?: (updates: Partial<Page>) => void
   onSiteUpdate?: (site: Site) => void
 }
+
 interface AddBlockMenuProps {
   isOpen: boolean
   onClose: () => void
@@ -31,7 +31,9 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
     { type: 'cta', name: 'Call to Action', description: 'Highlighted section with button' },
     { type: 'contact', name: 'Contact Form', description: 'Contact information and form' },
     { type: 'inventory', name: 'Inventory Showcase', description: 'Display featured inventory items' },
-    { type: 'landHome', name: 'Land & Home Packages', description: 'Showcase land and home packages' }
+    { type: 'landHome', name: 'Land & Home Packages', description: 'Showcase land and home packages' },
+    { type: 'features', name: 'Feature Highlights', description: 'List key features or benefits' },
+    { type: 'testimonials', name: 'Testimonials', description: 'Customer reviews and testimonials' }
   ]
 
   return (
@@ -68,7 +70,6 @@ function AddBlockMenu({ isOpen, onClose, onAddBlock }: AddBlockMenuProps) {
 export default function EditorCanvas({ site, currentPage, previewMode, onUpdatePage, onSiteUpdate }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false)
-  const [showComponentLibrary, setShowComponentLibrary] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null)
   const { toast } = useToast()
@@ -217,6 +218,19 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
     }
   }
 
+  const getFeatureIcon = (icon: string) => {
+    switch (icon) {
+      case 'star':
+        return Star
+      case 'users':
+        return Users
+      case 'shield':
+        return Shield
+      default:
+        return null
+    }
+  }
+
   const getDefaultBlockContent = (blockType: string) => {
     switch (blockType) {
       case 'hero':
@@ -268,6 +282,33 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
         return {
           title: 'Image Gallery',
           images: []
+        }
+      case 'features':
+        return {
+          title: 'Why Choose Us',
+          features: [
+            { icon: 'star', title: 'Quality Guaranteed', description: 'All our vehicles undergo thorough inspection' },
+            { icon: 'users', title: 'Expert Service', description: 'Our experienced team is here to help' },
+            { icon: 'shield', title: 'Warranty Included', description: 'Comprehensive warranty on all purchases' }
+          ]
+        }
+      case 'testimonials':
+        return {
+          title: 'What Our Customers Say',
+          testimonials: [
+            {
+              name: 'John Smith',
+              text: 'Excellent service and quality RVs. Highly recommended!',
+              rating: 5,
+              location: 'Austin, TX'
+            },
+            {
+              name: 'Sarah Johnson',
+              text: 'Found the perfect manufactured home for our family.',
+              rating: 5,
+              location: 'Dallas, TX'
+            }
+          ]
         }
       default:
         return {}
@@ -450,22 +491,22 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
                   </div>
                   <div>
                     <div className="space-y-4">
-                      <input 
-                        type="text" 
-                        placeholder="Your Name" 
+                      <input
+                        type="text"
+                        placeholder="Your Name"
                         className="w-full px-4 py-2 border border-gray-300 rounded-md"
                       />
-                      <input 
-                        type="email" 
-                        placeholder="Your Email" 
+                      <input
+                        type="email"
+                        placeholder="Your Email"
                         className="w-full px-4 py-2 border border-gray-300 rounded-md"
                       />
-                      <textarea 
-                        placeholder="Your Message" 
+                      <textarea
+                        placeholder="Your Message"
                         rows={4}
                         className="w-full px-4 py-2 border border-gray-300 rounded-md"
                       ></textarea>
-                      <button 
+                      <button
                         className="w-full px-6 py-3 font-semibold rounded-md transition-colors"
                         style={{ backgroundColor: primaryColor, color: 'white' }}
                       >
@@ -473,6 +514,56 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'features':
+          return (
+            <section className="py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid md:grid-cols-3 gap-8">
+                  {(block.content.features || []).map((feature: any, index: number) => {
+                    const IconComp = getFeatureIcon(feature.icon)
+                    return (
+                      <div key={index} className="text-center">
+                        {IconComp && <IconComp className="h-12 w-12 mx-auto mb-4 text-primary" />}
+                        <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                        <p className="text-gray-600">{feature.description}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+          )
+
+        case 'testimonials':
+          return (
+            <section className="py-16 bg-gray-50">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {block.content.title && (
+                  <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+                )}
+                <div className="grid md:grid-cols-2 gap-8">
+                  {(block.content.testimonials || []).map((t: any, index: number) => (
+                    <div key={index} className="bg-white p-6 rounded-lg shadow">
+                      {t.rating && (
+                        <div className="flex text-yellow-400 mb-2">
+                          {[...Array(t.rating)].map((_, i) => (
+                            <Star key={i} className="h-4 w-4" />
+                          ))}
+                        </div>
+                      )}
+                      <p className="mb-4 text-gray-700">{t.text}</p>
+                      <p className="font-semibold">{t.name}</p>
+                      {t.location && <p className="text-sm text-gray-500">{t.location}</p>}
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
