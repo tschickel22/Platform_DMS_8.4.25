@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { 
   Globe, 
@@ -32,6 +32,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     type: 'subdomain',
     subdomain: site.slug || ''
   })
+  const [savedDomain, setSavedDomain] = useState<string | null>(null)
   
   const { toast } = useToast()
   const { handleError } = useErrorHandler()
@@ -67,6 +68,24 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
       const result = await websiteService.setDomain(site.id, domainConfig)
       
       if (result.success) {
+        // Generate the domain string for display
+        let domainString = ''
+        switch (domainConfig.type) {
+          case 'subdomain':
+            domainString = `${domainConfig.subdomain}.renterinsight.com`
+            break
+          case 'custom':
+            domainString = domainConfig.customDomain || ''
+            break
+          case 'subdomain_custom':
+            domainString = `${domainConfig.subdomain}.${domainConfig.baseDomain}`
+            break
+          case 'multi_dealer':
+            domainString = `${domainConfig.dealerCode}.${domainConfig.groupDomain}`
+            break
+        }
+        setSavedDomain(domainString)
+        
         toast({
           title: 'Domain configured',
           description: result.message
@@ -82,6 +101,14 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     }
   }
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Copied',
+        description: 'DNS record copied to clipboard'
+      })
+    })
+  }
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     toast({
@@ -267,6 +294,95 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
               </>
             )}
           </Button>
+
+          {/* DNS Instructions - Show after custom domain is saved */}
+          {savedDomain && (domainConfig.type === 'custom' || domainConfig.type === 'subdomain_custom') && (
+            <Card className="mt-4 border-blue-200 bg-blue-50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg text-blue-900">DNS Configuration Required</CardTitle>
+                </div>
+                <CardDescription className="text-blue-700">
+                  To use your custom domain, you'll need to update your DNS records with your domain provider.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="font-semibold text-blue-900 mb-2">Required DNS Records:</h4>
+                  <div className="space-y-3">
+                    {/* CNAME Record */}
+                    <div className="bg-white p-3 rounded border">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">CNAME Record</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(`${savedDomain} CNAME renter-insight.netlify.app`)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div><strong>Name:</strong> {domainConfig.type === 'custom' ? 'www' : domainConfig.subdomain}</div>
+                        <div><strong>Type:</strong> CNAME</div>
+                        <div><strong>Value:</strong> renter-insight.netlify.app</div>
+                      </div>
+                    </div>
+
+                    {/* A Record (for apex domain) */}
+                    {domainConfig.type === 'custom' && (
+                      <div className="bg-white p-3 rounded border">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium">A Record (Apex Domain)</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(`${domainConfig.customDomain?.replace('www.', '') || ''} A 75.2.60.5`)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div><strong>Name:</strong> @ (or leave blank)</div>
+                          <div><strong>Type:</strong> A</div>
+                          <div><strong>Value:</strong> 75.2.60.5</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border-l-4 border-l-amber-400">
+                  <h5 className="font-medium text-amber-800 mb-1">Important Notes:</h5>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• DNS changes can take up to 24-48 hours to propagate globally</li>
+                    <li>• Make sure to remove any existing A or CNAME records for this domain</li>
+                    <li>• Contact your domain registrar if you need help accessing DNS settings</li>
+                    <li>• Your website will show an SSL error until DNS propagation is complete</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white p-3 rounded">
+                  <h5 className="font-medium text-gray-800 mb-2">Common Domain Providers:</h5>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <strong>GoDaddy:</strong> DNS Management
+                    </div>
+                    <div>
+                      <strong>Namecheap:</strong> Advanced DNS
+                    </div>
+                    <div>
+                      <strong>Cloudflare:</strong> DNS Records
+                    </div>
+                    <div>
+                      <strong>Google Domains:</strong> DNS Settings
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Preview Link */}
           {site.publishedAt && (
