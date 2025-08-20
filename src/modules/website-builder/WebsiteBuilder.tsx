@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Globe, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Globe, Edit, Trash2, Eye, Copy } from 'lucide-react'
 import { websiteService } from '@/services/website/service'
 import { Site } from './types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -87,7 +87,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
 
       // Reset workflow state
       handleCancelWorkflow()
-      
+
       // Reload sites and navigate to editor
       await loadSites()
       const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
@@ -120,30 +120,30 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
   const handleCloneSite = async (originalSite: Site) => {
     try {
       setCloning(originalSite.id)
-      
+
       // Create a copy of the site with new IDs and modified name
-      const clonedSiteData = {
+      const clonedSiteData: any = {
         ...originalSite,
         name: `${originalSite.name} (Copy)`,
         slug: `${originalSite.slug}-copy-${Date.now()}`,
-        pages: originalSite.pages.map(page => ({
+        pages: (originalSite.pages || []).map((page) => ({
           ...page,
-          id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          blocks: page.blocks.map(block => ({
+          id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          blocks: (page.blocks || []).map((block) => ({
             ...block,
-            id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
           }))
         }))
       }
-      
+
       // Remove the original ID so a new one gets generated
-      delete (clonedSiteData as any).id
-      delete (clonedSiteData as any).createdAt
-      delete (clonedSiteData as any).updatedAt
-      
+      delete clonedSiteData.id
+      delete clonedSiteData.createdAt
+      delete clonedSiteData.updatedAt
+
       const clonedSite = await websiteService.createSite(clonedSiteData)
-      setSites(prev => [clonedSite, ...prev])
-      
+      setSites((prev) => [clonedSite, ...prev])
+
       toast({
         title: 'Website Cloned',
         description: `${clonedSite.name} has been created as a copy of ${originalSite.name}.`
@@ -153,10 +153,6 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
     } finally {
       setCloning(null)
     }
-  }
-  const handlePreviewSite = (site: Site) => {
-    const previewUrl = `/s/${site.slug}/`
-    window.open(previewUrl, '_blank')
   }
 
   if (loading) {
@@ -172,11 +168,11 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted rounded w-1/2" />
               </CardHeader>
               <CardContent>
-                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded" />
               </CardContent>
             </Card>
           ))}
@@ -187,12 +183,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
 
   // Show template selector when requested
   if (showTemplateSelector) {
-    return (
-      <TemplateSelector
-        onSelectTemplate={handleTemplateSelected}
-        onCancel={handleCancelWorkflow}
-      />
-    )
+    return <TemplateSelector onSelectTemplate={handleTemplateSelected} onCancel={handleCancelWorkflow} />
   }
 
   return (
@@ -204,10 +195,9 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
             {mode === 'platform' ? 'Website Builder' : 'Company Website Editor'}
           </h1>
           <p className="text-muted-foreground">
-            {mode === 'platform' 
+            {mode === 'platform'
               ? 'Create and manage websites for the platform'
-              : 'Manage your company\'s public website'
-            }
+              : "Manage your company's public website"}
           </p>
         </div>
         <Button onClick={handleCreateWebsiteClick}>
@@ -254,12 +244,14 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                   </Badge>
                 </div>
               </CardHeader>
+
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-sm text-muted-foreground">
-                    {site.pages?.length || 0} pages • Updated {new Date(site.updatedAt).toLocaleDateString()}
+                    {(site.pages?.length || 0)} pages • Updated{' '}
+                    {site.updatedAt ? new Date(site.updatedAt).toLocaleDateString() : '—'}
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -270,25 +262,21 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Store preview data and open with same format as working preview
                         try {
                           const previewData = {
                             ...site,
                             pages: site.pages || [],
-                            lastPreviewUpdate: new Date().toISOString(),
+                            lastPreviewUpdate: new Date().toISOString()
                           }
                           const key = `wb2:preview-site:${site.slug}`
                           sessionStorage.setItem(key, JSON.stringify(previewData))
-                          
-                          // Use same URL format as working preview
                           const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
                           const previewUrl = `/s/${site.slug}/?data=${encoded}`
-                          
                           window.open(previewUrl, '_blank')
                         } catch (error) {
                           console.error('Preview error:', error)
@@ -299,26 +287,29 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                       <Eye className="h-4 w-4" />
                       Preview
                     </Button>
-                    
+
                     <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCloneSite(site)}
-                    disabled={cloning === site.id}
-                    title="Clone this website"
-                  >
-                    <Copy className="h-4 w-4" />
-                    {cloning === site.id ? '...' : ''}
-                  </Button>
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCloneSite(site)}
+                      disabled={cloning === site.id}
+                      title="Clone this website"
+                    >
+                      <Copy className="h-4 w-4" />
+                      {cloning === site.id ? '...' : ''}
+                    </Button>
+
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteSite(site.id)}
                       className="text-destructive hover:text-destructive"
+                      title="Delete this website"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-              </CardContent>
+                </div>
               </CardContent>
             </Card>
           ))}
