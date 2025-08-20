@@ -30,7 +30,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  const [activeTab, setActiveTab] = useState<'editor' | 'pages' | 'theme' | 'media' | 'components'>('editor')
+  // Removed 'editor' from the union; default to 'theme' or 'components' as you like
+  const [activeTab, setActiveTab] = useState<'pages' | 'theme' | 'media' | 'components'>('theme')
   const [rightSidebarVisible, setRightSidebarVisible] = useState(true)
 
   // --- helpers ----------------------------------------------------------------
@@ -189,10 +190,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const currentPageId = currentPage ? currentPage.id : null
 
+  // IMPORTANT: do NOT change tabs on selection
   const onSelectPageId = (id: string) => {
     const found = (site?.pages || []).find((p: any) => p.id === id) || null
     setCurrentPage(found)
-    setActiveTab('editor')
+    // stay on current tab; no setActiveTab here
   }
 
   if (loading) {
@@ -273,52 +275,28 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
         <div className="w-80 border-r bg-card overflow-y-auto">
+          {/* Always-visible Page List */}
+          <div className="p-4">
+            <PageList
+              pages={pagesForList}
+              currentPageId={currentPageId as any}
+              onSelectPage={onSelectPageId}
+              onCreatePage={() => {}}
+              onEditPage={() => {}}
+              onDeletePage={() => {}}
+              onDuplicatePage={() => {}}
+            />
+          </div>
+
+          {/* Secondary tools (Theme / Library / Media) */}
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="h-full">
-            <TabsList className="grid w-full grid-cols-5 m-4">
-              <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
-              <TabsTrigger value="pages" className="text-xs">Pages</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 mx-4 mb-4">
               <TabsTrigger value="theme" className="text-xs">Theme</TabsTrigger>
               <TabsTrigger value="components" className="text-xs">Library</TabsTrigger>
               <TabsTrigger value="media" className="text-xs">Media</TabsTrigger>
             </TabsList>
 
             <div className="px-4 pb-4">
-              <TabsContent value="editor" className="mt-0">
-                <Card>
-                  <CardHeader><CardTitle>Page Editor</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <Card>
-                        <CardHeader><CardTitle>Page Editor</CardTitle></CardHeader>
-                        <CardContent>
-                          {currentPage ? (
-                            <div className="space-y-2">
-                              <div className="text-sm font-medium">{currentPage.title}</div>
-                              <div className="text-xs text-muted-foreground">{currentPage.blocks?.length || 0} blocks</div>
-                              <div className="text-xs text-muted-foreground">Click on any content block to edit it</div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-muted-foreground">Select a page to edit</div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="pages" className="mt-0">
-                <PageList
-                  pages={pagesForList}
-                  currentPageId={currentPageId as any}
-                  onSelectPage={onSelectPageId}
-                  onCreatePage={() => {}}
-                  onEditPage={() => {}}
-                  onDeletePage={() => {}}
-                  onDuplicatePage={() => {}}
-                />
-              </TabsContent>
-
               <TabsContent value="theme" className="mt-0">
                 <ThemePalette
                   theme={site.theme}
@@ -331,7 +309,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               </TabsContent>
 
               <TabsContent value="components" className="mt-0">
-                <ComponentLibrary onAddComponent={handleAddComponent} onClose={() => setActiveTab('editor')} />
+                <ComponentLibrary onAddComponent={handleAddComponent} onClose={() => setActiveTab('theme')} />
               </TabsContent>
 
               <TabsContent value="media" className="mt-0">
