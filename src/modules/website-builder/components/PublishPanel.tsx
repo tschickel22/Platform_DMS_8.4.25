@@ -5,11 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Globe, 
-  ExternalLink, 
-  Copy, 
-  CheckCircle, 
-  AlertCircle,
   Loader2,
   Settings
 } from 'lucide-react'
