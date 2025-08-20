@@ -4,7 +4,7 @@ import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Layout, Spacing, Palette } from 'lucide-react'
+import { Layout, Space as Spacing, Palette } from 'lucide-react'
 
 interface LayoutControlsProps {
   content: any
