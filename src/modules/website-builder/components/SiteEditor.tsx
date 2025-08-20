@@ -30,8 +30,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  // Removed 'editor' from the union; default to 'theme' or 'components' as you like
-  const [activeTab, setActiveTab] = useState<'pages' | 'theme' | 'media' | 'components'>('theme')
+  const [activeTab, setActiveTab] = useState<'theme' | 'media' | 'components'>('theme')
   const [rightSidebarVisible, setRightSidebarVisible] = useState(true)
 
   // --- helpers ----------------------------------------------------------------
@@ -43,6 +42,11 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       try { sessionStorage.setItem(key, json) } catch {}
     } catch {}
   }
+
+  const slugify = (s: string) =>
+    s.toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
 
   // Listen for preview requests (one listener only)
   useEffect(() => {
@@ -110,12 +114,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     writePreview(updatedSite)
   }
 
-  const handleSave = async () => {
-    if (!site) return
+  const persistNow = async (s: Site) => {
     try {
       setSaving(true)
-      await websiteService.updateSite(site.id, site)
-      writePreview(site)
+      await websiteService.updateSite(s.id, s)
       toast({ title: 'Saved', description: 'Your changes have been saved.' })
     } catch (err) {
       handleError(err, 'saving site')
@@ -124,11 +126,15 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
+  const handleSave = async () => {
+    if (!site) return
+    await persistNow(site)
+  }
+
   const handlePreview = () => {
     if (!site) return
     try {
       writePreview(site)
-      // also pass data via URL for cross-origin safety
       const encoded = btoa(encodeURIComponent(JSON.stringify({ ...site, lastPreviewUpdate: new Date().toISOString() })))
       window.open(`/s/${site.slug}/?data=${encoded}`, '_blank')
       toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
@@ -174,6 +180,86 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
+  // -------- PageList bindings (create/edit/delete/duplicate) ------------------
+  const handleCreatePageFromList = async (data: { name: string; slug: string; template?: string }) => {
+    if (!site) return
+    const now = Date.now()
+    const newPage: Page = {
+      id: `page-${now}`,
+      title: data.name.trim(),
+      path: `/${slugify(data.slug || data.name)}`,
+      order: (site.pages?.length ?? 0),
+      seo: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      blocks: [] // optionally seed based on template
+    }
+    const updated: Site = { ...site, pages: [...(site.pages || []), newPage] }
+    setSite(updated)
+    setCurrentPage(newPage)
+    writePreview(updated)
+    await persistNow(updated)
+  }
+
+  const handleEditPageFromList = async (pageId: string, updates: { name: string; slug: string }) => {
+    if (!site) return
+    const updatedPages = (site.pages || []).map(p =>
+      p.id === pageId
+        ? {
+            ...p,
+            title: updates.name.trim(),
+            path: `/${slugify(updates.slug || updates.name)}`,
+            updatedAt: new Date().toISOString()
+          }
+        : p
+    )
+    const updated = { ...site, pages: updatedPages }
+    setSite(updated)
+    if (currentPage?.id === pageId) {
+      const newCurr = updatedPages.find(p => p.id === pageId) || null
+      setCurrentPage(newCurr)
+    }
+    writePreview(updated)
+    await persistNow(updated)
+  }
+
+  const handleDeletePageFromList = async (pageId: string) => {
+    if (!site) return
+    const remaining = (site.pages || []).filter(p => p.id !== pageId)
+    const updated = { ...site, pages: remaining }
+    setSite(updated)
+    if (currentPage?.id === pageId) {
+      setCurrentPage(remaining[0] || null)
+    }
+    writePreview(updated)
+    await persistNow(updated)
+  }
+
+  const handleDuplicatePageFromList = async (pageId: string) => {
+    if (!site) return
+    const src = (site.pages || []).find(p => p.id === pageId)
+    if (!src) return
+    const now = Date.now()
+    const baseSlug = (src.path || '/').replace(/^\//, '')
+    const newPage: Page = {
+      ...src,
+      id: `page-${now}`,
+      title: `${src.title} (Copy)`,
+      path: `/${slugify(`${baseSlug}-copy-${now}`)}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      order: (site.pages?.length ?? 0),
+      blocks: (src.blocks || []).map((b, i) => ({ ...b, id: `${b.id || 'block'}-${now}-${i}` }))
+    }
+    const updated = { ...site, pages: [...(site.pages || []), newPage] }
+    setSite(updated)
+    setCurrentPage(newPage)
+    writePreview(updated)
+    await persistNow(updated)
+    toast({ title: 'Page Cloned', description: `"${src.title}" has been duplicated.` })
+  }
+  // ---------------------------------------------------------------------------
+
   // Adapt data to PageList's expected props
   const pagesForList = useMemo(() => {
     const pgs = site?.pages || []
@@ -190,11 +276,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
   const currentPageId = currentPage ? currentPage.id : null
 
-  // IMPORTANT: do NOT change tabs on selection
+  // Do NOT change tabs on selection
   const onSelectPageId = (id: string) => {
     const found = (site?.pages || []).find((p: any) => p.id === id) || null
     setCurrentPage(found)
-    // stay on current tab; no setActiveTab here
   }
 
   if (loading) {
@@ -236,7 +321,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 type="text"
                 value={site.name}
                 onChange={(e) => setSite({ ...site, name: e.target.value })}
-                onBlur={handleSave}
+                onBlur={() => site && persistNow(site)}
                 className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 -mx-1"
                 placeholder="Enter site name"
               />
@@ -281,10 +366,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               pages={pagesForList}
               currentPageId={currentPageId as any}
               onSelectPage={onSelectPageId}
-              onCreatePage={() => {}}
-              onEditPage={() => {}}
-              onDeletePage={() => {}}
-              onDuplicatePage={() => {}}
+              onCreatePage={handleCreatePageFromList}
+              onEditPage={handleEditPageFromList}
+              onDeletePage={handleDeletePageFromList}
+              onDuplicatePage={handleDuplicatePageFromList}
             />
           </div>
 
