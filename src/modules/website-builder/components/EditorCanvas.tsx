@@ -31,12 +31,10 @@ interface BlockEditorModalProps {
 
 function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalProps) {
   const [formData, setFormData] = useState<any>({})
-  const [editingContent, setEditingContent] = useState<any>({})
 
   React.useEffect(() => {
     if (block) {
       setFormData(block.content || {})
-      setEditingContent(block.content || {})
     }
   }, [block])
 
@@ -104,14 +102,19 @@ function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalPr
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="content">Content</Label>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="body">Body</Label>
               <RichTextEditor
-                content={editingContent.html || editingContent.text || ''}
-                onChange={(html) => setEditingContent({
-                  ...editingContent,
-                  html,
-                  text: html
-                })}
+                content={formData.body || ''}
+                onChange={(body) => setFormData({ ...formData, body })}
                 placeholder="Enter your text content..."
               />
             </div>
@@ -597,10 +600,10 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateP
           return (
             <section className="py-16">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div 
-                  className={`prose prose-lg max-w-none text-${block.content.alignment || 'left'}`}
-                  dangerouslySetInnerHTML={{ __html: block.content.html || block.content.text || '' }}
-                />
+                <div className={`prose prose-lg max-w-none text-${block.content.alignment || 'left'}`}>
+                  {block.content.title && <h2>{block.content.title}</h2>}
+                  {block.content.body && <p>{block.content.body}</p>}
+                </div>
               </div>
             </section>
           )

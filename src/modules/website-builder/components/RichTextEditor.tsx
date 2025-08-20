@@ -35,7 +35,7 @@ export function RichTextEditor({ content, onChange, placeholder, showAdvancedToo
     ],
     content,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(editor.getText())
     },
     editorProps: {
       attributes: {

@@ -79,10 +79,10 @@ export function SiteRenderer({ site, page }: SiteRendererProps) {
         return (
           <section key={block.id} className="py-16">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div 
-                className={`prose prose-lg max-w-none ${block.content.alignment || 'text-left'}`}
-                dangerouslySetInnerHTML={{ __html: block.content.html || block.content.text || '' }}
-              />
+              <div className={`prose prose-lg max-w-none ${block.content.alignment || 'text-left'}`}>
+                {block.content.title && <h2>{block.content.title}</h2>}
+                {block.content.body && <p>{block.content.body}</p>}
+              </div>
             </div>
           </section>
         )
