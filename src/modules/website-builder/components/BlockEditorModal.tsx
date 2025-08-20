@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from './RichTextEditor'
 import { ImageEditor } from './ImageEditor'
@@ -35,6 +36,43 @@ export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditor
 
   const handleStyleUpdate = (newStyles: any) => {
     setStyles(newStyles)
+  }
+
+  const updateFeature = (index: number, field: string, value: string) => {
+    const features = [...(content.features || [])]
+    features[index] = { ...features[index], [field]: value }
+    setContent({ ...content, features })
+  }
+
+  const addFeature = () => {
+    const features = [...(content.features || []), { icon: '', title: '', description: '' }]
+    setContent({ ...content, features })
+  }
+
+  const removeFeature = (index: number) => {
+    const features = [...(content.features || [])]
+    features.splice(index, 1)
+    setContent({ ...content, features })
+  }
+
+  const updateTestimonial = (index: number, field: string, value: any) => {
+    const testimonials = [...(content.testimonials || [])]
+    testimonials[index] = { ...testimonials[index], [field]: value }
+    setContent({ ...content, testimonials })
+  }
+
+  const addTestimonial = () => {
+    const testimonials = [
+      ...(content.testimonials || []),
+      { name: '', text: '', rating: 5, location: '' }
+    ]
+    setContent({ ...content, testimonials })
+  }
+
+  const removeTestimonial = (index: number) => {
+    const testimonials = [...(content.testimonials || [])]
+    testimonials.splice(index, 1)
+    setContent({ ...content, testimonials })
   }
 
   if (!block) return null
@@ -226,6 +264,141 @@ export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditor
                       onChange={(e) => setContent({ ...content, buttonLink: e.target.value })}
                       placeholder="Enter button link..."
                     />
+                  </div>
+                </>
+              )}
+
+              {block.type === 'features' && (
+                <>
+                  <div>
+                    <Label htmlFor="features-title">Title</Label>
+                    <Input
+                      id="features-title"
+                      value={content.title || ''}
+                      onChange={(e) => setContent({ ...content, title: e.target.value })}
+                      placeholder="Enter section title..."
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <Label>Features</Label>
+                    {(content.features || []).map((feature: any, index: number) => (
+                      <div key={index} className="space-y-2 border p-3 rounded-md">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <Label>Icon</Label>
+                            <Input
+                              value={feature.icon || ''}
+                              onChange={(e) => updateFeature(index, 'icon', e.target.value)}
+                              placeholder="e.g. star"
+                            />
+                          </div>
+                          <div>
+                            <Label>Title</Label>
+                            <Input
+                              value={feature.title || ''}
+                              onChange={(e) => updateFeature(index, 'title', e.target.value)}
+                              placeholder="Feature title"
+                            />
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Input
+                              value={feature.description || ''}
+                              onChange={(e) => updateFeature(index, 'description', e.target.value)}
+                              placeholder="Feature description"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFeature(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" onClick={addFeature}>
+                      Add Feature
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {block.type === 'testimonials' && (
+                <>
+                  <div>
+                    <Label htmlFor="testimonials-title">Title</Label>
+                    <Input
+                      id="testimonials-title"
+                      value={content.title || ''}
+                      onChange={(e) => setContent({ ...content, title: e.target.value })}
+                      placeholder="Enter section title..."
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <Label>Testimonials</Label>
+                    {(content.testimonials || []).map((t: any, index: number) => (
+                      <div key={index} className="space-y-2 border p-3 rounded-md">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div>
+                            <Label>Name</Label>
+                            <Input
+                              value={t.name || ''}
+                              onChange={(e) => updateTestimonial(index, 'name', e.target.value)}
+                              placeholder="Customer name"
+                            />
+                          </div>
+                          <div>
+                            <Label>Location</Label>
+                            <Input
+                              value={t.location || ''}
+                              onChange={(e) => updateTestimonial(index, 'location', e.target.value)}
+                              placeholder="Location"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Testimonial</Label>
+                          <Textarea
+                            value={t.text || ''}
+                            onChange={(e) => updateTestimonial(index, 'text', e.target.value)}
+                            rows={3}
+                            placeholder="Testimonial text..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Rating</Label>
+                          <Select
+                            value={String(t.rating || 5)}
+                            onValueChange={(value) =>
+                              updateTestimonial(index, 'rating', parseInt(value))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[1, 2, 3, 4, 5].map((r) => (
+                                <SelectItem key={r} value={String(r)}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeTestimonial(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" onClick={addTestimonial}>
+                      Add Testimonial
+                    </Button>
                   </div>
                 </>
               )}
