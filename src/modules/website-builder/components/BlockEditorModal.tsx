@@ -18,7 +18,7 @@ interface BlockEditorModalProps {
   onSave: (updates: any) => void
 }
 
-export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalProps) {
+export default function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditorModalProps) {
   const [content, setContent] = useState(block?.content || {})
   const [styles, setStyles] = useState(block?.styles || {})
   const [showImageEditor, setShowImageEditor] = useState(false)
@@ -294,4 +294,3 @@ export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditor
   )
 }
 
-export default BlockEditorModal
