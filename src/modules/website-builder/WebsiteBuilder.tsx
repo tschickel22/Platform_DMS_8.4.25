@@ -8,6 +8,7 @@ import { websiteService } from '@/services/website/service'
 import { Site } from './types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { useToast } from '@/hooks/use-toast'
+  Copy,
 import TemplateSelector from './components/TemplateSelector'
 import { CreateSiteDetailsModal } from './components/CreateSiteDetailsModal'
 
@@ -20,6 +21,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
   const [loading, setLoading] = useState(true)
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [cloning, setCloning] = useState<string | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const navigate = useNavigate()
   const { handleError } = useErrorHandler()
@@ -116,6 +118,43 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
     }
   }
 
+  const handleCloneSite = async (originalSite: Site) => {
+    try {
+      setCloning(originalSite.id)
+      
+      // Create a copy of the site with new IDs and modified name
+      const clonedSiteData = {
+        ...originalSite,
+        name: `${originalSite.name} (Copy)`,
+        slug: `${originalSite.slug}-copy-${Date.now()}`,
+        pages: originalSite.pages.map(page => ({
+          ...page,
+          id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          blocks: page.blocks.map(block => ({
+            ...block,
+            id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          }))
+        }))
+      }
+      
+      // Remove the original ID so a new one gets generated
+      delete (clonedSiteData as any).id
+      delete (clonedSiteData as any).createdAt
+      delete (clonedSiteData as any).updatedAt
+      
+      const clonedSite = await websiteService.createSite(clonedSiteData)
+      setSites(prev => [clonedSite, ...prev])
+      
+      toast({
+        title: 'Website Cloned',
+        description: `${clonedSite.name} has been created as a copy of ${originalSite.name}.`
+      })
+    } catch (error) {
+      handleError(error, 'cloning website')
+    } finally {
+      setCloning(null)
+    }
+  }
   const handlePreviewSite = (site: Site) => {
     const previewUrl = `/s/${site.slug}/`
     window.open(previewUrl, '_blank')
@@ -245,7 +284,7 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                             lastPreviewUpdate: new Date().toISOString(),
                           }
                           const key = `wb2:preview-site:${site.slug}`
-                          localStorage.setItem(key, JSON.stringify(previewData))
+                <div className="flex items-center gap-2 flex-wrap">
                           sessionStorage.setItem(key, JSON.stringify(previewData))
                           
                           // Use same URL format as working preview
@@ -264,6 +303,16 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                     </Button>
                     
                     <Button
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCloneSite(site)}
+                    disabled={cloning === site.id}
+                    title="Clone this website"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {cloning === site.id ? '...' : ''}
+                  </Button>
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteSite(site.id)}
