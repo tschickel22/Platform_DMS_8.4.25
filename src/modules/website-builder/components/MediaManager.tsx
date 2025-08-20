@@ -2,7 +2,18 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Upload, Image, Trash2, ExternalLink, Search } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Upload, 
+  Image, 
+  FileText, 
+  Trash2, 
+  Copy, 
+  ExternalLink,
+  Search,
+  Grid,
+  List
+} from 'lucide-react'
 import { websiteService } from '@/services/website/service'
 import { Media } from '../types'
 import { useToast } from '@/hooks/use-toast'
@@ -10,13 +21,18 @@ import { useErrorHandler } from '@/hooks/useErrorHandler'
 
 interface MediaManagerProps {
   siteId: string
+  onSelectMedia?: (media: Media) => void
+  selectionMode?: boolean
 }
 
-export default function MediaManager({ siteId }: MediaManagerProps) {
+export default function MediaManager({ siteId, onSelectMedia, selectionMode = false }: MediaManagerProps) {
   const [media, setMedia] = useState<Media[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [selectedMedia, setSelectedMedia] = useState<string | null>(null)
+  
   const { toast } = useToast()
   const { handleError } = useErrorHandler()
 
@@ -29,8 +45,8 @@ export default function MediaManager({ siteId }: MediaManagerProps) {
       setLoading(true)
       const mediaList = await websiteService.getMedia(siteId)
       setMedia(mediaList)
-    } catch (err) {
-      handleError(err, 'loading media')
+    } catch (error) {
+      handleError(error, 'loading media')
     } finally {
       setLoading(false)
     }
@@ -42,37 +58,38 @@ export default function MediaManager({ siteId }: MediaManagerProps) {
 
     try {
       setUploading(true)
-      const file = files[0]
       
-      // Validate file size (2MB limit)
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: 'File too large',
-          description: 'Please select a file smaller than 2MB',
-          variant: 'destructive'
-        })
-        return
-      }
+      for (const file of Array.from(files)) {
+        // Validate file size (2MB limit)
+        if (file.size > 2 * 1024 * 1024) {
+          toast({
+            title: 'File too large',
+            description: `${file.name} is larger than 2MB`,
+            variant: 'destructive'
+          })
+          continue
+        }
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: 'Invalid file type',
-          description: 'Please select an image file',
-          variant: 'destructive'
-        })
-        return
-      }
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: 'Invalid file type',
+            description: `${file.name} is not a supported image format`,
+            variant: 'destructive'
+          })
+          continue
+        }
 
-      const newMedia = await websiteService.uploadMedia(siteId, file)
-      setMedia(prev => [newMedia, ...prev])
-      
-      toast({
-        title: 'Upload successful',
-        description: 'Your image has been uploaded'
-      })
-    } catch (err) {
-      handleError(err, 'uploading media')
+        const uploadedMedia = await websiteService.uploadMedia(siteId, file)
+        setMedia(prev => [uploadedMedia, ...prev])
+        
+        toast({
+          title: 'Upload successful',
+          description: `${file.name} has been uploaded`
+        })
+      }
+    } catch (error) {
+      handleError(error, 'uploading media')
     } finally {
       setUploading(false)
       // Reset file input
@@ -81,34 +98,37 @@ export default function MediaManager({ siteId }: MediaManagerProps) {
   }
 
   const handleDeleteMedia = async (mediaId: string) => {
-    if (!confirm('Are you sure you want to delete this image?')) return
+    const mediaItem = media.find(m => m.id === mediaId)
+    if (!mediaItem) return
+
+    if (!confirm(`Are you sure you want to delete "${mediaItem.name}"?`)) return
 
     try {
       await websiteService.deleteMedia(siteId, mediaId)
       setMedia(prev => prev.filter(m => m.id !== mediaId))
       
       toast({
-        title: 'Image deleted',
-        description: 'The image has been removed from your media library'
+        title: 'Media deleted',
+        description: `${mediaItem.name} has been deleted`
       })
-    } catch (err) {
-      handleError(err, 'deleting media')
+    } catch (error) {
+      handleError(error, 'deleting media')
     }
   }
 
-  const copyToClipboard = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url)
-      toast({
-        title: 'URL copied',
-        description: 'Image URL has been copied to clipboard'
-      })
-    } catch (err) {
-      toast({
-        title: 'Copy failed',
-        description: 'Could not copy URL to clipboard',
-        variant: 'destructive'
-      })
+  const handleCopyUrl = (url: string) => {
+    navigator.clipboard.writeText(url)
+    toast({
+      title: 'URL copied',
+      description: 'Media URL has been copied to clipboard'
+    })
+  }
+
+  const handleMediaSelect = (mediaItem: Media) => {
+    if (selectionMode && onSelectMedia) {
+      onSelectMedia(mediaItem)
+    } else {
+      setSelectedMedia(selectedMedia === mediaItem.id ? null : mediaItem.id)
     }
   }
 
@@ -116,13 +136,18 @@ export default function MediaManager({ siteId }: MediaManagerProps) {
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
   if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Media Library</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading media...</p>
@@ -135,110 +160,222 @@ export default function MediaManager({ siteId }: MediaManagerProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Media Library</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Media Library
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Upload Section */}
-        <div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="media-upload"
-            disabled={uploading}
-          />
-          <label htmlFor="media-upload">
+      <CardContent>
+        <div className="space-y-4">
+          {/* Upload Area */}
+          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-3">
+              Drag and drop images here, or click to browse
+            </p>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="media-upload"
+              disabled={uploading}
+            />
             <Button
               variant="outline"
-              className="w-full h-20 border-dashed"
+              onClick={() => document.getElementById('media-upload')?.click()}
               disabled={uploading}
-              asChild
             >
-              <div className="cursor-pointer">
-                <div className="text-center">
-                  <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {uploading ? 'Uploading...' : 'Click to upload image'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Max 2MB, JPG/PNG/GIF
-                  </p>
-                </div>
-              </div>
+              {uploading ? 'Uploading...' : 'Choose Files'}
             </Button>
-          </label>
-        </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Max file size: 2MB. Supported formats: JPG, PNG, GIF, WebP
+            </p>
+          </div>
 
-        {/* Search */}
-        {media.length > 0 && (
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search images..."
+              placeholder="Search media..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
-        )}
 
-        {/* Media Grid */}
-        {filteredMedia.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
-            {filteredMedia.map((item) => (
-              <div key={item.id} className="group relative">
-                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={item.url}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
+          {/* Media Grid/List */}
+          {filteredMedia.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">
+                {searchTerm ? 'No media found matching your search' : 'No media uploaded yet'}
+              </p>
+            </div>
+          ) : (
+            <div className={
+              viewMode === 'grid' 
+                ? 'grid grid-cols-2 gap-3' 
+                : 'space-y-2'
+            }>
+              {filteredMedia.map((item) => (
+                <div
+                  key={item.id}
+                  className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                    selectedMedia === item.id ? 'ring-2 ring-primary' : 'hover:shadow-md'
+                  }`}
+                  onClick={() => handleMediaSelect(item)}
+                >
+                  {viewMode === 'grid' ? (
+                    <div>
+                      <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                        {item.type === 'image' ? (
+                          <img
+                            src={item.url}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <FileText className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-medium truncate">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(item.size)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                        {item.type === 'image' ? (
+                          <img
+                            src={item.url}
+                            alt={item.name}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        ) : (
+                          <FileText className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {item.type}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatFileSize(item.size)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCopyUrl(item.url)
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(item.url, '_blank')
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteMedia(item.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
-                {/* Overlay with actions */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => copyToClipboard(item.url)}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDeleteMedia(item.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Image info */}
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground truncate">
-                    {item.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {(item.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+
+          {/* External URL Input */}
+          <div className="border-t pt-4">
+            <Label className="text-sm font-medium mb-2 block">Add External Image</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://example.com/image.jpg"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const url = (e.target as HTMLInputElement).value
+                    if (url) {
+                      const externalMedia: Media = {
+                        id: `external-${Date.now()}`,
+                        name: url.split('/').pop() || 'External Image',
+                        url,
+                        type: 'image',
+                        size: 0,
+                        uploadedAt: new Date().toISOString()
+                      }
+                      setMedia(prev => [externalMedia, ...prev])
+                      ;(e.target as HTMLInputElement).value = ''
+                    }
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const input = document.querySelector('input[placeholder*="example.com"]') as HTMLInputElement
+                  const url = input?.value
+                  if (url) {
+                    const externalMedia: Media = {
+                      id: `external-${Date.now()}`,
+                      name: url.split('/').pop() || 'External Image',
+                      url,
+                      type: 'image',
+                      size: 0,
+                      uploadedAt: new Date().toISOString()
+                    }
+                    setMedia(prev => [externalMedia, ...prev])
+                    input.value = ''
+                  }
+                }}
+              >
+                Add
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm ? 'No images found' : 'No media files'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {searchTerm ? 'Try a different search term' : 'Upload images and documents to get started'}
-            </p>
-          </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   )

@@ -1,277 +1,352 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  AlignJustify,
-  Move,
-  Square,
-  Circle,
-  Palette
-} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Layout, Spacing, Palette } from 'lucide-react'
 
 interface LayoutControlsProps {
-  blockId: string
-  currentStyles: any
-  onStyleUpdate: (styles: any) => void
+  content: any
+  onChange: (content: any) => void
 }
 
-export function LayoutControls({ blockId, currentStyles, onStyleUpdate }: LayoutControlsProps) {
-  const [padding, setPadding] = useState({
-    top: currentStyles?.padding?.top || 16,
-    right: currentStyles?.padding?.right || 16,
-    bottom: currentStyles?.padding?.bottom || 16,
-    left: currentStyles?.padding?.left || 16
-  })
+export default function LayoutControls({ content, onChange }: LayoutControlsProps) {
+  const spacing = content.spacing || {}
+  const borders = content.borders || {}
+  const shadows = content.shadows || {}
 
-  const [margin, setMargin] = useState({
-    top: currentStyles?.margin?.top || 0,
-    bottom: currentStyles?.margin?.bottom || 0
-  })
-
-  const [backgroundColor, setBackgroundColor] = useState(currentStyles?.backgroundColor || 'transparent')
-  const [borderRadius, setBorderRadius] = useState(currentStyles?.borderRadius || 0)
-  const [borderWidth, setBorderWidth] = useState(currentStyles?.borderWidth || 0)
-  const [borderColor, setBorderColor] = useState(currentStyles?.borderColor || '#e5e7eb')
-  const [shadowIntensity, setShadowIntensity] = useState(currentStyles?.shadowIntensity || 0)
-
-  const updateStyles = (newStyles: any) => {
-    const updatedStyles = { ...currentStyles, ...newStyles }
-    onStyleUpdate(updatedStyles)
+  const updateSpacing = (type: string, value: number) => {
+    onChange({
+      ...content,
+      spacing: { ...spacing, [type]: value }
+    })
   }
 
-  const handlePaddingChange = (side: string, value: number) => {
-    const newPadding = { ...padding, [side]: value }
-    setPadding(newPadding)
-    updateStyles({ padding: newPadding })
+  const updateBorders = (property: string, value: any) => {
+    onChange({
+      ...content,
+      borders: { ...borders, [property]: value }
+    })
   }
 
-  const handleMarginChange = (side: string, value: number) => {
-    const newMargin = { ...margin, [side]: value }
-    setMargin(newMargin)
-    updateStyles({ margin: newMargin })
+  const updateShadows = (property: string, value: any) => {
+    onChange({
+      ...content,
+      shadows: { ...shadows, [property]: value }
+    })
   }
-
-  const presetBackgrounds = [
-    { name: 'Transparent', value: 'transparent' },
-    { name: 'White', value: '#ffffff' },
-    { name: 'Light Gray', value: '#f8fafc' },
-    { name: 'Dark Gray', value: '#1e293b' },
-    { name: 'Primary', value: '#3b82f6' },
-    { name: 'Success', value: '#10b981' },
-    { name: 'Warning', value: '#f59e0b' },
-    { name: 'Danger', value: '#ef4444' }
-  ]
 
   const shadowPresets = [
-    { name: 'None', value: 0, shadow: 'none' },
-    { name: 'Small', value: 1, shadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' },
-    { name: 'Medium', value: 2, shadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' },
-    { name: 'Large', value: 3, shadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' },
-    { name: 'Extra Large', value: 4, shadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)' }
+    { name: 'None', value: 'none' },
+    { name: 'Small', value: '0 1px 2px 0 rgb(0 0 0 / 0.05)' },
+    { name: 'Medium', value: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' },
+    { name: 'Large', value: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' },
+    { name: 'Extra Large', value: '0 25px 50px -12px rgb(0 0 0 / 0.25)' }
   ]
 
   return (
-    <Card className="w-80">
-      <CardHeader>
-        <CardTitle className="text-lg">Layout & Styling</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="spacing" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="spacing">Spacing</TabsTrigger>
-            <TabsTrigger value="background">Background</TabsTrigger>
-            <TabsTrigger value="border">Border</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="spacing" className="space-y-6">
-            {/* Padding Controls */}
+    <div className="space-y-6">
+      {/* Spacing Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Spacing className="h-4 w-4" />
+            Spacing
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium mb-3 block">Padding (px)</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="padding-top" className="text-xs">Top</Label>
-                  <Input
-                    id="padding-top"
-                    type="number"
-                    value={padding.top}
-                    onChange={(e) => handlePaddingChange('top', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="padding-right" className="text-xs">Right</Label>
-                  <Input
-                    id="padding-right"
-                    type="number"
-                    value={padding.right}
-                    onChange={(e) => handlePaddingChange('right', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="padding-bottom" className="text-xs">Bottom</Label>
-                  <Input
-                    id="padding-bottom"
-                    type="number"
-                    value={padding.bottom}
-                    onChange={(e) => handlePaddingChange('bottom', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="padding-left" className="text-xs">Left</Label>
-                  <Input
-                    id="padding-left"
-                    type="number"
-                    value={padding.left}
-                    onChange={(e) => handlePaddingChange('left', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Margin Controls */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Margin (px)</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="margin-top" className="text-xs">Top</Label>
-                  <Input
-                    id="margin-top"
-                    type="number"
-                    value={margin.top}
-                    onChange={(e) => handleMarginChange('top', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="margin-bottom" className="text-xs">Bottom</Label>
-                  <Input
-                    id="margin-bottom"
-                    type="number"
-                    value={margin.bottom}
-                    onChange={(e) => handleMarginChange('bottom', parseInt(e.target.value) || 0)}
-                    className="h-8"
-                  />
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="background" className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Background Color</Label>
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {presetBackgrounds.map((bg) => (
-                  <button
-                    key={bg.value}
-                    className="h-8 rounded border-2 border-gray-200 hover:border-gray-400 flex items-center justify-center text-xs"
-                    style={{ backgroundColor: bg.value === 'transparent' ? 'white' : bg.value }}
-                    onClick={() => {
-                      setBackgroundColor(bg.value)
-                      updateStyles({ backgroundColor: bg.value })
-                    }}
-                  >
-                    {bg.value === 'transparent' && (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-white rounded" />
-                    )}
-                  </button>
-                ))}
-              </div>
-              <Input
-                type="color"
-                value={backgroundColor === 'transparent' ? '#ffffff' : backgroundColor}
-                onChange={(e) => {
-                  setBackgroundColor(e.target.value)
-                  updateStyles({ backgroundColor: e.target.value })
-                }}
-                className="w-full h-8"
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Shadow</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {shadowPresets.map((shadow) => (
-                  <Button
-                    key={shadow.value}
-                    variant={shadowIntensity === shadow.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => {
-                      setShadowIntensity(shadow.value)
-                      updateStyles({ 
-                        shadowIntensity: shadow.value,
-                        boxShadow: shadow.shadow 
-                      })
-                    }}
-                  >
-                    {shadow.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="border" className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Border Radius: {borderRadius}px</Label>
+              <Label>Padding Top</Label>
               <Slider
-                value={[borderRadius]}
-                onValueChange={(value) => {
-                  setBorderRadius(value[0])
-                  updateStyles({ borderRadius: `${value[0]}px` })
-                }}
-                min={0}
-                max={50}
-                step={1}
+                value={[spacing.paddingTop || 0]}
+                onValueChange={([value]) => updateSpacing('paddingTop', value)}
+                max={100}
+                step={4}
                 className="mt-2"
               />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.paddingTop || 0}px
+              </div>
             </div>
 
             <div>
-              <Label className="text-sm font-medium mb-3 block">Border Width: {borderWidth}px</Label>
+              <Label>Padding Bottom</Label>
               <Slider
-                value={[borderWidth]}
-                onValueChange={(value) => {
-                  setBorderWidth(value[0])
-                  updateStyles({ 
-                    borderWidth: `${value[0]}px`,
-                    borderStyle: value[0] > 0 ? 'solid' : 'none'
-                  })
-                }}
-                min={0}
+                value={[spacing.paddingBottom || 0]}
+                onValueChange={([value]) => updateSpacing('paddingBottom', value)}
+                max={100}
+                step={4}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.paddingBottom || 0}px
+              </div>
+            </div>
+
+            <div>
+              <Label>Padding Left</Label>
+              <Slider
+                value={[spacing.paddingLeft || 0]}
+                onValueChange={([value]) => updateSpacing('paddingLeft', value)}
+                max={100}
+                step={4}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.paddingLeft || 0}px
+              </div>
+            </div>
+
+            <div>
+              <Label>Padding Right</Label>
+              <Slider
+                value={[spacing.paddingRight || 0]}
+                onValueChange={([value]) => updateSpacing('paddingRight', value)}
+                max={100}
+                step={4}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.paddingRight || 0}px
+              </div>
+            </div>
+
+            <div>
+              <Label>Margin Top</Label>
+              <Slider
+                value={[spacing.marginTop || 0]}
+                onValueChange={([value]) => updateSpacing('marginTop', value)}
+                max={100}
+                step={4}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.marginTop || 0}px
+              </div>
+            </div>
+
+            <div>
+              <Label>Margin Bottom</Label>
+              <Slider
+                value={[spacing.marginBottom || 0]}
+                onValueChange={([value]) => updateSpacing('marginBottom', value)}
+                max={100}
+                step={4}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {spacing.marginBottom || 0}px
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Border Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layout className="h-4 w-4" />
+            Borders
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Border Width</Label>
+              <Slider
+                value={[borders.width || 0]}
+                onValueChange={([value]) => updateBorders('width', value)}
                 max={10}
                 step={1}
                 className="mt-2"
               />
+              <div className="text-sm text-muted-foreground mt-1">
+                {borders.width || 0}px
+              </div>
             </div>
 
-            {borderWidth > 0 && (
-              <div>
-                <Label className="text-sm font-medium mb-3 block">Border Color</Label>
-                <Input
+            <div>
+              <Label>Border Color</Label>
+              <div className="flex items-center gap-2 mt-2">
+                <input
                   type="color"
-                  value={borderColor}
-                  onChange={(e) => {
-                    setBorderColor(e.target.value)
-                    updateStyles({ borderColor: e.target.value })
-                  }}
-                  className="w-full h-8"
+                  value={borders.color || '#000000'}
+                  onChange={(e) => updateBorders('color', e.target.value)}
+                  className="w-12 h-8 rounded border"
+                />
+                <Input
+                  value={borders.color || '#000000'}
+                  onChange={(e) => updateBorders('color', e.target.value)}
+                  placeholder="#000000"
                 />
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            </div>
+
+            <div>
+              <Label>Border Radius</Label>
+              <Slider
+                value={[borders.radius || 0]}
+                onValueChange={([value]) => updateBorders('radius', value)}
+                max={50}
+                step={1}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {borders.radius || 0}px
+              </div>
+            </div>
+
+            <div>
+              <Label>Border Style</Label>
+              <Select
+                value={borders.style || 'solid'}
+                onValueChange={(value) => updateBorders('style', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="solid">Solid</SelectItem>
+                  <SelectItem value="dashed">Dashed</SelectItem>
+                  <SelectItem value="dotted">Dotted</SelectItem>
+                  <SelectItem value="double">Double</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Shadow Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Shadows</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Shadow Preset</Label>
+              <Select
+                value={shadows.preset || 'none'}
+                onValueChange={(value) => {
+                  const preset = shadowPresets.find(p => p.name.toLowerCase().replace(' ', '-') === value)
+                  updateShadows('preset', value)
+                  updateShadows('value', preset?.value || 'none')
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {shadowPresets.map((preset) => (
+                    <SelectItem 
+                      key={preset.name} 
+                      value={preset.name.toLowerCase().replace(' ', '-')}
+                    >
+                      {preset.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Shadow Intensity</Label>
+              <Slider
+                value={[shadows.intensity || 100]}
+                onValueChange={([value]) => updateShadows('intensity', value)}
+                max={200}
+                step={10}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {shadows.intensity || 100}%
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Image Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Image Filters
+            </span>
+            <Button variant="outline" size="sm" onClick={resetFilters}>
+              Reset
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Brightness</Label>
+              <Slider
+                value={[filters.brightness]}
+                onValueChange={([value]) => handleFilterChange('brightness', value)}
+                min={0}
+                max={200}
+                step={1}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {filters.brightness}%
+              </div>
+            </div>
+
+            <div>
+              <Label>Contrast</Label>
+              <Slider
+                value={[filters.contrast]}
+                onValueChange={([value]) => handleFilterChange('contrast', value)}
+                min={0}
+                max={200}
+                step={1}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {filters.contrast}%
+              </div>
+            </div>
+
+            <div>
+              <Label>Saturation</Label>
+              <Slider
+                value={[filters.saturation]}
+                onValueChange={([value]) => handleFilterChange('saturation', value)}
+                min={0}
+                max={200}
+                step={1}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {filters.saturation}%
+              </div>
+            </div>
+
+            <div>
+              <Label>Rotation</Label>
+              <Slider
+                value={[filters.rotation]}
+                onValueChange={([value]) => handleFilterChange('rotation', value)}
+                min={-180}
+                max={180}
+                step={15}
+                className="mt-2"
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {filters.rotation}°
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

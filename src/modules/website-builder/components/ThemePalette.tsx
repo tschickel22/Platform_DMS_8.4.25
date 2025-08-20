@@ -1,11 +1,16 @@
-import React, { useState } from 'react'
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Palette, RefreshCw } from 'lucide-react'
-import { Theme } from '../types'
+
+interface Theme {
+  primaryColor: string
+  secondaryColor: string
+  fontFamily: string
+}
 
 interface ThemePaletteProps {
   theme?: Theme
@@ -40,7 +45,7 @@ const presetThemes = [
   {
     name: 'Classic Gray',
     primaryColor: '#374151',
-    secondaryColor: '#4b5563',
+    secondaryColor: '#1f2937',
     fontFamily: 'Inter'
   }
 ]
@@ -51,277 +56,181 @@ const fontOptions = [
   { value: 'Open Sans', label: 'Open Sans' },
   { value: 'Montserrat', label: 'Montserrat' },
   { value: 'Lato', label: 'Lato' },
-  { value: 'Poppins', label: 'Poppins' }
+  { value: 'Poppins', label: 'Poppins' },
+  { value: 'Source Sans Pro', label: 'Source Sans Pro' },
+  { value: 'Oswald', label: 'Oswald' }
 ]
 
 export default function ThemePalette({ theme, onThemeUpdate }: ThemePaletteProps) {
-  const [customColors, setCustomColors] = useState({
-    primary: theme?.primaryColor || '#3b82f6',
-    secondary: theme?.secondaryColor || '#64748b'
-  })
-  const [customPrimaryColor, setCustomPrimaryColor] = useState(theme?.primaryColor || '#2563eb')
-  const [customSecondaryColor, setCustomSecondaryColor] = useState(theme?.secondaryColor || '#64748b')
-  const [customFontFamily, setCustomFontFamily] = useState(theme?.fontFamily || 'Inter')
-
-  const currentTheme: Theme = {
-    primaryColor: theme?.primaryColor || '#3b82f6',
-    secondaryColor: theme?.secondaryColor || '#64748b',
-    fontFamily: theme?.fontFamily || 'Inter'
+  const currentTheme = theme || {
+    primaryColor: '#3b82f6',
+    secondaryColor: '#1d4ed8',
+    fontFamily: 'Inter'
   }
 
   const handlePresetSelect = (preset: typeof presetThemes[0]) => {
-    const newTheme: Theme = {
-      primaryColor: preset.primaryColor,
-      secondaryColor: preset.secondaryColor,
-      fontFamily: preset.fontFamily
-    }
-    onThemeUpdate(newTheme)
-    setCustomColors({
-      primary: preset.primaryColor,
-      secondary: preset.secondaryColor
+    onThemeUpdate(preset)
+  }
+
+  const handleColorChange = (colorType: 'primaryColor' | 'secondaryColor', color: string) => {
+    onThemeUpdate({
+      ...currentTheme,
+      [colorType]: color
     })
   }
 
-  const handleCustomColorUpdate = () => {
-    const newTheme: Theme = {
-      ...currentTheme,
-      primaryColor: customColors.primary,
-      secondaryColor: customColors.secondary
-    }
-    onThemeUpdate(newTheme)
-  }
-
   const handleFontChange = (fontFamily: string) => {
-    const newTheme: Theme = {
+    onThemeUpdate({
       ...currentTheme,
       fontFamily
-    }
-    onThemeUpdate(newTheme)
+    })
   }
 
-  const handleCustomColorChange = () => {
-    const customTheme: Theme = {
-      primaryColor: customPrimaryColor,
-      secondaryColor: customSecondaryColor,
-      fontFamily: customFontFamily
-    }
-    onThemeUpdate(customTheme)
+  const resetToDefault = () => {
+    onThemeUpdate({
+      primaryColor: '#3b82f6',
+      secondaryColor: '#1d4ed8',
+      fontFamily: 'Inter'
+    })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Palette className="h-5 w-5" />
-          Theme & Style
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Theme
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={resetToDefault}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="presets" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="presets">Presets</TabsTrigger>
-            <TabsTrigger value="custom">Custom</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="presets" className="space-y-3 mt-4">
-            <div>
-              <h4 className="text-sm font-medium mb-3">Preset Themes</h4>
-              <div className="space-y-2">
-                {presetThemes.map((preset) => (
-                  <Button
-                    key={preset.name}
-                    variant="outline"
-                    className="w-full justify-start h-auto p-3"
-                    onClick={() => handlePresetSelect(preset)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        <div 
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: preset.primaryColor }}
-                        />
-                        <div 
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: preset.secondaryColor }}
-                        />
-                      </div>
-                      <span className="text-sm">{preset.name}</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Colors */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Custom Colors</Label>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Primary Color</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="color"
-                      value={customColors.primary}
-                      onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
-                      className="w-10 h-8 rounded border cursor-pointer"
-                    />
-                    <Input
-                      value={customColors.primary}
-                      onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
-                      className="flex-1 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-muted-foreground">Secondary Color</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="color"
-                      value={customColors.secondary}
-                      onChange={(e) => setCustomColors({ ...customColors, secondary: e.target.value })}
-                      className="w-10 h-8 rounded border cursor-pointer"
-                    />
-                    <Input
-                      value={customColors.secondary}
-                      onChange={(e) => setCustomColors({ ...customColors, secondary: e.target.value })}
-                      className="flex-1 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-
+        <div className="space-y-6">
+          {/* Preset Themes */}
+          <div>
+            <Label className="text-sm font-medium mb-3 block">Preset Themes</Label>
+            <div className="grid grid-cols-1 gap-2">
+              {presetThemes.map((preset) => (
                 <Button
-                  size="sm"
-                  onClick={handleCustomColorUpdate}
-                  className="w-full"
+                  key={preset.name}
+                  variant="outline"
+                  className="justify-start h-auto p-3"
+                  onClick={() => handlePresetSelect(preset)}
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Apply Colors
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex gap-1">
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: preset.primaryColor }}
+                      />
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: preset.secondaryColor }}
+                      />
+                    </div>
+                    <span className="text-sm">{preset.name}</span>
+                  </div>
                 </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Colors */}
+          <div className="space-y-4">
+            <Label className="text-sm font-medium">Custom Colors</Label>
+            
+            <div>
+              <Label htmlFor="primary-color" className="text-xs">Primary Color</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={currentTheme.primaryColor}
+                  onChange={(e) => handleColorChange('primaryColor', e.target.value)}
+                  className="w-12 h-8 rounded border cursor-pointer"
+                />
+                <Input
+                  id="primary-color"
+                  value={currentTheme.primaryColor}
+                  onChange={(e) => handleColorChange('primaryColor', e.target.value)}
+                  placeholder="#3b82f6"
+                />
               </div>
             </div>
 
-            {/* Typography */}
             <div>
-              <Label className="text-sm font-medium mb-3 block">Typography</Label>
-              <div>
-                <Label className="text-xs text-muted-foreground">Font Family</Label>
-                <select
-                  value={currentTheme.fontFamily}
-                  onChange={(e) => handleFontChange(e.target.value)}
-                  className="w-full mt-1 p-2 border rounded-md text-sm"
-                >
-                  {fontOptions.map(font => (
-                    <option key={font.value} value={font.value}>
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
+              <Label htmlFor="secondary-color" className="text-xs">Secondary Color</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={currentTheme.secondaryColor}
+                  onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
+                  className="w-12 h-8 rounded border cursor-pointer"
+                />
+                <Input
+                  id="secondary-color"
+                  value={currentTheme.secondaryColor}
+                  onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
+                  placeholder="#1d4ed8"
+                />
               </div>
             </div>
+          </div>
 
-            {/* Theme Preview */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Preview</Label>
-              <div 
-                className="p-4 rounded-lg border"
+          {/* Typography */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Typography</Label>
+            <Select
+              value={currentTheme.fontFamily}
+              onValueChange={handleFontChange}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fontOptions.map((font) => (
+                  <SelectItem key={font.value} value={font.value}>
+                    <span style={{ fontFamily: font.value }}>{font.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Theme Preview */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Preview</Label>
+            <div 
+              className="p-4 rounded-lg border"
+              style={{ 
+                backgroundColor: currentTheme.primaryColor + '10',
+                fontFamily: currentTheme.fontFamily
+              }}
+            >
+              <h3 
+                className="font-bold mb-2"
+                style={{ color: currentTheme.primaryColor }}
+              >
+                Sample Heading
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                This is how your content will look with the selected theme.
+              </p>
+              <Button
+                size="sm"
                 style={{ 
-                  fontFamily: currentTheme.fontFamily,
-                  backgroundColor: `${currentTheme.primaryColor}10`
+                  backgroundColor: currentTheme.primaryColor,
+                  color: 'white'
                 }}
               >
-                <h3 
-                  className="font-bold text-lg mb-2"
-                  style={{ color: currentTheme.primaryColor }}
-                >
-                  Sample Heading
-                </h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  This is how your content will look with the selected theme.
-                </p>
-                <button
-                  className="px-4 py-2 rounded-md text-white text-sm font-medium"
-                  style={{ backgroundColor: currentTheme.primaryColor }}
-                >
-                  Sample Button
-                </button>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="custom" className="space-y-4 mt-4">
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="primary-color" className="text-sm font-medium">
-                  Primary Color
-                </Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="primary-color"
-                    type="color"
-                    value={customPrimaryColor}
-                    onChange={(e) => setCustomPrimaryColor(e.target.value)}
-                    className="w-12 h-10 p-1 border rounded"
-                  />
-                  <Input
-                    type="text"
-                    value={customPrimaryColor}
-                    onChange={(e) => setCustomPrimaryColor(e.target.value)}
-                    className="flex-1"
-                    placeholder="#2563eb"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="secondary-color" className="text-sm font-medium">
-                  Secondary Color
-                </Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="secondary-color"
-                    type="color"
-                    value={customSecondaryColor}
-                    onChange={(e) => setCustomSecondaryColor(e.target.value)}
-                    className="w-12 h-10 p-1 border rounded"
-                  />
-                  <Input
-                    type="text"
-                    value={customSecondaryColor}
-                    onChange={(e) => setCustomSecondaryColor(e.target.value)}
-                    className="flex-1"
-                    placeholder="#64748b"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="font-family" className="text-sm font-medium">
-                  Font Family
-                </Label>
-                <select
-                  id="font-family"
-                  value={customFontFamily}
-                  onChange={(e) => setCustomFontFamily(e.target.value)}
-                  className="w-full mt-1 p-2 border rounded-md bg-background"
-                >
-                  {fontOptions.map((font) => (
-                    <option key={font.value} value={font.value}>
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <Button 
-                onClick={handleCustomColorChange}
-                className="w-full"
-              >
-                Apply Custom Theme
+                Sample Button
               </Button>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
