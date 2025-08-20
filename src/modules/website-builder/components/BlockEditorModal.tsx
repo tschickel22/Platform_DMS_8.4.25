@@ -76,15 +76,26 @@ export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditor
           <div className="flex-1 overflow-hidden">
             <TabsContent value="content" className="h-full overflow-y-auto p-4 space-y-4">
               {block.type === 'text' && (
-                <div>
-                  <Label>Content</Label>
-                  <RichTextEditor
-                    content={content.html || content.text || ''}
-                    onChange={(html) => setContent({ ...content, html })}
-                    placeholder="Enter your text content..."
-                    showAdvancedTools={true}
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label htmlFor="text-title">Title</Label>
+                    <Input
+                      id="text-title"
+                      value={content.title || ''}
+                      onChange={(e) => setContent({ ...content, title: e.target.value })}
+                      placeholder="Enter title..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Body</Label>
+                    <RichTextEditor
+                      content={content.body || ''}
+                      onChange={(body) => setContent({ ...content, body })}
+                      placeholder="Enter your text content..."
+                      showAdvancedTools={true}
+                    />
+                  </div>
+                </>
               )}
 
               {block.type === 'hero' && (
@@ -204,7 +215,7 @@ export function BlockEditorModal({ block, isOpen, onClose, onSave }: BlockEditor
                     <Label>Description</Label>
                     <RichTextEditor
                       content={content.description || ''}
-                      onChange={(html) => setContent({ ...content, description: html })}
+                      onChange={(text) => setContent({ ...content, description: text })}
                       placeholder="Enter CTA description..."
                       showAdvancedTools={true}
                     />

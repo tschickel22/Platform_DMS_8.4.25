@@ -90,7 +90,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       blockData: {
         type: 'text',
         content: {
-          html: '<h2>Our Services</h2><p class="text-lg text-gray-600">Everything you need for your RV or manufactured home</p>',
+          title: 'Our Services',
+          body: 'Everything you need for your RV or manufactured home',
           alignment: 'center'
         }
       }
@@ -105,7 +106,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       blockData: {
         type: 'text',
         content: {
-          html: '<p>Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.</p>',
+          body:
+            'Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.',
           alignment: 'left'
         }
       }
