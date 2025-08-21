@@ -338,13 +338,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 try {
                   const previewData = {
                     ...site,
-                    pages: site.pages || [],
-                    lastPreviewUpdate: new Date().toISOString()
-                  }
-                  const key = `wb2:preview-site:${site.slug}`
-                  sessionStorage.setItem(key, JSON.stringify(previewData))
-                  const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
-                  const localPreviewUrl = `/s/${site.slug}/?data=${encoded}`
                   window.open(localPreviewUrl, '_blank')
                 } catch (error) {
                   console.error('Preview error:', error)
