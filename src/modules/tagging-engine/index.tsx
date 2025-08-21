@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Tag, Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Tag, Plus, X } from 'lucide-react'
 
 export default function TaggingEngine() {
   return (
@@ -51,54 +53,82 @@ export default function TaggingEngine() {
   )
 }
 
+interface TagSelectorProps {
+  selectedTags: string[]
+  onTagsChange: (tags: string[]) => void
+  availableTags: string[]
+}
+
 // Export TagSelector component for use in other modules
-export function TagSelector({ 
-  selectedTags = [], 
-  onTagsChange = () => {},
-  availableTags = [],
-  placeholder = "Select tags..."
-}: {
-  selectedTags?: string[]
-  onTagsChange?: (tags: string[]) => void
-  availableTags?: string[]
-  placeholder?: string
-}) {
+export function TagSelector({ selectedTags, onTagsChange, availableTags }: TagSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    onTagsChange(selectedTags.filter(tag => tag !== tagToRemove))
+  }
+
+  const handleAddTag = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      onTagsChange([...selectedTags, tag])
+    }
+    setIsOpen(false)
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {selectedTags.map(tag => (
-          <span 
-            key={tag}
-            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
-          >
+        {selectedTags.map((tag) => (
+          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
             {tag}
             <button
-              onClick={() => onTagsChange(selectedTags.filter(t => t !== tag))}
-              className="ml-1 text-primary/60 hover:text-primary"
+              type="button"
+              onClick={() => handleRemoveTag(tag)}
+              className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
             >
-              ×
+              <X className="h-3 w-3" />
             </button>
-          </span>
+          </Badge>
         ))}
       </div>
-      <select 
-        onChange={(e) => {
-          const tag = e.target.value
-          if (tag && !selectedTags.includes(tag)) {
-            onTagsChange([...selectedTags, tag])
-          }
-          e.target.value = ''
-        }}
-        className="w-full px-3 py-2 border border-input rounded-md text-sm"
-      >
-        <option value="">{placeholder}</option>
-        {availableTags
-          .filter(tag => !selectedTags.includes(tag))
-          .map(tag => (
-            <option key={tag} value={tag}>{tag}</option>
-          ))
-        }
-      </select>
+      
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Tag
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {availableTags
+            .filter(tag => !selectedTags.includes(tag))
+            .map((tag) => (
+              <DropdownMenuItem key={tag} onClick={() => handleAddTag(tag)}>
+                {tag}
+              </DropdownMenuItem>
+            ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+// TagFilter component for filtering by tags
+interface TagFilterProps {
+  selectedTags: string[]
+  onTagsChange: (tags: string[]) => void
+  availableTags: string[]
+  placeholder?: string
+}
+
+export function TagFilter({ selectedTags, onTagsChange, availableTags, placeholder = "Filter by tags..." }: TagFilterProps) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Tags</label>
+      <TagSelector 
+        selectedTags={selectedTags}
+        onTagsChange={onTagsChange}
+        availableTags={availableTags}
+      />
     </div>
   )
 }
