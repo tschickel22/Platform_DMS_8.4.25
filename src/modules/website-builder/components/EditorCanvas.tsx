@@ -11,6 +11,17 @@ import MultiTextBlock from './blocks/MultiTextBlock'
 
 interface EditorCanvasProps {
   site: Site
+  currentPage: Page
+  onUpdatePage: (page: Page) => void
+}
+
+export default function EditorCanvas({ site, currentPage, onUpdatePage }: EditorCanvasProps) {
+  const [editingBlock, setEditingBlock] = useState<Block | null>(null)
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+  const [showAddBlock, setShowAddBlock] = useState(false)
+
+  const primaryColor = site.theme?.primaryColor || '#3b82f6'
+
   if (!currentPage) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -33,36 +44,65 @@ interface EditorCanvasProps {
     }
   }
 
-            <section className="py-8">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <GoogleMapBlock data={block.content || {}} />
-              </div>
-            </section>
-          )
-        case 'social_links':
+  const handleSaveBlock = (blockId: string, updates: Partial<Block>) => {
+    // In a real implementation, this would update the block
+    console.log('Save block:', blockId, updates)
+    setEditingBlock(null)
+  }
+
+  const handleAddBlock = (blockType: string) => {
+    // In a real implementation, this would add a new block
+    console.log('Add block:', blockType)
+    setShowAddBlock(false)
+  }
+
+  const renderBlock = (block: Block) => {
+    const isHovered = hoveredBlockId === block.id
+
+    const blockContent = (() => {
+      switch (block.type) {
+        case 'hero':
           return (
-            <section className="py-8">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <SocialLinksBlock data={block.content || { links: [] }} />
+            <section className="py-20 px-4" style={{ backgroundColor: block.content?.backgroundColor || 'transparent' }}>
+              <div className="max-w-4xl mx-auto text-center">
+                {block.content?.title && (
+                  <h1 className="text-4xl md:text-6xl font-bold mb-6" style={{ color: block.content?.titleColor || '#000' }}>
+                    {block.content.title}
+                  </h1>
+                )}
+                {block.content?.subtitle && (
+                  <p className="text-xl md:text-2xl text-gray-600 mb-8" style={{ color: block.content?.subtitleColor || '#666' }}>
+                    {block.content.subtitle}
+                  </p>
+                )}
+                {block.content?.buttonText && (
+                  <button
+                    className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
+                    style={{ backgroundColor: primaryColor, color: 'white' }}
+                  >
+                    {block.content.buttonText}
+                  </button>
+                )}
               </div>
             </section>
           )
-        case 'multi_image_gallery':
+
+        case 'text':
           return (
-            <section className="py-8">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <MultiImageGalleryBlock data={block.content || { images: [] }} />
+            <section className="py-16">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className={`text-${block.content?.alignment || 'left'}`}>
+                  {block.content?.title && (
+                    <h2 className="text-3xl font-bold mb-6">{block.content.title}</h2>
+                  )}
+                  {block.content?.content && (
+                    <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: block.content.content }} />
+                  )}
+                </div>
               </div>
             </section>
           )
-        case 'multi_text':
-          return (
-            <section className="py-8">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <MultiTextBlock data={block.content || { sections: [] }} />
-              </div>
-            </section>
-          )
+
         case 'google_map':
           return (
             <section className="py-8">
@@ -188,7 +228,7 @@ interface EditorCanvasProps {
                 className="h-8 w-8 p-0 cursor-grab"
               >
                 <GripVertical className="h-4 w-4" />
-              <p className="text-sm">Use the sidebar to add your first block</p>
+              </Button>
             </div>
           </div>
         )}
@@ -206,8 +246,10 @@ interface EditorCanvasProps {
     <div className="h-full overflow-y-auto">
       <div className="bg-white">
         {sortedBlocks.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <p className="text-lg text-muted-foreground mb-4">This page is empty</p>
+              <p className="text-sm">Use the sidebar to add your first block</p>
               <Button onClick={() => setShowAddBlock(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Block
@@ -222,6 +264,15 @@ interface EditorCanvasProps {
                 variant="outline"
                 onClick={() => setShowAddBlock(true)}
                 className="border-dashed"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Block
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Block Editor Modal */}
       {editingBlock && (
         <BlockEditorModal
