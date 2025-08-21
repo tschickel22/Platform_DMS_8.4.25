@@ -143,11 +143,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     await persistNow(site)
   }
 
-      
-      // Update sessionStorage for live preview
-      const previewKey = `wb2:preview:${site.slug}`
-      sessionStorage.setItem(previewKey, JSON.stringify(site))
-      
   const handlePreview = () => {
     if (!site) return
     try {
@@ -334,7 +329,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <ArrowLeft className="h-4 w-4 mr-2" />Back
             </Button>
             <div>
-              <h1 className="text-xl font-semibold">{site?.name || 'Loading...'}</h1>
+              <input
                 type="text"
                 value={site.name}
                 onChange={(e) => setSite({ ...site, name: e.target.value })}
@@ -403,7 +398,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <TabsContent value="theme" className="mt-0">
                 <ThemePalette
                   theme={site?.theme}
-                  onThemeUpdate={(t) => site && setSite({ ...site, theme: t })}
+                  onThemeUpdate={(t) => {
                     const updatedSite = { ...site, theme: t }
                     setSite(updatedSite)
                     writePreview(updatedSite)
@@ -440,7 +435,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 site={site}
                 currentPage={currentPage}
                 previewMode={previewMode}
-                onUpdateSite={handleUpdateSite}
                 onUpdateSite={(updatedSite) => setSite(updatedSite)}
                 onUpdatePage={handleUpdatePage}
                 onSiteUpdate={handleSiteUpdate}
