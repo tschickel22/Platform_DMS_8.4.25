@@ -1,13 +1,12 @@
 // src/utils/apiClient.ts
-// Robust API client for Netlify Functions (with env override + graceful parsing)
+// Robust API client for local development (with graceful parsing)
 import { toast } from '@/hooks/use-toast'
 import { logger, measurePerformance } from '@/utils/logger';
 
-// Allow override via env for local/prod differences.
-// e.g. VITE_FUNCTIONS_BASE="http://localhost:8888/.netlify/functions"
+// API base for local development
 const API_BASE: string =
-  (import.meta as any)?.env?.VITE_FUNCTIONS_BASE ||
-  '/.netlify/functions'
+  (import.meta as any)?.env?.VITE_API_BASE ||
+  '/api'
 
 interface ApiResponse<T = any> {
   data?: T
@@ -131,7 +130,7 @@ export class ApiClient {
   // Health check
   async ping(): Promise<boolean> {
     try {
-      const res = await fetch(this.buildUrl('/ping'))
+      const res = await fetch(this.buildUrl('/health'))
       return res.ok
     } catch (e) {
       console.error('Health check failed:', e)
@@ -139,65 +138,8 @@ export class ApiClient {
     }
   }
 
-  // Listings CRUD
-  listingsCrud = {
-    getListings: async (companyId: string) => {
-      const res = await this.get<any>(
-        `/listings-crud?companyId=${encodeURIComponent(companyId)}`
-      )
-      if (!res.success) {
-        throw new Error(
-          res.error ||
-            'Failed to fetch listings (is your Netlify Functions server running and returning JSON?)'
-        )
-      }
-      return res.data
-    },
-
-    getListing: async (companyId: string, listingId: string) => {
-      const res = await this.get<any>(
-        `/listings-crud?companyId=${encodeURIComponent(
-          companyId
-        )}&listingId=${encodeURIComponent(listingId)}`
-      )
-      if (!res.success) throw new Error(res.error || 'Failed to fetch listing')
-      return res.data
-    },
-
-    createListing: async (companyId: string, listingData: any) => {
-      const res = await this.post<any>(
-        `/listings-crud?companyId=${encodeURIComponent(companyId)}`,
-        listingData
-      )
-      if (!res.success) throw new Error(res.error || 'Failed to create listing')
-      return res.data
-    },
-
-    updateListing: async (
-      companyId: string,
-      listingId: string,
-      updates: any
-    ) => {
-      const res = await this.put<any>(
-        `/listings-crud?companyId=${encodeURIComponent(
-          companyId
-        )}&listingId=${encodeURIComponent(listingId)}`,
-        updates
-      )
-      if (!res.success) throw new Error(res.error || 'Failed to update listing')
-      return res.data
-    },
-
-    deleteListing: async (companyId: string, listingId: string) => {
-      const res = await this.delete<any>(
-        `/listings-crud?companyId=${encodeURIComponent(
-          companyId
-        )}&listingId=${encodeURIComponent(listingId)}`
-      )
-      if (!res.success) throw new Error(res.error || 'Failed to delete listing')
-      return res.data
-    },
-  }
+  // Note: Listings CRUD operations now handled by local storage services
+  // Remove Netlify-specific CRUD operations
 }
 
 export const apiClient = new ApiClient()

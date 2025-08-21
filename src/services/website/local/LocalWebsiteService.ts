@@ -332,118 +332,72 @@ export class LocalWebsiteService implements IWebsiteService {
   async publishSite(siteId: string): Promise<PublishResult> {
     await this.delay(500)
     
-    try {
-      const site = await this.getSite(siteId)
-      if (!site) throw new Error('Site not found')
-      
-      // Try to publish to Bolt Hosting via Netlify function
-      try {
-        const response = await fetch('/.netlify/functions/publish-site', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-publish-secret': 'demo-secret'
-          },
-          body: JSON.stringify({ site })
-        })
-        
-        if (response.ok) {
-          const result = await response.json()
-          
-          // Update site with published URL
-          const updatedSite = {
-            ...site,
-            publishedUrl: result.previewUrl,
-            publishedAt: result.publishedAt
-          }
-          await this.updateSite(siteId, updatedSite)
-          
-          return {
-            success: true,
-            previewUrl: result.previewUrl,
-            publishedAt: result.publishedAt
-          }
-        }
-      } catch (error) {
-        console.warn('Netlify function not available, using local preview:', error)
-      }
-      
-      // Fallback to local preview
-      const publishedSites = this.getFromStorage('published-sites', {})
-      publishedSites[site.slug] = {
-        ...site,
-        publishedAt: new Date().toISOString(),
-        version: Date.now()
-      }
-      this.setToStorage('published-sites', publishedSites)
-      
-      // Create published version
-      await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)
-      
-      const previewUrl = `${window.location.origin}/s/${site.slug}/`
-      
-      return {
-        success: true,
-        previewUrl,
-        publishedAt: new Date().toISOString()
-      }
-    } catch (error) {
-      console.error('Publish error:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+    const site = await this.getSite(siteId)
+    if (!site) throw new Error('Site not found')
+    
+    // Store published site data locally
+    const publishedSites = this.getFromStorage('published-sites', {})
+    publishedSites[site.slug] = {
+      ...site,
+      publishedAt: new Date().toISOString(),
+      version: Date.now()
+    }
+    this.setToStorage('published-sites', publishedSites)
+    
+    // Create published version
+    await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)
+    
+    const previewUrl = `${window.location.origin}/s/${site.slug}/`
+    
+    return {
+      success: true,
+      previewUrl,
+      publishedAt: new Date().toISOString()
     }
   }
 
   async setDomain(siteId: string, domain: DomainConfig): Promise<{ success: boolean; message: string }> {
     await this.delay(300)
     
-    // For local development, simulate domain mapping without external service
-    try {
-      // Generate domain string based on type
-      let domainString = ''
-      switch (domain.type) {
-        case 'subdomain':
-          domainString = `${domain.subdomain}.renterinsight.com`
-          break
-        case 'custom':
-          domainString = domain.customDomain
-          break
-        case 'subdomain_custom':
-          domainString = `${domain.subdomain}.${domain.baseDomain}`
-          break
-        case 'multi_dealer':
-          domainString = `${domain.dealerCode}.${domain.groupDomain}`
-          break
-        default:
-          throw new Error('Invalid domain type')
-      }
-      
-      // Store domain mapping locally
-      const domainMappings = this.getFromStorage('domain-mappings', {})
-      domainMappings[domainString] = {
-        siteId,
-        domain: domainString,
-        type: domain.type,
-        createdAt: new Date().toISOString(),
-        config: domain
-      }
-      this.setToStorage('domain-mappings', domainMappings)
-      
-      // Update site with domain info
-      await this.updateSite(siteId, { domain: domainString })
-      
-      return {
-        success: true,
-        message: 'Website address saved successfully!'
-      }
-    } catch (error) {
-      console.error('Domain mapping error:', error)
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to map domain'
-      }
+    // Generate domain string based on type
+    let domainString = ''
+    switch (domain.type) {
+      case 'subdomain':
+        domainString = `${domain.subdomain}.renterinsight.com`
+        break
+      case 'custom':
+        domainString = domain.customDomain
+        break
+      case 'subdomain_custom':
+        domainString = `${domain.subdomain}.${domain.baseDomain}`
+        break
+      case 'multi_dealer':
+        domainString = `${domain.dealerCode}.${domain.groupDomain}`
+        break
+      default:
+        return {
+          success: false,
+          message: 'Invalid domain type'
+        }
+    }
+    
+    // Store domain mapping locally
+    const domainMappings = this.getFromStorage('domain-mappings', {})
+    domainMappings[domainString] = {
+      siteId,
+      domain: domainString,
+      type: domain.type,
+      createdAt: new Date().toISOString(),
+      config: domain
+    }
+    this.setToStorage('domain-mappings', domainMappings)
+    
+    // Update site with domain info
+    await this.updateSite(siteId, { domain: domainString })
+    
+    return {
+      success: true,
+      message: 'Website address saved successfully!'
     }
   }
 
@@ -451,101 +405,222 @@ export class LocalWebsiteService implements IWebsiteService {
   async getDefaultManufacturers(): Promise<Manufacturer[]> {
     await this.delay()
     
-    try {
-      const response = await fetch('/.netlify/functions/manufacturers-default')
-      if (!response.ok) {
-        throw new Error('Failed to fetch manufacturers')
+    // Return local manufacturer data
+    return [
+      {
+        id: 'forest-river',
+        name: 'Forest River',
+        slug: 'forest-river',
+        logoUrl: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://forestriver.com',
+        enabled: true,
+        linkType: 'external'
+      },
+      {
+        id: 'jayco',
+        name: 'Jayco',
+        slug: 'jayco',
+        logoUrl: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://jayco.com',
+        enabled: true,
+        linkType: 'external'
+      },
+      {
+        id: 'thor',
+        name: 'Thor Motor Coach',
+        slug: 'thor',
+        logoUrl: 'https://images.pexels.com/photos/2339009/pexels-photo-2339009.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://thormotorcoach.com',
+        enabled: true,
+        linkType: 'external'
+      },
+      {
+        id: 'grand-design',
+        name: 'Grand Design',
+        slug: 'grand-design',
+        logoUrl: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://granddesignrv.com',
+        enabled: true,
+        linkType: 'external'
+      },
+      {
+        id: 'clayton',
+        name: 'Clayton Homes',
+        slug: 'clayton',
+        logoUrl: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://claytonhomes.com',
+        enabled: true,
+        linkType: 'external'
+      },
+      {
+        id: 'champion',
+        name: 'Champion Homes',
+        slug: 'champion',
+        logoUrl: 'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=100',
+        externalUrl: 'https://championhomes.com',
+        enabled: true,
+        linkType: 'external'
       }
-      return await response.json()
-    } catch (error) {
-      console.warn('Failed to fetch manufacturers, using fallback:', error)
-      // Fallback data
-      return [
-        {
-          id: 'forest-river',
-          name: 'Forest River',
-          slug: 'forest-river',
-          logoUrl: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=100',
-          externalUrl: 'https://forestriver.com',
-          enabled: true,
-          linkType: 'external'
-        },
-        {
-          id: 'jayco',
-          name: 'Jayco',
-          slug: 'jayco',
-          logoUrl: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=100',
-          externalUrl: 'https://jayco.com',
-          enabled: true,
-          linkType: 'external'
-        }
-      ]
-    }
+    ]
   }
 
   async getDemoInventory(): Promise<DemoInventoryItem[]> {
     await this.delay()
     
-    try {
-      const response = await fetch('/.netlify/functions/inventory-demo')
-      if (!response.ok) {
-        throw new Error('Failed to fetch demo inventory')
-      }
-      return await response.json()
-    } catch (error) {
-      console.warn('Failed to fetch demo inventory, using fallback:', error)
-      return [
-        {
-          id: 'demo-rv-1',
-          type: 'rv',
-          title: '2023 Forest River Cherokee',
-          price: 45000,
-          image: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
-          specs: { sleeps: 4, length: 28, slides: 1 }
-        },
-        {
-          id: 'demo-mh-1',
-          type: 'manufactured_home',
-          title: '2023 Clayton The Edge',
-          price: 95000,
-          image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
-          specs: { bedrooms: 3, bathrooms: 2, sqft: 1450 }
+    // Return local demo inventory data
+    return [
+      {
+        id: 'demo-rv-1',
+        type: 'rv',
+        title: '2023 Forest River Cherokee 274RK',
+        price: 45000,
+        image: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          sleeps: 4,
+          length: 28,
+          slides: 1,
+          year: 2023,
+          make: 'Forest River',
+          model: 'Cherokee 274RK'
         }
-      ]
-    }
+      },
+      {
+        id: 'demo-rv-2',
+        type: 'rv',
+        title: '2022 Jayco Jay Flight 28BHS',
+        price: 38000,
+        image: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          sleeps: 6,
+          length: 32,
+          slides: 1,
+          year: 2022,
+          make: 'Jayco',
+          model: 'Jay Flight 28BHS'
+        }
+      },
+      {
+        id: 'demo-rv-3',
+        type: 'rv',
+        title: '2024 Grand Design Solitude 310GK',
+        price: 85000,
+        image: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          sleeps: 6,
+          length: 35,
+          slides: 3,
+          year: 2024,
+          make: 'Grand Design',
+          model: 'Solitude 310GK'
+        }
+      },
+      {
+        id: 'demo-mh-1',
+        type: 'manufactured_home',
+        title: '2023 Clayton The Edge',
+        price: 95000,
+        image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          bedrooms: 3,
+          bathrooms: 2,
+          sqft: 1450,
+          year: 2023,
+          make: 'Clayton',
+          model: 'The Edge'
+        }
+      },
+      {
+        id: 'demo-mh-2',
+        type: 'manufactured_home',
+        title: '2022 Champion Titan',
+        price: 75000,
+        image: 'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          bedrooms: 4,
+          bathrooms: 2,
+          sqft: 1800,
+          year: 2022,
+          make: 'Champion',
+          model: 'Titan'
+        }
+      },
+      {
+        id: 'demo-mh-3',
+        type: 'manufactured_home',
+        title: '2024 Skyline Arrow',
+        price: 125000,
+        image: 'https://images.pexels.com/photos/2462014/pexels-photo-2462014.jpeg?auto=compress&cs=tinysrgb&w=400',
+        specs: {
+          bedrooms: 3,
+          bathrooms: 2,
+          sqft: 1600,
+          year: 2024,
+          make: 'Skyline',
+          model: 'Arrow'
+        }
+      }
+    ]
   }
 
   async getDemoLandHomePackages(): Promise<DemoLandHomePackage[]> {
     await this.delay()
     
-    try {
-      const response = await fetch('/.netlify/functions/landhome-demo')
-      if (!response.ok) {
-        throw new Error('Failed to fetch demo packages')
+    // Return local demo land/home package data
+    return [
+      {
+        id: 'demo-land-1',
+        type: 'land',
+        title: 'Premium Corner Lot #42',
+        price: 25000,
+        image: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Beautiful corner lot with all utilities available',
+        features: ['Water hookup', 'Sewer connection', 'Electric service', 'Corner location', 'Mature trees']
+      },
+      {
+        id: 'demo-land-2',
+        type: 'land',
+        title: 'Waterfront Lot #15',
+        price: 35000,
+        image: 'https://images.pexels.com/photos/1396132/pexels-photo-1396132.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Stunning waterfront lot with private dock access',
+        features: ['Waterfront', 'Private dock', 'All utilities', 'Paved road access', 'HOA amenities']
+      },
+      {
+        id: 'demo-home-1',
+        type: 'home',
+        title: '2023 Clayton The Edge - 3BR/2BA',
+        price: 95000,
+        image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Brand new manufactured home with modern finishes',
+        features: ['3 bedrooms', '2 bathrooms', '1450 sq ft', 'Energy efficient', 'Modern appliances']
+      },
+      {
+        id: 'demo-package-1',
+        type: 'package',
+        title: 'Complete Home + Land Package',
+        price: 120000,
+        image: 'https://images.pexels.com/photos/2462014/pexels-photo-2462014.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Everything you need - home, land, and setup included',
+        features: ['3BR/2BA Clayton home', 'Premium corner lot', 'Complete setup', 'Financing available', 'Move-in ready']
+      },
+      {
+        id: 'demo-package-2',
+        type: 'package',
+        title: 'Waterfront Living Package',
+        price: 155000,
+        image: 'https://images.pexels.com/photos/1546166/pexels-photo-1546166.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Luxury waterfront living with premium home',
+        features: ['4BR/2BA Champion home', 'Waterfront lot', 'Private dock', 'Premium finishes', 'Turnkey solution']
+      },
+      {
+        id: 'demo-package-3',
+        type: 'package',
+        title: 'Starter Home Package',
+        price: 85000,
+        image: 'https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&w=400',
+        description: 'Affordable starter package perfect for first-time buyers',
+        features: ['2BR/1BA home', 'Standard lot', 'Basic setup', 'Low down payment', 'First-time buyer friendly']
       }
-      return await response.json()
-    } catch (error) {
-      console.warn('Failed to fetch demo packages, using fallback:', error)
-      return [
-        {
-          id: 'demo-land-1',
-          type: 'land',
-          title: 'Premium Lot #42',
-          price: 25000,
-          image: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
-          description: 'Beautiful corner lot with utilities',
-          features: ['Water', 'Sewer', 'Electric', 'Corner lot']
-        },
-        {
-          id: 'demo-package-1',
-          type: 'package',
-          title: 'Home + Land Package',
-          price: 120000,
-          image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
-          description: 'Complete home and land package',
-          features: ['3BR/2BA Home', 'Premium lot', 'Setup included', 'Financing available']
-        }
-      ]
-    }
+    ]
   }
 }
