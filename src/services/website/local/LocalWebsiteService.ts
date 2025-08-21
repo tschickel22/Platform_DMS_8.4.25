@@ -330,22 +330,29 @@ export class LocalWebsiteService implements IWebsiteService {
 
   // Publishing
   async publishSite(siteId: string): Promise<PublishResult> {
-    await this.delay(500)
+    await this.delay(300)
     
     const site = await this.getSite(siteId)
     if (!site) throw new Error('Site not found')
     
-    // Store published site data locally
-    const publishedSites = this.getFromStorage('published-sites', {})
-    publishedSites[site.slug] = {
+    // Store site data for preview access using sessionStorage for immediate availability
+    const previewKey = `wb2:preview:${site.slug}`
+    sessionStorage.setItem(previewKey, JSON.stringify({
       ...site,
       publishedAt: new Date().toISOString(),
       version: Date.now()
-    }
+    }))
+    
+    // Also store in localStorage for persistence
+    const publishedSites = this.getFromStorage('published-sites', {})
+    publishedSites[site.slug] = site
     this.setToStorage('published-sites', publishedSites)
     
-    // Create published version
-    await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)
+    // Update site with published status
+    await this.updateSite(siteId, {
+      isPublished: true,
+      publishedAt: new Date().toISOString()
+    })
     
     const previewUrl = `${window.location.origin}/s/${site.slug}/`
     
