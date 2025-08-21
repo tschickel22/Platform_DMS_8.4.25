@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy, Eye } from 'lucide-react'
 import { Loader2, Settings } from 'lucide-react'
 import { Site, DomainConfig } from '../types'
 import { websiteService } from '@/services/website/service'
@@ -30,8 +30,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   const [publishing, setPublishing] = useState(false)
   const [settingDomain, setSettingDomain] = useState(false)
   const [showDomainSettings, setShowDomainSettings] = useState(false)
-  const [isPublished, setIsPublished] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string>('')
 
   const [domainConfig, setDomainConfig] = useState<DomainConfig>({
     type: 'subdomain',
@@ -44,12 +42,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   const { toast } = useToast()
   const { handleError } = useErrorHandler()
 
-  // Generate Bolt preview URL
-  const generatePreviewUrl = () => {
-    const baseUrl = window.location.origin
-    return `${baseUrl}/s/${site.slug}`
-  }
-
   // Compute the current domain to display
   const currentDomain = useMemo(() => {
     if (savedDomain) return savedDomain
@@ -58,7 +50,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   }, [savedDomain, site.previewUrl, site.slug])
 
   // Compute a preview URL to open
-  const computedPreviewUrl = useMemo(() => {
+  const previewUrl = useMemo(() => {
     return site.previewUrl || (currentDomain ? `https://${currentDomain}` : undefined)
   }, [site.previewUrl, currentDomain])
 
@@ -66,24 +58,8 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     try {
       setPublishing(true)
       const result = await websiteService.publishSite(site.id)
-      
+
       if (result.success) {
-        // Store site data for preview access
-        const previewKey = `wb2:preview:${site.slug}`
-        sessionStorage.setItem(previewKey, JSON.stringify(site))
-        
-        // Also store in localStorage for persistence
-        const publishedSites = JSON.parse(localStorage.getItem('wb2:published-sites') || '{}')
-        publishedSites[site.slug] = {
-          ...site,
-          publishedAt: new Date().toISOString(),
-          version: Date.now()
-        }
-        localStorage.setItem('wb2:published-sites', JSON.stringify(publishedSites))
-        
-        const url = generatePreviewUrl()
-        setPreviewUrl(url)
-        setIsPublished(true)
         onSiteUpdate({
           publishedAt: result.publishedAt,
           previewUrl: result.previewUrl
@@ -169,7 +145,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
       
       toast({
         title: 'Preview opened',
-        description: 'Your website preview is ready to view.',
+        description: 'Your website preview has opened in a new tab.'
       })
     } catch (error) {
       console.error('Failed to open preview:', error)
@@ -181,27 +157,14 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     }
   }
 
-  const openPreview = () => {
-    const url = computedPreviewUrl || generatePreviewUrl()
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  const copyPreviewUrl = async () => {
-    const url = computedPreviewUrl || generatePreviewUrl()
-    await copyToClipboard(url)
-  }
-
   // Single, non-duplicated helper
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
       toast({
-        title: 'URL Copied!',
-        description: 'Preview URL copied to clipboard',
+        title: 'Copied',
+        description: 'Value copied to clipboard'
       })
-    } catch (error) {
-      console.error('Failed to copy:', error)
-    }
+    })
   }
 
   return (
@@ -211,9 +174,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
           <Globe className="h-4 w-4" />
           Publish & Share
         </CardTitle>
-        <CardDescription>
-          Preview and share your website
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -262,8 +222,8 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => computedPreviewUrl && window.open(computedPreviewUrl, '_blank')}
-                disabled={!site.publishedAt || !computedPreviewUrl}
+                onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                disabled={!site.publishedAt || !previewUrl}
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -335,6 +295,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                           })
                         }
                         placeholder="www.yourdomain.com"
+                        className="mt-1"
                       />
                     </div>
                   )}
@@ -342,6 +303,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                   <Button
                     onClick={handleSetDomain}
                     disabled={settingDomain}
+                    size="sm"
                     className="w-full"
                   >
                     {settingDomain ? (
@@ -355,44 +317,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                   </Button>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Preview Section */}
-          {isPublished ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Preview Ready</span>
-              </div>
-              <div className="space-y-2">
-                <Button 
-                  onClick={openPreview}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Open Preview
-                </Button>
-                
-                <Button 
-                  onClick={copyPreviewUrl}
-                  className="w-full"
-                  variant="outline"
-                  size="sm"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy Preview URL
-                </Button>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Preview URL: {computedPreviewUrl || generatePreviewUrl()}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-              <span className="text-sm">Preview not generated</span>
             </div>
           )}
 
@@ -410,53 +334,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
               </>
             )}
           </Button>
-
-          {site.publishedAt && (
-            <div className="text-center">
-              <Button
-                onClick={openPreview}
-                variant="outline"
-                className="w-full"
-                disabled={!computedPreviewUrl}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View Live Site
-              </Button>
-            </div>
-          )}
-
-          {/* Publishing Info */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Changes will be live immediately after publishing</p>
-            <p>• You can update anytime after publishing</p>
-            <div className="text-green-600 text-xs">Preview: /s/{site.slug}</div>
-          </div>
-
-          {/* Preview Settings */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Preview Settings</CardTitle>
-              <CardDescription>
-                Configure how your website preview appears
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="slug">Preview Slug</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">/s/</span>
-                    <Input
-                      id="slug"
-                      value={site.slug}
-                      readOnly
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* DNS Instructions - Show after custom domain is saved */}
           {savedDomain &&
@@ -571,8 +448,26 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
               </Card>
             )}
 
-          <div className="text-xs text-muted-foreground p-2 bg-blue-50 rounded">
-            💡 <strong>Bolt Preview:</strong> Your website preview will be available at /s/{site.slug}
+          {/* Preview Link */}
+          {site.publishedAt && (
+            <div className="text-center">
+              <Button
+                variant="outline"
+                onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                className="w-full"
+                disabled={!previewUrl}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View Live Website
+              </Button>
+            </div>
+          )}
+
+          {/* Publishing Info */}
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>• Changes are saved automatically</p>
+            <p>• Publishing makes your site live on the internet</p>
+            <p>• You can update anytime after publishing</p>
           </div>
         </div>
       </CardContent>

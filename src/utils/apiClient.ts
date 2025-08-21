@@ -1,4 +1,5 @@
-// API client for Bolt environment - simplified for local development
+// src/utils/apiClient.ts
+// API client for Bolt environment - uses local storage for data persistence
 import { toast } from '@/hooks/use-toast'
 import { logger, measurePerformance } from '@/utils/logger';
 
@@ -10,84 +11,34 @@ interface ApiResponse<T = any> {
 }
 
 export class ApiClient {
-  private baseUrl: string
+  // Simplified API client for Bolt environment
+  // All data operations now use local storage through service layer
   
-  constructor() {
-    // In Bolt environment, we use relative URLs or local storage
-    this.baseUrl = ''
-  }
-  
-  // Health check for Bolt environment
+  // Health check for local environment
   async ping(): Promise<boolean> {
-    // Always healthy in Bolt since everything is local
+    // In Bolt environment, we're always "healthy" since everything is local
     return true
   }
   
-  // Simplified methods that work with local storage through service layer
+  // Placeholder methods for future backend integration
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    try {
-      logger.debug(`Local API GET: ${endpoint}`)
-      // All actual data comes from service layer using localStorage
-      return { success: true, data: {} as T, status: 200 }
-    } catch (error) {
-      logger.error(`Local API GET error: ${endpoint}`, error)
-      return { success: false, error: 'Local storage error', status: 500 }
-    }
+    logger.debug(`API GET request to ${endpoint} - using local storage`)
+    return { success: true, data: {} as T }
   }
   
   async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
-    try {
-      logger.debug(`Local API POST: ${endpoint}`, { body })
-      // All actual data operations go through service layer
-      return { success: true, data: {} as T, status: 201 }
-    } catch (error) {
-      logger.error(`Local API POST error: ${endpoint}`, error)
-      return { success: false, error: 'Local storage error', status: 500 }
-    }
+    logger.debug(`API POST request to ${endpoint} - using local storage`)
+    return { success: true, data: {} as T }
   }
   
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
-    try {
-      logger.debug(`Local API PUT: ${endpoint}`, { body })
-      return { success: true, data: {} as T, status: 200 }
-    } catch (error) {
-      logger.error(`Local API PUT error: ${endpoint}`, error)
-      return { success: false, error: 'Local storage error', status: 500 }
-    }
+    logger.debug(`API PUT request to ${endpoint} - using local storage`)
+    return { success: true, data: {} as T }
   }
   
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
-    try {
-      logger.debug(`Local API DELETE: ${endpoint}`)
-      return { success: true, data: {} as T, status: 200 }
-    } catch (error) {
-      logger.error(`Local API DELETE error: ${endpoint}`, error)
-      return { success: false, error: 'Local storage error', status: 500 }
-    }
-  }
-  
-  // Utility method for handling file uploads in Bolt
-  async uploadFile(file: File, endpoint: string): Promise<ApiResponse<{ url: string }>> {
-    try {
-      // Convert to base64 for local storage
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-      
-      logger.debug(`File upload to ${endpoint}`, { fileName: file.name, size: file.size })
-      
-      return { 
-        success: true, 
-        data: { url: base64 }, 
-        status: 200 
-      }
-    } catch (error) {
-      logger.error(`File upload error: ${endpoint}`, error)
-      return { success: false, error: 'File upload failed', status: 500 }
-    }
+    logger.debug(`API DELETE request to ${endpoint} - using local storage`)
+    return { success: true, data: {} as T }
   }
 }
 

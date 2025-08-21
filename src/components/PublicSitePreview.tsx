@@ -16,7 +16,7 @@ export default function PublicSitePreview() {
         setLoading(true)
         setError(null)
 
-        // First, try to get site data from URL parameters (for shared preview links)
+        // First, try to get site data from URL parameters (for direct preview links)
         const dataParam = searchParams.get('data')
         if (dataParam) {
           try {
@@ -30,7 +30,7 @@ export default function PublicSitePreview() {
           }
         }
 
-        // Second, try to get site data from sessionStorage (for live preview from editor)
+        // Second, try to get site data from sessionStorage (for live preview)
         if (siteSlug) {
           const sessionKey = `wb2:preview:${siteSlug}`
           const sessionData = sessionStorage.getItem(sessionKey)
@@ -46,25 +46,8 @@ export default function PublicSitePreview() {
           }
         }
 
-        // Third, try to get site data from localStorage (for published sites)
+        // Third, try to get site data from localStorage (for saved sites)
         if (siteSlug) {
-          // Check published sites first
-          const publishedSites = localStorage.getItem('wb2:published-sites')
-          if (publishedSites) {
-            try {
-              const sites = JSON.parse(publishedSites)
-              const foundSite = sites[siteSlug]
-              if (foundSite) {
-                setSite(foundSite)
-                setLoading(false)
-                return
-              }
-            } catch (err) {
-              console.warn('Failed to parse published sites:', err)
-            }
-          }
-          
-          // Fallback to regular sites storage
           const localSites = localStorage.getItem('wb2:sites')
           if (localSites) {
             try {
@@ -76,16 +59,16 @@ export default function PublicSitePreview() {
                 return
               }
             } catch (err) {
-              console.warn('Failed to parse local sites:', err)
+              console.warn('Failed to parse localStorage sites:', err)
             }
           }
         }
 
         // If no site found, show error
-        setError(`Website "${siteSlug}" not found. Please ensure the site exists and has been published.`)
+        setError('Website not found. Please ensure the site exists and try again.')
       } catch (err) {
         console.error('Error loading site for preview:', err)
-        setError('Failed to load website preview. Please try again.')
+        setError('Failed to load website preview.')
       } finally {
         setLoading(false)
       }
@@ -99,8 +82,7 @@ export default function PublicSitePreview() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Bolt preview...</p>
-          <p className="text-gray-500 text-sm mt-2">Site: {siteSlug}</p>
+          <p className="text-gray-600">Loading website preview...</p>
         </div>
       </div>
     )
@@ -113,10 +95,6 @@ export default function PublicSitePreview() {
           <div className="text-6xl mb-4">🚫</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Preview Not Available</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <div className="text-xs text-gray-500 mb-4 p-2 bg-gray-100 rounded">
-            Looking for: {siteSlug}<br/>
-            URL: {window.location.href}
-          </div>
           <button 
             onClick={() => window.location.reload()} 
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors mr-2"
@@ -139,7 +117,6 @@ export default function PublicSitePreview() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">No website data available</p>
-          <p className="text-gray-500 text-sm mt-2">Site slug: {siteSlug}</p>
         </div>
       </div>
     )
