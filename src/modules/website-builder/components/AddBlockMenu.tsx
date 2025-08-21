@@ -6,7 +6,6 @@ import {
    MousePointer, 
    Quote,
   Video,
-  Phone,
   Map,
   Share2,
   Grid3X3
