@@ -1,12 +1,23 @@
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Plus, Type, Image, Layout, Zap, Grid3X3, FileText, Phone, Star, Users, Map } from 'lucide-react'
-import { 
-   MousePointer, 
-   Quote,
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import {
+  Type,
+  Image as ImageIcon,
+  Grid3X3,
+  Phone,
+  Star,
+  Map,
+  MousePointer,
+  Quote,
   Video,
-  Share2,
 } from 'lucide-react'
 
 interface AddBlockMenuProps {
@@ -14,118 +25,136 @@ interface AddBlockMenuProps {
   onClose: () => void
 }
 
-const blockTypes = [
+type BlockTypeDef = {
+  type: string
+  name: string
+  description: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  category: 'Layout' | 'Content' | 'Media' | 'Marketing' | 'Business' | 'Social Proof' | 'Contact'
+}
+
+const blockTypes: BlockTypeDef[] = [
   {
     type: 'google_map',
     name: 'Google Map',
     description: 'Embed a Google Map by address or coordinates',
     icon: Map,
-    category: 'Contact'
+    category: 'Contact',
   },
   {
     type: 'social_links',
     name: 'Social Links',
     description: 'Row or grid of social icons with links',
     icon: Grid3X3,
-    category: 'Marketing'
+    category: 'Marketing',
   },
   {
     type: 'multi_image_gallery',
     name: 'Multi-Image Gallery',
     description: 'Grid gallery with lightbox',
     icon: Grid3X3,
-    category: 'Media'
+    category: 'Media',
   },
   {
     type: 'multi_text',
     name: 'Multi-Text Sections',
     description: 'Multiple text sections (1–3 columns)',
     icon: Type,
-    category: 'Content'
+    category: 'Content',
   },
   {
     type: 'hero',
     name: 'Hero Section',
     description: 'Large banner with title, subtitle, and call-to-action',
     icon: MousePointer,
-    category: 'Layout'
+    category: 'Layout',
   },
   {
     type: 'text',
     name: 'Text Block',
     description: 'Rich text content with formatting options',
     icon: Type,
-    category: 'Content'
+    category: 'Content',
   },
   {
     type: 'image',
     name: 'Image',
     description: 'Single image with caption and alignment options',
-    icon: Image,
-    category: 'Media'
+    icon: ImageIcon,
+    category: 'Media',
   },
   {
     type: 'gallery',
     name: 'Image Gallery',
     description: 'Grid of images with lightbox functionality',
     icon: Grid3X3,
-    category: 'Media'
+    category: 'Media',
   },
   {
     type: 'cta',
     name: 'Call to Action',
     description: 'Prominent section to drive user actions',
     icon: MousePointer,
-    category: 'Marketing'
+    category: 'Marketing',
   },
   {
     type: 'contact',
     name: 'Contact Info',
     description: 'Contact details and contact form',
     icon: Phone,
-    category: 'Business'
+    category: 'Business',
   },
   {
     type: 'testimonials',
     name: 'Testimonials',
     description: 'Customer reviews and testimonials',
     icon: Quote,
-    category: 'Social Proof'
+    category: 'Social Proof',
   },
   {
     type: 'features',
     name: 'Features Grid',
     description: 'Highlight key features or services',
     icon: Star,
-    category: 'Marketing'
+    category: 'Marketing',
   },
   {
     type: 'video',
     name: 'Video',
     description: 'Embedded video content',
     icon: Video,
-    category: 'Media'
+    category: 'Media',
   },
-  {
-    type: 'map',
-    name: 'Map',
-    description: 'Interactive map with location marker',
-    icon: Map,
-    category: 'Business'
-  }
+  // keep only one map option; the new google_map above is the one wired into the editor:
+  // {
+  //   type: 'map',
+  //   name: 'Map',
+  //   description: 'Interactive map with location marker',
+  //   icon: Map,
+  //   category: 'Business',
+  // },
 ]
 
-const categories = ['All', 'Layout', 'Content', 'Media', 'Marketing', 'Business', 'Social Proof']
+const categories: BlockTypeDef['category'][] = [
+  'Layout',
+  'Content',
+  'Media',
+  'Marketing',
+  'Business',
+  'Social Proof',
+  'Contact',
+]
 
 export default function AddBlockMenu({ onSelectBlock, onClose }: AddBlockMenuProps) {
-  const [selectedCategory, setSelectedCategory] = React.useState('All')
+  const [selectedCategory, setSelectedCategory] = React.useState<BlockTypeDef['category'] | 'All'>('All')
 
-  const filteredBlocks = selectedCategory === 'All' 
-    ? blockTypes 
-    : blockTypes.filter(block => block.category === selectedCategory)
+  const filteredBlocks =
+    selectedCategory === 'All'
+      ? blockTypes
+      : blockTypes.filter((block) => block.category === selectedCategory)
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add New Block</DialogTitle>
@@ -134,12 +163,12 @@ export default function AddBlockMenu({ onSelectBlock, onClose }: AddBlockMenuPro
         <div className="flex flex-col h-full">
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2 mb-6">
-            {categories.map((category) => (
+            {['All', ...categories].map((category) => (
               <Button
                 key={category}
                 variant={selectedCategory === category ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(category as any)}
               >
                 {category}
               </Button>
