@@ -9,10 +9,6 @@ import GoogleMapBlock from './blocks/GoogleMapBlock'
 import SocialLinksBlock from './blocks/SocialLinksBlock'
 import MultiImageGalleryBlock from './blocks/MultiImageGalleryBlock'
 import MultiTextBlock from './blocks/MultiTextBlock'
-import GoogleMapBlock from './blocks/GoogleMapBlock'
-import SocialLinksBlock from './blocks/SocialLinksBlock'
-import MultiImageGalleryBlock from './blocks/MultiImageGalleryBlock'
-import MultiTextBlock from './blocks/MultiTextBlock'
 
 interface EditorCanvasProps {
   site: Site
