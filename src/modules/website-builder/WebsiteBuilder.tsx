@@ -268,18 +268,25 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                       size="sm"
                       onClick={() => {
                         try {
+                          // Store current site data in sessionStorage for preview
                           const previewData = {
                             ...site,
                             pages: site.pages || [],
                             lastPreviewUpdate: new Date().toISOString()
                           }
-                          const key = `wb2:preview-site:${site.slug}`
-                          sessionStorage.setItem(key, JSON.stringify(previewData))
-                          const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
-                          const previewUrl = `/s/${site.slug}/?data=${encoded}`
+                          const sessionKey = `wb2:preview-site:${site.slug}`
+                          sessionStorage.setItem(sessionKey, JSON.stringify(previewData))
+                          
+                          // Open preview in new tab
+                          const previewUrl = `/s/${site.slug}/`
                           window.open(previewUrl, '_blank')
                         } catch (error) {
                           console.error('Preview error:', error)
+                          toast({
+                            title: 'Preview Error',
+                            description: 'Failed to open preview. Please try again.',
+                            variant: 'destructive'
+                          })
                         }
                       }}
                       className="flex items-center gap-2"
