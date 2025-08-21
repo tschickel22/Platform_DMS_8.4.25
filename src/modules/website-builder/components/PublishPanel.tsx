@@ -363,7 +363,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              copyToClipboard(`${savedDomain} CNAME renter-insight.netlify.app`)
+                              copyToClipboard(`${savedDomain} CNAME ${window.location.host}`)
                             }
                           >
                             <Copy className="h-4 w-4" />
@@ -378,7 +378,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                             <strong>Type:</strong> CNAME
                           </div>
                           <div>
-                            <strong>Value:</strong> renter-insight.netlify.app
+                            <strong>Value:</strong> {window.location.host}
                           </div>
                         </div>
                       </div>

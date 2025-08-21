@@ -93,7 +93,7 @@ export default function PropertyListingsSettings() {
   }, [toast, tenant])
 
   const generateExportUrl = (partner: SyndicationPartnerConfiguration | any): string => {
-    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
+    const baseUrl = `${window.location.origin}/api/syndication-feed`
     const companyId = tenant?.id || 'demo-company'
     
     const params = new URLSearchParams({
