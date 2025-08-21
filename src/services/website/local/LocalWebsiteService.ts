@@ -330,10 +330,15 @@ export class LocalWebsiteService implements IWebsiteService {
 
   // Publishing
   async publishSite(siteId: string): Promise<PublishResult> {
-    await this.delay(500)
+    await this.delay(200)
     
     const site = await this.getSite(siteId)
     if (!site) throw new Error('Site not found')
+    
+    // Ensure site has a slug
+    if (!site.slug) {
+      throw new Error('Site must have a slug before publishing')
+    }
     
     // Store published site data locally
     const publishedSites = this.getFromStorage('published-sites', {})
@@ -343,6 +348,10 @@ export class LocalWebsiteService implements IWebsiteService {
       version: Date.now()
     }
     this.setToStorage('published-sites', publishedSites)
+    
+    // Also store in sessionStorage for immediate preview access
+    const previewKey = `wb2:preview:${site.slug}`
+    sessionStorage.setItem(previewKey, JSON.stringify(site))
     
     // Create published version
     await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)

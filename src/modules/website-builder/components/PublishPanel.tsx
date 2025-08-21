@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Eye,
   Settings,
-  Loader2
+  Zap
 } from 'lucide-react'
 import { Site, DomainConfig } from '../types'
 import { websiteService } from '@/services/website/service'
@@ -29,65 +29,50 @@ interface PublishPanelProps {
 
 export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: PublishPanelProps) {
   const [isPublishing, setIsPublishing] = useState(false)
-  const [publishResult, setPublishResult] = useState<{ success: boolean; previewUrl?: string; publishedAt?: string } | null>(null)
+  const [publishResult, setPublishResult] = useState<any>(null)
   const [domainConfig, setDomainConfig] = useState<DomainConfig>({
     type: 'subdomain',
     subdomain: site.slug || ''
   })
   const [isDomainSaving, setIsDomainSaving] = useState(false)
-  const [domainResult, setDomainResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
-  
   const { toast } = useToast()
   const { handleError } = useErrorHandler()
 
   const handlePreview = () => {
     try {
-      // Store site data in sessionStorage for the preview window
+      // Store site data in sessionStorage for preview
       const previewKey = `wb2:preview:${site.slug}`
       sessionStorage.setItem(previewKey, JSON.stringify(site))
       
-      // Also encode site data in URL as backup
-      const encodedData = encodeURIComponent(JSON.stringify(site))
-      const previewUrl = `/s/${site.slug}/?data=${encodedData}`
+      // Open preview in new tab using the internal preview route
+      const previewUrl = `/s/${site.slug}/`
+      window.open(previewUrl, '_blank', 'width=1200,height=800')
       
-      // Open preview in new window
-      const previewWindow = window.open(previewUrl, '_blank', 'width=1200,height=800')
-      
-      if (!previewWindow) {
-        toast({
-          title: 'Preview Blocked',
-          description: 'Please allow popups for this site to open the preview.',
-          variant: 'destructive'
-        })
-      } else {
-        toast({
-          title: 'Preview Opened',
-          description: 'Your website preview has opened in a new window.'
-        })
-      }
+      toast({
+        title: 'Preview Opened',
+        description: 'Your website preview has opened in a new tab.'
+      })
     } catch (error) {
       console.error('Preview error:', error)
-      toast({
-        title: 'Preview Error',
-        description: 'Failed to open preview. Please try again.',
-        variant: 'destructive'
-      })
+      handleError(error, 'opening preview')
     }
   }
 
   const handlePublish = async () => {
     try {
       setIsPublishing(true)
+      
+      // Store the site data for preview access
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
       const result = await websiteService.publishSite(site.id)
       setPublishResult(result)
       
-      if (result.success) {
-        toast({
-          title: 'Published Successfully',
-          description: 'Your website is now live!'
-        })
-      }
+      toast({
+        title: 'Published Successfully',
+        description: 'Your website has been published and is now live.'
+      })
     } catch (error) {
       handleError(error, 'publishing site')
     } finally {
@@ -99,7 +84,6 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
     try {
       setIsDomainSaving(true)
       const result = await websiteService.setDomain(site.id, domainConfig)
-      setDomainResult(result)
       
       if (result.success) {
         toast({
@@ -107,11 +91,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
           description: result.message
         })
       } else {
-        toast({
-          title: 'Domain Error',
-          description: result.message,
-          variant: 'destructive'
-        })
+        throw new Error(result.message)
       }
     } catch (error) {
       handleError(error, 'saving domain')
@@ -120,41 +100,24 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
     }
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedUrl(text)
-      setTimeout(() => setCopiedUrl(null), 2000)
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
       toast({
         title: 'Copied',
         description: 'URL copied to clipboard'
       })
-    } catch (error) {
-      toast({
-        title: 'Copy Failed',
-        description: 'Failed to copy URL to clipboard',
-        variant: 'destructive'
-      })
-    }
+    })
   }
 
   const getPreviewUrl = () => {
     return `${window.location.origin}/s/${site.slug}/`
   }
 
-  const getDomainUrl = () => {
-    switch (domainConfig.type) {
-      case 'subdomain':
-        return `${domainConfig.subdomain}.renterinsight.com`
-      case 'custom':
-        return domainConfig.customDomain
-      case 'subdomain_custom':
-        return `${domainConfig.subdomain}.${domainConfig.baseDomain}`
-      case 'multi_dealer':
-        return `${domainConfig.dealerCode}.${domainConfig.groupDomain}`
-      default:
-        return ''
+  const getPublishedUrl = () => {
+    if (site.domain) {
+      return `https://${site.domain}`
     }
+    return `${window.location.origin}/s/${site.slug}/`
   }
 
   return (
@@ -167,30 +130,33 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
             Preview
           </CardTitle>
           <CardDescription>
-            Preview your website before publishing
+            Test your website before publishing
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-mono text-muted-foreground">
-              {getPreviewUrl()}
-            </span>
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {getPreviewUrl()}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Preview URL
+              </p>
+            </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => copyToClipboard(getPreviewUrl())}
-              className="ml-auto"
             >
-              {copiedUrl === getPreviewUrl() ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+              <Copy className="h-4 w-4" />
             </Button>
           </div>
           
-          <Button onClick={handlePreview} className="w-full">
+          <Button 
+            onClick={handlePreview} 
+            className="w-full"
+            variant="outline"
+          >
             <Eye className="h-4 w-4 mr-2" />
             Open Preview
           </Button>
@@ -209,51 +175,38 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {publishResult?.success ? (
-            <div className="space-y-3">
+          {publishResult ? (
+            <div className="space-y-4">
               <div className="flex items-center gap-2 text-green-600">
-                <CheckCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">Published Successfully</span>
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-medium">Published Successfully</span>
               </div>
               
-              {publishResult.previewUrl && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-md">
-                  <Globe className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-mono text-green-700">
-                    {publishResult.previewUrl}
-                  </span>
+              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-green-800 truncate">
+                    {getPublishedUrl()}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    Published at {new Date(publishResult.publishedAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => copyToClipboard(publishResult.previewUrl!)}
-                    className="ml-auto"
+                    onClick={() => copyToClipboard(getPublishedUrl())}
                   >
-                    {copiedUrl === publishResult.previewUrl ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(getPublishedUrl(), '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(publishResult.previewUrl, '_blank')}
-                  className="flex-1"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  View Live Site
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPublishResult(null)}
-                >
-                  Publish Again
-                </Button>
               </div>
             </div>
           ) : (
@@ -262,17 +215,8 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
               disabled={isPublishing}
               className="w-full"
             >
-              {isPublishing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <Globe className="h-4 w-4 mr-2" />
-                  Publish Website
-                </>
-              )}
+              <Globe className="h-4 w-4 mr-2" />
+              {isPublishing ? 'Publishing...' : 'Publish Website'}
             </Button>
           )}
         </CardContent>
@@ -291,176 +235,98 @@ export default function PublishPanel({ site, onSiteUpdate, mode = 'platform' }: 
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="domain-type">Domain Type</Label>
-              <Select
-                value={domainConfig.type}
-                onValueChange={(value: any) => setDomainConfig({ ...domainConfig, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="subdomain">Subdomain (free)</SelectItem>
-                  <SelectItem value="custom">Custom Domain</SelectItem>
-                  {mode === 'platform' && (
-                    <>
-                      <SelectItem value="subdomain_custom">Custom Subdomain</SelectItem>
-                      <SelectItem value="multi_dealer">Multi-Dealer</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {domainConfig.type === 'subdomain' && (
-              <div>
-                <Label htmlFor="subdomain">Subdomain</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="subdomain"
-                    value={domainConfig.subdomain}
-                    onChange={(e) => setDomainConfig({ ...domainConfig, subdomain: e.target.value })}
-                    placeholder="your-site"
-                  />
-                  <span className="text-sm text-muted-foreground">.renterinsight.com</span>
-                </div>
-              </div>
-            )}
-
-            {domainConfig.type === 'custom' && (
-              <div>
-                <Label htmlFor="custom-domain">Custom Domain</Label>
-                <Input
-                  id="custom-domain"
-                  value={domainConfig.customDomain || ''}
-                  onChange={(e) => setDomainConfig({ ...domainConfig, customDomain: e.target.value })}
-                  placeholder="www.yourdomain.com"
-                />
-              </div>
-            )}
-
-            {domainConfig.type === 'subdomain_custom' && (
-              <>
-                <div>
-                  <Label htmlFor="custom-subdomain">Subdomain</Label>
-                  <Input
-                    id="custom-subdomain"
-                    value={domainConfig.subdomain}
-                    onChange={(e) => setDomainConfig({ ...domainConfig, subdomain: e.target.value })}
-                    placeholder="your-site"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="base-domain">Base Domain</Label>
-                  <Input
-                    id="base-domain"
-                    value={domainConfig.baseDomain || ''}
-                    onChange={(e) => setDomainConfig({ ...domainConfig, baseDomain: e.target.value })}
-                    placeholder="yourdomain.com"
-                  />
-                </div>
-              </>
-            )}
-
-            {domainConfig.type === 'multi_dealer' && (
-              <>
-                <div>
-                  <Label htmlFor="dealer-code">Dealer Code</Label>
-                  <Input
-                    id="dealer-code"
-                    value={domainConfig.dealerCode || ''}
-                    onChange={(e) => setDomainConfig({ ...domainConfig, dealerCode: e.target.value })}
-                    placeholder="dealer123"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="group-domain">Group Domain</Label>
-                  <Input
-                    id="group-domain"
-                    value={domainConfig.groupDomain || ''}
-                    onChange={(e) => setDomainConfig({ ...domainConfig, groupDomain: e.target.value })}
-                    placeholder="dealergroup.com"
-                  />
-                </div>
-              </>
-            )}
+            <Label>Domain Type</Label>
+            <Select
+              value={domainConfig.type}
+              onValueChange={(value: any) => setDomainConfig({ ...domainConfig, type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="subdomain">Subdomain (free)</SelectItem>
+                <SelectItem value="custom">Custom Domain</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {domainResult && (
-            <div className={`flex items-center gap-2 p-3 rounded-md ${
-              domainResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-            }`}>
-              {domainResult.success ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
-              <span className="text-sm">{domainResult.message}</span>
+          {domainConfig.type === 'subdomain' && (
+            <div className="space-y-2">
+              <Label>Subdomain</Label>
+              <div className="flex items-center">
+                <Input
+                  value={domainConfig.subdomain || ''}
+                  onChange={(e) => setDomainConfig({ ...domainConfig, subdomain: e.target.value })}
+                  placeholder="your-site"
+                  className="rounded-r-none"
+                />
+                <div className="px-3 py-2 bg-muted border border-l-0 rounded-r-md text-sm text-muted-foreground">
+                  .renterinsight.com
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-mono text-muted-foreground">
-              {getDomainUrl()}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => copyToClipboard(`https://${getDomainUrl()}`)}
-              className="ml-auto"
-            >
-              {copiedUrl === `https://${getDomainUrl()}` ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          {domainConfig.type === 'custom' && (
+            <div className="space-y-2">
+              <Label>Custom Domain</Label>
+              <Input
+                value={domainConfig.customDomain || ''}
+                onChange={(e) => setDomainConfig({ ...domainConfig, customDomain: e.target.value })}
+                placeholder="www.yoursite.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                You'll need to configure DNS settings after saving
+              </p>
+            </div>
+          )}
 
           <Button 
-            onClick={handleDomainSave} 
-            disabled={isDomainSaving || !getDomainUrl()}
+            onClick={handleDomainSave}
+            disabled={isDomainSaving}
             variant="outline"
             className="w-full"
           >
-            {isDomainSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Settings className="h-4 w-4 mr-2" />
-                Save Website Address
-              </>
-            )}
+            {isDomainSaving ? 'Saving...' : 'Save Website Address'}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Site Info */}
+      {/* Site Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Site Information</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Site Status
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Pages</span>
-            <Badge variant="secondary">{site.pages?.length || 0}</Badge>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Pages</span>
+            <Badge variant="outline">{site.pages?.length || 0}</Badge>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Total Blocks</span>
-            <Badge variant="secondary">
+          
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Total Blocks</span>
+            <Badge variant="outline">
               {site.pages?.reduce((total, page) => total + (page.blocks?.length || 0), 0) || 0}
             </Badge>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Last Updated</span>
-            <span className="text-sm text-muted-foreground">
-              {site.updatedAt ? new Date(site.updatedAt).toLocaleDateString() : 'Never'}
-            </span>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Theme</span>
+            <Badge variant="outline">
+              {site.theme?.primaryColor ? 'Custom' : 'Default'}
+            </Badge>
+          </div>
+          
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Status</span>
+            <Badge variant={publishResult ? 'default' : 'secondary'}>
+              {publishResult ? 'Published' : 'Draft'}
+            </Badge>
           </div>
         </CardContent>
       </Card>
