@@ -131,6 +131,18 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     await persistNow(site)
   }
 
+  const handlePreview = () => {
+    if (!site) return
+    try {
+      writePreview(site)
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ ...site, lastPreviewUpdate: new Date().toISOString() })))
+      window.open(`/s/${site.slug}/?data=${encoded}`, '_blank')
+      toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
+    } catch (error) {
+      handleError(error, 'opening preview')
+    }
+  }
+
   const handleBackToBuilder = () => {
     const basePath = mode === 'platform' ? '/platform/website-builder' : '/company/settings/website'
     navigate(basePath)
