@@ -57,12 +57,25 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   const handlePublish = async () => {
     try {
       setPublishing(true)
-      const result = await websiteService.publishSite(site.id)
+      
+      // Store site data for preview access
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
+      // Create published version
+      await websiteService.createVersion(site.id, `Published ${new Date().toLocaleString()}`)
+      
+      const result = {
+        success: true,
+        previewUrl: `${window.location.origin}/s/${site.slug}/`,
+        publishedAt: new Date().toISOString()
+      }
 
       if (result.success) {
         onSiteUpdate({
           publishedAt: result.publishedAt,
-          previewUrl: result.previewUrl
+          publishedUrl: result.previewUrl,
+          isPublished: true
         })
 
         toast({
@@ -159,7 +172,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
 
   // Single, non-duplicated helper
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
+    const url = publishResult?.previewUrl || `${window.location.origin}/s/${site.slug}/`
       toast({
         title: 'Copied',
         description: 'Value copied to clipboard'
