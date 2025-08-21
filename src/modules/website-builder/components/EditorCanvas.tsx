@@ -23,6 +23,7 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateS
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+  
   const handleBlockUpdate = async (blockId: string, updates: Partial<Block>) => {
     if (!currentPage || !onUpdateSite) return
     
@@ -52,6 +53,14 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateS
     }
   }
 
+  const handleEditBlock = (block: Block) => {
+    setEditingBlock(block)
+  }
+
+  const handleDeleteBlock = (blockId: string) => {
+    // In a real implementation, this would call the website service
+    console.log('Delete block:', blockId)
+  }
 
   if (!currentPage) {
     return (
@@ -63,13 +72,9 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateS
       </div>
     )
   }
-    await handleBlockUpdate(blockId, updates)
-    setEditingBlock(null)
-  }
 
-  const handleSaveBlock = (blockId: string, updates: Partial<Block>) => {
-    // In a real implementation, this would call the website service
-    console.log('Save block:', blockId, updates)
+  const handleSaveBlock = async (blockId: string, updates: Partial<Block>) => {
+    await handleBlockUpdate(blockId, updates)
     setEditingBlock(null)
   }
 
