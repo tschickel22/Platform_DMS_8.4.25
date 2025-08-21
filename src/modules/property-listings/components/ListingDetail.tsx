@@ -63,7 +63,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
 
         // If not in mock data, try API call
         // TODO: Replace with actual API call when backend is ready
-        const response = await fetch(`/.netlify/functions/listings-crud?companyId=demo&listingId=${listingId}`)
+        const response = await fetch(`/api/listings/${listingId}?companyId=demo`, {
         
         if (response.ok) {
           const data = await response.json()
