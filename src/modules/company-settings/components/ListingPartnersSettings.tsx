@@ -136,7 +136,7 @@ export default function ListingPartnersSettings() {
   }
 
   const generateExportUrl = (partner: CompanySyndicationPartner): string => {
-    const baseUrl = 'https://your-app.netlify.app/.netlify/functions/syndication-feed'
+    const baseUrl = `${window.location.origin}/api/syndication-feed`
     const companyId = tenant?.id || 'demo-company'
     const leadReplyEmail = tenant?.settings?.leadReplyEmail || mockPlatformAdmin.leadReplyEmail
     
