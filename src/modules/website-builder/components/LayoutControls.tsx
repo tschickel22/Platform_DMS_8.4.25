@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Layout, Space as Spacing, Palette } from 'lucide-react'
-
+import { Input } from '@/components/ui/input'
 interface LayoutControlsProps {
   content: any
   onChange: (content: any) => void
