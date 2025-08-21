@@ -92,7 +92,8 @@ interface Tracking {
   bodyEndHtml?: string
 }
 
-function safeJsonParse<T = unknown>(value: string): T | null {
+function safeJsonParse<T = unknown>(value: string | null): T | null {
+  if (!value) return null
   try {
     return JSON.parse(value) as T
   } catch {
@@ -101,7 +102,6 @@ function safeJsonParse<T = unknown>(value: string): T | null {
 }
 
 function decodeBase64Url(data: string): string {
-  // Support base64url ( - _ ) and add padding if needed
   let s = data.replace(/-/g, '+').replace(/_/g, '/')
   const pad = s.length % 4
   if (pad) s += '='.repeat(4 - pad)
@@ -121,68 +121,72 @@ export default function PublicSitePreview() {
       setError(null)
       setSite(null)
 
-      if (!siteSlug) {
-        setError('No site specified in URL')
-        setLoading(false)
-        return
-      }
-
       try {
-        // Method 1: sessionStorage preview data
-        const sessionKey = `wb2:preview-site:${siteSlug}`
-        const sessionData = sessionStorage.getItem(sessionKey)
-        if (sessionData) {
-          const siteData = safeJsonParse<Site>(sessionData)
-          if (siteData) {
-            setSite(siteData)
-            return
-          } else {
-            console.warn('Failed to parse session data for preview')
-          }
-        }
-
-        // Method 2: URL ?data= (base64/base64url-encoded JSON)
+        // 1) URL data param (works with or without slug)
         const dataParam = searchParams.get('data')
         if (dataParam) {
           try {
-            const decoded =
-              // try base64url first, fall back to plain atob decodeURIComponent
-              decodeBase64Url(dataParam)
-            const siteData = safeJsonParse<Site>(decoded)
-            if (siteData) {
-              setSite(siteData)
+            const decoded = decodeBase64Url(dataParam)
+            const fromUrl = safeJsonParse<Site>(decoded)
+            if (fromUrl) {
+              setSite(fromUrl)
               return
             }
-          } catch (e) {
-            // Fallback attempt for plain base64
+          } catch {
+            // fallback: plain base64
             try {
               const decoded = atob(decodeURIComponent(dataParam))
-              const siteData = safeJsonParse<Site>(decoded)
-              if (siteData) {
-                setSite(siteData)
+              const fromUrl = safeJsonParse<Site>(decoded)
+              if (fromUrl) {
+                setSite(fromUrl)
                 return
               }
             } catch {
-              console.warn('Failed to parse URL data param')
+              // ignore; move on to next sources
             }
           }
         }
 
-        // Method 3: localStorage saved sites
-        const localSitesRaw = localStorage.getItem('wb2:sites')
-        if (localSitesRaw) {
-          const sites = safeJsonParse<Site[]>(localSitesRaw) || []
-          const found = Array.isArray(sites)
-            ? sites.find((s) => s.slug === siteSlug)
-            : null
-          if (found) {
-            setSite(found)
+        // 2) sessionStorage preview
+        if (siteSlug) {
+          const specific = safeJsonParse<Site>(
+            sessionStorage.getItem(`wb2:preview-site:${siteSlug}`)
+          )
+          if (specific) {
+            setSite(specific)
             return
+          }
+        } else {
+          // if no slug, pick the first preview entry found
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i)
+            if (key && key.startsWith('wb2:preview-site:')) {
+              const anyPreview = safeJsonParse<Site>(sessionStorage.getItem(key))
+              if (anyPreview) {
+                setSite(anyPreview)
+                return
+              }
+            }
           }
         }
 
-        // If nothing hit, set a friendly error
-        setError(`No website data found for slug "${siteSlug}".`)
+        // 3) localStorage sites
+        const localSites = safeJsonParse<Site[]>(localStorage.getItem('wb2:sites')) || []
+        if (Array.isArray(localSites) && localSites.length) {
+          if (siteSlug) {
+            const found = localSites.find((s) => s.slug === siteSlug)
+            if (found) {
+              setSite(found)
+              return
+            }
+          }
+          // no slug or not found — fall back to first site
+          setSite(localSites[0])
+          return
+        }
+
+        // If we get here, we truly have no data
+        setError('No website data available.')
       } catch (e) {
         console.error('Error loading site', e)
         setError('An unexpected error occurred while loading the website.')
@@ -210,7 +214,7 @@ export default function PublicSitePreview() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-6xl mb-4">🚫</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Website Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Website Not Available</h1>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
