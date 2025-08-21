@@ -331,6 +331,34 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                try {
+                  const previewData = {
+                    ...site,
+                    pages: site.pages || [],
+                    lastPreviewUpdate: new Date().toISOString()
+                  }
+                  const key = `wb2:preview-site:${site.slug}`
+                  sessionStorage.setItem(key, JSON.stringify(previewData))
+                  const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
+                  const localPreviewUrl = `/s/${site.slug}/?data=${encoded}`
+                  window.open(localPreviewUrl, '_blank')
+                } catch (error) {
+                  console.error('Preview error:', error)
+                  toast({
+                    title: 'Preview Error',
+                    description: 'Failed to open preview',
+                    variant: 'destructive'
+                  })
+                }
+              }}
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
             <Button variant="outline" size="sm" onClick={handlePreview} className="flex items-center gap-2">
               <Globe className="h-4 w-4" />Preview
             </Button>
