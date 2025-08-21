@@ -1,8 +1,5 @@
 import React from 'react'
-import {
-  Facebook, Instagram, Twitter, Youtube, Linkedin, Globe, Mail, Phone, Share2,
-  Twitch, Github, Pinterest
-} from 'lucide-react'
+import { Facebook, Instagram, Twitter, Youtube, Linkedin, Globe, Mail, Phone, Share2, Twitch, Github, Pointer as Pinterest } from 'lucide-react'
 
 export type SocialPlatform =
   | 'facebook' | 'instagram' | 'x' | 'twitter' | 'youtube' | 'linkedin'
