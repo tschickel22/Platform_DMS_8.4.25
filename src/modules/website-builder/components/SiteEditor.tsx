@@ -192,7 +192,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       seo: {},
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      blocks: [] // optionally seed based on template
+      blocks: []
     }
     const updated: Site = { ...site, pages: [...(site.pages || []), newPage] }
     setSite(updated)
@@ -331,34 +331,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                try {
-                  const previewData = {
-                    ...site,
-                    pages: site.pages || [],
-                    lastPreviewUpdate: new Date().toISOString()
-                  }
-                  const key = `wb2:preview-site:${site.slug}`
-                  sessionStorage.setItem(key, JSON.stringify(previewData))
-                  const encoded = btoa(encodeURIComponent(JSON.stringify(previewData)))
-                  const localPreviewUrl = `/s/${site.slug}/?data=${encoded}`
-                  window.open(localPreviewUrl, '_blank')
-                } catch (error) {
-                  console.error('Preview error:', error)
-                  toast({
-                    title: 'Preview Error',
-                    description: 'Failed to open preview',
-                    variant: 'destructive'
-                  })
-                }
-              }}
-            >
-              <Globe className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
+            {/* Keep ONLY this working Preview */}
             <Button variant="outline" size="sm" onClick={handlePreview} className="flex items-center gap-2">
               <Globe className="h-4 w-4" />Preview
             </Button>
@@ -370,17 +343,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             </Button>
             <Button variant={previewMode === 'mobile' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('mobile')}>
               <Smartphone className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
-                window.open(previewUrl, '_blank')
-              }}
-            >
-              <Globe className="h-4 w-4 mr-2" />
-              Preview
             </Button>
             <Button
               variant="outline"
