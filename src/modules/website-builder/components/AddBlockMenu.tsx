@@ -7,7 +7,6 @@ import {
    Quote,
   Video,
   Share2,
-  Grid3X3
 } from 'lucide-react'
 
 interface AddBlockMenuProps {
