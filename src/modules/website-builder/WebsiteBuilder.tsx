@@ -268,7 +268,6 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                       size="sm"
                       onClick={() => {
                         try {
-                          const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
                           const previewData = {
                             ...site,
                             pages: site.pages || [],
