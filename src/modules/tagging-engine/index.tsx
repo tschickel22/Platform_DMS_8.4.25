@@ -50,3 +50,55 @@ export default function TaggingEngine() {
     </div>
   )
 }
+
+// Export TagSelector component for use in other modules
+export function TagSelector({ 
+  selectedTags = [], 
+  onTagsChange = () => {},
+  availableTags = [],
+  placeholder = "Select tags..."
+}: {
+  selectedTags?: string[]
+  onTagsChange?: (tags: string[]) => void
+  availableTags?: string[]
+  placeholder?: string
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {selectedTags.map(tag => (
+          <span 
+            key={tag}
+            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
+          >
+            {tag}
+            <button
+              onClick={() => onTagsChange(selectedTags.filter(t => t !== tag))}
+              className="ml-1 text-primary/60 hover:text-primary"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <select 
+        onChange={(e) => {
+          const tag = e.target.value
+          if (tag && !selectedTags.includes(tag)) {
+            onTagsChange([...selectedTags, tag])
+          }
+          e.target.value = ''
+        }}
+        className="w-full px-3 py-2 border border-input rounded-md text-sm"
+      >
+        <option value="">{placeholder}</option>
+        {availableTags
+          .filter(tag => !selectedTags.includes(tag))
+          .map(tag => (
+            <option key={tag} value={tag}>{tag}</option>
+          ))
+        }
+      </select>
+    </div>
+  )
+}
