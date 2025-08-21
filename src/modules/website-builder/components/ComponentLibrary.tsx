@@ -533,5 +533,3 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
   )
 }
 
-
-export { ComponentLibrary }
