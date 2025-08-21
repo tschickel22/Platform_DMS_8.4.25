@@ -15,7 +15,6 @@ import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
 import ComponentLibrary from './ComponentLibrary'
 import { generateId } from '@/lib/utils'
-import { ComponentLibrary } from './ComponentLibrary'
 
 interface SiteEditorProps {
   mode?: 'platform' | 'company'
@@ -167,30 +166,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       })
     } catch (error) {
       handleError(error, 'adding block')
-    }
-  }
-
-  const handleAddComponent = async (template: any) => {
-    if (!currentPage) return
-
-    try {
-      const newBlock: any = {
-        ...template.blockData,
-        id: generateId(),
-        order: currentPage.blocks.length
-      }
-
-      await websiteService.createBlock(site.id, currentPage.id, newBlock)
-      
-      // Refresh the page to show the new block
-      window.location.reload()
-      
-      toast({
-        title: 'Component added',
-        description: `${template.name} has been added to the page.`
-      })
-    } catch (error) {
-      handleError(error, 'adding component')
     }
   }
 
@@ -502,6 +477,13 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                   onAddComponent={handleAddComponent}
                   onAddBlock={handleAddBlock}
                 />
+              </TabsContent>
+              <TabsContent value="components" className="mt-0">
+                <ComponentLibrary
+                  onAddComponent={handleAddComponent}
+                  onAddBlock={handleAddBlock}
+                />
+              </TabsContent>
               <TabsContent value="media" className="mt-0">
                 <MediaManager siteId={site.id} />
               </TabsContent>
