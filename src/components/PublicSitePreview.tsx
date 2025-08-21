@@ -155,6 +155,15 @@ export default function PublicSitePreview() {
         console.warn('Failed to load from localStorage:', err)
       }
 
+      // Method 4: Try to fetch from Netlify function
+      try {
+        const response = await fetch(`/.netlify/functions/get-site?slug=${siteSlug}`)
+        if (response.ok) {
+          const siteData = await response.json()
+          setSite(siteData)
+          setLoading(false)
+          return
+        } else if (response.status === 404) {
           setError('Website not found')
         } else {
           setError(`Failed to load website: ${response.statusText}`)
