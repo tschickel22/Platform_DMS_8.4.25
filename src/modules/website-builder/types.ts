@@ -109,6 +109,8 @@ export interface Site {
   faviconUrl?: string
   seo?: SeoMeta
   tracking?: Tracking
+  publishedUrl?: string
+  publishedAt?: string
   domain?: string
   createdAt: string
   updatedAt: string

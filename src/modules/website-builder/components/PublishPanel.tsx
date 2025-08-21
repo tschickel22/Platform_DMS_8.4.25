@@ -118,6 +118,12 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     }
   }
 
+  const handlePreview = () => {
+    // Use the published site URL if available, otherwise fallback to local preview
+    const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
+    window.open(previewUrl, '_blank')
+  }
+
   // Single, non-duplicated helper
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {

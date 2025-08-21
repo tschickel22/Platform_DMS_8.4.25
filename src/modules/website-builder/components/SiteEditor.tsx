@@ -346,6 +346,17 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => {
+                const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
+                window.open(previewUrl, '_blank')
+              }}
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setRightSidebarVisible(!rightSidebarVisible)}
               title={rightSidebarVisible ? 'Hide sidebar for larger preview' : 'Show sidebar'}
             >

@@ -330,14 +330,45 @@ export class LocalWebsiteService implements IWebsiteService {
 
   // Publishing
   async publishSite(siteId: string): Promise<PublishResult> {
-    await this.delay(500) // Simulate network delay
+    await this.delay(500)
     
     try {
       const site = await this.getSite(siteId)
       if (!site) throw new Error('Site not found')
       
-      // For local development, simulate publishing without external service
-      // Store published site data locally
+      // Try to publish to Bolt Hosting via Netlify function
+      try {
+        const response = await fetch('/.netlify/functions/publish-site', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-publish-secret': 'demo-secret'
+          },
+          body: JSON.stringify({ site })
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          
+          // Update site with published URL
+          const updatedSite = {
+            ...site,
+            publishedUrl: result.previewUrl,
+            publishedAt: result.publishedAt
+          }
+          await this.updateSite(siteId, updatedSite)
+          
+          return {
+            success: true,
+            previewUrl: result.previewUrl,
+            publishedAt: result.publishedAt
+          }
+        }
+      } catch (error) {
+        console.warn('Netlify function not available, using local preview:', error)
+      }
+      
+      // Fallback to local preview
       const publishedSites = this.getFromStorage('published-sites', {})
       publishedSites[site.slug] = {
         ...site,
@@ -349,9 +380,11 @@ export class LocalWebsiteService implements IWebsiteService {
       // Create published version
       await this.createVersion(siteId, `Published ${new Date().toLocaleString()}`)
       
+      const previewUrl = `${window.location.origin}/s/${site.slug}/`
+      
       return {
         success: true,
-        previewUrl: `${window.location.origin}/s/${site.slug}/`,
+        previewUrl,
         publishedAt: new Date().toISOString()
       }
     } catch (error) {
