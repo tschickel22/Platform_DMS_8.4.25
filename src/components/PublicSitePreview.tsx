@@ -8,7 +8,7 @@ import { websiteService } from '@/services/website/service'
 import { Site } from './types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { useToast } from '@/hooks/use-toast'
-import TemplateSelector from './components/TemplateSelector'
+import TemplateSelector from '@/modules/website-builder/components/TemplateSelector'
 import { CreateSiteDetailsModal } from './components/CreateSiteDetailsModal'
 
 interface WebsiteBuilderProps {
