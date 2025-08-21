@@ -117,6 +117,7 @@ export default function PublicSitePreview() {
       if (sessionData) {
         try {
           const siteData = JSON.parse(sessionData)
+          console.log('Loading site from sessionStorage:', siteData)
           setSite(siteData)
           setLoading(false)
           return
@@ -131,6 +132,7 @@ export default function PublicSitePreview() {
         try {
           const decoded = decodeURIComponent(atob(dataParam))
           const siteData = JSON.parse(decoded)
+          console.log('Loading site from URL data:', siteData)
           setSite(siteData)
           setLoading(false)
           return
@@ -139,13 +141,14 @@ export default function PublicSitePreview() {
         }
       }
 
-      // Method 3: Check localStorage for saved sites
+      // Method 3: Check localStorage for saved sites (as fallback)
       try {
         const localSites = localStorage.getItem('wb2:sites')
         if (localSites) {
           const sites = JSON.parse(localSites)
           const foundSite = sites.find((s: Site) => s.slug === siteSlug)
           if (foundSite) {
+            console.log('Loading site from localStorage:', foundSite)
             setSite(foundSite)
             setLoading(false)
             return
@@ -155,9 +158,9 @@ export default function PublicSitePreview() {
         console.warn('Failed to load from localStorage:', err)
       }
 
-      // No site data found in any local storage
-      setError('Live preview data not found. Please ensure the site is open in the builder and try again.')
-
+      // No site data found - provide helpful error message
+      console.warn('No site data found for slug:', siteSlug)
+      setError('Preview data not found. Please ensure the site is saved in the builder and try the preview again.')
     } catch (err) {
       console.error('Error loading site:', err)
       setError(err instanceof Error ? err.message : 'Failed to load website')
