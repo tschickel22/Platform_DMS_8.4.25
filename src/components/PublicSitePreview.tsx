@@ -9,7 +9,7 @@ import { Site } from './types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { useToast } from '@/hooks/use-toast'
 import TemplateSelector from '@/modules/website-builder/components/TemplateSelector'
-import { CreateSiteDetailsModal } from './components/CreateSiteDetailsModal'
+import { CreateSiteDetailsModal } from '@/modules/website-builder/components/CreateSiteDetailsModal'
 
 interface WebsiteBuilderProps {
   mode?: 'platform' | 'company'
