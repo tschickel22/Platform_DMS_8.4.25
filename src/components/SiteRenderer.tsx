@@ -93,10 +93,21 @@ interface Tracking {
 
 export function SiteRenderer({ site }: SiteRendererProps) {
   // Find the current page based on URL path, default to home page
-  const currentPath = window.location.pathname.split('/').pop() || ''
+  const currentPath = (() => {
+    const pathname = window.location.pathname
+    // Handle Bolt preview URLs like /s/site-slug/page-path
+    if (pathname.startsWith('/s/')) {
+      const parts = pathname.split('/')
+      // /s/site-slug/page-path -> return page-path or empty for home
+      return parts.length > 3 ? parts.slice(3).join('/') : ''
+    }
+    // Fallback to original logic
+    return pathname.split('/').pop() || ''
+  })()
+  
   const currentPage = site.pages?.find(page => {
     const pagePath = page.path?.replace(/^\//, '') || ''
-    return pagePath === currentPath || (currentPath === site.slug && page.path === '/')
+    return pagePath === currentPath || (currentPath === '' && page.path === '/')
   }) || site.pages?.[0] || null
 
   if (!currentPage) {
@@ -105,6 +116,9 @@ export function SiteRenderer({ site }: SiteRendererProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">No Content</h1>
           <p className="text-gray-600">This website has no pages to display.</p>
+          <div className="mt-4 text-xs text-gray-500">
+            Site: {site.name} | Current path: {currentPath || '(home)'}
+          </div>
         </div>
       </div>
     )
@@ -172,6 +186,11 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                   src={block.content.src} 
                   alt={block.content.alt || ''} 
                   className="max-w-full h-auto rounded-lg shadow-lg"
+                  onError={(e) => {
+                    // Fallback for broken images
+                    const target = e.target as HTMLImageElement
+                    target.src = 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800'
+                  }}
                 />
                 {block.content.caption && (
                   <p className="mt-4 text-gray-600 text-sm">{block.content.caption}</p>
@@ -195,6 +214,10 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                       src={image.src} 
                       alt={image.alt || ''} 
                       className="w-full h-64 object-cover rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400'
+                      }}
                     />
                     {image.caption && (
                       <p className="mt-2 text-sm text-gray-600">{image.caption}</p>
@@ -218,7 +241,7 @@ export function SiteRenderer({ site }: SiteRendererProps) {
               )}
               {block.content.buttonText && (
                 <button 
-                  className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
+                  className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors hover:opacity-90"
                   style={{ backgroundColor: primaryColor, color: 'white' }}
                   onClick={() => block.content.buttonLink && (window.location.href = block.content.buttonLink)}
                 >
@@ -267,7 +290,10 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                   </div>
                 </div>
                 <div>
-                  <form className="space-y-4">
+                  <form className="space-y-4" onSubmit={(e) => {
+                    e.preventDefault()
+                    toast({ title: 'Demo Mode', description: 'Contact form submission is disabled in preview mode.' })
+                  }}>
                     <input 
                       type="text" 
                       placeholder="Your Name" 
@@ -285,7 +311,7 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                     ></textarea>
                     <button 
                       type="submit"
-                      className="w-full px-6 py-3 font-semibold rounded-md transition-colors"
+                      className="w-full px-6 py-3 font-semibold rounded-md transition-colors hover:opacity-90"
                       style={{ backgroundColor: primaryColor, color: 'white' }}
                     >
                       Send Message
@@ -311,6 +337,10 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                       src={item.image} 
                       alt={item.title} 
                       className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400'
+                      }}
                     />
                     <div className="p-6">
                       <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
@@ -347,6 +377,10 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                       src={pkg.image} 
                       alt={pkg.title} 
                       className="w-full h-64 object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400'
+                      }}
                     />
                     <div className="p-6">
                       <h3 className="text-xl font-semibold mb-2">{pkg.title}</h3>
@@ -403,6 +437,10 @@ export function SiteRenderer({ site }: SiteRendererProps) {
                   src={site.brand.logoUrl} 
                   alt={site.name} 
                   className="h-8 w-auto mr-3"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
                 />
               )}
               <span className="text-xl font-bold" style={{ color: site.theme?.primaryColor || '#3b82f6' }}>
@@ -415,12 +453,18 @@ export function SiteRenderer({ site }: SiteRendererProps) {
               {(site.pages || []).map((page) => (
                 <a
                   key={page.id}
-                  href={`#${page.path}`}
+                  href={page.path === '/' ? '#' : `#${page.path}`}
                   className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
                 >
                   {page.title}
                 </a>
               ))}
+            </div>
+            
+            {/* Bolt Preview Indicator */}
+            <div className="hidden lg:flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <Eye className="h-3 w-3 mr-1" />
+              Bolt Preview
             </div>
           </div>
         </div>
@@ -436,6 +480,9 @@ export function SiteRenderer({ site }: SiteRendererProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             © {new Date().getFullYear()} {site.name}. All rights reserved.
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            Powered by Renter Insight • Built with Bolt
           </p>
         </div>
       </footer>

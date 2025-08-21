@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Globe, ExternalLink, Copy, CheckCircle, AlertCircle, Eye } from 'lucide-react'
 import { Loader2, Settings } from 'lucide-react'
 import { Site, DomainConfig } from '../types'
 import { websiteService } from '@/services/website/service'
@@ -19,7 +19,8 @@ interface PublishPanelProps {
 
 function hostFromUrl(url?: string | null): string {
   if (!url) return ''
-  try {
+  const [isPublished, setIsPublished] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string>('')
     return new URL(url).host
   } catch {
     return url.replace(/^https?:\/\//, '')
@@ -42,6 +43,12 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   const { toast } = useToast()
   const { handleError } = useErrorHandler()
 
+  // Generate Bolt preview URL
+  const generatePreviewUrl = () => {
+    const baseUrl = window.location.origin
+    return `${baseUrl}/s/${site.slug}`
+  }
+
   // Compute the current domain to display
   const currentDomain = useMemo(() => {
     if (savedDomain) return savedDomain
@@ -58,8 +65,22 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     try {
       setPublishing(true)
       const result = await websiteService.publishSite(site.id)
-
-      if (result.success) {
+      // Store site data for preview access
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
+      // Also store in localStorage for persistence
+      const publishedSites = JSON.parse(localStorage.getItem('wb2:published-sites') || '{}')
+      publishedSites[site.slug] = {
+        ...site,
+        publishedAt: new Date().toISOString(),
+        version: Date.now()
+      }
+      localStorage.setItem('wb2:published-sites', JSON.stringify(publishedSites))
+      
+      const url = generatePreviewUrl()
+      setPreviewUrl(url)
+      setIsPublished(true)
         onSiteUpdate({
           publishedAt: result.publishedAt,
           previewUrl: result.previewUrl
@@ -145,7 +166,7 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
       
       toast({
         title: 'Preview opened',
-        description: 'Your website preview has opened in a new tab.'
+        description: 'Your website preview is ready to view.',
       })
     } catch (error) {
       console.error('Failed to open preview:', error)
@@ -154,15 +175,21 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
         description: 'Unable to open preview. Please try again.',
         variant: 'destructive'
       })
-    }
+  const openPreview = () => {
+    const url = previewUrl || generatePreviewUrl()
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const copyPreviewUrl = async () => {
+    const url = previewUrl || generatePreviewUrl()
   }
 
   // Single, non-duplicated helper
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
+      await navigator.clipboard.writeText(url)
       toast({
-        title: 'Copied',
-        description: 'Value copied to clipboard'
+        title: 'URL Copied!',
+        description: 'Preview URL copied to clipboard',
       })
     })
   }
@@ -284,38 +311,37 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                   )}
 
                   {domainConfig.type === 'custom' && (
-                    <div>
+            Preview and share your website
                       <Label>Custom Domain</Label>
                       <Input
                         value={domainConfig.customDomain || ''}
-                        onChange={(e) =>
+          {isPublished ? (
                           setDomainConfig({
                             ...domainConfig,
                             customDomain: e.target.value
-                          })
+                <span className="text-sm font-medium">Preview Ready</span>
                         }
                         placeholder="www.yourdomain.com"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleSetDomain}
-                    disabled={settingDomain}
-                    size="sm"
-                    className="w-full"
-                  >
                     {settingDomain ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Setting Domain...
-                      </>
-                    ) : (
-                      'Save Domain Settings'
-                    )}
-                  </Button>
-                </div>
+              <div className="space-y-2">
+                <Button 
+                  onClick={openPreview}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Open Preview
+                </Button>
+                
+                <Button 
+                  onClick={copyPreviewUrl}
+                  className="w-full"
+                  variant="outline"
+                  size="sm"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Preview URL
+                </Button>
               )}
             </div>
           )}
@@ -443,30 +469,34 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                         <strong>Google Domains:</strong> DNS Settings
                       </div>
                     </div>
+              
+              <div className="text-xs text-muted-foreground">
+                Preview URL: {previewUrl || generatePreviewUrl()}
+              </div>
                   </div>
                 </CardContent>
-              </Card>
-            )}
+          <div className="text-xs text-muted-foreground p-2 bg-blue-50 rounded">
+            💡 <strong>Bolt Preview:</strong> Your website preview will be available at /s/{site.slug}
 
-          {/* Preview Link */}
+                <span className="text-sm">Preview not generated</span>
           {site.publishedAt && (
             <div className="text-center">
-              <Button
+          <CardTitle>Preview Settings</CardTitle>
                 variant="outline"
-                onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+            Configure how your website preview appears
                 className="w-full"
                 disabled={!previewUrl}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                View Live Website
+            <Label htmlFor="slug">Preview Slug</Label>
               </Button>
             </div>
-          )}
+                id="slug"
 
           {/* Publishing Info */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Changes are saved automatically</p>
-            <p>• Publishing makes your site live on the internet</p>
+            <div className="text-green-600 text-xs">Preview: /s/{site.slug}</div>
+      {/* Preview Settings */}
+              <span className="text-sm text-muted-foreground">/s/</span>
             <p>• You can update anytime after publishing</p>
           </div>
         </div>
