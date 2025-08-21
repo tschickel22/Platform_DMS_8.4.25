@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useToast } from '@/hooks/use-toast'
 
 interface Site {
   id: string
@@ -184,6 +185,7 @@ function SiteRenderer({ site }: { site: Site }) {
 
 export default function PublicSitePreview() {
   const { siteSlug } = useParams()
+  const { toast } = useToast()
   const [site, setSite] = useState<Site | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -249,7 +251,19 @@ export default function PublicSitePreview() {
 
       const t = setTimeout(() => {
         if (!resolvedRef.current) {
-          setError(`Website '${siteSlug}' not found. Open the preview from the Website Builder so it can pass the data across origins.`)
+          // Try to get site data from localStorage as fallback
+          try {
+            const sites = JSON.parse(localStorage.getItem('wb2:sites') || '[]')
+            const foundSite = sites.find((s: any) => s.slug === siteSlug)
+            if (foundSite) {
+              resolve(foundSite)
+              return
+            }
+          } catch (error) {
+            console.warn('Failed to load from localStorage:', error)
+          }
+          
+          setError(`Website '${siteSlug}' not found. Please open the preview from the Website Builder.`)
           setLoading(false)
         }
       }, 1500)
