@@ -533,3 +533,6 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
   )
 }
 
+
+
+export default ComponentLibrary
