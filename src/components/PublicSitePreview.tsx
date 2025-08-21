@@ -139,7 +139,7 @@ export default function PublicSitePreview() {
         }
       }
 
-      // Method 3: Check localStorage for saved sites
+      // Method 3: Check localStorage for saved sites (LOCAL ONLY - NO NETLIFY)
       try {
         const localSites = localStorage.getItem('wb2:sites')
         if (localSites) {
@@ -155,23 +155,8 @@ export default function PublicSitePreview() {
         console.warn('Failed to load from localStorage:', err)
       }
 
-      // Method 4: Try to fetch from Netlify function (published sites)
-      try {
-        const response = await fetch(`/.netlify/functions/get-site?site=${encodeURIComponent(siteSlug)}`)
-        if (response.ok) {
-          const siteData = await response.json()
-          setSite(siteData)
-          setLoading(false)
-          return
-        } else if (response.status === 404) {
-          setError('Website not found')
-        } else {
-          setError(`Failed to load website: ${response.statusText}`)
-        }
-      } catch (err) {
-        console.warn('Failed to fetch from Netlify function:', err)
-        setError('Website not found or not published')
-      }
+      // If no site found anywhere, show error
+      setError('Website not found')
 
     } catch (err) {
       console.error('Error loading site:', err)
