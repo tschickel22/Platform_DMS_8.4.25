@@ -334,7 +334,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               <ArrowLeft className="h-4 w-4 mr-2" />Back
             </Button>
             <div>
-              <input
+              <h1 className="text-xl font-semibold">{site?.name || 'Loading...'}</h1>
                 type="text"
                 value={site.name}
                 onChange={(e) => setSite({ ...site, name: e.target.value })}
@@ -343,7 +343,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 placeholder="Enter site name"
               />
               <div className="text-sm text-muted-foreground">
-                {site.slug}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com
+                {site?.slug || 'loading'}.{mode === 'platform' ? 'platform' : 'renterinsight'}.com
               </div>
             </div>
           </div>
@@ -385,8 +385,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               currentPageId={currentPageId as any}
               onSelectPage={onSelectPageId}
               onCreatePage={handleCreatePageFromList}
-              onEditPage={handleEditPageFromList}
-              onDeletePage={handleDeletePageFromList}
+              site={site}
+              onSiteUpdate={(updates) => site && setSite({ ...site, ...updates })}
               onDuplicatePage={handleDuplicatePageFromList}
             />
           </div>
@@ -402,8 +402,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             <div className="px-4 pb-4">
               <TabsContent value="theme" className="mt-0">
                 <ThemePalette
-                  theme={site.theme}
-                  onThemeUpdate={(t) => {
+                  theme={site?.theme}
+                  onThemeUpdate={(t) => site && setSite({ ...site, theme: t })}
                     const updatedSite = { ...site, theme: t }
                     setSite(updatedSite)
                     writePreview(updatedSite)
@@ -416,7 +416,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
               </TabsContent>
 
               <TabsContent value="media" className="mt-0">
-                <MediaManager siteId={site.id} />
+                <MediaManager siteId={site?.id || ''} />
               </TabsContent>
             </div>
           </Tabs>
