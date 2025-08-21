@@ -20,7 +20,6 @@ export default defineConfig({
         '**/mocks/**',
         'dist/',
         'public/',
-        'netlify/'
       ]
     }
   },
