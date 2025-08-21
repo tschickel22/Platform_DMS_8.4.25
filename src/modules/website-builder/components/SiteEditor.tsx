@@ -13,6 +13,8 @@ import PageList from './PageList'
 import ThemePalette from './ThemePalette'
 import MediaManager from './MediaManager'
 import PublishPanel from './PublishPanel'
+import ComponentLibrary from './ComponentLibrary'
+import { generateId } from '@/lib/utils'
 import { ComponentLibrary } from './ComponentLibrary'
 
 interface SiteEditorProps {
@@ -140,6 +142,119 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
       toast({ title: 'Preview Opened', description: 'Your site preview has opened in a new tab.' })
     } catch (error) {
       handleError(error, 'opening preview')
+    }
+  }
+
+  const handleAddBlock = async (blockType: string) => {
+    if (!currentPage) return
+
+    try {
+      const newBlock: any = {
+        id: generateId(),
+        type: blockType,
+        content: getDefaultContent(blockType),
+        order: currentPage.blocks.length
+      }
+
+      await websiteService.createBlock(site.id, currentPage.id, newBlock)
+      
+      // Refresh the page to show the new block
+      window.location.reload()
+      
+      toast({
+        title: 'Block added',
+        description: `${blockType} block has been added to the page.`
+      })
+    } catch (error) {
+      handleError(error, 'adding block')
+    }
+  }
+
+  const handleAddComponent = async (template: any) => {
+    if (!currentPage) return
+
+    try {
+      const newBlock: any = {
+        ...template.blockData,
+        id: generateId(),
+        order: currentPage.blocks.length
+      }
+
+      await websiteService.createBlock(site.id, currentPage.id, newBlock)
+      
+      // Refresh the page to show the new block
+      window.location.reload()
+      
+      toast({
+        title: 'Component added',
+        description: `${template.name} has been added to the page.`
+      })
+    } catch (error) {
+      handleError(error, 'adding component')
+    }
+  }
+
+  const getDefaultContent = (blockType: string) => {
+    switch (blockType) {
+      case 'hero':
+        return {
+          title: 'Welcome to Our Website',
+          subtitle: 'Discover amazing products and services',
+          ctaText: 'Get Started',
+          ctaLink: '#'
+        }
+      case 'text':
+        return {
+          html: '<p>Add your text content here...</p>'
+        }
+      case 'image':
+        return {
+          src: 'https://picsum.photos/1200/600',
+          alt: 'Placeholder image'
+        }
+      case 'cta':
+        return {
+          title: 'Ready to Get Started?',
+          description: 'Join thousands of satisfied customers',
+          buttonText: 'Contact Us',
+          buttonLink: '#'
+        }
+      case 'contact':
+        return {
+          title: 'Contact Us',
+          description: 'Get in touch with our team',
+          phone: '(555) 123-4567',
+          email: 'info@example.com',
+          address: '123 Main St, City, State 12345'
+        }
+      case 'google_map':
+        return {
+          address: '1600 Amphitheatre Pkwy, Mountain View, CA',
+          zoom: 14,
+          height: 360
+        }
+      case 'social_links':
+        return {
+          title: 'Follow Us',
+          layout: 'row',
+          align: 'left',
+          size: 'md',
+          links: []
+        }
+      case 'multi_image_gallery':
+        return {
+          columns: 3,
+          aspect: 'auto',
+          images: []
+        }
+      case 'multi_text':
+        return {
+          columns: 2,
+          showDividers: false,
+          sections: []
+        }
+      default:
+        return {}
     }
   }
 
@@ -383,20 +498,10 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
 
             <div className="px-4 pb-4">
               <TabsContent value="theme" className="mt-0">
-                <ThemePalette
-                  theme={site.theme}
-                  onThemeUpdate={(t) => {
-                    const updatedSite = { ...site, theme: t }
-                    setSite(updatedSite)
-                    writePreview(updatedSite)
-                  }}
+                <ComponentLibrary
+                  onAddComponent={handleAddComponent}
+                  onAddBlock={handleAddBlock}
                 />
-              </TabsContent>
-
-              <TabsContent value="components" className="mt-0">
-                <ComponentLibrary onAddComponent={handleAddComponent} onClose={() => setActiveTab('theme')} />
-              </TabsContent>
-
               <TabsContent value="media" className="mt-0">
                 <MediaManager siteId={site.id} />
               </TabsContent>
@@ -422,6 +527,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 site={site}
                 currentPage={currentPage}
                 previewMode={previewMode}
+                onAddBlock={handleAddBlock}
                 onUpdatePage={handleUpdatePage}
                 onSiteUpdate={handleSiteUpdate}
               />

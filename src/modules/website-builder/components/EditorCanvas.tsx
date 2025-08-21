@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Edit, Trash2, Plus, GripVertical } from 'lucide-react'
 import { Site, Page, Block } from '../types'
 import BlockEditorModal from './BlockEditorModal'
-import AddBlockMenu from './AddBlockMenu'
 import GoogleMapBlock from './blocks/GoogleMapBlock'
 import SocialLinksBlock from './blocks/SocialLinksBlock'
 import MultiImageGalleryBlock from './blocks/MultiImageGalleryBlock'
@@ -12,15 +11,6 @@ import MultiTextBlock from './blocks/MultiTextBlock'
 
 interface EditorCanvasProps {
   site: Site
-  currentPage: Page | null
-  previewMode: 'desktop' | 'tablet' | 'mobile'
-}
-
-export default function EditorCanvas({ site, currentPage, previewMode }: EditorCanvasProps) {
-  const [editingBlock, setEditingBlock] = useState<Block | null>(null)
-  const [showAddBlock, setShowAddBlock] = useState(false)
-  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
-
   if (!currentPage) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -43,71 +33,6 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
     }
   }
 
-  const handleSaveBlock = (blockId: string, updates: Partial<Block>) => {
-    // In a real implementation, this would call the website service
-    console.log('Save block:', blockId, updates)
-    setEditingBlock(null)
-  }
-
-  const handleAddBlock = (blockType: string) => {
-    // In a real implementation, this would call the website service
-    console.log('Add block:', blockType)
-    setShowAddBlock(false)
-  }
-
-  const renderBlock = (block: Block) => {
-    const primaryColor = site.theme?.primaryColor || '#3b82f6'
-    const isHovered = hoveredBlockId === block.id
-
-    const blockContent = (() => {
-      switch (block.type) {
-        case 'hero':
-          return (
-            <section className="relative bg-gray-900 text-white min-h-[400px] flex items-center">
-              {block.content?.backgroundImage && (
-                <div
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url(${block.content.backgroundImage})` }}
-                >
-                  <div className="absolute inset-0 bg-black/50" />
-                </div>
-              )}
-              <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-                {block.content?.title && (
-                  <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                    {block.content.title}
-                  </h1>
-                )}
-                {block.content?.subtitle && (
-                  <p className="text-xl md:text-2xl mb-8 text-gray-200">
-                    {block.content.subtitle}
-                  </p>
-                )}
-                {block.content?.ctaText && (
-                  <button
-                    className="px-8 py-3 text-lg font-semibold rounded-lg transition-colors"
-                    style={{ backgroundColor: primaryColor, color: 'white' }}
-                  >
-                    {block.content.ctaText}
-                  </button>
-                )}
-              </div>
-            </section>
-          )
-
-        case 'text':
-          return (
-            <section className="py-16">
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div
-                  className={`prose prose-lg max-w-none ${block.content?.alignment || 'text-left'}`}
-                  dangerouslySetInnerHTML={{ __html: block.content?.html || block.content?.text || 'Add your text content here...' }}
-                />
-              </div>
-            </section>
-          )
-        case 'google_map':
-          return (
             <section className="py-8">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <GoogleMapBlock data={block.content || {}} />
@@ -263,7 +188,7 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
                 className="h-8 w-8 p-0 cursor-grab"
               >
                 <GripVertical className="h-4 w-4" />
-              </Button>
+              <p className="text-sm">Use the sidebar to add your first block</p>
             </div>
           </div>
         )}
@@ -281,7 +206,6 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
     <div className="h-full overflow-y-auto">
       <div className="bg-white">
         {sortedBlocks.length === 0 ? (
-          <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center">
               <p className="text-lg text-muted-foreground mb-4">This page is empty</p>
               <Button onClick={() => setShowAddBlock(true)}>
@@ -298,15 +222,6 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
                 variant="outline"
                 onClick={() => setShowAddBlock(true)}
                 className="border-dashed"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Block
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-
       {/* Block Editor Modal */}
       {editingBlock && (
         <BlockEditorModal

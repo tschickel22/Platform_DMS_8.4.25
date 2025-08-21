@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -16,7 +16,11 @@ import {
   Phone,
   Map,
   Share2,
+  Grid3X3,
+  Plus
 } from 'lucide-react'
+import { Block } from '../types'
+import { generateId } from '@/lib/utils'
 
 interface ComponentTemplate {
   id: string
@@ -28,17 +32,96 @@ interface ComponentTemplate {
   blockData: any
 }
 
+// Block types for adding new blocks
+const blockTypes = [
+  {
+    type: 'hero',
+    name: 'Hero Section',
+    description: 'Large banner with title, subtitle, and call-to-action',
+    icon: Layout,
+    category: 'Layout'
+  },
+  {
+    type: 'text',
+    name: 'Text Block',
+    description: 'Rich text content with formatting options',
+    icon: Type,
+    category: 'Content'
+  },
+  {
+    type: 'image',
+    name: 'Image',
+    description: 'Single image with caption and styling options',
+    icon: ImageIcon,
+    category: 'Media'
+  },
+  {
+    type: 'cta',
+    name: 'Call to Action',
+    description: 'Button or link to drive user actions',
+    icon: MousePointer,
+    category: 'Marketing'
+  },
+  {
+    type: 'contact',
+    name: 'Contact Info',
+    description: 'Contact details and form',
+    icon: Phone,
+    category: 'Contact'
+  },
+  {
+    type: 'inventory',
+    name: 'Inventory Grid',
+    description: 'Display inventory items in a grid layout',
+    icon: Grid,
+    category: 'Business'
+  },
+  {
+    type: 'landHome',
+    name: 'Land & Home Packages',
+    description: 'Showcase land and home package deals',
+    icon: Star,
+    category: 'Business'
+  },
+  {
+    type: 'google_map',
+    name: 'Google Map',
+    description: 'Embed a Google Map by address or coordinates',
+    icon: Map,
+    category: 'Contact'
+  },
+  {
+    type: 'social_links',
+    name: 'Social Links',
+    description: 'Row or grid of social icons with links',
+    icon: Share2,
+    category: 'Marketing'
+  },
+  {
+    type: 'multi_image_gallery',
+    name: 'Multi-Image Gallery',
+    description: 'Grid gallery with lightbox',
+    icon: Grid3X3,
+    category: 'Media'
+  },
+  {
+    type: 'multi_text',
+    name: 'Multi-Text Sections',
+    description: 'Multiple text sections (1–3 columns)',
+    icon: Type,
+    category: 'Content'
+  }
+]
+
 interface ComponentLibraryProps {
-  /** Parent expects normalized block data to append to the current page */
-  onAddComponent: (blockData: any, meta?: { templateId: string; name: string; category: string }) => void
-  /** Parent-controlled close callback (switch tab / hide modal) */
-  onClose?: () => void
+  onAddComponent: (template: ComponentTemplate) => void
+  onAddBlock?: (blockType: string) => void
 }
 
-export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryProps) {
+export default function ComponentLibrary({ onAddComponent, onAddBlock }: ComponentLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] =
-    useState<'all' | ComponentTemplate['category']>('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [activeTab, setActiveTab] = useState<'templates' | 'blocks'>('templates')
 
   const componentTemplates: ComponentTemplate[] = [
     // Hero Components
@@ -389,146 +472,137 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
     },
   ]
 
-  const categories: Array<{
-    id: 'all' | ComponentTemplate['category']
-    name: string
-    icon: React.ComponentType<any>
-  }> = [
-    { id: 'all', name: 'All Components', icon: Grid },
-    { id: 'hero', name: 'Hero Sections', icon: Layout },
-    { id: 'text', name: 'Text & Content', icon: Type },
-    { id: 'media', name: 'Images & Media', icon: ImageIcon },
-    { id: 'cta', name: 'Call to Action', icon: MousePointer },
-    { id: 'contact', name: 'Contact', icon: Phone },
-    { id: 'features', name: 'Features', icon: Star },
-    { id: 'social', name: 'Social Proof', icon: Users },
-  ]
+  const templateCategories = ['all', ...Array.from(new Set(componentTemplates.map(t => t.category)))]
+  const blockCategories = ['all', ...Array.from(new Set(blockTypes.map(t => t.category)))]
 
-  const filteredComponents = componentTemplates.filter((c) => {
-    const matchesSearch =
-      !searchTerm ||
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesCategory = selectedCategory === 'all' || c.category === selectedCategory
+  const filteredTemplates = componentTemplates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory
     return matchesSearch && matchesCategory
   })
 
-  const handleChoose = (tpl: ComponentTemplate) => {
-    onAddComponent(tpl.blockData, { templateId: tpl.id, name: tpl.name, category: tpl.category })
-    // Do NOT auto-close; parent decides (lets you add multiple)
+  const filteredBlocks = blockTypes.filter(block => {
+    const matchesSearch = block.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         block.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || block.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  const handleAddBlock = (blockType: string) => {
+    if (onAddBlock) {
+      onAddBlock(blockType)
+    }
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.()
-      }}
-    >
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Component Library</CardTitle>
-          <Button variant="outline" onClick={onClose}>
-            Close
+    <Card>
+      <CardHeader>
+        <CardTitle>Add Content</CardTitle>
+        <CardDescription>Add components or blocks to your page</CardDescription>
+        
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant={activeTab === 'templates' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('templates')}
+          >
+            Templates
           </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="flex">
-            {/* Categories Sidebar */}
-            <div className="w-64 border-r bg-gray-50 p-4">
-              <div className="space-y-2">
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? 'default' : 'ghost'}
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    <category.icon className="h-4 w-4 mr-2" />
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
+          <Button
+            variant={activeTab === 'blocks' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('blocks')}
+          >
+            Basic Blocks
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search components..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-            {/* Components Grid */}
-            <div className="flex-1 p-4">
-              {/* Search */}
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search components..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-2">
+          {(activeTab === 'templates' ? templateCategories : blockCategories).map(category => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+            >
+              {category === 'all' ? 'All' : category}
+            </Button>
+          ))}
+        </div>
 
-              {/* Components Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto">
-                {filteredComponents.map((component) => (
-                  <Card
-                    key={component.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleChoose(component)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') handleChoose(component)
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <component.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-sm">{component.name}</h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {component.category}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {component.preview && (
-                        <div className="mb-3">
-                          <img
-                            src={component.preview}
-                            alt={component.name}
-                            className="w-full h-20 object-cover rounded border"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      <p className="text-xs text-muted-foreground">{component.description}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {filteredComponents.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Grid className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No components found</p>
-                  <p className="text-sm">Try adjusting your search or category filter</p>
+        {/* Content Grid */}
+        <div className="grid gap-3">
+          {activeTab === 'templates' ? (
+            filteredTemplates.map(template => (
+              <div
+                key={template.id}
+                className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => onAddComponent(template)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md">
+                    <template.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">{template.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {template.description}
+                    </p>
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      {template.category}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ))
+          ) : (
+            filteredBlocks.map(block => (
+              <div
+                key={block.type}
+                className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => handleAddBlock(block.type)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md">
+                    <block.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">{block.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {block.description}
+                    </p>
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      {block.category}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {(activeTab === 'templates' ? filteredTemplates : filteredBlocks).length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Grid className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No {activeTab} found</p>
+            <p className="text-xs">Try adjusting your search or category filter</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
