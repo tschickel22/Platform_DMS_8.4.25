@@ -3,16 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Plus, Type, Image, Layout, Zap, Grid3X3, FileText, Phone, Star, Users, Map } from 'lucide-react'
 import { 
-  Type, 
-  Image, 
-  MousePointer, 
-  Phone, 
-  Star,
-  Grid3X3,
-  Quote,
+   MousePointer, 
+   Quote,
   Video,
-  Map,
-  Calendar
+   Calendar
 } from 'lucide-react'
 
 interface AddBlockMenuProps {
