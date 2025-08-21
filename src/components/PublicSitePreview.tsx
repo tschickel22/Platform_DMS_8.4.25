@@ -1,212 +1,443 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
-import { SiteRenderer } from '@/components/SiteRenderer'
+import React, { useState, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Globe, ExternalLink, CheckCircle, AlertCircle, Info, Copy } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Settings } from 'lucide-react'
+import { Site, DomainConfig } from '../types'
+import { websiteService } from '@/services/website/service'
+import { useToast } from '@/hooks/use-toast'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
 
-interface Site {
-  id: string
-  name: string
-  slug: string
-  pages: Page[]
-  theme?: Theme
-  nav?: NavConfig
-  brand?: { logoUrl?: string; color?: string }
-  faviconUrl?: string
-  seo?: SeoMeta
-  tracking?: Tracking
+interface PublishPanelProps {
+  site: Site
+  onSiteUpdate: (updates: Partial<Site>) => void
+  mode: 'platform' | 'company'
 }
 
-interface Page {
-  id: string
-  title: string
-  path: string
-  blocks: Block[]
-  seo?: PageSeo
-}
-
-interface Block {
-  id: string
-  type: string
-  content: any
-  order: number
-}
-
-interface Theme {
-  primaryColor: string
-  secondaryColor: string
-  fontFamily: string
-}
-
-interface NavConfig {
-  manufacturersMenu: {
-    enabled: boolean
-    label: string
-    items: Manufacturer[]
+function hostFromUrl(url?: string | null): string {
+  if (!url) return ''
+  try {
+    return new URL(url).host
+  } catch {
+    return url.replace(/^https?:\/\//, '')
   }
-  showLandHomeMenu?: boolean
-  landHomeLabel?: string
 }
 
-interface Manufacturer {
-  id: string
-  name: string
-  slug: string
-  logoUrl?: string
-  externalUrl?: string
-  enabled: boolean
-  linkType: 'inventory' | 'external'
-}
+export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelProps) {
+  const [publishing, setPublishing] = useState(false)
+  const [settingDomain, setSettingDomain] = useState(false)
+  const [showDomainSettings, setShowDomainSettings] = useState(false)
 
-interface SeoMeta {
-  siteDefaults: {
-    title?: string
-    description?: string
-    ogImageUrl?: string
-    robots?: string
-    canonicalBase?: string
-  }
-  pages: Record<string, {
-    title?: string
-    description?: string
-    ogImageUrl?: string
-    robots?: string
-    canonicalPath?: string
-  }>
-}
+  const [domainConfig, setDomainConfig] = useState<DomainConfig>({
+    type: 'subdomain',
+    subdomain: site.slug || ''
+  })
 
-interface PageSeo {
-  title?: string
-  description?: string
-  ogImageUrl?: string
-  robots?: string
-  canonicalPath?: string
-}
+  // Track a saved domain string (set after saving domain settings)
+  const [savedDomain, setSavedDomain] = useState<string | null>(null)
 
-interface Tracking {
-  ga4Id?: string
-  gtagId?: string
-  gtmId?: string
-  headHtml?: string
-  bodyEndHtml?: string
-}
+  const { toast } = useToast()
+  const { handleError } = useErrorHandler()
 
-export default function PublicSitePreview() {
-  const { siteSlug } = useParams<{ siteSlug: string }>()
-  const [searchParams] = useSearchParams()
-  const [site, setSite] = useState<Site | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Compute the current domain to display
+  const currentDomain = useMemo(() => {
+    if (savedDomain) return savedDomain
+    // Prefer a host from previewUrl if available, otherwise fall back to the subdomain default
+    return hostFromUrl(site.previewUrl) || (site.slug ? `${site.slug}.renterinsight.com` : '')
+  }, [savedDomain, site.previewUrl, site.slug])
 
-  useEffect(() => {
-    loadSite()
-  }, [siteSlug])
+  // Compute a preview URL to open
+  const previewUrl = useMemo(() => {
+    return site.previewUrl || (currentDomain ? `https://${currentDomain}` : undefined)
+  }, [site.previewUrl, currentDomain])
 
-  const loadSite = async () => {
-    if (!siteSlug) {
-      setError('No site specified in URL')
-      setLoading(false)
-      return
-    }
-
+  const handlePublish = async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setPublishing(true)
+      const result = await websiteService.publishSite(site.id)
 
-      // Method 1: Check sessionStorage for local preview data
-      const sessionKey = `wb2:preview-site:${siteSlug}`
-      const sessionData = sessionStorage.getItem(sessionKey)
-      if (sessionData) {
-        try {
-          const siteData = JSON.parse(sessionData)
-          console.log('Loading site from sessionStorage:', siteData)
-          setSite(siteData)
-          setLoading(false)
-          return
-        } catch (err) {
-          console.warn('Failed to parse session data:', err)
-        }
+      if (result.success) {
+        onSiteUpdate({
+          publishedAt: result.publishedAt,
+          previewUrl: result.previewUrl
+        })
+
+        toast({
+          title: 'Site published!',
+          description: 'Your website is now live and accessible.'
+        })
+      } else {
+        throw new Error(result.error || 'Publishing failed')
       }
-
-      // Method 2: Check URL data parameter
-      const dataParam = searchParams.get('data')
-      if (dataParam) {
-        try {
-          const decoded = decodeURIComponent(atob(dataParam))
-          const siteData = JSON.parse(decoded)
-          console.log('Loading site from URL data:', siteData)
-          setSite(siteData)
-          setLoading(false)
-          return
-        } catch (err) {
-          console.warn('Failed to parse URL data:', err)
-        }
-      }
-
-      // Method 3: Check localStorage for saved sites (as fallback)
-      try {
-        const localSites = localStorage.getItem('wb2:sites')
-        if (localSites) {
-          const sites = JSON.parse(localSites)
-          const foundSite = sites.find((s: Site) => s.slug === siteSlug)
-          if (foundSite) {
-            console.log('Loading site from localStorage:', foundSite)
-            setSite(foundSite)
-            setLoading(false)
-            return
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load from localStorage:', err)
-      }
-
-      // No site data found - provide helpful error message
-      console.warn('No site data found for slug:', siteSlug)
-      setError('Preview data not found. Please ensure the site is saved in the builder and try the preview again.')
-    } catch (err) {
-      console.error('Error loading site:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load website')
+    } catch (error) {
+      handleError(error, 'publishing site')
     } finally {
-      setLoading(false)
+      setPublishing(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading website...</p>
-        </div>
-      </div>
-    )
+  const handleSetDomain = async () => {
+    try {
+      setSettingDomain(true)
+      const result = await websiteService.setDomain(site.id, domainConfig)
+
+      if (result.success) {
+        // Generate the domain string for display based on chosen type
+        let domainString = ''
+        switch (domainConfig.type) {
+          case 'subdomain':
+            domainString = `${domainConfig.subdomain}.renterinsight.com`
+            break
+          case 'custom':
+            domainString = domainConfig.customDomain || ''
+            break
+          case 'subdomain_custom':
+            domainString = `${domainConfig.subdomain}.${domainConfig.baseDomain || ''}`
+            break
+          case 'multi_dealer':
+            domainString = `${domainConfig.dealerCode || ''}.${domainConfig.groupDomain || ''}`
+            break
+        }
+        setSavedDomain(domainString)
+
+        toast({
+          title: 'Domain configured',
+          description: result.message
+        })
+        setShowDomainSettings(false)
+      } else {
+        throw new Error(result.message || 'Domain configuration failed')
+      }
+    } catch (error) {
+      handleError(error, 'setting domain')
+    } finally {
+      setSettingDomain(false)
+    }
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-6xl mb-4">🚫</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Website Not Found</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
+  const handlePreview = () => {
+    // Use the published site URL if available, otherwise fallback to local preview
+    const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
+    window.open(previewUrl, '_blank')
   }
 
-  if (!site) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No website data available</p>
-        </div>
-      </div>
-    )
+  // Single, non-duplicated helper
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Copied',
+        description: 'Value copied to clipboard'
+      })
+    })
   }
 
-  return <SiteRenderer site={site} />
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Globe className="h-4 w-4" />
+          Publish & Share
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {/* Publish Status */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              {site.publishedAt ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Published</span>
+                  <Badge variant="secondary" className="text-xs">
+                    Live
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-medium">Draft</span>
+                  <Badge variant="outline" className="text-xs">
+                    Not Published
+                  </Badge>
+                </>
+              )}
+            </div>
+
+            {site.publishedAt && (
+              <p className="text-xs text-muted-foreground">
+                Last published: {new Date(site.publishedAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+
+          {/* Current URL */}
+          <div>
+            <Label className="text-sm font-medium">Website Address</Label>
+            <div className="flex items-center gap-2 mt-2">
+              <Input value={currentDomain} readOnly className="text-sm" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(`https://${currentDomain}`)}
+                disabled={!currentDomain}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                disabled={!site.publishedAt || !previewUrl}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Domain Settings */}
+          {mode === 'platform' && (
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDomainSettings(!showDomainSettings)}
+                className="w-full"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Domain Settings
+              </Button>
+
+              {showDomainSettings && (
+                <div className="mt-4 space-y-4 p-4 border rounded-lg bg-muted/50">
+                  <div>
+                    <Label>Domain Type</Label>
+                    <select
+                      value={domainConfig.type}
+                      onChange={(e) =>
+                        setDomainConfig({
+                          ...domainConfig,
+                          type: e.target.value as DomainConfig['type']
+                        })
+                      }
+                      className="w-full mt-1 p-2 border rounded-md"
+                    >
+                      <option value="subdomain">Subdomain (free)</option>
+                      <option value="custom">Custom Domain</option>
+                    </select>
+                  </div>
+
+                  {domainConfig.type === 'subdomain' && (
+                    <div>
+                      <Label>Subdomain</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          value={domainConfig.subdomain || ''}
+                          onChange={(e) =>
+                            setDomainConfig({
+                              ...domainConfig,
+                              subdomain: e.target.value
+                            })
+                          }
+                          placeholder="your-site"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          .renterinsight.com
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {domainConfig.type === 'custom' && (
+                    <div>
+                      <Label>Custom Domain</Label>
+                      <Input
+                        value={domainConfig.customDomain || ''}
+                        onChange={(e) =>
+                          setDomainConfig({
+                            ...domainConfig,
+                            customDomain: e.target.value
+                          })
+                        }
+                        placeholder="www.yourdomain.com"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleSetDomain}
+                    disabled={settingDomain}
+                    size="sm"
+                    className="w-full"
+                  >
+                    {settingDomain ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Setting Domain...
+                      </>
+                    ) : (
+                      'Save Domain Settings'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Publish Button */}
+          <Button onClick={handlePublish} disabled={publishing} className="w-full" size="lg">
+            {publishing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <Globe className="h-4 w-4 mr-2" />
+                {site.publishedAt ? 'Update Website' : 'Publish Website'}
+              </>
+            )}
+          </Button>
+
+          {/* DNS Instructions - Show after custom domain is saved */}
+          {savedDomain &&
+            (domainConfig.type === 'custom' || domainConfig.type === 'subdomain_custom') && (
+              <Card className="mt-4 border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-lg text-blue-900">
+                      DNS Configuration Required
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-blue-700">
+                    To use your custom domain, you'll need to update your DNS records with your
+                    domain provider.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-blue-900 mb-2">Required DNS Records:</h4>
+                    <div className="space-y-3">
+                      {/* CNAME Record */}
+                      <div className="bg-white p-3 rounded border">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium">CNAME Record</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              copyToClipboard(`${savedDomain} CNAME renter-insight.netlify.app`)
+                            }
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div>
+                            <strong>Name:</strong>{' '}
+                            {domainConfig.type === 'custom' ? 'www' : domainConfig.subdomain}
+                          </div>
+                          <div>
+                            <strong>Type:</strong> CNAME
+                          </div>
+                          <div>
+                            <strong>Value:</strong> renter-insight.netlify.app
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* A Record (for apex domain) */}
+                      {domainConfig.type === 'custom' && (
+                        <div className="bg-white p-3 rounded border">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">A Record (Apex Domain)</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                copyToClipboard(
+                                  `${(domainConfig.customDomain || '')
+                                    .replace('www.', '')} A 75.2.60.5`
+                                )
+                              }
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div>
+                              <strong>Name:</strong> @ (or leave blank)
+                            </div>
+                            <div>
+                              <strong>Type:</strong> A
+                            </div>
+                            <div>
+                              <strong>Value:</strong> 75.2.60.5
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded border-l-4 border-l-amber-400">
+                    <h5 className="font-medium text-amber-800 mb-1">Important Notes:</h5>
+                    <ul className="text-sm text-amber-700 space-y-1">
+                      <li>• DNS changes can take up to 24-48 hours to propagate globally</li>
+                      <li>• Make sure to remove any existing A or CNAME records for this domain</li>
+                      <li>• Contact your domain registrar if you need help accessing DNS settings</li>
+                      <li>• Your website will show an SSL error until DNS propagation is complete</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-white p-3 rounded">
+                    <h5 className="font-medium text-gray-800 mb-2">Common Domain Providers:</h5>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <strong>GoDaddy:</strong> DNS Management
+                      </div>
+                      <div>
+                        <strong>Namecheap:</strong> Advanced DNS
+                      </div>
+                      <div>
+                        <strong>Cloudflare:</strong> DNS Records
+                      </div>
+                      <div>
+                        <strong>Google Domains:</strong> DNS Settings
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+          {/* Preview Link */}
+          {site.publishedAt && (
+            <div className="text-center">
+              <Button
+                variant="outline"
+                onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                className="w-full"
+                disabled={!previewUrl}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View Live Website
+              </Button>
+            </div>
+          )}
+
+          {/* Publishing Info */}
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>• Changes are saved automatically</p>
+            <p>• Publishing makes your site live on the internet</p>
+            <p>• You can update anytime after publishing</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

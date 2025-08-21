@@ -120,7 +120,16 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
 
   const handlePreview = () => {
     // Use the published site URL if available, otherwise fallback to local preview
-    const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
+    // Store current site data in sessionStorage for live preview
+    const sessionKey = `wb2:preview-site:${site.slug}`
+    sessionStorage.setItem(sessionKey, JSON.stringify(site))
+    
+    // Also store by ID in case slug doesn't match
+    const sessionKeyById = `wb2:preview-site:${site.id}`
+    sessionStorage.setItem(sessionKeyById, JSON.stringify(site))
+    
+    const previewUrl = `${window.location.origin}/s/${site.slug}/`
+    console.log('Opening preview with site data:', site)
     window.open(previewUrl, '_blank')
   }
 

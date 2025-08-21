@@ -12,10 +12,46 @@ interface EditorCanvasProps {
   previewMode: 'desktop' | 'tablet' | 'mobile'
 }
 
-export default function EditorCanvas({ site, currentPage, previewMode }: EditorCanvasProps) {
+interface EditorCanvasProps {
+  site: Site
+  currentPage: Page | null
+  previewMode: 'desktop' | 'tablet' | 'mobile'
+  onUpdateSite?: (updatedSite: Site) => void
+}
+
+export default function EditorCanvas({ site, currentPage, previewMode, onUpdateSite }: EditorCanvasProps) {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null)
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+  const handleBlockUpdate = async (blockId: string, updates: Partial<Block>) => {
+    if (!currentPage || !onUpdateSite) return
+    
+    // Create updated site with modified block
+    const updatedSite = {
+      ...site,
+      pages: site.pages.map(page => 
+        page.id === currentPage.id 
+          ? {
+              ...page,
+              blocks: page.blocks.map(block =>
+                block.id === blockId ? { ...block, ...updates } : block
+              )
+            }
+          : page
+      )
+    }
+    
+    // Update the site state in parent component
+    onUpdateSite(updatedSite)
+    
+    // Also update localStorage for persistence
+    try {
+      await websiteService.updateSite(site.id, updatedSite)
+    } catch (error) {
+      console.error('Failed to save block update:', error)
+    }
+  }
+
 
   if (!currentPage) {
     return (
@@ -27,16 +63,8 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
       </div>
     )
   }
-
-  const handleEditBlock = (block: Block) => {
-    setEditingBlock(block)
-  }
-
-  const handleDeleteBlock = (blockId: string) => {
-    if (confirm('Are you sure you want to delete this block?')) {
-      // In a real implementation, this would call the website service
-      console.log('Delete block:', blockId)
-    }
+    await handleBlockUpdate(blockId, updates)
+    setEditingBlock(null)
   }
 
   const handleSaveBlock = (blockId: string, updates: Partial<Block>) => {

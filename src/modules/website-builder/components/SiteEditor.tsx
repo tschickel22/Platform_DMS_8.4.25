@@ -423,6 +423,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 site={site}
                 currentPage={currentPage}
                 previewMode={previewMode}
+                onUpdateSite={(updatedSite) => setSite(updatedSite)}
                 onUpdatePage={handleUpdatePage}
                 onSiteUpdate={handleSiteUpdate}
               />
