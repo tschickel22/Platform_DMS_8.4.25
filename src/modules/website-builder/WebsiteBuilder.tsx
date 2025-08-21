@@ -154,7 +154,6 @@ export default function PublicSitePreview() {
       } catch (err) {
         console.warn('Failed to load from localStorage:', err)
       }
-    }
 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
