@@ -126,11 +126,28 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     }
   }
 
+  // Update preview data whenever site changes
+  useEffect(() => {
+    if (site) {
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+    }
+  }, [site])
+
+  const handleUpdateSite = (updatedSite: Site) => {
+    setSite(updatedSite)
+  }
+
   const handleSave = async () => {
     if (!site) return
     await persistNow(site)
   }
 
+      
+      // Update sessionStorage for live preview
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
   const handlePreview = () => {
     if (!site) return
     try {
@@ -423,6 +440,7 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 site={site}
                 currentPage={currentPage}
                 previewMode={previewMode}
+                onUpdateSite={handleUpdateSite}
                 onUpdateSite={(updatedSite) => setSite(updatedSite)}
                 onUpdatePage={handleUpdatePage}
                 onSiteUpdate={handleSiteUpdate}

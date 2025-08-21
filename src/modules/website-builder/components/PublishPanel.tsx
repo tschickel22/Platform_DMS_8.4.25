@@ -124,13 +124,37 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
     const sessionKey = `wb2:preview-site:${site.slug}`
     sessionStorage.setItem(sessionKey, JSON.stringify(site))
     
-    // Also store by ID in case slug doesn't match
-    const sessionKeyById = `wb2:preview-site:${site.id}`
-    sessionStorage.setItem(sessionKeyById, JSON.stringify(site))
-    
-    const previewUrl = `${window.location.origin}/s/${site.slug}/`
-    console.log('Opening preview with site data:', site)
-    window.open(previewUrl, '_blank')
+    try {
+      // Store current site data in sessionStorage for preview
+      const previewKey = `wb2:preview:${site.slug}`
+      sessionStorage.setItem(previewKey, JSON.stringify(site))
+      
+      // Also store in localStorage as backup
+      const localSites = JSON.parse(localStorage.getItem('wb2:sites') || '[]')
+      const existingIndex = localSites.findIndex((s: any) => s.id === site.id)
+      if (existingIndex >= 0) {
+        localSites[existingIndex] = site
+      } else {
+        localSites.push(site)
+      }
+      localStorage.setItem('wb2:sites', JSON.stringify(localSites))
+      
+      // Open preview in new window
+      const previewUrl = `${window.location.origin}/s/${site.slug}/`
+      window.open(previewUrl, '_blank')
+      
+      toast({
+        title: 'Preview opened',
+        description: 'Your website preview has opened in a new tab.'
+      })
+    } catch (error) {
+      console.error('Failed to open preview:', error)
+      toast({
+        title: 'Preview failed',
+        description: 'Unable to open preview. Please try again.',
+        variant: 'destructive'
+      })
+    }
   }
 
   // Single, non-duplicated helper

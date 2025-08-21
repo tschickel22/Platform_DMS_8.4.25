@@ -92,8 +92,12 @@ interface Tracking {
 }
 
 export function SiteRenderer({ site }: SiteRendererProps) {
-  // Find the current page - for preview, we'll show the first page (home page)
-  const currentPage = site.pages?.[0] || null
+  // Find the current page based on URL path, default to home page
+  const currentPath = window.location.pathname.split('/').pop() || ''
+  const currentPage = site.pages?.find(page => {
+    const pagePath = page.path?.replace(/^\//, '') || ''
+    return pagePath === currentPath || (currentPath === site.slug && page.path === '/')
+  }) || site.pages?.[0] || null
 
   if (!currentPage) {
     return (
