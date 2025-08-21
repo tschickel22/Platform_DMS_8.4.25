@@ -41,7 +41,7 @@ export default function ListingDetail({ listingId: propListingId }: ListingDetai
     const fetchListing = async () => {
       try {
         setLoading(true)
-        setError(null)
+        const response = await fetch(`/api/listings/${listingId}?companyId=${companyId}`, {
 
         // Handle new listing case
         if (listingId === 'new') {
