@@ -1,459 +1,544 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { ShareListingModal } from './ShareListingModal'
-import { 
-  ArrowLeft,
-  Share, 
-  MapPin, 
-  Calendar, 
-  Home, 
-  Bed, 
-  Bath, 
-  Square, 
-  Car,
-  Share2,
-  Heart,
-  Phone,
-  Mail,
-  Globe
-} from 'lucide-react'
-import { mockListings } from '@/mocks/listingsMock'
+import { ArrowLeft, Save, Eye, Share2, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
+import { PropertyListing } from '@/mocks/propertyListingsMock'
 
-interface ListingDetailProps {
-  listingId?: string
-}
-
-export default function ListingDetail({ listingId: propListingId }: ListingDetailProps) {
-  const { listingId: paramListingId } = useParams()
+export default function ListingDetail() {
+  const { listingId } = useParams<{ listingId: string }>()
   const navigate = useNavigate()
-  const [listing, setListing] = useState<any>(null)
+  const { toast } = useToast()
+  const { handleError } = useErrorHandler()
+  
+  const [listing, setListing] = useState<PropertyListing | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [shareModalOpen, setShareModalOpen] = useState(false)
-
-  const listingId = propListingId || paramListingId
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const fetchListing = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/listings/${listingId}?companyId=${companyId}`, {
+    loadListing()
+  }, [listingId])
 
-        // Handle new listing case
-        if (listingId === 'new') {
-          setListing(null) // Will trigger form to show empty state
-          return
-        }
-        
-        // Ensure we have an array to search in
-        const listings = mockListings?.sampleListings || []
-        
-        // First try to find in mock data
-        const mockListing = listings.find(l => l.id === listingId)
-        
-        if (mockListing) {
-          setListing(mockListing)
-          setLoading(false)
-          return
-        }
-
-        // If not in mock data, try API call
-        // TODO: Replace with actual API call when backend is ready
-        const response = await fetch(`/api/listings/${listingId}?companyId=demo`, {
-        
-        if (response.ok) {
-          const data = await response.json()
-          setListing(data)
+  const loadListing = async () => {
+    if (!listingId) return
+    
+    try {
+      setLoading(true)
+      
+      // For now, use local storage to simulate API call
+      // In the future, this will be replaced with Rails API call
+      const savedListings = localStorage.getItem('property-listings')
+      if (savedListings) {
+        const listings: PropertyListing[] = JSON.parse(savedListings)
+        const found = listings.find(l => l.id === listingId)
+        if (found) {
+          setListing(found)
         } else {
           throw new Error('Listing not found')
         }
-      } catch (err) {
-        console.error('Error fetching listing:', err)
-        setError('Failed to load listing details')
-      } finally {
-        setLoading(false)
+      } else {
+        // Use mock data as fallback
+        const { mockPropertyListings } = await import('@/mocks/propertyListingsMock')
+        const found = mockPropertyListings.find(l => l.id === listingId)
+        if (found) {
+          setListing(found)
+        } else {
+          throw new Error('Listing not found')
+        }
       }
-    }
-
-    if (listingId) {
-      fetchListing()
-    } else {
-      setError('No listing ID provided')
+    } catch (error) {
+      handleError(error, 'loading listing')
+      navigate('/property/listings')
+    } finally {
       setLoading(false)
     }
-  }, [listingId])
-
-  const handleBack = () => {
-    navigate(-1)
   }
 
-  const handleShare = () => {
-    // TODO: Implement share functionality in Phase 3
-    console.log('Share listing:', listingId)
+  const handleSave = async () => {
+    if (!listing) return
+    
+    try {
+      setSaving(true)
+      
+      // Update listing in local storage
+      // In the future, this will be replaced with Rails API call
+      const savedListings = localStorage.getItem('property-listings')
+      const listings: PropertyListing[] = savedListings ? JSON.parse(savedListings) : []
+      
+      const updatedListings = listings.map(l => 
+        l.id === listing.id ? { ...listing, updatedAt: new Date().toISOString() } : l
+      )
+      
+      // If listing doesn't exist in saved listings, add it
+      if (!listings.find(l => l.id === listing.id)) {
+        updatedListings.push({ ...listing, updatedAt: new Date().toISOString() })
+      }
+      
+      localStorage.setItem('property-listings', JSON.stringify(updatedListings))
+      
+      toast({
+        title: 'Success',
+        description: 'Listing updated successfully'
+      })
+    } catch (error) {
+      handleError(error, 'saving listing')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!listing || !confirm('Are you sure you want to delete this listing?')) return
+    
+    try {
+      // Delete from local storage
+      // In the future, this will be replaced with Rails API call
+      const savedListings = localStorage.getItem('property-listings')
+      if (savedListings) {
+        const listings: PropertyListing[] = JSON.parse(savedListings)
+        const filteredListings = listings.filter(l => l.id !== listing.id)
+        localStorage.setItem('property-listings', JSON.stringify(filteredListings))
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Listing deleted successfully'
+      })
+      
+      navigate('/property/listings')
+    } catch (error) {
+      handleError(error, 'deleting listing')
+    }
+  }
+
+  const handlePreview = () => {
+    // Open preview in new tab using Bolt hosting URL structure
+    const previewUrl = `${window.location.origin}/public/demo/listing/${listing?.id}`
+    window.open(previewUrl, '_blank')
+  }
+
+  const handleShare = async () => {
+    if (!listing) return
+    
+    try {
+      const shareUrl = `${window.location.origin}/public/demo/listing/${listing.id}`
+      await navigator.clipboard.writeText(shareUrl)
+      
+      toast({
+        title: 'Link Copied',
+        description: 'Listing URL copied to clipboard'
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy link to clipboard',
+        variant: 'destructive'
+      })
+    }
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded mb-6"></div>
-          <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading listing...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !listing) {
+  if (!listing) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Listings
-        </Button>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold mb-2">Listing Not Found</h3>
-              <p className="text-muted-foreground mb-4">
-                {error || 'The listing you\'re looking for could not be found.'}
-              </p>
-              <Button onClick={handleBack}>
-                Return to Listings
-              </Button>
-            </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Listing Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The listing you're looking for could not be found.
+            </p>
+            <Button onClick={() => navigate('/property/listings')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Listings
+            </Button>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price)
-  }
-
-  const primaryImage = listing.media?.photos?.[0] || listing.media?.primaryPhoto || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
-
   return (
-    <>
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Listings
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Heart className="h-4 w-4 mr-2" />
-            Save
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate('/property/listings')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Listings
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
+          <div>
+            <h1 className="text-2xl font-bold">{listing.title}</h1>
+            <p className="text-muted-foreground">
+              {listing.location.city}, {listing.location.state}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handlePreview}>
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
+          </Button>
+          <Button variant="outline" onClick={handleShare}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+          <Button variant="destructive" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Hero Image */}
-          <div className="relative">
-            <img
-              src={primaryImage}
-              alt={listing.searchResultsText || `${listing.year} ${listing.make} ${listing.model}`}
-              className="w-full h-96 object-cover rounded-lg"
-            />
-            <div className="absolute top-4 left-4">
-              <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
-                {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
-              </Badge>
+      {/* Main Content */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>
+              Core listing details and pricing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={listing.title}
+                onChange={(e) => setListing({ ...listing, title: e.target.value })}
+              />
             </div>
-            {listing.status && (
-              <div className="absolute top-4 right-4">
-                <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
-                  {listing.status}
-                </Badge>
+            
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={listing.description}
+                onChange={(e) => setListing({ ...listing, description: e.target.value })}
+                rows={4}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="listingType">Listing Type</Label>
+                <Select
+                  value={listing.listingType}
+                  onValueChange={(value: 'manufactured_home' | 'rv') => 
+                    setListing({ ...listing, listingType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
+                    <SelectItem value="rv">RV</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="offerType">Offer Type</Label>
+                <Select
+                  value={listing.offerType}
+                  onValueChange={(value: 'for_sale' | 'for_rent' | 'both') => 
+                    setListing({ ...listing, offerType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="for_sale">For Sale</SelectItem>
+                    <SelectItem value="for_rent">For Rent</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {(listing.offerType === 'for_sale' || listing.offerType === 'both') && (
+                <div>
+                  <Label htmlFor="salePrice">Sale Price</Label>
+                  <Input
+                    id="salePrice"
+                    type="number"
+                    value={listing.salePrice || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      salePrice: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+              )}
+              
+              {(listing.offerType === 'for_rent' || listing.offerType === 'both') && (
+                <div>
+                  <Label htmlFor="rentPrice">Rent Price</Label>
+                  <Input
+                    id="rentPrice"
+                    type="number"
+                    value={listing.rentPrice || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      rentPrice: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={listing.status}
+                onValueChange={(value: 'active' | 'draft' | 'inactive') => 
+                  setListing({ ...listing, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Vehicle/Property Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Property Details</CardTitle>
+            <CardDescription>
+              Specifications and features
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={listing.year}
+                  onChange={(e) => setListing({ ...listing, year: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="make">Make</Label>
+                <Input
+                  id="make"
+                  value={listing.make}
+                  onChange={(e) => setListing({ ...listing, make: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  value={listing.model}
+                  onChange={(e) => setListing({ ...listing, model: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            {listing.listingType === 'manufactured_home' && (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="bedrooms">Bedrooms</Label>
+                  <Input
+                    id="bedrooms"
+                    type="number"
+                    value={listing.bedrooms || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      bedrooms: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bathrooms">Bathrooms</Label>
+                  <Input
+                    id="bathrooms"
+                    type="number"
+                    value={listing.bathrooms || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      bathrooms: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="squareFootage">Square Footage</Label>
+                  <Input
+                    id="squareFootage"
+                    type="number"
+                    value={listing.squareFootage || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      squareFootage: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {listing.listingType === 'rv' && (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="sleeps">Sleeps</Label>
+                  <Input
+                    id="sleeps"
+                    type="number"
+                    value={listing.sleeps || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      sleeps: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="length">Length (ft)</Label>
+                  <Input
+                    id="length"
+                    type="number"
+                    value={listing.length || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      length: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="slides">Slides</Label>
+                  <Input
+                    id="slides"
+                    type="number"
+                    value={listing.slides || ''}
+                    onChange={(e) => setListing({ 
+                      ...listing, 
+                      slides: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={listing.location.city}
+                  onChange={(e) => setListing({ 
+                    ...listing, 
+                    location: { ...listing.location, city: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={listing.location.state}
+                  onChange={(e) => setListing({ 
+                    ...listing, 
+                    location: { ...listing.location, state: e.target.value }
+                  })}
+                />
+              </div>
+            </div>
+            
+            {listing.location.address && (
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={listing.location.address}
+                  onChange={(e) => setListing({ 
+                    ...listing, 
+                    location: { ...listing.location, address: e.target.value }
+                  })}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Media Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Media</CardTitle>
+          <CardDescription>
+            Photos and media for this listing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="primaryPhoto">Primary Photo URL</Label>
+              <Input
+                id="primaryPhoto"
+                value={listing.media.primaryPhoto}
+                onChange={(e) => setListing({ 
+                  ...listing, 
+                  media: { ...listing.media, primaryPhoto: e.target.value }
+                })}
+                placeholder="https://example.com/photo.jpg"
+              />
+            </div>
+            
+            {listing.media.primaryPhoto && (
+              <div className="mt-4">
+                <img 
+                  src={listing.media.primaryPhoto} 
+                  alt={listing.title}
+                  className="w-full max-w-md h-48 object-cover rounded-lg border"
+                />
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Title and Basic Info */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {listing.searchResultsText || `${listing.year} ${listing.make} ${listing.model}`}
-            </h1>
-            <div className="flex items-center text-muted-foreground mb-4">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>
-                {listing.location?.city && listing.location?.state 
-                  ? `${listing.location.city}, ${listing.location.state}`
-                  : 'Location not specified'
-                }
-              </span>
-            </div>
-            
-            {/* Key Features */}
-            <div className="flex flex-wrap gap-4 text-sm">
-              {listing.year && (
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>{listing.year}</span>
-                </div>
-              )}
-              {listing.bedrooms && (
-                <div className="flex items-center">
-                  <Bed className="h-4 w-4 mr-1" />
-                  <span>{listing.bedrooms} bed</span>
-                </div>
-              )}
-              {listing.bathrooms && (
-                <div className="flex items-center">
-                  <Bath className="h-4 w-4 mr-1" />
-                  <span>{listing.bathrooms} bath</span>
-                </div>
-              )}
-              {listing.dimensions?.length_ft && (
-                <div className="flex items-center">
-                  <Square className="h-4 w-4 mr-1" />
-                  <span>{listing.dimensions.length_ft} ft</span>
-                </div>
-              )}
-              {listing.sleeps && (
-                <div className="flex items-center">
-                  <Home className="h-4 w-4 mr-1" />
-                  <span>Sleeps {listing.sleeps}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          {listing.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {listing.description}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Features and Specifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Features & Specifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Basic Information</h4>
-                  <div className="space-y-2 text-sm">
-                    {listing.make && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Make:</span>
-                        <span>{listing.make}</span>
-                      </div>
-                    )}
-                    {listing.model && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Model:</span>
-                        <span>{listing.model}</span>
-                      </div>
-                    )}
-                    {listing.year && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Year:</span>
-                        <span>{listing.year}</span>
-                      </div>
-                    )}
-                    {listing.condition && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Condition:</span>
-                        <span className="capitalize">{listing.condition}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold mb-2">Dimensions</h4>
-                  <div className="space-y-2 text-sm">
-                    {listing.dimensions?.length_ft && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Length:</span>
-                        <span>{listing.dimensions.length_ft} ft</span>
-                      </div>
-                    )}
-                    {listing.dimensions?.width_ft && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Width:</span>
-                        <span>{listing.dimensions.width_ft} ft</span>
-                      </div>
-                    )}
-                    {listing.slides && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Slide Outs:</span>
-                        <span>{listing.slides}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Button 
-            variant="outline"
-            onClick={() => setShareModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Share className="h-4 w-4" />
-            Share
-          </Button>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Pricing Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {listing.salePrice && (
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatPrice(listing.salePrice)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Sale Price</div>
-                  </div>
-                )}
-                {listing.rentPrice && (
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600">
-                      {formatPrice(listing.rentPrice)}/mo
-                    </div>
-                    <div className="text-sm text-muted-foreground">Monthly Rent</div>
-                  </div>
-                )}
-                {!listing.salePrice && !listing.rentPrice && (
-                  <div className="text-muted-foreground">
-                    Contact for pricing
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {listing.seller?.companyName && (
-                  <div>
-                    <div className="font-semibold">{listing.seller.companyName}</div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  {listing.seller?.phone && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={`tel:${listing.seller.phone}`}>
-                        <Phone className="h-4 w-4 mr-2" />
-                        {listing.seller.phone}
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {listing.seller?.emails?.[0] && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={`mailto:${listing.seller.emails[0]}`}>
-                        <Mail className="h-4 w-4 mr-2" />
-                        {listing.seller.emails[0]}
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {listing.seller?.website && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={listing.seller.website} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-4 w-4 mr-2" />
-                        Visit Website
-                      </a>
-                    </Button>
-                  )}
-                </div>
-
-                <Separator />
-                
-                <Button className="w-full" size="lg">
-                  Contact Seller
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Location */}
-          {listing.location && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  {listing.location.address1 && (
-                    <div>{listing.location.address1}</div>
-                  )}
-                  {listing.location.city && listing.location.state && (
-                    <div>{listing.location.city}, {listing.location.state}</div>
-                  )}
-                  {listing.location.postalCode && (
-                    <div>{listing.location.postalCode}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      {/* Status Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Status:</span>
+        <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+          {listing.status}
+        </Badge>
       </div>
     </div>
-
-    {/* Share Modal */}
-    <ShareListingModal
-      open={shareModalOpen}
-      onOpenChange={setShareModalOpen}
-      listing={listing}
-    />
-  </>
   )
 }
