@@ -15,7 +15,7 @@ import {
   Mail,
   Phone,
   Map,
-  Share2
+  Share2,
 } from 'lucide-react'
 
 interface ComponentTemplate {
@@ -48,7 +48,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Large centered hero with title, subtitle, and CTA',
       category: 'hero',
       icon: Layout,
-      preview: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'hero',
         content: {
@@ -56,10 +57,11 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           subtitle: 'Find your perfect RV or manufactured home',
           ctaText: 'Browse Inventory',
           ctaLink: '/inventory',
-          backgroundImage: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=1200',
-          alignment: 'center'
-        }
-      }
+          backgroundImage:
+            'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=1200',
+          alignment: 'center',
+        },
+      },
     },
     {
       id: 'hero-split',
@@ -67,7 +69,8 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Hero with content on left, image on right',
       category: 'hero',
       icon: Layout,
-      preview: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'hero',
         content: {
@@ -76,9 +79,10 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           ctaText: 'Learn More',
           ctaLink: '/about',
           layout: 'split',
-          image: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800'
-        }
-      }
+          image:
+            'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
+        },
+      },
     },
 
     // Text Components
@@ -92,10 +96,11 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       blockData: {
         type: 'text',
         content: {
-          html: '<h2>Our Services</h2><p class="text-lg text-gray-600">Everything you need for your RV or manufactured home</p>',
-          alignment: 'center'
-        }
-      }
+          html:
+            '<h2>Our Services</h2><p class="text-lg text-gray-600">Everything you need for your RV or manufactured home</p>',
+          alignment: 'center',
+        },
+      },
     },
     {
       id: 'text-paragraph',
@@ -107,10 +112,11 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       blockData: {
         type: 'text',
         content: {
-          html: '<p>Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.</p>',
-          alignment: 'left'
-        }
-      }
+          html:
+            '<p>Add your content here. This is a standard paragraph that you can customize with your own text, formatting, and styling.</p>',
+          alignment: 'left',
+        },
+      },
     },
 
     // Image / Media Components
@@ -120,30 +126,34 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Grid of images with captions',
       category: 'media',
       icon: Grid,
-      preview: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'gallery',
         content: {
           title: 'Our Inventory',
           images: [
             {
-              src: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'RV Image 1',
-              caption: 'Travel Trailers'
+              caption: 'Travel Trailers',
             },
             {
-              src: 'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'RV Image 2',
-              caption: 'Motorhomes'
+              caption: 'Motorhomes',
             },
             {
-              src: 'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
+              src:
+                'https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=800',
               alt: 'Manufactured Home',
-              caption: 'Manufactured Homes'
-            }
-          ]
-        }
-      }
+              caption: 'Manufactured Homes',
+            },
+          ],
+        },
+      },
     },
     {
       id: 'image-single',
@@ -151,16 +161,18 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       description: 'Single image with optional caption',
       category: 'media',
       icon: ImageIcon,
-      preview: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
+      preview:
+        'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=400',
       blockData: {
         type: 'image',
         content: {
-          src: 'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=800',
+          src:
+            'https://images.pexels.com/photos/2356002/pexels-photo-2356002.jpeg?auto=compress&cs=tinysrgb&w=800',
           alt: 'Featured Image',
           caption: 'Add your image caption here',
-          alignment: 'center'
-        }
-      }
+          alignment: 'center',
+        },
+      },
     },
 
     // CTA Components
@@ -178,9 +190,9 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           description: 'Browse our extensive inventory of RVs and manufactured homes',
           buttonText: 'View Inventory',
           buttonLink: '/inventory',
-          alignment: 'center'
-        }
-      }
+          alignment: 'center',
+        },
+      },
     },
     {
       id: 'cta-newsletter',
@@ -196,9 +208,9 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           description: 'Get notified about new inventory and special offers',
           buttonText: 'Subscribe',
           buttonLink: '#newsletter',
-          showEmailInput: true
-        }
-      }
+          showEmailInput: true,
+        },
+      },
     },
 
     // Contact Components
@@ -217,9 +229,9 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           phone: '(555) 123-4567',
           email: 'info@dealership.com',
           address: '123 Main Street, City, State 12345',
-          showForm: false
-        }
-      }
+          showForm: false,
+        },
+      },
     },
     {
       id: 'contact-form',
@@ -234,9 +246,9 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           title: 'Send us a Message',
           description: "We'll get back to you within 24 hours",
           showForm: true,
-          formFields: ['name', 'email', 'phone', 'message']
-        }
-      }
+          formFields: ['name', 'email', 'phone', 'message'],
+        },
+      },
     },
 
     // Features Components
@@ -252,12 +264,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         content: {
           title: 'Why Choose Us',
           features: [
-            { icon: 'star',  title: 'Quality Guaranteed',  description: 'All our vehicles undergo thorough inspection' },
-            { icon: 'users', title: 'Expert Service',       description: 'Our experienced team is here to help' },
-            { icon: 'shield',title: 'Warranty Included',   description: 'Comprehensive warranty on all purchases' }
-          ]
-        }
-      }
+            { icon: 'star', title: 'Quality Guaranteed', description: 'All our vehicles undergo thorough inspection' },
+            { icon: 'users', title: 'Expert Service', description: 'Our experienced team is here to help' },
+            { icon: 'shield', title: 'Warranty Included', description: 'Comprehensive warranty on all purchases' },
+          ],
+        },
+      },
     },
 
     // Testimonials
@@ -273,13 +285,23 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         content: {
           title: 'What Our Customers Say',
           testimonials: [
-            { name: 'John Smith',  text: 'Excellent service and quality RVs. Highly recommended!', rating: 5, location: 'Austin, TX' },
-            { name: 'Sarah Johnson', text: 'Found the perfect manufactured home for our family.',  rating: 5, location: 'Dallas, TX' }
-          ]
-        }
-      }
-    }
-  ]
+            {
+              name: 'John Smith',
+              text: 'Excellent service and quality RVs. Highly recommended!',
+              rating: 5,
+              location: 'Austin, TX',
+            },
+            {
+              name: 'Sarah Johnson',
+              text: 'Found the perfect manufactured home for our family.',
+              rating: 5,
+              location: 'Dallas, TX',
+            },
+          ],
+        },
+      },
+    },
+
     // ---- New: Social Links ---------------------------------------------------
     {
       id: 'social-links',
@@ -298,11 +320,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           links: [
             { platform: 'facebook', url: 'https://facebook.com/yourpage' },
             { platform: 'instagram', url: 'https://instagram.com/yourhandle' },
-            { platform: 'x', url: 'https://x.com/yourhandle' }
-          ]
-        }
-      }
+            { platform: 'x', url: 'https://x.com/yourhandle' },
+          ],
+        },
+      },
     },
+
     // ---- New: Multi-Image Gallery -------------------------------------------
     {
       id: 'multi-image-gallery',
@@ -319,11 +342,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           images: [
             { src: 'https://picsum.photos/seed/1/800/600', alt: 'Photo 1' },
             { src: 'https://picsum.photos/seed/2/800/600', alt: 'Photo 2' },
-            { src: 'https://picsum.photos/seed/3/800/600', alt: 'Photo 3' }
-          ]
-        }
-      }
+            { src: 'https://picsum.photos/seed/3/800/600', alt: 'Photo 3' },
+          ],
+        },
+      },
     },
+
     // ---- New: Multi-Text Sections -------------------------------------------
     {
       id: 'multi-text',
@@ -340,11 +364,12 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
           sections: [
             { heading: 'Fast Delivery', body: 'We ship nationwide within 7–10 days.' },
             { heading: 'Financing', body: 'Flexible plans available for qualified buyers.' },
-            { heading: 'Warranty', body: 'All models include a 12-month limited warranty.' }
-          ]
-        }
-      }
+            { heading: 'Warranty', body: 'All models include a 12-month limited warranty.' },
+          ],
+        },
+      },
     },
+
     // ---- New: Google Map -----------------------------------------------------
     {
       id: 'google-map',
@@ -358,12 +383,17 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
         content: {
           address: '1600 Amphitheatre Pkwy, Mountain View, CA',
           zoom: 14,
-          height: 360
-        }
-      }
-    }
+          height: 360,
+        },
+      },
+    },
+  ]
 
-  const categories: Array<{ id: 'all' | ComponentTemplate['category']; name: string; icon: React.ComponentType<any> }> = [
+  const categories: Array<{
+    id: 'all' | ComponentTemplate['category']
+    name: string
+    icon: React.ComponentType<any>
+  }> = [
     { id: 'all', name: 'All Components', icon: Grid },
     { id: 'hero', name: 'Hero Sections', icon: Layout },
     { id: 'text', name: 'Text & Content', icon: Type },
@@ -371,7 +401,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
     { id: 'cta', name: 'Call to Action', icon: MousePointer },
     { id: 'contact', name: 'Contact', icon: Phone },
     { id: 'features', name: 'Features', icon: Star },
-    { id: 'social', name: 'Social Proof', icon: Users }
+    { id: 'social', name: 'Social Proof', icon: Users },
   ]
 
   const filteredComponents = componentTemplates.filter((c) => {
@@ -386,16 +416,24 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
 
   const handleChoose = (tpl: ComponentTemplate) => {
     onAddComponent(tpl.blockData, { templateId: tpl.id, name: tpl.name, category: tpl.category })
-    // Do NOT auto-close; parent decides (prevents blank tab + lets you add multiple)
+    // Do NOT auto-close; parent decides (lets you add multiple)
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true"
-         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.()
+      }}
+    >
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Component Library</CardTitle>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="flex">
@@ -474,9 +512,7 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
                         </div>
                       )}
 
-                      <p className="text-xs text-muted-foreground">
-                        {component.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{component.description}</p>
                     </CardContent>
                   </Card>
                 ))}
