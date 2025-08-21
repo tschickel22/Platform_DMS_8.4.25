@@ -1,7 +1,7 @@
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Type, Image, Layout, Zap, Grid3X3, FileText, Phone, Star, Users, Map } from 'lucide-react'
 import { 
   Type, 
   Image, 
@@ -21,6 +21,34 @@ interface AddBlockMenuProps {
 }
 
 const blockTypes = [
+  {
+    type: 'google_map',
+    name: 'Google Map',
+    description: 'Embed a Google Map by address or coordinates',
+    icon: Map,
+    category: 'Contact'
+  },
+  {
+    type: 'social_links',
+    name: 'Social Links',
+    description: 'Row or grid of social icons with links',
+    icon: Grid3X3,
+    category: 'Marketing'
+  },
+  {
+    type: 'multi_image_gallery',
+    name: 'Multi-Image Gallery',
+    description: 'Grid gallery with lightbox',
+    icon: Grid3X3,
+    category: 'Media'
+  },
+  {
+    type: 'multi_text',
+    name: 'Multi-Text Sections',
+    description: 'Multiple text sections (1–3 columns)',
+    icon: Type,
+    category: 'Content'
+  },
   {
     type: 'hero',
     name: 'Hero Section',

@@ -10,6 +10,10 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Upload, Palette, Layout, Type } from 'lucide-react'
+import GoogleMapBlockEditor from './blocks/editors/GoogleMapBlockEditor'
+import SocialLinksEditor from './blocks/editors/SocialLinksEditor'
+import MultiImageGalleryEditor from './blocks/editors/MultiImageGalleryEditor'
+import MultiTextBlockEditor from './blocks/editors/MultiTextBlockEditor'
 import { Block } from '../types'
 import RichTextEditor from './RichTextEditor'
 import ImageEditor from './ImageEditor'
@@ -219,6 +223,15 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
             </div>
           </div>
         )
+
+      case 'google_map':
+        return <GoogleMapBlockEditor value={content} onChange={setContent} />
+      case 'social_links':
+        return <SocialLinksEditor value={content} onChange={setContent} />
+      case 'multi_image_gallery':
+        return <MultiImageGalleryEditor value={content} onChange={setContent} />
+      case 'multi_text':
+        return <MultiTextBlockEditor value={content} onChange={setContent} />
 
       default:
         return (
