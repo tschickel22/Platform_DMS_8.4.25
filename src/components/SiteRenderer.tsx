@@ -92,39 +92,25 @@ interface Tracking {
 }
 
 export function SiteRenderer({ site }: SiteRendererProps) {
-  console.log('SiteRenderer received site:', site)
-  
   // Find the current page based on URL path, default to home page
-  const pathParts = window.location.pathname.split('/')
-  const currentPath = pathParts[pathParts.length - 1] || ''
-  console.log('Current path for page matching:', currentPath)
-  
+  const currentPath = window.location.pathname.split('/').pop() || ''
   const currentPage = site.pages?.find(page => {
     const pagePath = page.path?.replace(/^\//, '') || ''
-    console.log('Checking page:', page.title, 'with path:', pagePath, 'against:', currentPath)
     return pagePath === currentPath || (currentPath === site.slug && page.path === '/')
   }) || site.pages?.[0] || null
 
-  console.log('Selected page:', currentPage?.title || 'none')
-
   if (!currentPage) {
-    console.error('No page found to render')
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">No Content</h1>
           <p className="text-gray-600">This website has no pages to display.</p>
-          <div className="mt-4 text-xs text-gray-500">
-            <p>Available pages: {site.pages?.map(p => p.title).join(', ') || 'none'}</p>
-            <p>Current path: {currentPath}</p>
-          </div>
         </div>
       </div>
     )
   }
 
   const renderBlock = (block: Block) => {
-    console.log('Rendering block:', block.type, block.id)
     const primaryColor = site.brand?.color || site.theme?.primaryColor || '#3b82f6'
 
     switch (block.type) {

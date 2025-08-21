@@ -39,12 +39,6 @@ export default function EditorCanvas({ site, currentPage, previewMode, onUpdateS
           updatedSite.updatedAt = new Date().toISOString()
           
           // Update the site state in parent component
-      
-      // Update sessionStorage for preview
-      if (site.slug) {
-        const previewKey = `wb2:preview:${site.slug}`
-        sessionStorage.setItem(previewKey, JSON.stringify(updatedSite))
-      }
           onUpdateSite(updatedSite)
           
           // Also save to localStorage for persistence

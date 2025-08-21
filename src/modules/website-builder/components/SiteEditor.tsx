@@ -143,13 +143,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
     await persistNow(site)
   }
 
-      
-      // Update sessionStorage for preview
-      if (site.slug) {
-        const previewKey = `wb2:preview:${site.slug}`
-        sessionStorage.setItem(previewKey, JSON.stringify(site))
-      }
-      
   const handlePreview = () => {
     if (!site) return
     try {
