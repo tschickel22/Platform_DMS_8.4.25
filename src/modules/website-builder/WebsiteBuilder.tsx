@@ -267,7 +267,8 @@ export default function WebsiteBuilder({ mode = 'platform' }: WebsiteBuilderProp
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
+                        try {
+                          const previewUrl = site.publishedUrl || `${window.location.origin}/s/${site.slug}/`
                           const previewData = {
                             ...site,
                             pages: site.pages || [],
