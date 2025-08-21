@@ -1,4 +1,5 @@
 import React from 'react'
+import { Eye } from 'lucide-react'
 
 interface SiteRendererProps {
   site: Site
