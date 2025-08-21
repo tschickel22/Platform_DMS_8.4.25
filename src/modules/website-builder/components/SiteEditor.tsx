@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Save, Globe, Smartphone, Monitor, Eye } from 'lucide-react'
+import { ArrowLeft, Save, Globe, Smartphone, Monitor, ChevronRight, ChevronLeft } from 'lucide-react'
 import { websiteService } from '@/services/website/service'
 import { Site, Page } from '../types'
 import { useErrorHandler } from '@/hooks/useErrorHandler'
@@ -343,36 +343,6 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
             </Button>
             <Button variant={previewMode === 'mobile' ? 'default' : 'outline'} size="sm" onClick={() => setPreviewMode('mobile')}>
               <Smartphone className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!site) return
-                try {
-                  // Use the current site state (including any unsaved changes)
-                  const previewData = {
-                    ...site,
-                    pages: site.pages || [],
-                    lastPreviewUpdate: new Date().toISOString()
-                  }
-                  const key = `wb2:preview-site:${site.slug}`
-                  sessionStorage.setItem(key, JSON.stringify(previewData))
-                  const previewUrl = `/s/${site.slug}/`
-                  window.open(previewUrl, '_blank')
-                } catch (error) {
-                  console.error('Preview error:', error)
-                  toast({
-                    title: 'Preview Error',
-                    description: 'Failed to open preview. Please try again.',
-                    variant: 'destructive'
-                  })
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              Preview
             </Button>
             <Button
               variant="outline"
