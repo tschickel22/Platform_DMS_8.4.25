@@ -72,16 +72,26 @@ const PublicCatalogView: React.FC = () => {
     if (USE_MOCKS) {
       const mock =
         (ListingsMock as any).mockListings ??
-        (ListingsMock as any).listings ??
-        (ListingsMock as any).sampleListings ??
+      // Load listings from local storage or use mock data as fallback
+      const savedListings = localStorage.getItem(`listings:${companySlug}`)
+      let listingsData = mockListings
+      
+      if (savedListings) {
+        try {
+          const parsed = JSON.parse(savedListings)
+          listingsData = Array.isArray(parsed) ? parsed : mockListings
+        } catch (error) {
+          console.warn('Failed to parse saved listings, using mock data:', error)
+        }
+      }
         (ListingsMock as any).default
-
-      const data = asArray(mock)
-      console.log('Mock data found:', data)
-      setListings(data)
-      setLoading(false)
+      setListings(listingsData)
+      setFilteredListings(listingsData)
     } else {
       // TODO: real API call when ready
+      // Fallback to mock data on error
+      setListings(mockListings)
+      setFilteredListings(mockListings)
       setListings([])
       setLoading(false)
     }
