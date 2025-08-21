@@ -1,7 +1,7 @@
 import React from 'react'
 import { Routes, Route, useSearchParams, useNavigate } from 'react-router-dom'
 import { PortalProvider } from '@/contexts/PortalContext'
-import ErrorBoundary from '@/components/ErrorBoundary'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { mockUsers } from '@/mocks/usersMock'
 import ClientPortal from '@/ClientPortal'
 import { ClientLoansView } from '@/modules/client-portal/components/ClientLoansView'
