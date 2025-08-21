@@ -6,7 +6,6 @@ import {
    MousePointer, 
    Quote,
   Video,
-  Map,
   Share2,
   Grid3X3
 } from 'lucide-react'
