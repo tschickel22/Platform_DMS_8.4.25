@@ -16,55 +16,69 @@ export default function PublicSitePreview() {
         setLoading(true)
         setError(null)
 
+        console.log('Loading site preview for slug:', siteSlug)
+        console.log('Search params:', searchParams.toString())
+
         // First, try to get site data from URL parameters (for direct preview links)
         const dataParam = searchParams.get('data')
         if (dataParam) {
+          console.log('Found data parameter, attempting to parse...')
           try {
             const decodedData = decodeURIComponent(dataParam)
             const siteData = JSON.parse(decodedData)
+            console.log('Successfully parsed site data from URL:', siteData)
             setSite(siteData)
             setLoading(false)
             return
           } catch (err) {
-            console.warn('Failed to parse URL data parameter:', err)
+            console.error('Failed to parse URL data parameter:', err)
           }
         }
 
         // Second, try to get site data from sessionStorage (for live preview)
         if (siteSlug) {
           const sessionKey = `wb2:preview:${siteSlug}`
+          console.log('Checking sessionStorage with key:', sessionKey)
           const sessionData = sessionStorage.getItem(sessionKey)
           if (sessionData) {
+            console.log('Found session data, attempting to parse...')
             try {
               const siteData = JSON.parse(sessionData)
+              console.log('Successfully parsed site data from session:', siteData)
               setSite(siteData)
               setLoading(false)
               return
             } catch (err) {
-              console.warn('Failed to parse session data:', err)
+              console.error('Failed to parse session data:', err)
             }
           }
         }
 
         // Third, try to get site data from localStorage (for saved sites)
         if (siteSlug) {
+          console.log('Checking localStorage for sites...')
           const localSites = localStorage.getItem('wb2:sites')
           if (localSites) {
             try {
               const sites = JSON.parse(localSites)
+              console.log('Found sites in localStorage:', sites.length, 'sites')
               const foundSite = sites.find((s: Site) => s.slug === siteSlug || s.id === siteSlug)
               if (foundSite) {
+                console.log('Found matching site:', foundSite)
                 setSite(foundSite)
                 setLoading(false)
                 return
+              } else {
+                console.log('No matching site found for slug:', siteSlug)
               }
             } catch (err) {
-              console.warn('Failed to parse localStorage sites:', err)
+              console.error('Failed to parse localStorage sites:', err)
             }
           }
         }
 
         // If no site found, show error
+        console.error('No site data found for slug:', siteSlug)
         setError('Website not found. Please ensure the site exists and try again.')
       } catch (err) {
         console.error('Error loading site for preview:', err)
