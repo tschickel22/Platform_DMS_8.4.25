@@ -338,6 +338,8 @@ export default function SiteEditor({ mode = 'platform' }: SiteEditorProps) {
                 try {
                   const previewData = {
                     ...site,
+                  }
+                  const localPreviewUrl = `/s/${site.slug}/`
                   window.open(localPreviewUrl, '_blank')
                 } catch (error) {
                   console.error('Preview error:', error)
