@@ -2,7 +2,7 @@ import React from 'react'
 
 export interface TextSection {
   heading?: string
-  body?: string // accepts plain text or simple HTML
+  body?: string
 }
 
 export type MultiTextBlockData = {

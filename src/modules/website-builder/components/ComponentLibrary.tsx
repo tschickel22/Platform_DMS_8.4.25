@@ -13,7 +13,9 @@ import {
   Star,
   Users,
   Mail,
-  Phone
+  Phone,
+  Map,
+  Share2
 } from 'lucide-react'
 
 interface ComponentTemplate {
@@ -278,6 +280,88 @@ export function ComponentLibrary({ onAddComponent, onClose }: ComponentLibraryPr
       }
     }
   ]
+    // ---- New: Social Links ---------------------------------------------------
+    {
+      id: 'social-links',
+      name: 'Social Links',
+      description: 'Row or grid of social icons with links',
+      category: 'social',
+      icon: Share2,
+      preview: '',
+      blockData: {
+        type: 'social_links',
+        content: {
+          title: 'Follow Us',
+          layout: 'row',
+          align: 'left',
+          size: 'md',
+          links: [
+            { platform: 'facebook', url: 'https://facebook.com/yourpage' },
+            { platform: 'instagram', url: 'https://instagram.com/yourhandle' },
+            { platform: 'x', url: 'https://x.com/yourhandle' }
+          ]
+        }
+      }
+    },
+    // ---- New: Multi-Image Gallery -------------------------------------------
+    {
+      id: 'multi-image-gallery',
+      name: 'Multi-Image Gallery',
+      description: 'Grid gallery with lightbox',
+      category: 'media',
+      icon: ImageIcon,
+      preview: '',
+      blockData: {
+        type: 'multi_image_gallery',
+        content: {
+          columns: 3,
+          aspect: 'auto',
+          images: [
+            { src: 'https://picsum.photos/seed/1/800/600', alt: 'Photo 1' },
+            { src: 'https://picsum.photos/seed/2/800/600', alt: 'Photo 2' },
+            { src: 'https://picsum.photos/seed/3/800/600', alt: 'Photo 3' }
+          ]
+        }
+      }
+    },
+    // ---- New: Multi-Text Sections -------------------------------------------
+    {
+      id: 'multi-text',
+      name: 'Multi-Text Sections',
+      description: 'Multiple text sections in 1–3 columns',
+      category: 'text',
+      icon: Type,
+      preview: '',
+      blockData: {
+        type: 'multi_text',
+        content: {
+          columns: 3,
+          showDividers: true,
+          sections: [
+            { heading: 'Fast Delivery', body: 'We ship nationwide within 7–10 days.' },
+            { heading: 'Financing', body: 'Flexible plans available for qualified buyers.' },
+            { heading: 'Warranty', body: 'All models include a 12-month limited warranty.' }
+          ]
+        }
+      }
+    },
+    // ---- New: Google Map -----------------------------------------------------
+    {
+      id: 'google-map',
+      name: 'Google Map',
+      description: 'Embed a Google Map by address or coordinates',
+      category: 'contact',
+      icon: Map,
+      preview: '',
+      blockData: {
+        type: 'google_map',
+        content: {
+          address: '1600 Amphitheatre Pkwy, Mountain View, CA',
+          zoom: 14,
+          height: 360
+        }
+      }
+    }
 
   const categories: Array<{ id: 'all' | ComponentTemplate['category']; name: string; icon: React.ComponentType<any> }> = [
     { id: 'all', name: 'All Components', icon: Grid },

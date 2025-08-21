@@ -1,9 +1,12 @@
 import React from 'react'
-import { Facebook, Instagram, Twitter, Youtube, Linkedin, Globe, Mail, Phone, MessageSquare, Share2, Twitch, Github, Pointer as Pinterest } from 'lucide-react'
+import {
+  Facebook, Instagram, Twitter, Youtube, Linkedin, Globe, Mail, Phone, Share2,
+  Twitch, Github, Pinterest
+} from 'lucide-react'
 
 export type SocialPlatform =
   | 'facebook' | 'instagram' | 'x' | 'twitter' | 'youtube' | 'linkedin'
-  | 'website' | 'email' | 'phone' | 'tiktok' | 'pinterest' | 'github' | 'twitch'
+  | 'website' | 'email' | 'phone' | 'pinterest' | 'github' | 'twitch'
 
 export interface SocialLink {
   platform: SocialPlatform
@@ -19,10 +22,6 @@ export type SocialLinksBlockData = {
   size?: 'sm' | 'md' | 'lg'
   gap?: number
   className?: string
-}
-
-export interface SocialLinksBlockProps {
-  data: SocialLinksBlockData
 }
 
 function iconFor(platform: SocialPlatform, size: number) {
@@ -44,7 +43,7 @@ function iconFor(platform: SocialPlatform, size: number) {
   }
 }
 
-export default function SocialLinksBlock({ data }: SocialLinksBlockProps) {
+export default function SocialLinksBlock({ data }: { data: SocialLinksBlockData }) {
   const {
     title,
     links = [],

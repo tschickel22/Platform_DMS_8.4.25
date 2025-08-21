@@ -9,6 +9,10 @@ import GoogleMapBlock from './blocks/GoogleMapBlock'
 import SocialLinksBlock from './blocks/SocialLinksBlock'
 import MultiImageGalleryBlock from './blocks/MultiImageGalleryBlock'
 import MultiTextBlock from './blocks/MultiTextBlock'
+import GoogleMapBlock from './blocks/GoogleMapBlock'
+import SocialLinksBlock from './blocks/SocialLinksBlock'
+import MultiImageGalleryBlock from './blocks/MultiImageGalleryBlock'
+import MultiTextBlock from './blocks/MultiTextBlock'
 
 interface EditorCanvasProps {
   site: Site
@@ -103,6 +107,38 @@ export default function EditorCanvas({ site, currentPage, previewMode }: EditorC
                   className={`prose prose-lg max-w-none ${block.content?.alignment || 'text-left'}`}
                   dangerouslySetInnerHTML={{ __html: block.content?.html || block.content?.text || 'Add your text content here...' }}
                 />
+              </div>
+            </section>
+          )
+        case 'google_map':
+          return (
+            <section className="py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <GoogleMapBlock data={block.content || {}} />
+              </div>
+            </section>
+          )
+        case 'social_links':
+          return (
+            <section className="py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <SocialLinksBlock data={block.content || { links: [] }} />
+              </div>
+            </section>
+          )
+        case 'multi_image_gallery':
+          return (
+            <section className="py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <MultiImageGalleryBlock data={block.content || { images: [] }} />
+              </div>
+            </section>
+          )
+        case 'multi_text':
+          return (
+            <section className="py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <MultiTextBlock data={block.content || { sections: [] }} />
               </div>
             </section>
           )

@@ -5,23 +5,14 @@ export type GoogleMapBlockData = {
   lat?: number
   lng?: number
   zoom?: number
-  height?: number // px
+  height?: number
   markerLabel?: string
-  apiKey?: string // optional; if omitted we fall back to public embed
+  apiKey?: string
   mapTypeId?: 'roadmap' | 'satellite' | 'hybrid' | 'terrain'
   className?: string
 }
 
-export interface GoogleMapBlockProps {
-  data: GoogleMapBlockData
-}
-
-/**
- * Zero-dependency Google Maps block.
- * If `apiKey` is provided we use the official embed v1 endpoint.
- * Otherwise we fall back to a public embed URL that does not require an API key.
- */
-export default function GoogleMapBlock({ data }: GoogleMapBlockProps) {
+export default function GoogleMapBlock({ data }: { data: GoogleMapBlockData }) {
   const {
     address,
     lat,
@@ -49,10 +40,8 @@ export default function GoogleMapBlock({ data }: GoogleMapBlockProps) {
       maptype: mapTypeId,
     })
     src = `${base}${mode}?${params.toString()}`
-  } else {
-    if (q) {
-      src = `https://www.google.com/maps?q=${q}&z=${zoom}&output=embed`
-    }
+  } else if (q) {
+    src = `https://www.google.com/maps?q=${q}&z=${zoom}&output=embed`
   }
 
   if (!src) {

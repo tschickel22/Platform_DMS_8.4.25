@@ -14,6 +14,10 @@ import GoogleMapBlockEditor from './blocks/editors/GoogleMapBlockEditor'
 import SocialLinksEditor from './blocks/editors/SocialLinksEditor'
 import MultiImageGalleryEditor from './blocks/editors/MultiImageGalleryEditor'
 import MultiTextBlockEditor from './blocks/editors/MultiTextBlockEditor'
+import GoogleMapBlockEditor from './blocks/editors/GoogleMapBlockEditor'
+import SocialLinksEditor from './blocks/editors/SocialLinksEditor'
+import MultiImageGalleryEditor from './blocks/editors/MultiImageGalleryEditor'
+import MultiTextBlockEditor from './blocks/editors/MultiTextBlockEditor'
 import { Block } from '../types'
 import RichTextEditor from './RichTextEditor'
 import ImageEditor from './ImageEditor'
@@ -130,6 +134,14 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
         return (
           <div className="space-y-6">
             <div>
+      case 'google_map':
+        return <GoogleMapBlockEditor value={content} onChange={setContent} />
+      case 'social_links':
+        return <SocialLinksEditor value={content} onChange={setContent} />
+      case 'multi_image_gallery':
+        return <MultiImageGalleryEditor value={content} onChange={setContent} />
+      case 'multi_text':
+        return <MultiTextBlockEditor value={content} onChange={setContent} />
               <Label htmlFor="image-src">Image URL</Label>
               <Input
                 id="image-src"

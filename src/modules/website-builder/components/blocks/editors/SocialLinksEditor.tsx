@@ -40,10 +40,7 @@ export default function SocialLinksEditor({
     update({ links })
   }
 
-  const addLink = () => {
-    update({ links: [...(draft.links ?? []), { platform: 'website', url: '' }] })
-  }
-
+  const addLink = () => update({ links: [...(draft.links ?? []), { platform: 'website', url: '' }] })
   const removeLink = (idx: number) => {
     const links = [...(draft.links ?? [])]
     links.splice(idx, 1)
