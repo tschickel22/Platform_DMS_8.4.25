@@ -6,7 +6,10 @@ import {
    MousePointer, 
    Quote,
   Video,
-   Calendar
+  Phone,
+  Map,
+  Share2,
+  Grid3X3
 } from 'lucide-react'
 
 interface AddBlockMenuProps {
