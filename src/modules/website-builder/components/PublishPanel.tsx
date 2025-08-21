@@ -132,13 +132,8 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
   }
 
   const handlePreview = () => {
-    // Store current site data for preview
-    const previewKey = `wb2:preview:${site.slug}`
-    sessionStorage.setItem(previewKey, JSON.stringify(site))
-    
-    // Open preview in new tab
-    const previewUrl = `${window.location.origin}/s/${site.slug}/`
-    window.open(previewUrl, '_blank')
+    // Use the published site URL if available, otherwise fallback to local preview
+    // Store current site data in sessionStorage for live preview
     const sessionKey = `wb2:preview-site:${site.slug}`
     sessionStorage.setItem(sessionKey, JSON.stringify(site))
     
@@ -333,6 +328,15 @@ export default function PublishPanel({ site, onSiteUpdate, mode }: PublishPanelP
                       'Save Domain Settings'
                     )}
                   </Button>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    <p>
+                      To use a custom domain with Bolt hosting, contact support for domain configuration:
+                    </p>
+                    <code className="text-sm">support@bolt.new</code>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Custom domains require Bolt Pro plan and DNS configuration assistance.
+                  </p>
                 </div>
               )}
             </div>
