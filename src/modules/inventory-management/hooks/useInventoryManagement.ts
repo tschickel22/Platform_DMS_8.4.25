@@ -1,184 +1,131 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Vehicle, RVVehicle, MHVehicle, InventoryStats } from '../state/types'
-import { normalizeVehicleData } from '../utils/adapters'
+// hooks/useInventoryManagement.ts
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Vehicle, RVVehicle, MHVehicle, InventoryStats, VehicleStatus } from '../state/types'
 
-// Mock data - in production this would come from an API
-const mockInventoryData: Vehicle[] = [
-  {
-    id: '1',
-    type: 'RV',
-    status: 'Available',
-    vehicleIdentificationNumber: '1FDXE45S8HDA12345',
-    brand: 'Forest River',
-    model: 'Cherokee',
-    modelDate: 2023,
-    mileage: 5000,
-    bodyStyle: 'Travel Trailer',
-    fuelType: 'None',
-    vehicleTransmission: 'None',
-    color: 'White',
-    price: 45000,
-    priceCurrency: 'USD',
-    availability: 'Available',
-    images: ['https://images.pexels.com/photos/1687845/pexels-photo-1687845.jpeg'],
-    description: 'Beautiful travel trailer perfect for family adventures',
-    sellerName: 'RV World',
-    sellerPhone: '555-0123',
-    sellerEmail: 'sales@rvworld.com',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z'
-  } as RVVehicle,
-  {
-    id: '2',
-    type: 'MH',
-    status: 'Available',
-    askingPrice: 85000,
-    homeType: 'Single Wide',
-    make: 'Clayton',
-    model: 'The Edge',
-    year: 2022,
-    bedrooms: 3,
-    bathrooms: 2,
-    address1: '123 Mobile Home Park Dr',
-    city: 'Austin',
-    state: 'TX',
-    zip9: '78701',
-    serialNumber: 'CLT123456789',
-    width1: 16,
-    length1: 80,
-    color: 'Beige',
-    description: 'Modern manufactured home in excellent condition',
-    createdAt: '2024-01-16T10:00:00Z',
-    updatedAt: '2024-01-16T10:00:00Z'
-  } as MHVehicle
-]
+// LocalStorage helpers
+const STORAGE_KEY = 'ri_inventory__vehicles'
 
-export const useInventoryManagement = () => {
+function loadFromStorage(): Vehicle[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed as Vehicle[]
+  } catch {
+    return []
+  }
+}
+
+function saveToStorage(vehicles: Vehicle[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles))
+  } catch {
+    // noop
+  }
+}
+
+function ensureIds(vs: Partial<Vehicle>[]): Vehicle[] {
+  const nowIso = new Date().toISOString()
+  return vs.map((v) => ({
+    id: (v as any).id ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+    type: (v as any).type ?? 'RV',
+    status: (v as any).status ?? 'Available',
+    createdAt: (v as any).createdAt ?? nowIso,
+    updatedAt: nowIso,
+    ...(v as any),
+  })) as Vehicle[]
+}
+
+export function useInventoryManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize data
+  // initial load
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // In production, this would be an API call
-        const normalizedData = normalizeVehicleData(mockInventoryData)
-        setVehicles(normalizedData)
-        setError(null)
-      } catch (err) {
-        setError('Failed to load inventory data')
-        console.error('Error loading inventory:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [])
-
-  // Add vehicle
-  const addVehicle = useCallback(async (vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const newVehicle: Vehicle = {
-        ...vehicle,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      setVehicles(prev => [...prev, newVehicle])
-      return newVehicle
-    } catch (err) {
-      setError('Failed to add vehicle')
-      throw err
+      const existing = loadFromStorage()
+      setVehicles(existing)
+    } catch (e) {
+      setError('Failed to load inventory')
+    } finally {
+      setLoading(false)
     }
   }, [])
 
-  // Update vehicle
-  const updateVehicle = useCallback(async (id: string, updates: Partial<Vehicle>) => {
-    try {
-      setVehicles(prev => prev.map(vehicle => 
-        vehicle.id === id 
-          ? { ...vehicle, ...updates, updatedAt: new Date().toISOString() }
-          : vehicle
-      ))
-    } catch (err) {
-      setError('Failed to update vehicle')
-      throw err
-    }
-  }, [])
-
-  // Delete vehicle
-  const deleteVehicle = useCallback(async (id: string) => {
-    try {
-      setVehicles(prev => prev.filter(vehicle => vehicle.id !== id))
-    } catch (err) {
-      setError('Failed to delete vehicle')
-      throw err
-    }
-  }, [])
-
-  // Bulk import vehicles
-  const importVehicles = useCallback(async (newVehicles: Vehicle[]) => {
-    try {
-      const vehiclesWithIds = newVehicles.map(vehicle => ({
-        ...vehicle,
-        id: vehicle.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        createdAt: vehicle.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }))
-      
-      setVehicles(prev => [...prev, ...vehiclesWithIds])
-      return vehiclesWithIds
-    } catch (err) {
-      setError('Failed to import vehicles')
-      throw err
-    }
-  }, [])
-
-  // Calculate stats
-  const getStats = useCallback((): InventoryStats => {
+  // derived stats
+  const stats: InventoryStats = useMemo(() => {
     const total = vehicles.length
     const available = vehicles.filter(v => v.status === 'Available').length
-    const reserved = vehicles.filter(v => v.status === 'Reserved').length
+    const reserved = vehicles.filter(v => v.status === 'Reserved' || (v as any).salePending === 'Yes').length
     const sold = vehicles.filter(v => v.status === 'Sold').length
-    
-    const totalValue = vehicles.reduce((sum, vehicle) => {
-      if (vehicle.type === 'RV') {
-        return sum + (vehicle.price || 0)
-      } else if (vehicle.type === 'MH') {
-        return sum + (vehicle.askingPrice || 0)
-      }
-      return sum
+    const totalValue = vehicles.reduce((sum, v) => {
+      const price = (v as any).price ?? (v as any).askingPrice ?? 0
+      return sum + (Number(price) || 0)
     }, 0)
-
-    return {
-      total,
-      available,
-      reserved,
-      sold,
-      totalValue
-    }
+    return { total, available, reserved, sold, totalValue }
   }, [vehicles])
+
+  const getById = useCallback((id: string) => {
+    return vehicles.find(v => v.id === id)
+  }, [vehicles])
+
+  const createVehicle = useCallback(async (data: Partial<Vehicle>) => {
+    const [veh] = ensureIds([data])
+    const next = [...vehicles, veh]
+    setVehicles(next)
+    saveToStorage(next)
+    return veh
+  }, [vehicles])
+
+  const addVehicle = createVehicle // alias for compatibility
+
+  const updateVehicle = useCallback(async (id: string, updates: Partial<Vehicle>) => {
+    const next = vehicles.map(v => v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } as Vehicle : v)
+    setVehicles(next)
+    saveToStorage(next)
+    return next.find(v => v.id === id)!
+  }, [vehicles])
+
+  const updateVehicleStatus = useCallback(async (id: string, status: VehicleStatus) => {
+    return updateVehicle(id, { status } as Partial<Vehicle>)
+  }, [updateVehicle])
+
+  const deleteVehicle = useCallback(async (id: string) => {
+    const next = vehicles.filter(v => v.id !== id)
+    setVehicles(next)
+    saveToStorage(next)
+  }, [vehicles])
+
+  const importVehicles = useCallback(async (incoming: Vehicle[]) => {
+    const withIds = ensureIds(incoming)
+    const next = [...vehicles, ...withIds]
+    setVehicles(next)
+    saveToStorage(next)
+  }, [vehicles])
+
+  const getStats = useCallback(() => stats, [stats])
+
+  const refreshData = useCallback(() => {
+    setLoading(true)
+    setTimeout(() => setLoading(false), 200)
+  }, [])
 
   return {
     vehicles,
     loading,
     error,
+    // CRUD
+    createVehicle,
     addVehicle,
     updateVehicle,
+    updateVehicleStatus,
     deleteVehicle,
     importVehicles,
+    // utils
+    getById,
     getStats,
-    refreshData: () => {
-      // Trigger data reload if needed
-      setLoading(true)
-      setTimeout(() => setLoading(false), 500)
-    }
+    refreshData,
   }
 }
