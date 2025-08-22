@@ -1,222 +1,213 @@
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Copy, ExternalLink, Mail, MessageSquare } from 'lucide-react'
+import { ShareSettings } from '../types'
+import { propertyListingsService } from '../services/propertyListingsService'
 import { useToast } from '@/hooks/use-toast'
-import { 
-  Copy, 
-  Mail, 
-  MessageSquare, 
-  Facebook, 
-  Twitter, 
-  Linkedin,
-  QrCode,
-  Share2,
-  ExternalLink
-} from 'lucide-react'
 
 interface ShareListingModalProps {
-  // ShadCN pattern
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  // Legacy compatibility
-  isOpen?: boolean
-  onClose?: () => void
-  // Data
-  listing: any
-  company?: { id?: string; name?: string; slug?: string }
+  isOpen: boolean
+  onClose: () => void
+  listingId?: string
+  listingTitle?: string
+  mode: 'single' | 'all'
 }
 
-export function ShareListingModal(props: ShareListingModalProps) {
-  // Normalize props for ShadCN pattern
-  const open = props.open ?? props.isOpen ?? false
-  const onOpenChange = props.onOpenChange ?? ((o: boolean) => { if (!o) props.onClose?.() })
-  
+export function ShareListingModal({ isOpen, onClose, listingId, listingTitle, mode }: ShareListingModalProps) {
   const { toast } = useToast()
-  const [customMessage, setCustomMessage] = useState('')
-  
-  if (!props.listing) return null
-  
-  // Company info with defaults
-  const companySlug = props.company?.slug ?? 'demo'
-  const companyName = props.company?.name ?? 'Demo RV Dealership'
-  
-  // Generate shareable link
-  const shareableLink = `${window.location.origin}/${companySlug}/listing/${props.listing.id}`
-  
-  // Format listing info
-  const listingTitle = `${props.listing.year} ${props.listing.make} ${props.listing.model}`
-  const price = props.listing.salePrice || props.listing.rentPrice || 0
-  const formattedPrice = Number.isFinite(price) ? price.toLocaleString() : '0'
-  const priceLabel = props.listing.offerType === 'for_rent' ? '/month' : ''
-  
-  const handleCopyLink = async () => {
+  const [shareUrl, setShareUrl] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const [settings, setSettings] = useState<ShareSettings>({
+    type: mode,
+    expiresIn: 30,
+    includeContact: true,
+    allowLeadCapture: true,
+    trackViews: true
+  })
+
+  const handleGenerateUrl = async () => {
     try {
-      await navigator.clipboard.writeText(shareableLink)
+      setLoading(true)
+      
+      let url: string
+      if (mode === 'single' && listingId) {
+        url = await propertyListingsService.generateShareUrl(listingId, settings)
+      } else {
+        url = await propertyListingsService.generateShareAllUrl(settings)
+      }
+      
+      setShareUrl(url)
+      
       toast({
-        title: "Link copied!",
-        description: "The listing link has been copied to your clipboard.",
+        title: 'Share URL Generated',
+        description: 'Your shareable URL has been created successfully.'
       })
     } catch (error) {
       toast({
-        title: "Copy failed",
-        description: "Please copy the link manually.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to generate share URL. Please try again.',
+        variant: 'destructive'
       })
+    } finally {
+      setLoading(false)
     }
   }
-  
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(shareUrl)
+    toast({
+      title: 'Copied!',
+      description: 'Share URL copied to clipboard.'
+    })
+  }
+
   const handleEmailShare = () => {
-    const subject = encodeURIComponent(`Check out this ${listingTitle}`)
-    const body = encodeURIComponent(
-      `${customMessage ? customMessage + '\n\n' : ''}I thought you might be interested in this listing:\n\n${listingTitle}\n$${formattedPrice}${priceLabel}\n\n${shareableLink}\n\nShared from ${companyName}`
-    )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
-  }
-  
-  const handleSMSShare = () => {
-    const message = encodeURIComponent(
-      `${customMessage ? customMessage + ' ' : ''}Check out this ${listingTitle} - $${formattedPrice}${priceLabel}: ${shareableLink}`
-    )
-    window.open(`sms:?body=${message}`)
-  }
-  
-  const handleSocialShare = (platform: string) => {
-    const text = encodeURIComponent(`Check out this ${listingTitle} - $${formattedPrice}${priceLabel}`)
-    const url = encodeURIComponent(shareableLink)
+    const subject = mode === 'single' 
+      ? `Check out this listing: ${listingTitle}`
+      : 'Check out our latest property listings'
     
-    const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
-    }
+    const body = mode === 'single'
+      ? `I thought you might be interested in this property listing:\n\n${listingTitle}\n\n${shareUrl}`
+      : `Check out our latest property listings:\n\n${shareUrl}`
     
-    window.open(urls[platform as keyof typeof urls], '_blank', 'width=600,height=400')
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
+  }
+
+  const handleSmsShare = () => {
+    const message = mode === 'single'
+      ? `Check out this listing: ${listingTitle} ${shareUrl}`
+      : `Check out our latest listings: ${shareUrl}`
+    
+    window.open(`sms:?body=${encodeURIComponent(message)}`)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Share Listing
+          <DialogTitle>
+            Share {mode === 'single' ? 'Listing' : 'All Listings'}
           </DialogTitle>
+          <DialogDescription>
+            {mode === 'single' 
+              ? `Generate a shareable link for "${listingTitle}"`
+              : 'Generate a shareable link for all your active listings'
+            }
+          </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
-          {/* Listing Preview */}
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="flex items-start gap-3">
-              {props.listing.media?.primaryPhoto && (
-                <img 
-                  src={props.listing.media.primaryPhoto} 
-                  alt={listingTitle}
-                  className="w-16 h-16 object-cover rounded"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">{listingTitle}</h4>
-                <p className="text-lg font-bold text-primary">
-                  ${formattedPrice}{priceLabel}
-                </p>
-                <div className="flex gap-1 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {props.listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {props.listing.condition || 'Used'}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+          {/* Expiration */}
+          <div>
+            <Label htmlFor="expires">Link expires in</Label>
+            <Select 
+              value={settings.expiresIn.toString()} 
+              onValueChange={(value) => setSettings({ ...settings, expiresIn: parseInt(value) })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="30">30 days</SelectItem>
+                <SelectItem value="90">90 days</SelectItem>
+                <SelectItem value="365">1 year</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
-          {/* Share Link */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Share Link</label>
-            <div className="flex gap-2">
-              <Input 
-                value={shareableLink} 
-                readOnly 
-                className="flex-1"
+
+          {/* Options */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="includeContact"
+                checked={settings.includeContact}
+                onCheckedChange={(checked) => setSettings({ ...settings, includeContact: !!checked })}
               />
-              <Button onClick={handleCopyLink} size="sm">
-                <Copy className="h-4 w-4" />
-              </Button>
+              <Label htmlFor="includeContact">Include contact information</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="allowLeadCapture"
+                checked={settings.allowLeadCapture}
+                onCheckedChange={(checked) => setSettings({ ...settings, allowLeadCapture: !!checked })}
+              />
+              <Label htmlFor="allowLeadCapture">Allow lead capture</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="trackViews"
+                checked={settings.trackViews}
+                onCheckedChange={(checked) => setSettings({ ...settings, trackViews: !!checked })}
+              />
+              <Label htmlFor="trackViews">Track views and analytics</Label>
             </div>
           </div>
-          
+
           {/* Custom Message */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Custom Message (Optional)</label>
-            <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Add a personal message..."
-              className="w-full p-2 border rounded-md resize-none h-20 text-sm"
+          <div>
+            <Label htmlFor="customMessage">Custom message (optional)</Label>
+            <Textarea
+              id="customMessage"
+              placeholder="Add a personal message to appear with the listing..."
+              value={settings.customMessage || ''}
+              onChange={(e) => setSettings({ ...settings, customMessage: e.target.value })}
+              rows={3}
             />
           </div>
-          
-          <Separator />
-          
-          {/* Quick Share Options */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Quick Share</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <Button onClick={handleEmailShare} variant="outline" size="sm">
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
-              <Button onClick={handleSMSShare} variant="outline" size="sm">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                SMS
-              </Button>
+
+          {/* Generate URL */}
+          {!shareUrl && (
+            <Button onClick={handleGenerateUrl} disabled={loading} className="w-full">
+              {loading ? 'Generating...' : 'Generate Share URL'}
+            </Button>
+          )}
+
+          {/* Share URL Result */}
+          {shareUrl && (
+            <div className="space-y-3">
+              <div>
+                <Label>Share URL</Label>
+                <div className="flex gap-2">
+                  <Input value={shareUrl} readOnly className="flex-1" />
+                  <Button variant="outline" size="sm" onClick={handleCopyUrl}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Quick Share Options */}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleEmailShare} className="flex-1">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleSmsShare} className="flex-1">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  SMS
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => window.open(shareUrl, '_blank')} className="flex-1">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Preview
+                </Button>
+              </div>
             </div>
-          </div>
-          
-          {/* Social Media */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Social Media</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <Button 
-                onClick={() => handleSocialShare('facebook')} 
-                variant="outline" 
-                size="sm"
-              >
-                <Facebook className="h-4 w-4 mr-1" />
-                Facebook
-              </Button>
-              <Button 
-                onClick={() => handleSocialShare('twitter')} 
-                variant="outline" 
-                size="sm"
-              >
-                <Twitter className="h-4 w-4 mr-1" />
-                Twitter
-              </Button>
-              <Button 
-                onClick={() => handleSocialShare('linkedin')} 
-                variant="outline" 
-                size="sm"
-              >
-                <Linkedin className="h-4 w-4 mr-1" />
-                LinkedIn
-              </Button>
-            </div>
-          </div>
-          
-          {/* Analytics Preview */}
-          <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-            <div className="flex items-center gap-1 mb-1">
-              <ExternalLink className="h-3 w-3" />
-              Link Analytics
-            </div>
-            <p>Track clicks, views, and engagement when you share this link.</p>
-          </div>
+          )}
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

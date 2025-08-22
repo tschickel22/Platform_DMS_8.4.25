@@ -5,16 +5,24 @@ export interface PropertyListing {
   listingType: 'manufactured_home' | 'rv'
   offerType: 'for_sale' | 'for_rent' | 'both'
   status: 'active' | 'draft' | 'inactive'
+  
+  // Pricing
   salePrice?: number
   rentPrice?: number
+  lotRent?: number
+  taxes?: number
+  hoa?: number
+  
+  // Basic Info
   year: number
   make: string
   model: string
+  condition: 'new' | 'used' | 'refurbished'
   vin?: string
   serialNumber?: string
-  condition: 'new' | 'used' | 'refurbished'
+  stockNumber?: string
   
-  // RV specific fields
+  // RV Specific
   sleeps?: number
   slides?: number
   length?: number
@@ -23,69 +31,110 @@ export interface PropertyListing {
   transmission?: string
   odometerMiles?: number
   
-  // Manufactured Home specific fields
+  // Manufactured Home Specific
   bedrooms?: number
   bathrooms?: number
   dimensions?: {
     width_ft?: number
     length_ft?: number
-    sections?: number
     sqft?: number
+    sections?: number
   }
   
+  // Location
   location: {
     city: string
     state: string
     postalCode?: string
     address?: string
     communityName?: string
-    coordinates?: {
-      latitude: number
-      longitude: number
-    }
+    township?: string
+    schoolDistrict?: string
+    latitude?: number
+    longitude?: number
   }
   
+  // Media
   media: {
     primaryPhoto: string
     photos: string[]
     virtualTour?: string
+    videoUrl?: string
   }
   
-  features: Record<string, boolean | string | number>
+  // Features (comprehensive)
+  features: {
+    // RV Features
+    generator?: boolean
+    solar?: boolean
+    awning?: boolean
+    slideOut?: boolean
+    garage?: boolean
+    
+    // Manufactured Home Features
+    centralAir?: boolean
+    fireplace?: boolean
+    dishwasher?: boolean
+    washerDryer?: boolean
+    vaultedCeilings?: boolean
+    deck?: boolean
+    shed?: boolean
+    energyStar?: boolean
+    
+    // General Features
+    furnished?: boolean
+    petFriendly?: boolean
+    smokingAllowed?: boolean
+    utilities?: string[]
+    appliances?: string[]
+    flooring?: string[]
+    
+    // Custom features
+    [key: string]: any
+  }
   
-  // SEO and marketing
+  // SEO & Marketing
   searchResultsText?: string
-  seoTitle?: string
-  seoDescription?: string
   keywords?: string[]
+  metaDescription?: string
   
-  // Pricing and terms
-  lotRent?: number
-  taxes?: number
-  financing?: {
-    available: boolean
-    downPayment?: number
-    monthlyPayment?: number
-    termMonths?: number
-    interestRate?: number
+  // Syndication & Export
+  exportMeta?: {
+    SellerID?: string
+    CompanyID?: string
+    RentalPrice?: number
+    Township?: string
+    SchoolDistrict?: string
+    Latitude?: number
+    Longitude?: number
+    LotRent?: string
+    Taxes?: string
+    SellerAccountKey?: number
+    SellerFirstName?: string
+    SellerLastName?: string
+    SellerCompanyName?: string
+    SellerPhone?: string
+    SellerEmail?: string
+    SellerFax?: string
+    SoldPrice?: number
+    SellerWebsite?: string
+    SellerEmail2?: string
+    SellerEmail3?: string
+    SellerEmail4?: string
+    SellerPhone2?: string
   }
   
-  // Contact and seller info
-  contactInfo?: {
-    name: string
-    phone: string
-    email: string
-    website?: string
-  }
+  // Sharing & Visibility
+  isPublic: boolean
+  shareToken?: string
+  expiresAt?: string
+  viewCount?: number
+  leadCount?: number
   
-  // Syndication
-  syndicationPartners?: string[]
-  lastSynced?: string
-  
+  // Timestamps
   createdAt: string
   updatedAt: string
-  createdBy: string
-  updatedBy: string
+  publishedAt?: string
 }
 
 export interface ListingTemplate {
@@ -95,19 +144,18 @@ export interface ListingTemplate {
   listingType: 'manufactured_home' | 'rv'
   fields: TemplateField[]
   isDefault: boolean
-  createdAt: string
-  updatedAt: string
+  isActive: boolean
 }
 
 export interface TemplateField {
   id: string
   name: string
   label: string
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'textarea' | 'image' | 'date'
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'textarea' | 'currency' | 'date'
   required: boolean
+  placeholder?: string
   options?: string[]
   defaultValue?: any
-  placeholder?: string
   validation?: {
     min?: number
     max?: number
@@ -121,19 +169,43 @@ export interface TemplateField {
 export interface SyndicationPartner {
   id: string
   name: string
-  exportFormat: 'XML' | 'JSON'
-  exportUrl: string
+  description: string
+  exportFormat: 'XML' | 'JSON' | 'CSV'
+  endpoint?: string
+  apiKey?: string
   isActive: boolean
-  lastSync?: string
-  supportedListingTypes: string[]
+  supportedTypes: ('manufactured_home' | 'rv')[]
   fieldMapping: Record<string, string>
+  lastSync?: string
+  syncStatus?: 'success' | 'error' | 'pending'
+}
+
+export interface ShareSettings {
+  type: 'single' | 'all'
+  expiresIn: number // days
+  includeContact: boolean
+  customMessage?: string
+  allowLeadCapture: boolean
+  trackViews: boolean
 }
 
 export interface ListingExport {
-  id: string
+  format: 'CSV' | 'XML' | 'JSON' | 'PDF'
+  includePhotos: boolean
+  includePrivateFields: boolean
+  filterBy?: {
+    status?: string[]
+    type?: string[]
+    priceRange?: { min: number; max: number }
+  }
+}
+
+export interface ListingAnalytics {
   listingId: string
-  partnerId: string
-  exportedAt: string
-  status: 'success' | 'failed' | 'pending'
-  errorMessage?: string
+  views: number
+  leads: number
+  shares: number
+  lastViewed?: string
+  topSources: Array<{ source: string; count: number }>
+  conversionRate: number
 }
