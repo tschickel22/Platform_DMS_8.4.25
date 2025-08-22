@@ -1,115 +1,134 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Vehicle, VehicleStatus } from '@/types'
+import { Label } from '@/components/ui/label'
+import { ArrowLeft, Car, Home } from 'lucide-react'
+import { VehicleInventory, RVInventory, ManufacturedHomeInventory } from '../types'
+import MHInventoryForm from './MHInventoryForm'
+import RVInventoryForm from './RVInventoryForm'
 
-export interface VehicleFormProps {
-  vehicle?: Vehicle
-  onSave: (data: Partial<Vehicle>) => void
+interface VehicleFormProps {
+  initialData?: Partial<VehicleInventory>
+  onSave: (data: VehicleInventory) => Promise<void>
   onCancel: () => void
+  mode: 'create' | 'edit'
 }
 
-// Named export to match: import { VehicleForm } from './forms/VehicleForm'
-export function VehicleForm({ vehicle, onSave, onCancel }: VehicleFormProps) {
-  // Use safe defaults; keep this lightweight and self-contained
-  const [vin, setVin] = useState<string>(vehicle?.vin || '')
-  const [make, setMake] = useState<string>(vehicle?.make || '')
-  const [model, setModel] = useState<string>(vehicle?.model || '')
-  const [year, setYear] = useState<number>(vehicle?.year ?? new Date().getFullYear())
-  const [price, setPrice] = useState<number>(vehicle?.price ?? 0)
-  const [location, setLocation] = useState<string>(vehicle?.location || '')
-  const [status, setStatus] = useState<VehicleStatus>(
-    (vehicle?.status as VehicleStatus) ?? (Object.values(VehicleStatus)[0] as VehicleStatus)
+export default function VehicleForm({ initialData, onSave, onCancel, mode }: VehicleFormProps) {
+  const [vehicleType, setVehicleType] = useState<'rv' | 'manufactured_home' | null>(
+    initialData?.listingType || null
   )
 
-  const handleSave = () => {
-    onSave({
-      id: vehicle?.id, // preserve if editing
-      vin,
-      make,
-      model,
-      year,
-      price,
-      location,
-      status,
-    })
+  // If we have initial data, render the appropriate form directly
+  if (initialData && initialData.listingType) {
+    if (initialData.listingType === 'rv') {
+      return (
+        <RVInventoryForm
+          initialData={initialData as Partial<RVInventory>}
+          onSave={onSave}
+          onCancel={onCancel}
+          mode={mode}
+        />
+      )
+    } else if (initialData.listingType === 'manufactured_home') {
+      return (
+        <MHInventoryForm
+          initialData={initialData as Partial<ManufacturedHomeInventory>}
+          onSave={onSave}
+          onCancel={onCancel}
+          mode={mode}
+        />
+      )
+    }
   }
 
-  // Derive status options from enum to avoid drift across branches
-  const statusOptions = (Object.values(VehicleStatus) as string[])
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle>{vehicle ? 'Edit Vehicle' : 'Add Vehicle'}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vin">VIN</Label>
-              <Input id="vin" value={vin} onChange={(e) => setVin(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value) || new Date().getFullYear())}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="make">Make</Label>
-              <Input id="make" value={make} onChange={(e) => setMake(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={String(status)}
-                onValueChange={(v) => setStatus(v as VehicleStatus)}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s.toString()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+  // For create mode, show type selection first
+  if (!vehicleType) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inventory
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Add New Inventory Item</h1>
+              <p className="text-muted-foreground">
+                Choose the type of inventory item you want to add
+              </p>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-2">
-            <Button onClick={handleSave}>Save</Button>
-            <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
+              onClick={() => setVehicleType('rv')}
+            >
+              <CardHeader className="text-center">
+                <Car className="h-12 w-12 mx-auto mb-2 text-primary" />
+                <CardTitle>RV / Recreational Vehicle</CardTitle>
+                <CardDescription>
+                  Travel trailers, motorhomes, fifth wheels, toy haulers, and other recreational vehicles
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• Travel Trailers & Fifth Wheels</p>
+                  <p>• Class A, B, C Motorhomes</p>
+                  <p>• Toy Haulers & Pop-ups</p>
+                  <p>• Truck Campers</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
+              onClick={() => setVehicleType('manufactured_home')}
+            >
+              <CardHeader className="text-center">
+                <Home className="h-12 w-12 mx-auto mb-2 text-primary" />
+                <CardTitle>Manufactured Home</CardTitle>
+                <CardDescription>
+                  Single-wide, double-wide, triple-wide, and modular homes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• Single-wide Homes</p>
+                  <p>• Double-wide Homes</p>
+                  <p>• Triple-wide Homes</p>
+                  <p>• Park Models & Modular</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
+        </div>
+      </div>
+    )
+  }
+
+  // Render the appropriate form based on selected type
+  if (vehicleType === 'rv') {
+    return (
+      <RVInventoryForm
+        initialData={{ listingType: 'rv', ...initialData } as Partial<RVInventory>}
+        onSave={onSave}
+        onCancel={onCancel}
+        mode={mode}
+      />
+    )
+  } else if (vehicleType === 'manufactured_home') {
+    return (
+      <MHInventoryForm
+        initialData={{ listingType: 'manufactured_home', ...initialData } as Partial<ManufacturedHomeInventory>}
+        onSave={onSave}
+        onCancel={onCancel}
+        mode={mode}
+      />
+    )
+  }
+
+  return null
 }

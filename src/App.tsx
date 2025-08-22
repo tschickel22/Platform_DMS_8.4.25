@@ -131,6 +131,21 @@ function App() {
                                       <WarrantyMgmt />
                                     </ErrorBoundary>
                                   } />
+                                  <Route path="/inventory/new" element={
+                                    <ErrorBoundary>
+                                      <InventoryManagement />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/inventory/:inventoryId" element={
+                                    <ErrorBoundary>
+                                      <InventoryManagement />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/inventory/:inventoryId/edit" element={
+                                    <ErrorBoundary>
+                                      <InventoryManagement />
+                                    </ErrorBoundary>
+                                  } />
                                   <Route path="/inventory/*" element={<InventoryManagement />} />
                                   <Route path="/land/*" element={<LandManagement />} />
                                   <Route path="/delivery/*" element={<DeliveryTracker />} />

@@ -1,350 +1,478 @@
-import React from 'react'
-import { Vehicle, RVVehicle, MHVehicle } from '../state/types'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Car, 
-  Home, 
-  MapPin, 
-  DollarSign, 
-  Calendar, 
-  Palette, 
-  Fuel, 
-  Settings, 
-  Bed, 
-  Bath,
-  Phone,
-  Mail,
-  Globe
+  ArrowLeft, 
+  Edit, 
+  Share, 
+  Download, 
+  Eye,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Home,
+  Car,
+  ExternalLink,
+  Trash2
 } from 'lucide-react'
+import { VehicleInventory } from '../types'
+import { useInventoryManagement } from '../hooks/useInventoryManagement'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 
-interface VehicleDetailProps {
-  vehicle: Vehicle | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
+export default function VehicleDetail() {
+  const { inventoryId } = useParams<{ inventoryId: string }>()
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const { inventory, loading, deleteVehicle } = useInventoryManagement()
+  
+  const [vehicle, setVehicle] = useState<VehicleInventory | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<string>('')
 
-const formatPrice = (vehicle: Vehicle): string => {
-  if (vehicle.type === 'RV') {
-    return `$${vehicle.price?.toLocaleString() || '0'}`
-  } else if (vehicle.type === 'MH') {
-    return `$${vehicle.askingPrice?.toLocaleString() || '0'}`
-  }
-  return '$0'
-}
-
-const RVDetails: React.FC<{ rv: RVVehicle }> = ({ rv }) => (
-  <div className="space-y-6">
-    {/* Basic Info */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Car className="h-5 w-5" />
-          Vehicle Information
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">VIN</p>
-            <p className="font-mono">{rv.vehicleIdentificationNumber}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Year</p>
-            <p>{rv.modelDate}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Make</p>
-            <p>{rv.brand}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Model</p>
-            <p>{rv.model}</p>
-          </div>
-          {rv.bodyStyle && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Body Style</p>
-              <p>{rv.bodyStyle}</p>
-            </div>
-          )}
-          {rv.color && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Color</p>
-              <p>{rv.color}</p>
-            </div>
-          )}
-        </div>
-        
-        {rv.mileage && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Mileage</p>
-            <p>{rv.mileage.toLocaleString()} miles</p>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-2 gap-4">
-          {rv.fuelType && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Fuel Type</p>
-              <p>{rv.fuelType}</p>
-            </div>
-          )}
-          {rv.vehicleTransmission && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Transmission</p>
-              <p>{rv.vehicleTransmission}</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Pricing */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Pricing
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold">{formatPrice(rv)}</span>
-          <Badge>{rv.status}</Badge>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Currency: {rv.priceCurrency}
-        </p>
-      </CardContent>
-    </Card>
-
-    {/* Seller Info */}
-    {(rv.sellerName || rv.sellerPhone || rv.sellerEmail) && (
-      <Card>
-        <CardHeader>
-          <CardTitle>Seller Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {rv.sellerName && (
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{rv.sellerName}</span>
-            </div>
-          )}
-          {rv.sellerPhone && (
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{rv.sellerPhone}</span>
-            </div>
-          )}
-          {rv.sellerEmail && (
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>{rv.sellerEmail}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    )}
-
-    {/* Description */}
-    {rv.description && (
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed">{rv.description}</p>
-        </CardContent>
-      </Card>
-    )}
-  </div>
-)
-
-const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
-  <div className="space-y-6">
-    {/* Basic Info */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Home className="h-5 w-5" />
-          Home Information
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Home Type</p>
-            <p>{mh.homeType}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Year</p>
-            <p>{mh.year}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Make</p>
-            <p>{mh.make}</p>
-          </div>
-          {mh.model && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Model</p>
-              <p>{mh.model}</p>
-            </div>
-          )}
-        </div>
-        
-        {mh.serialNumber && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Serial Number</p>
-            <p className="font-mono">{mh.serialNumber}</p>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2">
-            <Bed className="h-4 w-4 text-muted-foreground" />
-            <span>{mh.bedrooms} Bedrooms</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Bath className="h-4 w-4 text-muted-foreground" />
-            <span>{mh.bathrooms} Bathrooms</span>
-          </div>
-        </div>
-        
-        {(mh.width1 || mh.length1) && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
-            <p>{mh.width1 && mh.length1 ? `${mh.width1}' × ${mh.length1}'` : 'Not specified'}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Location */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          Location
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <p>{mh.address1}</p>
-          {mh.address2 && <p>{mh.address2}</p>}
-          <p>{mh.city}, {mh.state} {mh.zip9}</p>
-          {mh.countyName && (
-            <p className="text-sm text-muted-foreground">County: {mh.countyName}</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Pricing */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Pricing
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold">{formatPrice(mh)}</span>
-          <Badge>{mh.status}</Badge>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          {mh.lotRent && (
-            <div>
-              <p className="font-medium text-muted-foreground">Lot Rent</p>
-              <p>{mh.lotRent}</p>
-            </div>
-          )}
-          {mh.taxes && (
-            <div>
-              <p className="font-medium text-muted-foreground">Taxes</p>
-              <p>{mh.taxes}</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Features */}
-    {(mh.centralAir || mh.garage || mh.deck || mh.fireplace) && (
-      <Card>
-        <CardHeader>
-          <CardTitle>Features</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {mh.centralAir === 'Yes' && <div>✓ Central Air</div>}
-            {mh.garage === 'Yes' && <div>✓ Garage</div>}
-            {mh.carport === 'Yes' && <div>✓ Carport</div>}
-            {mh.deck === 'Yes' && <div>✓ Deck</div>}
-            {mh.patio === 'Yes' && <div>✓ Patio</div>}
-            {mh.fireplace === 'Yes' && <div>✓ Fireplace</div>}
-            {mh.laundryRoom === 'Yes' && <div>✓ Laundry Room</div>}
-            {mh.storageShed === 'Yes' && <div>✓ Storage Shed</div>}
-          </div>
-        </CardContent>
-      </Card>
-    )}
-
-    {/* Description */}
-    {mh.description && (
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed">{mh.description}</p>
-        </CardContent>
-      </Card>
-    )}
-  </div>
-)
-
-const VehicleDetail: React.FC<VehicleDetailProps> = ({
-  vehicle,
-  open,
-  onOpenChange
-}) => {
-  if (!vehicle) return null
-
-  const getVehicleTitle = (): string => {
-    if (vehicle.type === 'RV') {
-      const rv = vehicle as RVVehicle
-      return `${rv.modelDate || ''} ${rv.brand || ''} ${rv.model || ''}`.trim()
-    } else if (vehicle.type === 'MH') {
-      const mh = vehicle as MHVehicle
-      return `${mh.year || ''} ${mh.make || ''} ${mh.model || ''}`.trim()
+  useEffect(() => {
+    if (inventoryId && inventory.length > 0) {
+      const found = inventory.find(v => v.id === inventoryId)
+      setVehicle(found || null)
+      setSelectedPhoto(found?.media.primaryPhoto || '')
     }
-    return 'Vehicle Details'
+  }, [inventoryId, inventory])
+
+  const handleEdit = () => {
+    navigate(`/inventory/${inventoryId}/edit`)
   }
+
+  const handleDelete = async () => {
+    if (!vehicle) return
+    
+    if (confirm('Are you sure you want to delete this inventory item? This action cannot be undone.')) {
+      try {
+        await deleteVehicle(vehicle.id)
+        toast({
+          title: 'Success',
+          description: 'Inventory item deleted successfully'
+        })
+        navigate('/inventory')
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete inventory item',
+          variant: 'destructive'
+        })
+      }
+    }
+  }
+
+  const handleShare = () => {
+    if (!vehicle) return
+    const url = `${window.location.origin}/public/demo/listing/${vehicle.id}`
+    navigator.clipboard.writeText(url)
+    toast({
+      title: 'Link Copied',
+      description: 'Public listing URL copied to clipboard'
+    })
+  }
+
+  const handleCreateListing = () => {
+    if (!vehicle) return
+    navigate(`/property/listings/new?inventoryId=${vehicle.id}`)
+  }
+
+  const handlePreview = () => {
+    if (!vehicle) return
+    const url = `${window.location.origin}/public/demo/listing/${vehicle.id}`
+    window.open(url, '_blank')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading inventory item...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!vehicle) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Inventory Item Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The inventory item you're looking for could not be found.
+            </p>
+            <Button onClick={() => navigate('/inventory')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inventory
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const TypeIcon = vehicle.listingType === 'rv' ? Car : Home
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{getVehicleTitle()}</DialogTitle>
-          <DialogDescription>
-            {vehicle.type === 'RV' ? 'Recreational Vehicle' : 'Manufactured Home'} Details
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="mt-6">
-          {vehicle.type === 'RV' ? (
-            <RVDetails rv={vehicle as RVVehicle} />
-          ) : (
-            <MHDetails mh={vehicle as MHVehicle} />
-          )}
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/inventory')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inventory
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <TypeIcon className="h-5 w-5 text-muted-foreground" />
+                <h1 className="text-2xl font-bold">{vehicle.title}</h1>
+                <Badge className={getStatusColor(vehicle.status)}>
+                  {vehicle.status}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                {vehicle.inventoryId} • {vehicle.year} {vehicle.make} {vehicle.model}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handlePreview}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <Button variant="outline" onClick={handleShare}>
+              <Share className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button variant="outline" onClick={handleCreateListing}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Create Listing
+            </Button>
+            <Button onClick={handleEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Photo Gallery */}
+            <Card>
+              <CardContent className="p-0">
+                {/* Main Photo */}
+                <div className="h-96 bg-gray-100">
+                  {selectedPhoto ? (
+                    <img
+                      src={selectedPhoto}
+                      alt={vehicle.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <TypeIcon className="h-24 w-24 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Photo Thumbnails */}
+                {vehicle.media.photos.length > 1 && (
+                  <div className="p-4 border-t">
+                    <div className="flex gap-2 overflow-x-auto">
+                      {vehicle.media.photos.map((photo, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedPhoto(photo)}
+                          className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
+                            selectedPhoto === photo ? 'border-primary' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={photo}
+                            alt={`Photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Description & Details */}
+            <Tabs defaultValue="description" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="specifications">Specifications</TabsTrigger>
+                <TabsTrigger value="features">Features</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="description">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Description</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {vehicle.description || 'No description available.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="specifications">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Specifications</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Year</Label>
+                        <p>{vehicle.year}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Make</Label>
+                        <p>{vehicle.make}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Model</Label>
+                        <p>{vehicle.model}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Condition</Label>
+                        <p className="capitalize">{vehicle.condition}</p>
+                      </div>
+                      {vehicle.vin && (
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">VIN</Label>
+                          <p className="font-mono text-sm">{vehicle.vin}</p>
+                        </div>
+                      )}
+                      
+                      {vehicle.listingType === 'rv' && (
+                        <>
+                          {vehicle.sleeps && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Sleeps</Label>
+                              <p>{vehicle.sleeps}</p>
+                            </div>
+                          )}
+                          {vehicle.length && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Length</Label>
+                              <p>{vehicle.length} ft</p>
+                            </div>
+                          )}
+                          {vehicle.slides && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Slide Outs</Label>
+                              <p>{vehicle.slides}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {vehicle.listingType === 'manufactured_home' && (
+                        <>
+                          {vehicle.bedrooms && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Bedrooms</Label>
+                              <p>{vehicle.bedrooms}</p>
+                            </div>
+                          )}
+                          {vehicle.bathrooms && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Bathrooms</Label>
+                              <p>{vehicle.bathrooms}</p>
+                            </div>
+                          )}
+                          {vehicle.dimensions?.sqft && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Square Feet</Label>
+                              <p>{vehicle.dimensions.sqft}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="features">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {Object.keys(vehicle.features).length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(vehicle.features).map(([key, value]) => (
+                          <div key={key} className="flex items-center justify-between">
+                            <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No features listed.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Pricing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {vehicle.salePrice && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Sale Price</Label>
+                    <p className="text-2xl font-bold text-primary">
+                      {formatCurrency(vehicle.salePrice)}
+                    </p>
+                  </div>
+                )}
+                {vehicle.rentPrice && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Rent Price</Label>
+                    <p className="text-xl font-semibold">
+                      {formatCurrency(vehicle.rentPrice)}/month
+                    </p>
+                  </div>
+                )}
+                {vehicle.cost && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Cost</Label>
+                    <p>{formatCurrency(vehicle.cost)}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Location */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p>{vehicle.location.city}, {vehicle.location.state}</p>
+                {vehicle.location.postalCode && (
+                  <p className="text-sm text-muted-foreground">{vehicle.location.postalCode}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Inventory Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Inventory Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Inventory ID</Label>
+                  <p className="font-mono text-sm">{vehicle.inventoryId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created</Label>
+                  <p>{formatDate(vehicle.createdAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
+                  <p>{formatDate(vehicle.updatedAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Type</Label>
+                  <p className="capitalize">{vehicle.listingType.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Offer Type</Label>
+                  <p className="capitalize">{vehicle.offerType.replace('_', ' ')}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button className="w-full" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Inventory
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handleCreateListing}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Create Public Listing
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handlePreview}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Public View
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handleShare}>
+                  <Share className="h-4 w-4 mr-2" />
+                  Share Listing
+                </Button>
+                <Button variant="destructive" className="w-full" onClick={handleDelete}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Inventory
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-export default VehicleDetail
+// Helper function to get status color
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'available':
+      return 'bg-green-100 text-green-800'
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'sold':
+      return 'bg-blue-100 text-blue-800'
+    case 'reserved':
+      return 'bg-purple-100 text-purple-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}

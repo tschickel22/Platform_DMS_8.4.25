@@ -1,939 +1,1374 @@
-import React, { useState, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { X, Plus, Upload, Camera, Star } from 'lucide-react'
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Save, 
+  X, 
+  Upload, 
+  MapPin, 
+  DollarSign, 
+  Car, 
+  Settings,
+  Image as ImageIcon,
+  FileText,
+  Tag,
+  Fuel,
+  ArrowLeft
+} from 'lucide-react'
+import { useDropzone } from 'react-dropzone'
+import { RVInventory } from '../types'
+import { formatCurrency } from '@/lib/utils'
 
 interface RVInventoryFormProps {
-  onSubmit: (data: any) => void
+  initialData?: Partial<RVInventory>
+  onSave: (data: RVInventory) => Promise<void>
   onCancel: () => void
-  initialData?: any
+  mode: 'create' | 'edit'
 }
 
-// Define the type for an image object
-type ImageFile = {
-  id: string; // Unique ID for react-beautiful-dnd
-  url: string; // URL for preview (blob URL for files, or actual URL for existing)
-  isCover: boolean;
-  file?: File; // The actual File object if it's a newly uploaded file
-};
+const defaultRVData: Partial<RVInventory> = {
+  listingType: 'rv',
+  condition: 'new',
+  status: 'available',
+  offerType: 'for_sale',
+  sleeps: 4,
+  slides: 1,
+  length: 28,
+  fuelType: 'gasoline',
+  transmission: 'automatic',
+  features: {
+    generator: false,
+    solar: false,
+    awning: false,
+    slideOut: false,
+    airConditioning: false,
+    heating: false,
+    microwave: false,
+    refrigerator: false,
+    stove: false,
+    oven: false,
+    bathroom: false,
+    shower: false,
+    toilet: false,
+    waterHeater: false,
+    waterPump: false,
+    blackTank: false,
+    grayTank: false,
+    freshTank: false
+  },
+  location: {
+    city: '',
+    state: '',
+    postalCode: '',
+    coordinates: { lat: 0, lng: 0 }
+  },
+  media: {
+    primaryPhoto: '',
+    photos: [],
+    virtualTour: '',
+    videoUrl: ''
+  },
+  seo: {
+    keywords: [],
+    metaDescription: '',
+    searchResultsText: ''
+  },
+  analytics: {
+    views: 0,
+    leads: 0,
+    lastViewed: null,
+    conversionRate: 0
+  }
+}
 
-function RVInventoryForm({ onSubmit, onCancel, initialData }: RVInventoryFormProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const conditionOptions = [
+  { value: 'new', label: 'New' },
+  { value: 'used', label: 'Used' },
+  { value: 'certified', label: 'Certified Pre-Owned' }
+]
 
-  const [formData, setFormData] = useState({
-    // Basic Information
-    vin: initialData?.vin || '',
-    make: initialData?.make || '',
-    model: initialData?.model || '',
-    year: initialData?.year || new Date().getFullYear(),
-    mileage: initialData?.mileage || '',
-    mileageUnit: initialData?.mileageUnit || 'SMI', // New field, Sample Data
-    bodyStyle: initialData?.bodyStyle || '',
-    
-    // Vehicle Details
-    fuelType: initialData?.fuelType || '',
-    transmission: initialData?.transmission || '',
-    exteriorColor: initialData?.exteriorColor || '',
-    interiorColor: initialData?.interiorColor || '',
-    vehicleInteriorType: initialData?.vehicleInteriorType || 'Cloth', // New field, Sample Data
-    condition: initialData?.condition || '',
-    availability: initialData?.availability || '',
-    vehicleConfiguration: initialData?.vehicleConfiguration || '26T', // New field, Sample Data
-    
-    // RV Specific
-    rvType: initialData?.rvType || '',
-    length: initialData?.length || '',
-    slideOuts: initialData?.slideOuts || '',
-    sleeps: initialData?.sleeps || '',
-    awning: initialData?.awning || false,
-    generator: initialData?.generator || false,
-    numberOfDoors: initialData?.numberOfDoors || '', // New field
-    seatingCapacity: initialData?.seatingCapacity || '', // New field
-    
-    // Pricing
-    msrp: initialData?.msrp || '',
-    salePrice: initialData?.salePrice || '',
-    priceCurrency: initialData?.priceCurrency || 'USD', // New field, Sample Data
-    cost: initialData?.cost || '',
-    
-    // Features
-    features: initialData?.features || [],
-    
-    // Description
-    description: initialData?.description || '',
-    
-    // Seller Information
-    sellerName: initialData?.sellerName || 'Renter Insight', // New field, Sample Data
-    sellerPhone: initialData?.sellerPhone || '+1-303-555-1234', // New field, Sample Data
-    sellerAddressStreet: initialData?.sellerAddressStreet || '1234 Main St', // New field, Sample Data
-    sellerAddressCity: initialData?.sellerAddressCity || 'Denver', // New field, Sample Data
-    sellerAddressState: initialData?.sellerAddressState || 'CO', // New field, Sample Data
-    sellerAddressZip: initialData?.sellerAddressZip || '80202', // New field, Sample Data
+const statusOptions = [
+  { value: 'available', label: 'Available' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'sold', label: 'Sold' },
+  { value: 'reserved', label: 'Reserved' }
+]
 
-    // Images & Videos
-    listingUrl: initialData?.listingUrl || 'https://example.com/rv-listing', // New field, Sample Data
-    images: initialData?.images?.map((img: string, index: number) => ({
-      id: `image-${index}`,
-      url: img,
-      isCover: index === 0, // First image is cover by default
-      file: undefined,
-    })) || [],
-    videos: initialData?.videos || [], // New field for video URLs
+const offerTypeOptions = [
+  { value: 'for_sale', label: 'For Sale' },
+  { value: 'for_rent', label: 'For Rent' },
+  { value: 'both', label: 'Both Sale & Rent' }
+]
+
+const rvTypeOptions = [
+  { value: 'travel_trailer', label: 'Travel Trailer' },
+  { value: 'fifth_wheel', label: 'Fifth Wheel' },
+  { value: 'motorhome_a', label: 'Class A Motorhome' },
+  { value: 'motorhome_b', label: 'Class B Motorhome' },
+  { value: 'motorhome_c', label: 'Class C Motorhome' },
+  { value: 'toy_hauler', label: 'Toy Hauler' },
+  { value: 'popup', label: 'Pop-up Camper' },
+  { value: 'truck_camper', label: 'Truck Camper' }
+]
+
+const fuelTypeOptions = [
+  { value: 'gasoline', label: 'Gasoline' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'na', label: 'N/A (Towable)' }
+]
+
+const transmissionOptions = [
+  { value: 'automatic', label: 'Automatic' },
+  { value: 'manual', label: 'Manual' },
+  { value: 'na', label: 'N/A (Towable)' }
+]
+
+const stateOptions = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+]
+
+export default function RVInventoryForm({ initialData, onSave, onCancel, mode }: RVInventoryFormProps) {
+  const [formData, setFormData] = useState<RVInventory>({
+    ...defaultRVData,
+    ...initialData,
+    id: initialData?.id || `rv-${Date.now()}`,
+    createdAt: initialData?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  } as RVInventory)
+
+  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState('basic')
+
+  // Photo upload handling
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+    },
+    maxSize: 5 * 1024 * 1024, // 5MB
+    onDrop: (acceptedFiles) => {
+      acceptedFiles.forEach(file => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64 = reader.result as string
+          setFormData(prev => ({
+            ...prev,
+            media: {
+              ...prev.media,
+              photos: [...prev.media.photos, base64],
+              primaryPhoto: prev.media.primaryPhoto || base64
+            }
+          }))
+        }
+        reader.readAsDataURL(file)
+      })
+    }
   })
 
-  const [newFeature, setNewFeature] = useState('')
-  const [newVideoUrl, setNewVideoUrl] = useState('')
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const updateField = (path: string, value: any) => {
+    setFormData(prev => {
+      const keys = path.split('.')
+      const updated = { ...prev }
+      let current: any = updated
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        current[keys[i]] = { ...current[keys[i]] }
+        current = current[keys[i]]
+      }
+      
+      current[keys[keys.length - 1]] = value
+      return updated
+    })
   }
 
-  const addFeature = () => {
-    if (newFeature.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        features: [...prev.features, newFeature.trim()]
-      }))
-      setNewFeature('')
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.title?.trim()) newErrors.title = 'Title is required'
+    if (!formData.make?.trim()) newErrors.make = 'Make is required'
+    if (!formData.model?.trim()) newErrors.model = 'Model is required'
+    if (!formData.year || formData.year < 1900) newErrors.year = 'Valid year is required'
+    if (!formData.vin?.trim()) newErrors.vin = 'VIN is required'
+    if (!formData.location.city?.trim()) newErrors['location.city'] = 'City is required'
+    if (!formData.location.state?.trim()) newErrors['location.state'] = 'State is required'
+
+    if (formData.offerType === 'for_sale' || formData.offerType === 'both') {
+      if (!formData.salePrice || formData.salePrice <= 0) {
+        newErrors.salePrice = 'Sale price is required'
+      }
     }
-  }
 
-  const removeFeature = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      features: prev.features.filter((_: any, i: number) => i !== index)
-    }))
-  }
-
-  const addVideo = () => {
-    if (newVideoUrl.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        videos: [...prev.videos, newVideoUrl.trim()]
-      }))
-      setNewVideoUrl('')
+    if (formData.offerType === 'for_rent' || formData.offerType === 'both') {
+      if (!formData.rentPrice || formData.rentPrice <= 0) {
+        newErrors.rentPrice = 'Rent price is required'
+      }
     }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const removeVideo = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      videos: prev.videos.filter((_: any, i: number) => i !== index)
-    }))
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Basic validation - check if required fields are filled
-    if (!formData.vin || !formData.make || !formData.model || !formData.year) {
-      alert('Please fill in all required fields (VIN, Make, Model, Year)')
+    if (!validateForm()) {
       return
     }
-    
-    // Only submit if we have valid data
-    onSubmit(formData)
+
+    setSaving(true)
+    try {
+      // Calculate search results text
+      const searchText = `${formData.year} ${formData.make} ${formData.model} - ${formData.length}ft ${formData.rvType?.replace('_', ' ') || 'RV'}`
+      
+      const finalData = {
+        ...formData,
+        seo: {
+          ...formData.seo,
+          searchResultsText: searchText
+        },
+        updatedAt: new Date().toISOString()
+      }
+
+      await onSave(finalData)
+    } catch (error) {
+      console.error('Error saving RV:', error)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // Image handling functions
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newImages: ImageFile[] = Array.from(files).map((file, index) => ({
-        id: `file-${Date.now()}-${index}`, // Unique ID for dnd
-        url: URL.createObjectURL(file),
-        isCover: false, // Will be set to cover if it's the first image
-        file: file,
-      }));
-
-      setFormData(prev => {
-        const updatedImages = [...prev.images, ...newImages];
-        // If no cover image exists, set the first image as cover
-        if (!updatedImages.some(img => img.isCover) && updatedImages.length > 0) {
-          updatedImages[0].isCover = true;
-        }
-        return { ...prev, images: updatedImages };
-      });
-    }
-  };
-
-  const handleRemoveImage = (id: string) => {
-    setFormData(prev => {
-      const updatedImages = prev.images.filter(img => img.id !== id);
-      // If the removed image was the cover, set the first remaining image as cover
-      if (prev.images.find(img => img.id === id)?.isCover && updatedImages.length > 0) {
-        updatedImages[0].isCover = true;
+  const removePrimaryPhoto = () => {
+    setFormData(prev => ({
+      ...prev,
+      media: {
+        ...prev.media,
+        primaryPhoto: '',
+        photos: prev.media.photos.filter(p => p !== prev.media.primaryPhoto)
       }
-      return { ...prev, images: updatedImages };
-    });
-  };
+    }))
+  }
 
-  const handleSetCoverImage = (id: string) => {
+  const removePhoto = (photoToRemove: string) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images.map(img => ({
-        ...img,
-        isCover: img.id === id,
-      })),
-    }));
-  };
+      media: {
+        ...prev.media,
+        photos: prev.media.photos.filter(p => p !== photoToRemove),
+        primaryPhoto: prev.media.primaryPhoto === photoToRemove ? 
+          (prev.media.photos.find(p => p !== photoToRemove) || '') : 
+          prev.media.primaryPhoto
+      }
+    }))
+  }
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const reorderedImages = Array.from(formData.images);
-    const [movedImage] = reorderedImages.splice(result.source.index, 1);
-    reorderedImages.splice(result.destination.index, 0, movedImage);
-
+  const setPrimaryPhoto = (photo: string) => {
     setFormData(prev => ({
       ...prev,
-      images: reorderedImages,
-    }));
-  };
-
-  // Dropdown options
-  const makeOptions = [
-    'Winnebago', 'Thor', 'Forest River', 'Jayco', 'Coachmen', 'Keystone', 'Heartland', 
-    'Grand Design', 'Newmar', 'Tiffin', 'Holiday Rambler', 'Fleetwood', 'Dutchmen', 
-    'Prime Time', 'Palomino', 'Gulf Stream', 'Cruiser RV', 'KZ', 'Northwood', 'Lance'
-  ]
-
-  const bodyStyleOptions = [
-    'Class A Motorhome', 'Class B Motorhome', 'Class C Motorhome', 'Travel Trailer', 
-    'Fifth Wheel', 'Toy Hauler', 'Pop-up Camper', 'Truck Camper', 'Park Model', 
-    'Destination Trailer', 'Hybrid Trailer', 'Teardrop Trailer'
-  ]
-
-  const rvTypeOptions = [
-    'Motorhome', 'Travel Trailer', 'Fifth Wheel', 'Toy Hauler', 'Pop-up', 'Truck Camper'
-  ]
-
-  const fuelTypeOptions = [
-    'Gasoline', 'Diesel', 'Electric', 'Hybrid', 'Propane'
-  ]
-
-  const transmissionOptions = [
-    'Automatic', 'Manual', 'CVT', '6-Speed Automatic', '8-Speed Automatic', '10-Speed Automatic'
-  ]
-
-  const conditionOptions = [
-    'New', 'Used - Excellent', 'Used - Good', 'Used - Fair', 'Certified Pre-Owned', 'Damaged'
-  ]
-
-  const availabilityOptions = [
-    'Available', 'Sold', 'Pending', 'On Hold', 'In Transit', 'Service Required'
-  ]
-
-  const slideOutOptions = [
-    '0', '1', '2', '3', '4', '5+'
-  ]
-
-  const sleepsOptions = [
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10+'
-  ]
-
-  const priceCurrencyOptions = [
-    'USD', 'CAD', 'EUR', 'GBP'
-  ]
-
-  const mileageUnitOptions = [
-    'SMI', 'KMI' // Statute Miles, Kilometers
-  ]
-
-  const vehicleInteriorTypeOptions = [
-    'Cloth', 'Leather', 'Vinyl', 'Fabric'
-  ]
-
-  const doorOptions = [
-    '2', '3', '4', '5+'
-  ]
-
-  const stateOptions = [ // Options for State
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-  ]
+      media: {
+        ...prev.media,
+        primaryPhoto: photo
+      }
+    }))
+  }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {initialData ? 'Edit RV' : 'Add RV'}
-          </h1>
-          <p className="text-muted-foreground">
-            {initialData ? 'Update RV information' : 'Add a new RV to inventory'}
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inventory
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {mode === 'create' ? 'Add New' : 'Edit'} RV
+              </h1>
+              <p className="text-muted-foreground">
+                {mode === 'create' ? 'Create a new RV listing' : 'Update RV details'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>
-            {initialData ? 'Update RV' : 'Add RV'}
-          </Button>
-        </div>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>
-              Enter the basic details about the RV
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="vin">VIN *</Label>
-                <Input
-                  id="vin"
-                  value={formData.vin}
-                  onChange={(e) => handleInputChange('vin', e.target.value)}
-                  placeholder="Enter VIN number"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="make">Make *</Label>
-                <Select value={formData.make || ''} onValueChange={(value) => handleInputChange('make', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select make" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {makeOptions.map((make) => (
-                      <SelectItem key={make} value={make}>
-                        {make}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model">Model *</Label>
-                <Input
-                  id="model"
-                  value={formData.model}
-                  onChange={(e) => handleInputChange('model', e.target.value)}
-                  placeholder="Enter model"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="year">Year *</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  value={formData.year}
-                  onChange={(e) => handleInputChange('year', parseInt(e.target.value))}
-                  placeholder="Enter year"
-                  min="1900"
-                  max={new Date().getFullYear() + 1}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mileage">Mileage</Label>
-                <Input
-                  id="mileage"
-                  type="number"
-                  value={formData.mileage}
-                  onChange={(e) => handleInputChange('mileage', e.target.value)}
-                  placeholder="Enter mileage"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mileageUnit">Mileage Unit</Label>
-                <Select value={formData.mileageUnit || ''} onValueChange={(value) => handleInputChange('mileageUnit', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mileageUnitOptions.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bodyStyle">Body Style *</Label>
-                <Select value={formData.bodyStyle || ''} onValueChange={(value) => handleInputChange('bodyStyle', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select body style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bodyStyleOptions.map((style) => (
-                      <SelectItem key={style} value={style}>
-                        {style}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicleConfiguration">Vehicle Configuration</Label>
-                <Input
-                  id="vehicleConfiguration"
-                  value={formData.vehicleConfiguration}
-                  onChange={(e) => handleInputChange('vehicleConfiguration', e.target.value)}
-                  placeholder="e.g., 26T"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <form onSubmit={handleSubmit}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="specifications">Specifications</TabsTrigger>
+              <TabsTrigger value="pricing">Pricing</TabsTrigger>
+              <TabsTrigger value="location">Location</TabsTrigger>
+              <TabsTrigger value="features">Features</TabsTrigger>
+              <TabsTrigger value="media">Media & SEO</TabsTrigger>
+            </TabsList>
 
-        {/* Vehicle Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Vehicle Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fuelType">Fuel Type</Label>
-                <Select value={formData.fuelType || ''} onValueChange={(value) => handleInputChange('fuelType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select fuel type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fuelTypeOptions.map((fuel) => (
-                      <SelectItem key={fuel} value={fuel}>
-                        {fuel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="transmission">Transmission</Label>
-                <Select value={formData.transmission || ''} onValueChange={(value) => handleInputChange('transmission', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select transmission" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {transmissionOptions.map((trans) => (
-                      <SelectItem key={trans} value={trans}>
-                        {trans}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="exteriorColor">Exterior Color</Label>
-                <Input
-                  id="exteriorColor"
-                  value={formData.exteriorColor}
-                  onChange={(e) => handleInputChange('exteriorColor', e.target.value)}
-                  placeholder="Enter exterior color"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="interiorColor">Interior Color</Label>
-                <Input
-                  id="interiorColor"
-                  value={formData.interiorColor}
-                  onChange={(e) => handleInputChange('interiorColor', e.target.value)}
-                  placeholder="Enter interior color"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicleInteriorType">Interior Type</Label>
-                <Select value={formData.vehicleInteriorType || ''} onValueChange={(value) => handleInputChange('vehicleInteriorType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select interior type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicleInteriorTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition || ''} onValueChange={(value) => handleInputChange('condition', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {conditionOptions.map((condition) => (
-                      <SelectItem key={condition} value={condition}>
-                        {condition}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="availability">Availability</Label>
-                <Select value={formData.availability || ''} onValueChange={(value) => handleInputChange('availability', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select availability" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availabilityOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* RV Specific Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>RV Specific Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="rvType">RV Type</Label>
-                <Select value={formData.rvType || ''} onValueChange={(value) => handleInputChange('rvType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select RV type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rvTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="length">Length (ft)</Label>
-                <Input
-                  id="length"
-                  type="number"
-                  value={formData.length}
-                  onChange={(e) => handleInputChange('length', e.target.value)}
-                  placeholder="Enter length in feet"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slideOuts">Slide Outs</Label>
-                <Select value={formData.slideOuts || ''} onValueChange={(value) => handleInputChange('slideOuts', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select number of slide outs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {slideOutOptions.map((count) => (
-                      <SelectItem key={count} value={count}>
-                        {count}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sleeps">Sleeps</Label>
-                <Select value={formData.sleeps || ''} onValueChange={(value) => handleInputChange('sleeps', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select sleeping capacity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sleepsOptions.map((count) => (
-                      <SelectItem key={count} value={count}>
-                        {count}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="numberOfDoors">Number of Doors</Label>
-                <Select value={formData.numberOfDoors || ''} onValueChange={(value) => handleInputChange('numberOfDoors', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select number of doors" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {doorOptions.map((count) => (
-                      <SelectItem key={count} value={count}>
-                        {count}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="seatingCapacity">Seating Capacity</Label>
-                <Input
-                  id="seatingCapacity"
-                  type="number"
-                  value={formData.seatingCapacity}
-                  onChange={(e) => handleInputChange('seatingCapacity', e.target.value)}
-                  placeholder="Enter seating capacity"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pricing */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="msrp">MSRP</Label>
-                <Input
-                  id="msrp"
-                  type="number"
-                  value={formData.msrp}
-                  onChange={(e) => handleInputChange('msrp', e.target.value)}
-                  placeholder="Enter MSRP"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="salePrice">Sale Price</Label>
-                <Input
-                  id="salePrice"
-                  type="number"
-                  value={formData.salePrice}
-                  onChange={(e) => handleInputChange('salePrice', e.target.value)}
-                  placeholder="Enter sale price"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceCurrency">Currency</Label>
-                <Select value={formData.priceCurrency || ''} onValueChange={(value) => handleInputChange('priceCurrency', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priceCurrencyOptions.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cost">Cost</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  value={formData.cost}
-                  onChange={(e) => handleInputChange('cost', e.target.value)}
-                  placeholder="Enter cost"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Seller Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Seller Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sellerName">Seller Name</Label>
-                <Input
-                  id="sellerName"
-                  value={formData.sellerName}
-                  onChange={(e) => handleInputChange('sellerName', e.target.value)}
-                  placeholder="Enter seller name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellerPhone">Seller Phone</Label>
-                <Input
-                  id="sellerPhone"
-                  type="tel"
-                  value={formData.sellerPhone}
-                  onChange={(e) => handleInputChange('sellerPhone', e.target.value)}
-                  placeholder="Enter seller phone number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellerAddressStreet">Seller Address (Street)</Label>
-                <Input
-                  id="sellerAddressStreet"
-                  value={formData.sellerAddressStreet}
-                  onChange={(e) => handleInputChange('sellerAddressStreet', e.target.value)}
-                  placeholder="Enter street address"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellerAddressCity">Seller Address (City)</Label>
-                <Input
-                  id="sellerAddressCity"
-                  value={formData.sellerAddressCity}
-                  onChange={(e) => handleInputChange('sellerAddressCity', e.target.value)}
-                  placeholder="Enter city"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellerAddressState">Seller Address (State)</Label>
-                <Select value={formData.sellerAddressState || ''} onValueChange={(value) => handleInputChange('sellerAddressState', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stateOptions.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellerAddressZip">Seller Address (Zip)</Label>
-                <Input
-                  id="sellerAddressZip"
-                  value={formData.sellerAddressZip}
-                  onChange={(e) => handleInputChange('sellerAddressZip', e.target.value)}
-                  placeholder="Enter zip code"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Features */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Features</CardTitle>
-            <CardDescription>
-              Add key features and amenities
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={newFeature}
-                onChange={(e) => setNewFeature(e.target.value)}
-                placeholder="Enter a feature"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
-              />
-              <Button type="button" onClick={addFeature}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {formData.features.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.features.map((feature: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {feature}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => removeFeature(index)}
-                    />
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Description */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter detailed description..."
-              rows={4}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Images & Videos */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Images & Videos</CardTitle>
-            <CardDescription>
-              Upload photos and link to videos of the RV
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="listingUrl">Listing URL</Label>
-              <Input
-                id="listingUrl"
-                type="url"
-                value={formData.listingUrl}
-                onChange={(e) => handleInputChange('listingUrl', e.target.value)}
-                placeholder="Enter the main listing URL"
-              />
-            </div>
-
-            {/* Image Upload and Management */}
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Drag and drop images here, or click to select files
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={handleFileSelect}>
-                  <Camera className="h-4 w-4 mr-2" />
-                  Select Images
-                </Button>
-              </div>
-            </div>
-
-            {formData.images.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">Uploaded Images</h3>
-                <DragDropContext onDragEnd={onDragEnd}>
-                  <Droppable droppableId="images">
-                    {(provided) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                      >
-                        {formData.images.map((image, index) => (
-                          <Draggable key={image.id} draggableId={image.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`relative group border rounded-lg overflow-hidden ${
-                                  image.isCover ? 'border-2 border-primary' : 'border-gray-200'
-                                } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
-                              >
-                                <img
-                                  src={image.url}
-                                  alt={`RV Image ${index + 1}`}
-                                  className="w-full h-32 object-cover"
-                                />
-                                <div className="absolute top-2 right-2 flex gap-1">
-                                  {image.isCover && (
-                                    <Badge className="bg-primary text-primary-foreground">Cover</Badge>
-                                  )}
-                                  {!image.isCover && (
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      size="icon"
-                                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => handleSetCoverImage(image.id)}
-                                      title="Set as cover image"
-                                    >
-                                      <Star className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleRemoveImage(image.id)}
-                                    title="Remove image"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              </div>
-            )}
-
-            {/* Video URLs */}
-            <div className="mt-4 space-y-2">
-              <h3 className="text-lg font-semibold mb-2">Video URLs</h3>
-              <div className="flex gap-2">
-                <Input
-                  value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                  placeholder="Enter video URL (e.g., YouTube)"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addVideo())}
-                />
-                <Button type="button" onClick={addVideo}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {formData.videos.length > 0 && (
-                <div className="space-y-2">
-                  {formData.videos.map((video: string, index: number) => (
-                    <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
-                      <a href={video} target="_blank" rel="noopener noreferrer" className="flex-1 truncate text-blue-600 hover:underline">
-                        {video}
-                      </a>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => removeVideo(index)}
-                        title="Remove video"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+            {/* Basic Information */}
+            <TabsContent value="basic" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="h-5 w-5" />
+                    Basic Information
+                  </CardTitle>
+                  <CardDescription>
+                    Essential details about the RV
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="title">Listing Title *</Label>
+                      <Input
+                        id="title"
+                        value={formData.title || ''}
+                        onChange={(e) => updateField('title', e.target.value)}
+                        placeholder="e.g., 2023 Forest River Cherokee 274RK"
+                        className={errors.title ? 'border-red-500' : ''}
+                      />
+                      {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Action buttons at the bottom */}
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>
-            {initialData ? 'Update RV' : 'Add RV'}
-          </Button>
-        </div>
-      </form>
+                    <div>
+                      <Label htmlFor="inventoryId">Inventory ID</Label>
+                      <Input
+                        id="inventoryId"
+                        value={formData.inventoryId || ''}
+                        onChange={(e) => updateField('inventoryId', e.target.value)}
+                        placeholder="e.g., INV-RV-001"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="year">Year *</Label>
+                      <Input
+                        id="year"
+                        type="number"
+                        value={formData.year || ''}
+                        onChange={(e) => updateField('year', parseInt(e.target.value) || 0)}
+                        placeholder="e.g., 2023"
+                        min="1900"
+                        max={new Date().getFullYear() + 1}
+                        className={errors.year ? 'border-red-500' : ''}
+                      />
+                      {errors.year && <p className="text-sm text-red-500 mt-1">{errors.year}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="make">Make *</Label>
+                      <Input
+                        id="make"
+                        value={formData.make || ''}
+                        onChange={(e) => updateField('make', e.target.value)}
+                        placeholder="e.g., Forest River"
+                        className={errors.make ? 'border-red-500' : ''}
+                      />
+                      {errors.make && <p className="text-sm text-red-500 mt-1">{errors.make}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="model">Model *</Label>
+                      <Input
+                        id="model"
+                        value={formData.model || ''}
+                        onChange={(e) => updateField('model', e.target.value)}
+                        placeholder="e.g., Cherokee 274RK"
+                        className={errors.model ? 'border-red-500' : ''}
+                      />
+                      {errors.model && <p className="text-sm text-red-500 mt-1">{errors.model}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="vin">VIN *</Label>
+                      <Input
+                        id="vin"
+                        value={formData.vin || ''}
+                        onChange={(e) => updateField('vin', e.target.value)}
+                        placeholder="e.g., 1FUJBBCK5NLBXXXXX"
+                        className={errors.vin ? 'border-red-500' : ''}
+                      />
+                      {errors.vin && <p className="text-sm text-red-500 mt-1">{errors.vin}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="rvType">RV Type</Label>
+                      <Select value={formData.rvType} onValueChange={(value) => updateField('rvType', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select RV type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rvTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="condition">Condition</Label>
+                      <Select value={formData.condition} onValueChange={(value) => updateField('condition', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select condition" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {conditionOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={formData.status} onValueChange={(value) => updateField('status', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="offerType">Offer Type</Label>
+                      <Select value={formData.offerType} onValueChange={(value) => updateField('offerType', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select offer type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {offerTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description || ''}
+                      onChange={(e) => updateField('description', e.target.value)}
+                      placeholder="Detailed description of the RV..."
+                      rows={4}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Specifications */}
+            <TabsContent value="specifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    RV Specifications
+                  </CardTitle>
+                  <CardDescription>
+                    Detailed specifications and capabilities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Layout & Capacity */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Layout & Capacity</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label htmlFor="sleeps">Sleeps</Label>
+                        <Input
+                          id="sleeps"
+                          type="number"
+                          value={formData.sleeps || ''}
+                          onChange={(e) => updateField('sleeps', parseInt(e.target.value) || 0)}
+                          min="1"
+                          max="12"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="length">Length (ft)</Label>
+                        <Input
+                          id="length"
+                          type="number"
+                          step="0.5"
+                          value={formData.length || ''}
+                          onChange={(e) => updateField('length', parseFloat(e.target.value) || 0)}
+                          min="15"
+                          max="45"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="slides">Slide Outs</Label>
+                        <Input
+                          id="slides"
+                          type="number"
+                          value={formData.slides || ''}
+                          onChange={(e) => updateField('slides', parseInt(e.target.value) || 0)}
+                          min="0"
+                          max="5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="weight">Dry Weight (lbs)</Label>
+                        <Input
+                          id="weight"
+                          type="number"
+                          value={formData.weight || ''}
+                          onChange={(e) => updateField('weight', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 6500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Engine & Drivetrain (for motorhomes) */}
+                  {(formData.rvType?.includes('motorhome') || formData.rvType === 'truck_camper') && (
+                    <>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Engine & Drivetrain</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="engine">Engine</Label>
+                            <Input
+                              id="engine"
+                              value={formData.engine || ''}
+                              onChange={(e) => updateField('engine', e.target.value)}
+                              placeholder="e.g., Ford V10 Triton"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="fuelType">Fuel Type</Label>
+                            <Select value={formData.fuelType} onValueChange={(value) => updateField('fuelType', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select fuel type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {fuelTypeOptions.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="transmission">Transmission</Label>
+                            <Select value={formData.transmission} onValueChange={(value) => updateField('transmission', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select transmission" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {transmissionOptions.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="odometerMiles">Odometer (miles)</Label>
+                          <Input
+                            id="odometerMiles"
+                            type="number"
+                            value={formData.odometerMiles || ''}
+                            onChange={(e) => updateField('odometerMiles', parseInt(e.target.value) || 0)}
+                            placeholder="e.g., 15000"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="fuelCapacity">Fuel Tank (gallons)</Label>
+                          <Input
+                            id="fuelCapacity"
+                            type="number"
+                            value={formData.fuelCapacity || ''}
+                            onChange={(e) => updateField('fuelCapacity', parseInt(e.target.value) || 0)}
+                            placeholder="e.g., 55"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="mpg">MPG (estimated)</Label>
+                          <Input
+                            id="mpg"
+                            type="number"
+                            step="0.1"
+                            value={formData.mpg || ''}
+                            onChange={(e) => updateField('mpg', parseFloat(e.target.value) || 0)}
+                            placeholder="e.g., 8.5"
+                          />
+                        </div>
+                      </div>
+
+                      <Separator />
+                    </>
+                  )}
+
+                  {/* Tank Capacities */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Tank Capacities</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="freshWaterCapacity">Fresh Water (gallons)</Label>
+                        <Input
+                          id="freshWaterCapacity"
+                          type="number"
+                          value={formData.freshWaterCapacity || ''}
+                          onChange={(e) => updateField('freshWaterCapacity', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 40"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="grayWaterCapacity">Gray Water (gallons)</Label>
+                        <Input
+                          id="grayWaterCapacity"
+                          type="number"
+                          value={formData.grayWaterCapacity || ''}
+                          onChange={(e) => updateField('grayWaterCapacity', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 30"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="blackWaterCapacity">Black Water (gallons)</Label>
+                        <Input
+                          id="blackWaterCapacity"
+                          type="number"
+                          value={formData.blackWaterCapacity || ''}
+                          onChange={(e) => updateField('blackWaterCapacity', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 30"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Electrical */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Electrical System</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="generatorWattage">Generator (watts)</Label>
+                        <Input
+                          id="generatorWattage"
+                          type="number"
+                          value={formData.generatorWattage || ''}
+                          onChange={(e) => updateField('generatorWattage', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 4000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="solarWattage">Solar (watts)</Label>
+                        <Input
+                          id="solarWattage"
+                          type="number"
+                          value={formData.solarWattage || ''}
+                          onChange={(e) => updateField('solarWattage', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 200"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="batteryCapacity">Battery (amp hours)</Label>
+                        <Input
+                          id="batteryCapacity"
+                          type="number"
+                          value={formData.batteryCapacity || ''}
+                          onChange={(e) => updateField('batteryCapacity', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Pricing */}
+            <TabsContent value="pricing" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Pricing Information
+                  </CardTitle>
+                  <CardDescription>
+                    Set pricing for sale and/or rental
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Sale Pricing */}
+                  {(formData.offerType === 'for_sale' || formData.offerType === 'both') && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Sale Pricing</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="salePrice">Sale Price *</Label>
+                          <Input
+                            id="salePrice"
+                            type="number"
+                            value={formData.salePrice || ''}
+                            onChange={(e) => updateField('salePrice', parseInt(e.target.value) || 0)}
+                            placeholder="e.g., 45000"
+                            className={errors.salePrice ? 'border-red-500' : ''}
+                          />
+                          {errors.salePrice && <p className="text-sm text-red-500 mt-1">{errors.salePrice}</p>}
+                        </div>
+                        <div>
+                          <Label htmlFor="cost">Cost Basis</Label>
+                          <Input
+                            id="cost"
+                            type="number"
+                            value={formData.cost || ''}
+                            onChange={(e) => updateField('cost', parseInt(e.target.value) || 0)}
+                            placeholder="e.g., 35000"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="downPayment">Min Down Payment</Label>
+                          <Input
+                            id="downPayment"
+                            type="number"
+                            value={formData.pricing?.downPayment || ''}
+                            onChange={(e) => updateField('pricing.downPayment', parseInt(e.target.value) || 0)}
+                            placeholder="e.g., 5000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rental Pricing */}
+                  {(formData.offerType === 'for_rent' || formData.offerType === 'both') && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Rental Pricing</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label htmlFor="rentPrice">Daily Rate *</Label>
+                            <Input
+                              id="rentPrice"
+                              type="number"
+                              value={formData.rentPrice || ''}
+                              onChange={(e) => updateField('rentPrice', parseInt(e.target.value) || 0)}
+                              placeholder="e.g., 150"
+                              className={errors.rentPrice ? 'border-red-500' : ''}
+                            />
+                            {errors.rentPrice && <p className="text-sm text-red-500 mt-1">{errors.rentPrice}</p>}
+                          </div>
+                          <div>
+                            <Label htmlFor="weeklyRate">Weekly Rate</Label>
+                            <Input
+                              id="weeklyRate"
+                              type="number"
+                              value={formData.pricing?.weeklyRate || ''}
+                              onChange={(e) => updateField('pricing.weeklyRate', parseInt(e.target.value) || 0)}
+                              placeholder="e.g., 900"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="monthlyRate">Monthly Rate</Label>
+                            <Input
+                              id="monthlyRate"
+                              type="number"
+                              value={formData.pricing?.monthlyRate || ''}
+                              onChange={(e) => updateField('pricing.monthlyRate', parseInt(e.target.value) || 0)}
+                              placeholder="e.g., 3000"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="securityDeposit">Security Deposit</Label>
+                            <Input
+                              id="securityDeposit"
+                              type="number"
+                              value={formData.pricing?.securityDeposit || ''}
+                              onChange={(e) => updateField('pricing.securityDeposit', parseInt(e.target.value) || 0)}
+                              placeholder="e.g., 500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  {/* Additional Fees */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Additional Fees</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="cleaningFee">Cleaning Fee</Label>
+                        <Input
+                          id="cleaningFee"
+                          type="number"
+                          value={formData.pricing?.cleaningFee || ''}
+                          onChange={(e) => updateField('pricing.cleaningFee', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 75"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="petFee">Pet Fee</Label>
+                        <Input
+                          id="petFee"
+                          type="number"
+                          value={formData.pricing?.petFee || ''}
+                          onChange={(e) => updateField('pricing.petFee', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 25"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="deliveryFee">Delivery Fee</Label>
+                        <Input
+                          id="deliveryFee"
+                          type="number"
+                          value={formData.pricing?.deliveryFee || ''}
+                          onChange={(e) => updateField('pricing.deliveryFee', parseInt(e.target.value) || 0)}
+                          placeholder="e.g., 200"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Location */}
+            <TabsContent value="location" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Location Details
+                  </CardTitle>
+                  <CardDescription>
+                    Current location and availability
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        value={formData.location.city || ''}
+                        onChange={(e) => updateField('location.city', e.target.value)}
+                        placeholder="e.g., Phoenix"
+                        className={errors['location.city'] ? 'border-red-500' : ''}
+                      />
+                      {errors['location.city'] && <p className="text-sm text-red-500 mt-1">{errors['location.city']}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="state">State *</Label>
+                      <Select 
+                        value={formData.location.state} 
+                        onValueChange={(value) => updateField('location.state', value)}
+                      >
+                        <SelectTrigger className={errors['location.state'] ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stateOptions.map(state => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors['location.state'] && <p className="text-sm text-red-500 mt-1">{errors['location.state']}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="postalCode">Postal Code</Label>
+                      <Input
+                        id="postalCode"
+                        value={formData.location.postalCode || ''}
+                        onChange={(e) => updateField('location.postalCode', e.target.value)}
+                        placeholder="e.g., 85001"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dealershipLocation">Dealership Location</Label>
+                      <Input
+                        id="dealershipLocation"
+                        value={formData.location.dealershipLocation || ''}
+                        onChange={(e) => updateField('location.dealershipLocation', e.target.value)}
+                        placeholder="e.g., Main Lot"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Coordinates */}
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Coordinates (Optional)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="latitude">Latitude</Label>
+                        <Input
+                          id="latitude"
+                          type="number"
+                          step="any"
+                          value={formData.location.coordinates?.lat || ''}
+                          onChange={(e) => updateField('location.coordinates.lat', parseFloat(e.target.value) || 0)}
+                          placeholder="e.g., 33.4484"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="longitude">Longitude</Label>
+                        <Input
+                          id="longitude"
+                          type="number"
+                          step="any"
+                          value={formData.location.coordinates?.lng || ''}
+                          onChange={(e) => updateField('location.coordinates.lng', parseFloat(e.target.value) || 0)}
+                          placeholder="e.g., -112.0740"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Features */}
+            <TabsContent value="features" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Tag className="h-5 w-5" />
+                    Features & Equipment
+                  </CardTitle>
+                  <CardDescription>
+                    Select all applicable features and equipment
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Power & Utilities */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Power & Utilities</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="generator"
+                          checked={formData.features.generator || false}
+                          onCheckedChange={(checked) => updateField('features.generator', checked)}
+                        />
+                        <Label htmlFor="generator">Generator</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="solar"
+                          checked={formData.features.solar || false}
+                          onCheckedChange={(checked) => updateField('features.solar', checked)}
+                        />
+                        <Label htmlFor="solar">Solar Panels</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="inverter"
+                          checked={formData.features.inverter || false}
+                          onCheckedChange={(checked) => updateField('features.inverter', checked)}
+                        />
+                        <Label htmlFor="inverter">Inverter</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="airConditioning"
+                          checked={formData.features.airConditioning || false}
+                          onCheckedChange={(checked) => updateField('features.airConditioning', checked)}
+                        />
+                        <Label htmlFor="airConditioning">Air Conditioning</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="heating"
+                          checked={formData.features.heating || false}
+                          onCheckedChange={(checked) => updateField('features.heating', checked)}
+                        />
+                        <Label htmlFor="heating">Heating System</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="waterHeater"
+                          checked={formData.features.waterHeater || false}
+                          onCheckedChange={(checked) => updateField('features.waterHeater', checked)}
+                        />
+                        <Label htmlFor="waterHeater">Water Heater</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Kitchen & Appliances */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Kitchen & Appliances</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="microwave"
+                          checked={formData.features.microwave || false}
+                          onCheckedChange={(checked) => updateField('features.microwave', checked)}
+                        />
+                        <Label htmlFor="microwave">Microwave</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="refrigerator"
+                          checked={formData.features.refrigerator || false}
+                          onCheckedChange={(checked) => updateField('features.refrigerator', checked)}
+                        />
+                        <Label htmlFor="refrigerator">Refrigerator</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="stove"
+                          checked={formData.features.stove || false}
+                          onCheckedChange={(checked) => updateField('features.stove', checked)}
+                        />
+                        <Label htmlFor="stove">Stove/Cooktop</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="oven"
+                          checked={formData.features.oven || false}
+                          onCheckedChange={(checked) => updateField('features.oven', checked)}
+                        />
+                        <Label htmlFor="oven">Oven</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="dishwasher"
+                          checked={formData.features.dishwasher || false}
+                          onCheckedChange={(checked) => updateField('features.dishwasher', checked)}
+                        />
+                        <Label htmlFor="dishwasher">Dishwasher</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="washerDryer"
+                          checked={formData.features.washerDryer || false}
+                          onCheckedChange={(checked) => updateField('features.washerDryer', checked)}
+                        />
+                        <Label htmlFor="washerDryer">Washer/Dryer</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Bathroom & Water */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Bathroom & Water</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="bathroom"
+                          checked={formData.features.bathroom || false}
+                          onCheckedChange={(checked) => updateField('features.bathroom', checked)}
+                        />
+                        <Label htmlFor="bathroom">Full Bathroom</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="shower"
+                          checked={formData.features.shower || false}
+                          onCheckedChange={(checked) => updateField('features.shower', checked)}
+                        />
+                        <Label htmlFor="shower">Shower</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="toilet"
+                          checked={formData.features.toilet || false}
+                          onCheckedChange={(checked) => updateField('features.toilet', checked)}
+                        />
+                        <Label htmlFor="toilet">Toilet</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="waterPump"
+                          checked={formData.features.waterPump || false}
+                          onCheckedChange={(checked) => updateField('features.waterPump', checked)}
+                        />
+                        <Label htmlFor="waterPump">Water Pump</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="freshTank"
+                          checked={formData.features.freshTank || false}
+                          onCheckedChange={(checked) => updateField('features.freshTank', checked)}
+                        />
+                        <Label htmlFor="freshTank">Fresh Water Tank</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="grayTank"
+                          checked={formData.features.grayTank || false}
+                          onCheckedChange={(checked) => updateField('features.grayTank', checked)}
+                        />
+                        <Label htmlFor="grayTank">Gray Water Tank</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="blackTank"
+                          checked={formData.features.blackTank || false}
+                          onCheckedChange={(checked) => updateField('features.blackTank', checked)}
+                        />
+                        <Label htmlFor="blackTank">Black Water Tank</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Exterior Features */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Exterior Features</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="awning"
+                          checked={formData.features.awning || false}
+                          onCheckedChange={(checked) => updateField('features.awning', checked)}
+                        />
+                        <Label htmlFor="awning">Awning</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="slideOut"
+                          checked={formData.features.slideOut || false}
+                          onCheckedChange={(checked) => updateField('features.slideOut', checked)}
+                        />
+                        <Label htmlFor="slideOut">Slide Outs</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="outdoorKitchen"
+                          checked={formData.features.outdoorKitchen || false}
+                          onCheckedChange={(checked) => updateField('features.outdoorKitchen', checked)}
+                        />
+                        <Label htmlFor="outdoorKitchen">Outdoor Kitchen</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="outdoorShower"
+                          checked={formData.features.outdoorShower || false}
+                          onCheckedChange={(checked) => updateField('features.outdoorShower', checked)}
+                        />
+                        <Label htmlFor="outdoorShower">Outdoor Shower</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="bikeRack"
+                          checked={formData.features.bikeRack || false}
+                          onCheckedChange={(checked) => updateField('features.bikeRack', checked)}
+                        />
+                        <Label htmlFor="bikeRack">Bike Rack</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ladder"
+                          checked={formData.features.ladder || false}
+                          onCheckedChange={(checked) => updateField('features.ladder', checked)}
+                        />
+                        <Label htmlFor="ladder">Roof Ladder</Label>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Media & SEO */}
+            <TabsContent value="media" className="space-y-6">
+              {/* Photo Upload */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5" />
+                    Photos
+                  </CardTitle>
+                  <CardDescription>
+                    Upload photos of the RV
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Upload Area */}
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      {isDragActive ? 'Drop photos here...' : 'Drag & drop photos here, or click to select'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Supports: JPEG, PNG, WebP (max 5MB each)
+                    </p>
+                  </div>
+
+                  {/* Photo Gallery */}
+                  {formData.media.photos.length > 0 && (
+                    <div className="space-y-3">
+                      <Label>Uploaded Photos</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {formData.media.photos.map((photo, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={photo}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-1">
+                              {formData.media.primaryPhoto !== photo && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setPrimaryPhoto(photo)}
+                                >
+                                  Primary
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => removePhoto(photo)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            {formData.media.primaryPhoto === photo && (
+                              <Badge className="absolute top-1 left-1 text-xs">Primary</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Virtual Tour & Video */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="virtualTour">Virtual Tour URL</Label>
+                      <Input
+                        id="virtualTour"
+                        value={formData.media.virtualTour || ''}
+                        onChange={(e) => updateField('media.virtualTour', e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="videoUrl">Video URL</Label>
+                      <Input
+                        id="videoUrl"
+                        value={formData.media.videoUrl || ''}
+                        onChange={(e) => updateField('media.videoUrl', e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* SEO */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    SEO & Marketing
+                  </CardTitle>
+                  <CardDescription>
+                    Optimize for search engines and marketing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="metaDescription">Meta Description</Label>
+                    <Textarea
+                      id="metaDescription"
+                      value={formData.seo.metaDescription || ''}
+                      onChange={(e) => updateField('seo.metaDescription', e.target.value)}
+                      placeholder="Brief description for search engines..."
+                      rows={3}
+                      maxLength={160}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {(formData.seo.metaDescription || '').length}/160 characters
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="keywords">Keywords (comma-separated)</Label>
+                    <Input
+                      id="keywords"
+                      value={formData.seo.keywords?.join(', ') || ''}
+                      onChange={(e) => updateField('seo.keywords', e.target.value.split(',').map(k => k.trim()).filter(Boolean))}
+                      placeholder="rv, motorhome, travel trailer..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="searchResultsText">Search Results Text</Label>
+                    <Input
+                      id="searchResultsText"
+                      value={formData.seo.searchResultsText || ''}
+                      onChange={(e) => updateField('seo.searchResultsText', e.target.value)}
+                      placeholder="Text shown in search results"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </form>
+      </div>
     </div>
   )
 }
-
-export default RVInventoryForm
-export { RVInventoryForm }
