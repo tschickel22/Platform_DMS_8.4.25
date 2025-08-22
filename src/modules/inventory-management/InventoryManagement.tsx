@@ -18,6 +18,7 @@ import {
   Trash2,
   ExternalLink,
   Share,
+  DollarSign
   Grid,
   List
 } from 'lucide-react'
