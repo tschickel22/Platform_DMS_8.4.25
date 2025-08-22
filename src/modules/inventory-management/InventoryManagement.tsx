@@ -330,41 +330,6 @@ function InventoryList() {
                         </div>
                       </div>
                       
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2 pt-2 border-t">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/inventory/${item.id}`)}
-                          className="flex-1"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/inventory/${item.id}/edit`)}
-                          className="flex-1"
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleShare(item)}
-                        >
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -935,33 +900,38 @@ export default function InventoryManagement() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Add New Inventory</h1>
               <p className="text-muted-foreground">
-                Add a new RV or manufactured home to your inventory
+                Add a new vehicle to your inventory
               </p>
             </div>
             <Button variant="outline" onClick={() => navigate('/inventory')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Inventory
             </Button>
           </div>
-          <VehicleForm
-            mode="create"
-            onSave={async (data) => {
-              try {
-                const newItem = await createVehicle(data)
-                toast({
-                  title: 'Success',
-                  description: 'Inventory item created successfully'
-                })
-                navigate(`/inventory/${newItem.id}`)
-              } catch (error) {
-                toast({
-                  title: 'Error',
-                  description: 'Failed to create inventory item',
-                  variant: 'destructive'
-                })
-              }
-            }}
-            onCancel={() => navigate('/inventory')}
-          />
+          
+          <Card>
+            <CardContent className="p-6">
+              <VehicleForm
+                onSubmit={async (data) => {
+                  try {
+                    const newItem = await createVehicle(data)
+                    toast({
+                      title: 'Success',
+                      description: 'Inventory item created successfully'
+                    })
+                    navigate(`/inventory/${newItem.id}`)
+                  } catch (error) {
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to create inventory item',
+                      variant: 'destructive'
+                    })
+                  }
+                }}
+                onCancel={() => navigate('/inventory')}
+              />
+            </CardContent>
+          </Card>
         </div>
       } />
       <Route path="/:inventoryId" element={<InventoryDetail />} />
