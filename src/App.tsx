@@ -1,7 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
