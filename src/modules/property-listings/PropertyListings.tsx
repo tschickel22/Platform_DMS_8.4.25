@@ -20,20 +20,65 @@ import {
   Edit,
   Share2
 } from 'lucide-react'
-import { mockListings } from '@/mocks/listingsMock'
-import { ListingForm } from './components/ListingForm'
-import { ListingDetail } from './components/ListingDetail'
-import { ListingOverview } from './components/ListingOverview'
+
+// Simple mock data to avoid import errors
+const mockListingsData = {
+  sampleListings: [
+    {
+      id: '1',
+      title: 'Modern Downtown Apartment',
+      address: '123 Main St, Downtown',
+      listingType: 'rent',
+      rent: 2500,
+      purchasePrice: null,
+      bedrooms: 2,
+      bathrooms: 2,
+      squareFootage: 1200,
+      propertyType: 'apartment',
+      status: 'active',
+      images: ['https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg'],
+      createdAt: '2024-01-15T10:00:00Z'
+    },
+    {
+      id: '2',
+      title: 'Cozy Suburban House',
+      address: '456 Oak Ave, Suburbia',
+      listingType: 'rent',
+      rent: 3200,
+      purchasePrice: null,
+      bedrooms: 3,
+      bathrooms: 2,
+      squareFootage: 1800,
+      propertyType: 'house',
+      status: 'active',
+      images: ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'],
+      createdAt: '2024-01-10T14:30:00Z'
+    },
+    {
+      id: '3',
+      title: 'Luxury Waterfront Condo',
+      address: '789 Waterfront Blvd, Marina',
+      listingType: 'rent',
+      rent: 4500,
+      purchasePrice: null,
+      bedrooms: 2,
+      bathrooms: 3,
+      squareFootage: 1600,
+      propertyType: 'condo',
+      status: 'pending',
+      images: ['https://images.pexels.com/photos/1571471/pexels-photo-1571471.jpeg'],
+      createdAt: '2024-01-20T09:15:00Z'
+    }
+  ]
+}
 
 function PropertyListingsMain() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [showForm, setShowForm] = useState(false)
-  const [selectedListing, setSelectedListing] = useState(null)
 
   // Filter listings based on search and filters
-  const filteredListings = mockListings.sampleListings.filter(listing => {
+  const filteredListings = mockListingsData.sampleListings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          listing.address.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || listing.status === statusFilter
@@ -60,39 +105,9 @@ function PropertyListingsMain() {
     }
   }
 
-  if (showForm) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Add New Listing</h1>
-            <p className="text-muted-foreground">Create a new property listing</p>
-          </div>
-          <Button variant="outline" onClick={() => setShowForm(false)}>
-            Back to Listings
-          </Button>
-        </div>
-        <ListingForm onCancel={() => setShowForm(false)} />
-      </div>
-    )
-  }
-
-  if (selectedListing) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Listing Details</h1>
-            <p className="text-muted-foreground">View and manage listing information</p>
-          </div>
-          <Button variant="outline" onClick={() => setSelectedListing(null)}>
-            Back to Listings
-          </Button>
-        </div>
-        <ListingDetail listing={selectedListing} onBack={() => setSelectedListing(null)} />
-      </div>
-    )
-  }
+  const totalListings = mockListingsData.sampleListings.length
+  const activeListings = mockListingsData.sampleListings.filter(l => l.status === 'active').length
+  const pendingListings = mockListingsData.sampleListings.filter(l => l.status === 'pending').length
 
   return (
     <div className="space-y-6">
@@ -100,39 +115,35 @@ function PropertyListingsMain() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Property Listings</h1>
-          <p className="text-muted-foreground">
-            Manage your property listings and syndication
-          </p>
+          <p className="text-muted-foreground">Manage your property inventory</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button>
           <Plus className="h-4 w-4 mr-2" />
           Add Listing
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockListings.sampleListings.length}</div>
+            <div className="text-2xl font-bold">{totalListings}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last month
+              All property listings
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {mockListings.sampleListings.filter(l => l.status === 'active').length}
-            </div>
+            <div className="text-2xl font-bold">{activeListings}</div>
             <p className="text-xs text-muted-foreground">
               Currently available
             </p>
@@ -140,37 +151,25 @@ function PropertyListingsMain() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Price</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,850</div>
+            <div className="text-2xl font-bold">{pendingListings}</div>
             <p className="text-xs text-muted-foreground">
-              +5% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Views This Month</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
+              Under review
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Search and Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Search & Filter</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -183,7 +182,7 @@ function PropertyListingsMain() {
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -195,7 +194,7 @@ function PropertyListingsMain() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -216,15 +215,15 @@ function PropertyListingsMain() {
           <Card key={listing.id} className="overflow-hidden">
             <div className="aspect-video relative">
               <img
-                src={listing.images?.[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg'}
+                src={listing.images[0]}
                 alt={listing.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute top-2 right-2">
-                <Badge className={getStatusColor(listing.status)}>
-                  {listing.status}
-                </Badge>
-              </div>
+              <Badge 
+                className={`absolute top-2 right-2 ${getStatusColor(listing.status)}`}
+              >
+                {listing.status}
+              </Badge>
             </div>
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -236,19 +235,14 @@ function PropertyListingsMain() {
                   </CardDescription>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-lg font-bold text-primary">
                     {formatPrice(listing)}
                   </div>
-                  {listing.listingType === 'sale' && listing.lotRent && (
-                    <div className="text-sm text-muted-foreground">
-                      +${listing.lotRent}/mo lot
-                    </div>
-                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+              <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                 <div className="flex items-center">
                   <Bed className="h-4 w-4 mr-1" />
                   {listing.bedrooms} bed
@@ -259,24 +253,19 @@ function PropertyListingsMain() {
                 </div>
                 <div className="flex items-center">
                   <Square className="h-4 w-4 mr-1" />
-                  {listing.squareFootage} sq ft
+                  {listing.squareFootage} sqft
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => setSelectedListing(listing)}
-                >
+                <Button variant="outline" size="sm" className="flex-1">
                   <Eye className="h-4 w-4 mr-1" />
                   View
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="flex-1">
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="flex-1">
                   <Share2 className="h-4 w-4 mr-1" />
                   Share
                 </Button>
@@ -289,21 +278,10 @@ function PropertyListingsMain() {
       {filteredListings.length === 0 && (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center py-12">
+            <div className="text-center py-12 text-muted-foreground">
               <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-2">No listings found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Get started by creating your first property listing'
-                }
-              </p>
-              {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
-                <Button onClick={() => setShowForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Listing
-                </Button>
-              )}
+              <p className="text-lg font-medium">No listings found</p>
+              <p>Try adjusting your search criteria or add a new listing</p>
             </div>
           </CardContent>
         </Card>
@@ -316,8 +294,7 @@ export default function PropertyListings() {
   return (
     <Routes>
       <Route path="/" element={<PropertyListingsMain />} />
-      <Route path="/overview" element={<ListingOverview />} />
-      <Route path="*" element={<PropertyListingsMain />} />
+      <Route path="/*" element={<PropertyListingsMain />} />
     </Routes>
   )
 }
