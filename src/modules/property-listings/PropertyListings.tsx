@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,23 +28,30 @@ function PropertyListingsDashboard() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
 
+  // Ensure mockListings is always an array to prevent filter errors
+  const listings = mockListings?.sampleListings || []
+
   // Filter listings based on search and filters
-  const filteredListings = mockListings.sampleListings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.address.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = selectedStatus === 'all' || listing.status === selectedStatus
-    const matchesType = selectedType === 'all' || listing.propertyType === selectedType
-    
-    return matchesSearch && matchesStatus && matchesType
-  })
+  const filteredListings = useMemo(() => {
+    return listings.filter(listing => {
+      const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           listing.address.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = selectedStatus === 'all' || listing.status === selectedStatus
+      const matchesType = selectedType === 'all' || listing.propertyType === selectedType
+      
+      return matchesSearch && matchesStatus && matchesType
+    })
+  }, [listings, searchTerm, selectedStatus, selectedType])
 
   // Get statistics
-  const stats = {
-    total: mockListings.sampleListings.length,
-    active: mockListings.sampleListings.filter(l => l.status === 'active').length,
-    pending: mockListings.sampleListings.filter(l => l.status === 'pending').length,
-    sold: mockListings.sampleListings.filter(l => l.status === 'sold').length
-  }
+  const stats = useMemo(() => {
+    const total = listings.length
+    const active = listings.filter(l => l.status === 'active').length
+    const pending = listings.filter(l => l.status === 'pending').length
+    const sold = listings.filter(l => l.status === 'sold').length
+    
+    return { total, active, pending, sold }
+  }, [listings])
 
   return (
     <div className="space-y-6">
