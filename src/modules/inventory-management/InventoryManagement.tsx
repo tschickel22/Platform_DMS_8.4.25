@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,8 @@ import {
   Share,
   DollarSign,
   Grid,
-  List
+  List,
+  ArrowLeft
 } from 'lucide-react'
 import { VehicleInventory, RVInventory, ManufacturedHomeInventory } from './types'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
@@ -162,7 +163,7 @@ function InventoryList() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('all')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Inventory</CardTitle>
             <Car className="h-4 w-4 text-muted-foreground" />
@@ -174,7 +175,7 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('rv')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">RVs</CardTitle>
             <Car className="h-4 w-4 text-muted-foreground" />
@@ -188,7 +189,7 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('manufactured_home')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Manufactured Homes</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
@@ -202,7 +203,7 @@ function InventoryList() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('available')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -257,20 +258,18 @@ function InventoryList() {
                 <SelectItem value="reserved">Reserved</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1 border rounded-md">
+            <div className="flex gap-2">
               <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="rounded-r-none"
               >
                 <Grid className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                variant={viewMode === 'table' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className="rounded-l-none"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -286,18 +285,90 @@ function InventoryList() {
           description="No inventory items match your current filters. Try adjusting your search or filters."
           icon={<Car className="h-12 w-12" />}
           action={{
-            label: 'Add Inventory',
+            label: "Add Inventory",
             onClick: () => navigate('/inventory/new')
           }}
         />
-      ) : viewMode === 'grid' ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      ) : (
+        <div className={viewMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
           {filteredInventory.map((item) => {
             const TypeIcon = getTypeIcon(item.listingType)
+            
+            if (viewMode === 'table') {
+              return (
+                <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          {item.media?.primaryPhoto ? (
+                            <img
+                              src={item.media.primaryPhoto}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <TypeIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {item.year} {item.make} {item.model}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={getStatusColor(item.status)}>
+                              {item.status}
+                            </Badge>
+                            <span className="text-sm font-medium">
+                              {item.salePrice ? formatCurrency(item.salePrice) : 
+                               item.rentPrice ? `${formatCurrency(item.rentPrice)}/mo` : 'Price TBD'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/inventory/${item.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/inventory/${item.id}/edit`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleShare(item)}
+                        >
+                          <Share className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            }
+
             return (
-              <Card key={item.id} className="overflow-hidden">
+              <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video bg-gray-100 relative">
-                  {item.media.primaryPhoto ? (
+                  {item.media?.primaryPhoto ? (
                     <img
                       src={item.media.primaryPhoto}
                       alt={item.title}
@@ -305,183 +376,73 @@ function InventoryList() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <TypeIcon className="h-12 w-12 text-muted-foreground" />
+                      <TypeIcon className="h-16 w-16 text-muted-foreground" />
                     </div>
                   )}
-                  <Badge className={`absolute top-2 right-2 ${getStatusColor(item.status)}`}>
-                    {item.status}
-                  </Badge>
+                  <div className="absolute top-2 right-2">
+                    <Badge className={getStatusColor(item.status)}>
+                      {item.status}
+                    </Badge>
+                  </div>
                 </div>
                 <CardContent className="p-4">
                   <div className="space-y-2">
-                    <h3 className="font-semibold line-clamp-1">{item.title}</h3>
+                    <h3 className="font-semibold text-lg">{item.title}</h3>
                     <p className="text-sm text-muted-foreground">
                       {item.year} {item.make} {item.model}
                     </p>
                     <div className="flex items-center justify-between">
-                      <div>
-                        {item.salePrice && (
-                          <p className="text-lg font-bold text-primary">
-                            {formatCurrency(item.salePrice)}
-                          </p>
-                        )}
-                        {item.rentPrice && (
-                          <p className="text-sm text-muted-foreground">
-                            {formatCurrency(item.rentPrice)}/mo
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/inventory/${item.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/inventory/${item.id}/edit`)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleShare(item)}
-                        >
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCreateListing(item)}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <span className="text-lg font-bold text-primary">
+                        {item.salePrice ? formatCurrency(item.salePrice) : 
+                         item.rentPrice ? `${formatCurrency(item.rentPrice)}/mo` : 'Price TBD'}
+                      </span>
+                      <TypeIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
+                    {item.location && (
+                      <p className="text-sm text-muted-foreground">
+                        {item.location.city}, {item.location.state}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/inventory/${item.id}`)}
+                      className="flex-1"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/inventory/${item.id}/edit`)}
+                      className="flex-1"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleShare(item)}
+                    >
+                      <Share className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             )
           })}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b">
-                  <tr>
-                    <th className="text-left p-4 font-medium">Vehicle</th>
-                    <th className="text-left p-4 font-medium">Type</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-left p-4 font-medium">Price</th>
-                    <th className="text-left p-4 font-medium">Location</th>
-                    <th className="text-left p-4 font-medium">Created</th>
-                    <th className="text-right p-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInventory.map((item) => {
-                    const TypeIcon = getTypeIcon(item.listingType)
-                    return (
-                      <tr key={item.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                              {item.media.primaryPhoto ? (
-                                <img
-                                  src={item.media.primaryPhoto}
-                                  alt={item.title}
-                                  className="w-full h-full object-cover rounded"
-                                />
-                              ) : (
-                                <TypeIcon className="h-6 w-6 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{item.title}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {item.year} {item.make} {item.model}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="outline" className="capitalize">
-                            {item.listingType.replace('_', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            {item.salePrice && (
-                              <p className="font-medium">{formatCurrency(item.salePrice)}</p>
-                            )}
-                            {item.rentPrice && (
-                              <p className="text-sm text-muted-foreground">
-                                {formatCurrency(item.rentPrice)}/mo
-                              </p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-sm">
-                            {item.location.city}, {item.location.state}
-                          </p>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(item.createdAt)}
-                          </p>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/inventory/${item.id}`)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/inventory/${item.id}/edit`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleCreateListing(item)}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   )
@@ -490,17 +451,15 @@ function InventoryList() {
 function InventoryDetail() {
   const { inventoryId } = useParams<{ inventoryId: string }>()
   const navigate = useNavigate()
-  const { inventory, loading } = useInventoryManagement()
+  const { inventory, loading, deleteVehicle } = useInventoryManagement()
   const { toast } = useToast()
   
   const [item, setItem] = useState<VehicleInventory | null>(null)
-  const [selectedPhoto, setSelectedPhoto] = useState<string>('')
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (inventoryId && inventory.length > 0) {
       const found = inventory.find(i => i.id === inventoryId)
       setItem(found || null)
-      setSelectedPhoto(found?.media.primaryPhoto || '')
     }
   }, [inventoryId, inventory])
 
@@ -508,17 +467,58 @@ function InventoryDetail() {
     navigate(`/inventory/${inventoryId}/edit`)
   }
 
-  const handleCreateListing = () => {
-    navigate(`/property/listings/new?inventoryId=${inventoryId}`)
+  const handleDelete = async () => {
+    if (!item) return
+    
+    if (confirm('Are you sure you want to delete this inventory item?')) {
+      try {
+        await deleteVehicle(item.id)
+        toast({
+          title: 'Success',
+          description: 'Inventory item deleted successfully'
+        })
+        navigate('/inventory')
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete inventory item',
+          variant: 'destructive'
+        })
+      }
+    }
   }
 
   const handleShare = () => {
-    const url = `${window.location.origin}/public/demo/listing/${inventoryId}`
+    if (!item) return
+    const url = `${window.location.origin}/public/demo/listing/${item.id}`
     navigator.clipboard.writeText(url)
     toast({
       title: 'Link Copied',
       description: 'Public listing URL copied to clipboard'
     })
+  }
+
+  const handleCreateListing = () => {
+    navigate(`/property/listings/new?inventoryId=${item?.id}`)
+  }
+
+  const getTypeIcon = (type: string) => {
+    return type === 'rv' ? Car : Home
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-100 text-green-800'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'sold':
+        return 'bg-blue-100 text-blue-800'
+      case 'reserved':
+        return 'bg-purple-100 text-purple-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
   }
 
   if (loading) {
@@ -580,17 +580,21 @@ function InventoryDetail() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleShare}>
-              <Share className="h-4 w-4 mr-2" />
-              Share
-            </Button>
             <Button variant="outline" onClick={handleCreateListing}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Create Listing
             </Button>
-            <Button onClick={handleEdit}>
+            <Button variant="outline" onClick={handleShare}>
+              <Share className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button variant="outline" onClick={handleEdit}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
             </Button>
           </div>
         </div>
@@ -603,9 +607,9 @@ function InventoryDetail() {
             <Card>
               <CardContent className="p-0">
                 <div className="h-96 bg-gray-100">
-                  {selectedPhoto ? (
+                  {item.media?.primaryPhoto ? (
                     <img
-                      src={selectedPhoto}
+                      src={item.media.primaryPhoto}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
@@ -615,84 +619,18 @@ function InventoryDetail() {
                     </div>
                   )}
                 </div>
-                
-                {item.media.photos.length > 1 && (
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2 overflow-x-auto">
-                      {item.media.photos.map((photo, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedPhoto(photo)}
-                          className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
-                            selectedPhoto === photo ? 'border-primary' : 'border-gray-200'
-                          }`}
-                        >
-                          <img
-                            src={photo}
-                            alt={`Photo ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Specifications */}
+            {/* Description */}
             <Card>
               <CardHeader>
-                <CardTitle>Specifications</CardTitle>
+                <CardTitle>Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {item.listingType === 'rv' && (
-                    <>
-                      {item.sleeps && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Sleeps</p>
-                          <p>{item.sleeps}</p>
-                        </div>
-                      )}
-                      {item.length && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Length</p>
-                          <p>{item.length} ft</p>
-                        </div>
-                      )}
-                      {item.slides && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Slide Outs</p>
-                          <p>{item.slides}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  
-                  {item.listingType === 'manufactured_home' && (
-                    <>
-                      {item.bedrooms && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Bedrooms</p>
-                          <p>{item.bedrooms}</p>
-                        </div>
-                      )}
-                      {item.bathrooms && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Bathrooms</p>
-                          <p>{item.bathrooms}</p>
-                        </div>
-                      )}
-                      {item.dimensions?.sqft && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Square Feet</p>
-                          <p>{item.dimensions.sqft}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  {item.description || 'No description available.'}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -721,23 +659,227 @@ function InventoryDetail() {
                     </p>
                   </div>
                 )}
+                {item.cost && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Cost</p>
+                    <p>{formatCurrency(item.cost)}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Specifications */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Specifications</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Year:</span>
+                    <span className="ml-2">{item.year}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Make:</span>
+                    <span className="ml-2">{item.make}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Model:</span>
+                    <span className="ml-2">{item.model}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Condition:</span>
+                    <span className="ml-2 capitalize">{item.condition}</span>
+                  </div>
+                  
+                  {item.listingType === 'rv' && (
+                    <>
+                      {(item as RVInventory).sleeps && (
+                        <div>
+                          <span className="text-muted-foreground">Sleeps:</span>
+                          <span className="ml-2">{(item as RVInventory).sleeps}</span>
+                        </div>
+                      )}
+                      {(item as RVInventory).length && (
+                        <div>
+                          <span className="text-muted-foreground">Length:</span>
+                          <span className="ml-2">{(item as RVInventory).length} ft</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {item.listingType === 'manufactured_home' && (
+                    <>
+                      {(item as ManufacturedHomeInventory).bedrooms && (
+                        <div>
+                          <span className="text-muted-foreground">Bedrooms:</span>
+                          <span className="ml-2">{(item as ManufacturedHomeInventory).bedrooms}</span>
+                        </div>
+                      )}
+                      {(item as ManufacturedHomeInventory).bathrooms && (
+                        <div>
+                          <span className="text-muted-foreground">Bathrooms:</span>
+                          <span className="ml-2">{(item as ManufacturedHomeInventory).bathrooms}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
             {/* Location */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{item.location.city}, {item.location.state}</p>
-                {item.location.postalCode && (
-                  <p className="text-sm text-muted-foreground">{item.location.postalCode}</p>
-                )}
-              </CardContent>
-            </Card>
+            {item.location && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Location</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>{item.location.city}, {item.location.state}</p>
+                  {item.location.postalCode && (
+                    <p className="text-sm text-muted-foreground">{item.location.postalCode}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function InventoryEdit() {
+  const { inventoryId } = useParams<{ inventoryId: string }>()
+  const navigate = useNavigate()
+  const { inventory, loading, updateVehicle } = useInventoryManagement()
+  const { toast } = useToast()
+  
+  const [item, setItem] = useState<VehicleInventory | null>(null)
+
+  useEffect(() => {
+    if (inventoryId && inventory.length > 0) {
+      const found = inventory.find(i => i.id === inventoryId)
+      setItem(found || null)
+    }
+  }, [inventoryId, inventory])
+
+  const handleSave = async (formData: Partial<VehicleInventory>) => {
+    if (!item) return
+    
+    try {
+      await updateVehicle(item.id, formData)
+      toast({
+        title: 'Success',
+        description: 'Inventory item updated successfully'
+      })
+      navigate(`/inventory/${item.id}`)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update inventory item',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading inventory item...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!item) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Inventory Item Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The inventory item you're looking for could not be found.
+            </p>
+            <Button onClick={() => navigate('/inventory')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inventory
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/${inventoryId}`)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Details
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Edit Inventory Item</h1>
+            <p className="text-muted-foreground">{item.title}</p>
+          </div>
+        </div>
+
+        <VehicleForm
+          initialData={item}
+          onSave={handleSave}
+          onCancel={() => navigate(`/inventory/${inventoryId}`)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function InventoryCreate() {
+  const navigate = useNavigate()
+  const { createVehicle } = useInventoryManagement()
+  const { toast } = useToast()
+
+  const handleSave = async (formData: Partial<VehicleInventory>) => {
+    try {
+      const newItem = await createVehicle(formData)
+      toast({
+        title: 'Success',
+        description: 'Inventory item created successfully'
+      })
+      navigate(`/inventory/${newItem.id}`)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create inventory item',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/inventory')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Inventory
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Add New Inventory Item</h1>
+            <p className="text-muted-foreground">Create a new RV or manufactured home listing</p>
+          </div>
+        </div>
+
+        <VehicleForm
+          onSave={handleSave}
+          onCancel={() => navigate('/inventory')}
+        />
       </div>
     </div>
   )
@@ -747,9 +889,9 @@ export default function InventoryManagement() {
   return (
     <Routes>
       <Route path="/" element={<InventoryList />} />
-      <Route path="/new" element={<VehicleForm mode="create" />} />
+      <Route path="/new" element={<InventoryCreate />} />
       <Route path="/:inventoryId" element={<InventoryDetail />} />
-      <Route path="/:inventoryId/edit" element={<VehicleForm mode="edit" />} />
+      <Route path="/:inventoryId/edit" element={<InventoryEdit />} />
     </Routes>
   )
 }
