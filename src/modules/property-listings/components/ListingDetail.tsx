@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   ArrowLeft, 
@@ -20,6 +21,25 @@ import {
 import { PropertyListing } from '../types'
 import { usePropertyListings } from '../hooks/usePropertyListings'
 import { formatCurrency, formatDate } from '@/lib/utils'
+
+// Helper function to get type icon
+function getTypeIcon(type: string) {
+  return type === 'rv' ? Car : Home
+}
+
+// Helper function to get status color
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'active':
+      return 'bg-green-100 text-green-800'
+    case 'draft':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'inactive':
+      return 'bg-gray-100 text-gray-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>()
