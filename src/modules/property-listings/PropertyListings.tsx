@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Building, Home, DollarSign, Search, MapPin, Bed, Bath, Square, Users, Ruler, Eye, Trash2, Plus, Share2,
+  Building, Home, DollarSign, Search, MapPin, Bed, Bath, Square, Users, Ruler, Eye, Trash2, Plus, Share2, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
