@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-// import { User, UserRole } from '@/types'
+import { User, UserRole } from '@/types'
 import { saveToLocalStorage, loadFromLocalStorage, removeFromLocalStorage } from '@/lib/utils'
 
 interface AuthContextType {
@@ -7,7 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   isLoading: boolean
-  hasPermission?: (resource: string, action: string) => boolean
+  hasPermission: (resource: string, action: string) => boolean
   hasRole: (role: UserRole) => boolean
 }
 
@@ -19,25 +19,6 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
-}
-
-// Simple user types to avoid dependency issues
-interface User {
-  id: string
-  email: string
-  name: string
-  role: string
-  tenantId: string
-  permissions: Permission[]
-  createdAt: Date
-  updatedAt: Date
-}
-
-interface Permission {
-  id: string
-  name: string
-  resource: string
-  action: string
 }
 
 interface AuthProviderProps {
@@ -57,7 +38,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         id: '1',
         email: 'admin@renterinsight.com',
         name: 'Admin User',
-        role: 'admin',
+        role: UserRole.ADMIN,
         tenantId: 'tenant-1',
         permissions: [
           { id: '1', name: 'All Access', resource: '*', action: '*' }
@@ -81,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           id: '1',
           email,
           name: 'Admin User',
-          role: 'admin',
+          role: UserRole.ADMIN,
           tenantId: 'tenant-1',
           permissions: [
             { id: '1', name: 'All Access', resource: '*', action: '*' }
@@ -118,9 +99,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
   }
 
-  const hasRole = (role: string): boolean => {
+  const hasRole = (role: UserRole): boolean => {
     if (!user) return false
-    return user.role === role || user.role === 'admin'
+    return user.role === role || user.role === UserRole.ADMIN
   }
 
   const value = {

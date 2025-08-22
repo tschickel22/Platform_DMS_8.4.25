@@ -1,29 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-// import { Tenant, CustomField } from '@/types'
+import { Tenant, CustomField } from '@/types'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-
-// Simple types to avoid dependency issues
-interface Tenant {
-  id: string
-  name: string
-  domain: string
-  settings: any
-  customFields: CustomField[]
-  branding: any
-  createdAt: Date
-  updatedAt: Date
-}
-
-interface CustomField {
-  id: string
-  name: string
-  type: string
-  required: boolean
-  options?: string[]
-  defaultValue?: any
-  module: string
-  section: string
-}
 
 interface TenantContextType {
   tenant: Tenant | null
