@@ -18,12 +18,15 @@ import {
 import * as ListingsMock from '@/mocks/listingsMock'
 import { ShareListingModal } from './ShareListingModal'
 
+/** ---------- helpers ---------- */
+
 // Normalize any plausible mock module shape into an array
 const asArray = (val: any) => {
   if (Array.isArray(val)) return val
   if (Array.isArray(val?.listings)) return val.listings
   if (Array.isArray(val?.sampleListings)) return val.sampleListings
   if (Array.isArray(val?.default)) return val.default
+  if (Array.isArray((val as any)?.mockListings)) return (val as any).mockListings
   return []
 }
 
@@ -44,38 +47,53 @@ const formatPrice = (price?: number) =>
       }).format(price)
     : ''
 
+/** ---------- component ---------- */
+
 const PublicListingView: React.FC = () => {
   const { listingId } = useParams()
   const navigate = useNavigate()
 
+  // single source of truth to avoid "already declared" errors
   const [loading, setLoading] = useState(true)
-  const [listing, setListing] = useState<any>(null)
+  const [listing, setListing] = useState<PropertyListing | any>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
+
     async function load() {
+      if (!listingId) return
       setLoading(true)
-      const USE_MOCKS = (import.meta as any)?.env?.VITE_USE_MOCKS !== 'false'
 
-      if (USE_MOCKS) {
-        const mock =
-          (ListingsMock as any).mockListings ??
-          (ListingsMock as any).listings ??
-          (ListingsMock as any).sampleListings ??
-          (ListingsMock as any).default
+      try {
+        const USE_MOCKS = (import.meta as any)?.env?.VITE_USE_MOCKS !== 'false'
 
-        const data = asArray(mock).map(normalize)
-        const found = data.find((l: any) => String(l.id) === String(listingId))
-        if (!cancelled) setListing(found ?? null)
-      } else {
-        // TODO: wire to real API when ready
+        if (USE_MOCKS) {
+          // pull from various possible mock exports
+          const mockRoot =
+            (ListingsMock as any).mockListings ??
+            (ListingsMock as any).listings ??
+            (ListingsMock as any).sampleListings ??
+            (ListingsMock as any).default ??
+            ListingsMock
+
+          const data = asArray(mockRoot).map(normalize)
+          const found = data.find((l: any) => String(l.id) === String(listingId))
+          if (!cancelled) setListing(found ?? null)
+        } else {
+          // real service path
+          const found = await propertyListingsService.getListingById(listingId)
+          if (!cancelled) setListing(found ?? null)
+        }
+      } catch (err) {
+        console.error('Failed to load listing:', err)
         if (!cancelled) setListing(null)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-
-      if (!cancelled) setLoading(false)
     }
+
     load()
     return () => {
       cancelled = true
@@ -94,7 +112,6 @@ const PublicListingView: React.FC = () => {
   }
 
   if (!listing) {
-    // Graceful fallback
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
@@ -115,88 +132,15 @@ const PublicListingView: React.FC = () => {
     )
   }
 
+  // images
   const photos: string[] = listing.media?.photos ?? []
   const primary = listing.media?.primaryPhoto ?? photos[0]
   const allImages =
     primary != null ? [primary, ...photos.filter((p: string) => p !== primary)] : photos
-  const [propertyListing, setPropertyListing] = useState<PropertyListing | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadListing = async () => {
-      if (!listingId) return
-      
-      try {
-        setLoading(true)
-        const foundListing = await propertyListingsService.getListingById(listingId!)
-        setPropertyListing(foundListing)
-      } catch (error) {
-        console.error('Failed to load listing:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    loadListing()
-  }, [listingId])
-
-  if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
-  }
-  if (!propertyListing) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Listing not found</div>
-  }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-4">{propertyListing.title}</h1>
-              <p className="text-gray-600 mb-6">{propertyListing.description}</p>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {propertyListing.salePrice && (
-                  <div>
-                    <span className="text-sm text-gray-500">Sale Price</span>
-                    <div className="text-2xl font-bold text-green-600">${propertyListing.salePrice.toLocaleString()}</div>
-                  </div>
-                )}
-                {propertyListing.rentPrice && (
-                  <div>
-                    <span className="text-sm text-gray-500">Rent Price</span>
-                    <div className="text-2xl font-bold text-blue-600">${propertyListing.rentPrice.toLocaleString()}/mo</div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-3">
-                <div><span className="font-semibold">Year:</span> {propertyListing.year}</div>
-                <div><span className="font-semibold">Make:</span> {propertyListing.make}</div>
-                <div><span className="font-semibold">Model:</span> {propertyListing.model}</div>
-                {propertyListing.bedrooms && <div><span className="font-semibold">Bedrooms:</span> {propertyListing.bedrooms}</div>}
-                {propertyListing.bathrooms && <div><span className="font-semibold">Bathrooms:</span> {propertyListing.bathrooms}</div>}
-                {propertyListing.sleeps && <div><span className="font-semibold">Sleeps:</span> {propertyListing.sleeps}</div>}
-                {propertyListing.length && <div><span className="font-semibold">Length:</span> {propertyListing.length} ft</div>}
-                {propertyListing.squareFootage && <div><span className="font-semibold">Square Footage:</span> {propertyListing.squareFootage} sq ft</div>}
-              </div>
-            </div>
-            
-            <div>
-              {propertyListing.media?.primaryPhoto && (
-                <img src={propertyListing.media.primaryPhoto} alt={propertyListing.title} className="w-full h-64 object-cover rounded-lg mb-4" />
-              )}
-              {propertyListing.media?.photos && propertyListing.media.photos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {propertyListing.media.photos.slice(0, 6).map((photo, index) => (
-                    <img key={index} src={photo} alt={`${propertyListing.title} ${index + 1}`} className="w-full h-20 object-cover rounded" />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       <div className="bg-card border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)} className="flex items-center">
@@ -207,7 +151,11 @@ const PublicListingView: React.FC = () => {
             <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
               {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
             </Badge>
-            <Button variant="outline" onClick={() => setShareModalOpen(true)} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShareModalOpen(true)}
+              className="flex items-center gap-2"
+            >
               <Share2 className="h-4 w-4" />
               Share
             </Button>
@@ -215,6 +163,7 @@ const PublicListingView: React.FC = () => {
         </div>
       </div>
 
+      {/* Main */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Media + description */}
@@ -244,6 +193,7 @@ const PublicListingView: React.FC = () => {
                         className={`w-20 h-20 rounded overflow-hidden border-2 ${
                           selectedImageIndex === i ? 'border-primary' : 'border-border'
                         }`}
+                        aria-label={`View image ${i + 1}`}
                       >
                         <img src={img} className="w-full h-full object-cover" alt={`View ${i + 1}`} />
                       </button>
@@ -364,17 +314,18 @@ const PublicListingView: React.FC = () => {
                     </div>
                   )}
 
-                  {listing.dimensions?.sqft != null && (
+                  {(listing.squareFootage ?? listing.dimensions?.sqft) != null && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Square Feet</span>
-                      <span className="font-medium">{listing.dimensions.sqft} sq ft</span>
+                      <span className="font-medium">
+                        {(listing.squareFootage ?? listing.dimensions?.sqft) as number} sq ft
+                      </span>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Property Information */}
             {(listing.status || listing.offerType || listing.location?.address1) && (
               <Card>
                 <CardHeader>
@@ -426,18 +377,23 @@ const PublicListingView: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
-            <p className="text-gray-600 mb-4">Interested in {propertyListing.title}? Get in touch with us!</p>
-            
+            <p className="text-gray-600 mb-4">
+              Interested in {listing.title}? Get in touch with us!
+            </p>
+
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input type="text" placeholder="Your Name" className="border rounded-md px-3 py-2" />
               <input type="email" placeholder="Your Email" className="border rounded-md px-3 py-2" />
               <input type="tel" placeholder="Your Phone" className="border rounded-md px-3 py-2" />
-              <textarea 
-                placeholder={`I'm interested in ${propertyListing.title}. Please contact me with more information.`}
-                className="border rounded-md px-3 py-2 md:col-span-2" 
+              <textarea
+                placeholder={`I'm interested in ${listing.title}. Please contact me with more information.`}
+                className="border rounded-md px-3 py-2 md:col-span-2"
                 rows={4}
               ></textarea>
-              <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 md:col-span-2">
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 md:col-span-2"
+              >
                 Send Message
               </button>
             </form>
@@ -445,15 +401,10 @@ const PublicListingView: React.FC = () => {
         </div>
       </div>
 
-      <ShareListingModal
-        open={shareModalOpen}
-        onOpenChange={setShareModalOpen}
-        listing={listing}
-      />
+      <ShareListingModal open={shareModalOpen} onOpenChange={setShareModalOpen} listing={listing} />
     </div>
   )
 }
 
 export default PublicListingView
-
 export { PublicListingView }
