@@ -1,12 +1,12 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import ErrorBoundary from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { MenuManagerProvider } from '@/contexts/MenuManagerContext'
 import { logger } from '@/utils/logger'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
