@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   Plus, 
   Search, 
@@ -119,6 +120,9 @@ function InventoryList() {
   const [sortBy, setSortBy] = useState<'year' | 'price' | 'make' | 'updated'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
+  // Modal state for add inventory
+  const [showAddModal, setShowAddModal] = useState(false)
+
   // Load inventory data
   useEffect(() => {
     loadInventory()
@@ -185,7 +189,36 @@ function InventoryList() {
 
   // Handle actions
   const handleAddInventory = () => {
-    navigate('/inventory/new')
+    setShowAddModal(true)
+  }
+
+  const handleCreateVehicle = async (vehicleData: any) => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      const newVehicle = {
+        ...vehicleData,
+        id: `vh-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      toast({
+        title: 'Vehicle Added',
+        description: 'New vehicle has been added to inventory'
+      })
+
+      // Close modal and refresh the list
+      setShowAddModal(false)
+      // In a real app, you would refresh the data here
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add vehicle to inventory',
+        variant: 'destructive'
+      })
+    }
   }
 
   const handleViewVehicle = (vehicleId: string) => {
@@ -503,6 +536,20 @@ function InventoryList() {
           )}
         </div>
       )}
+
+      {/* Add Inventory Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Vehicle</DialogTitle>
+          </DialogHeader>
+          <VehicleForm
+            mode="create"
+            onSave={handleCreateVehicle}
+            onCancel={() => setShowAddModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
