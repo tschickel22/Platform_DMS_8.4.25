@@ -922,12 +922,84 @@ function InventoryCreate() {
 }
 
 export default function InventoryManagement() {
+  const navigate = useNavigate()
+  const { createVehicle, updateVehicle } = useInventoryManagement()
+  const { toast } = useToast()
+
   return (
     <Routes>
       <Route path="/" element={<InventoryList />} />
-      <Route path="/new" element={<InventoryCreate />} />
+      <Route path="/new" element={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Add New Inventory</h1>
+              <p className="text-muted-foreground">
+                Add a new RV or manufactured home to your inventory
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/inventory')}>
+              Back to Inventory
+            </Button>
+          </div>
+          <VehicleForm
+            mode="create"
+            onSave={async (data) => {
+              try {
+                const newItem = await createVehicle(data)
+                toast({
+                  title: 'Success',
+                  description: 'Inventory item created successfully'
+                })
+                navigate(`/inventory/${newItem.id}`)
+              } catch (error) {
+                toast({
+                  title: 'Error',
+                  description: 'Failed to create inventory item',
+                  variant: 'destructive'
+                })
+              }
+            }}
+            onCancel={() => navigate('/inventory')}
+          />
+        </div>
+      } />
       <Route path="/:inventoryId" element={<InventoryDetail />} />
-      <Route path="/:inventoryId/edit" element={<InventoryEdit />} />
+      <Route path="/:inventoryId/edit" element={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Edit Inventory</h1>
+              <p className="text-muted-foreground">
+                Update inventory item details
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/inventory')}>
+              Back to Inventory
+            </Button>
+          </div>
+          <VehicleForm
+            mode="edit"
+            onSave={async (data) => {
+              try {
+                await updateVehicle(data.id!, data)
+                toast({
+                  title: 'Success',
+                  description: 'Inventory item updated successfully'
+                })
+                navigate(`/inventory/${data.id}`)
+              } catch (error) {
+                toast({
+                  title: 'Error',
+                  description: 'Failed to update inventory item',
+                  variant: 'destructive'
+                })
+              }
+            }}
+            onCancel={() => navigate('/inventory')}
+          />
+        </div>
+      } />
     </Routes>
   )
 }
