@@ -1,214 +1,112 @@
-import React, { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useMemo } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Plus, 
   Search, 
   Filter, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Share, 
-  ArrowLeft,
-  Package,
-  DollarSign,
-  MapPin,
-  Calendar,
+  Grid3X3, 
+  List, 
   Download,
-  Upload,
-  MoreHorizontal,
-  Grid,
-  List,
-  SortAsc,
-  SortDesc
+  ArrowLeft,
+  Eye,
+  Edit,
+  Share,
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import { useErrorHandler } from '@/hooks/useErrorHandler'
-import { mockInventory } from '@/mocks/inventoryMock'
 import { VehicleForm } from './forms/VehicleForm'
-import { EmptyState } from '@/components/ui/empty-state'
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { mockInventory } from '@/mocks/inventoryMock'
+import { useToast } from '@/hooks/use-toast'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 
-// Types
-interface Vehicle {
-  id: string
-  listingType: 'rv' | 'manufactured_home'
-  inventoryId: string
-  year: number
-  make: string
-  model: string
-  vin?: string
-  serialNumber?: string
-  condition: 'new' | 'used'
-  salePrice?: number
-  rentPrice?: number
-  offerType: 'for_sale' | 'for_rent' | 'both'
-  status: 'available' | 'pending' | 'sold' | 'service'
-  bedrooms?: number
-  bathrooms?: number
-  sleeps?: number
-  slides?: number
-  length?: number
-  squareFootage?: number
-  fuelType?: string
-  engine?: string
-  transmission?: string
-  odometerMiles?: number
-  description?: string
-  searchResultsText?: string
-  media?: {
-    primaryPhoto?: string
-    photos?: string[]
-  }
-  location?: {
-    city?: string
-    state?: string
-    postalCode?: string
-    communityName?: string
-  }
-  features?: Record<string, boolean>
-  createdAt: string
-  updatedAt: string
-}
-
-// Main Component
 export default function InventoryManagement() {
-  return (
-    <Routes>
-      <Route path="/" element={<InventoryList />} />
-      <Route path="/new" element={<NewInventoryPage />} />
-      <Route path="/:vehicleId" element={<VehicleDetailPage />} />
-      <Route path="/:vehicleId/edit" element={<EditVehiclePage />} />
-    </Routes>
-  )
-}
-
-// Inventory List Component
-function InventoryList() {
+  const location = useLocation()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { handleError } = useErrorHandler()
   
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'rv' | 'manufactured_home'>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'pending' | 'sold' | 'service'>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [sortBy, setSortBy] = useState<'year' | 'price' | 'make' | 'updated'>('updated')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-
   // Modal state for add inventory
   const [showAddModal, setShowAddModal] = useState(false)
+  
+  // Filter and search state
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('updated')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
-  // Load inventory data
-  useEffect(() => {
-    loadInventory()
-  }, [])
+  // Determine current view based on URL
+  const isNewPage = location.pathname === '/inventory/new'
+  const isEditPage = location.pathname.includes('/edit')
+  const isDetailPage = location.pathname.match(/^\/inventory\/[^\/]+$/) && !isNewPage && !isEditPage
+  const isListPage = location.pathname === '/inventory' || location.pathname === '/inventory/'
 
-  const loadInventory = async () => {
-    try {
-      setLoading(true)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setVehicles(mockInventory.sampleVehicles)
-    } catch (error) {
-      handleError(error, 'loading inventory')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Get vehicle ID from URL for edit/detail pages
+  const vehicleId = location.pathname.split('/')[2]
+  const currentVehicle = mockInventory.sampleVehicles.find(v => v.id === vehicleId)
 
   // Filter and sort vehicles
-  const filteredVehicles = vehicles
-    .filter(vehicle => {
+  const filteredVehicles = useMemo(() => {
+    let filtered = mockInventory.sampleVehicles.filter(vehicle => {
       const matchesSearch = searchTerm === '' || 
         vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicle.inventoryId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (vehicle.vin && vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()))
+        vehicle.vin?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.inventoryId.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesType = filterType === 'all' || vehicle.listingType === filterType
-      const matchesStatus = filterStatus === 'all' || vehicle.status === filterStatus
+      const matchesType = typeFilter === 'all' || vehicle.listingType === typeFilter
+      const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter
 
       return matchesSearch && matchesType && matchesStatus
     })
-    .sort((a, b) => {
-      let aValue: any, bValue: any
 
+    // Sort vehicles
+    filtered.sort((a, b) => {
       switch (sortBy) {
         case 'year':
-          aValue = a.year
-          bValue = b.year
-          break
+          return (b.year || 0) - (a.year || 0)
         case 'price':
-          aValue = a.salePrice || a.rentPrice || 0
-          bValue = b.salePrice || b.rentPrice || 0
-          break
+          return (b.salePrice || 0) - (a.salePrice || 0)
         case 'make':
-          aValue = a.make
-          bValue = b.make
-          break
+          return a.make.localeCompare(b.make)
         case 'updated':
-          aValue = new Date(a.updatedAt).getTime()
-          bValue = new Date(b.updatedAt).getTime()
-          break
         default:
-          aValue = a.updatedAt
-          bValue = b.updatedAt
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1
-      } else {
-        return aValue < bValue ? 1 : -1
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       }
     })
 
-  // Handle actions
-  const handleAddInventory = () => {
-    setShowAddModal(true)
-  }
+    return filtered
+  }, [searchTerm, typeFilter, statusFilter, sortBy])
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = mockInventory.sampleVehicles.length
+    const available = mockInventory.sampleVehicles.filter(v => v.status === 'available').length
+    const pending = mockInventory.sampleVehicles.filter(v => v.status === 'pending').length
+    const sold = mockInventory.sampleVehicles.filter(v => v.status === 'sold').length
+    const totalValue = mockInventory.sampleVehicles
+      .filter(v => v.status === 'available')
+      .reduce((sum, v) => sum + (v.salePrice || 0), 0)
+
+    return { total, available, pending, sold, totalValue }
+  }, [])
 
   const handleCreateVehicle = async (vehicleData: any) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // In a real app, this would call an API
+      console.log('Creating vehicle:', vehicleData)
       
-      const newVehicle = {
-        ...vehicleData,
-        id: `vh-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
       toast({
-        title: 'Vehicle Added',
-        description: 'New vehicle has been added to inventory'
+        title: 'Success',
+        description: 'Vehicle added to inventory successfully'
       })
-
+      
       // Close modal and refresh the list
       setShowAddModal(false)
       // In a real app, you would refresh the data here
@@ -221,26 +119,20 @@ function InventoryList() {
     }
   }
 
-  const handleViewVehicle = (vehicleId: string) => {
-    navigate(`/inventory/${vehicleId}`)
-  }
-
-  const handleEditVehicle = (vehicleId: string) => {
-    navigate(`/inventory/${vehicleId}/edit`)
-  }
-
-  const handleShareVehicle = async (vehicle: Vehicle) => {
-    const shareUrl = `${window.location.origin}/public/demo/listing/${vehicle.id}`
+  const handleUpdateVehicle = async (vehicleData: any) => {
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      console.log('Updating vehicle:', vehicleData)
+      
       toast({
-        title: 'Link Copied',
-        description: 'Public listing link copied to clipboard'
+        title: 'Success',
+        description: 'Vehicle updated successfully'
       })
+      
+      navigate(`/inventory/${vehicleId}`)
     } catch (error) {
       toast({
-        title: 'Share Failed',
-        description: 'Could not copy link to clipboard',
+        title: 'Error',
+        description: 'Failed to update vehicle',
         variant: 'destructive'
       })
     }
@@ -248,16 +140,28 @@ function InventoryList() {
 
   const handleDeleteVehicle = async (vehicleId: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      setVehicles(prev => prev.filter(v => v.id !== vehicleId))
+      console.log('Deleting vehicle:', vehicleId)
+      
       toast({
-        title: 'Vehicle Deleted',
-        description: 'Vehicle has been removed from inventory'
+        title: 'Success',
+        description: 'Vehicle deleted successfully'
       })
     } catch (error) {
-      handleError(error, 'deleting vehicle')
+      toast({
+        title: 'Error',
+        description: 'Failed to delete vehicle',
+        variant: 'destructive'
+      })
     }
+  }
+
+  const handleShareVehicle = (vehicleId: string) => {
+    const shareUrl = `${window.location.origin}/public/demo/listing/${vehicleId}`
+    navigator.clipboard.writeText(shareUrl)
+    toast({
+      title: 'Link Copied',
+      description: 'Public listing link copied to clipboard'
+    })
   }
 
   const handleExportCSV = () => {
@@ -267,16 +171,16 @@ function InventoryList() {
       'Year': vehicle.year,
       'Make': vehicle.make,
       'Model': vehicle.model,
-      'VIN/Serial': vehicle.vin || vehicle.serialNumber || '',
+      'VIN': vehicle.vin || vehicle.serialNumber,
       'Status': vehicle.status,
       'Sale Price': vehicle.salePrice || '',
       'Rent Price': vehicle.rentPrice || '',
-      'Location': vehicle.location ? `${vehicle.location.city}, ${vehicle.location.state}` : '',
+      'Location': `${vehicle.location.city}, ${vehicle.location.state}`,
       'Created': new Date(vehicle.createdAt).toLocaleDateString()
     }))
 
     const csvContent = [
-      Object.keys(csvData[0]).join(','),
+      Object.keys(csvData[0] || {}).join(','),
       ...csvData.map(row => Object.values(row).join(','))
     ].join('\n')
 
@@ -294,328 +198,177 @@ function InventoryList() {
     })
   }
 
-  // Calculate stats
-  const stats = {
-    total: vehicles.length,
-    available: vehicles.filter(v => v.status === 'available').length,
-    pending: vehicles.filter(v => v.status === 'pending').length,
-    sold: vehicles.filter(v => v.status === 'sold').length,
-    totalValue: vehicles.reduce((sum, v) => sum + (v.salePrice || v.rentPrice || 0), 0)
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'sold': return 'bg-blue-100 text-blue-800'
-      case 'service': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getTypeLabel = (type: string) => {
-    return type === 'manufactured_home' ? 'Manufactured Home' : 'RV'
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-24 bg-gray-200 rounded"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
-          <p className="text-muted-foreground">
-            Manage your vehicle inventory and listings
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button onClick={handleAddInventory}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Inventory
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Units</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available</CardTitle>
-            <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.available}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <div className="h-2 w-2 bg-yellow-500 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sold</CardTitle>
-            <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.sold}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by make, model, VIN, or inventory ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-              >
-                <option value="all">All Types</option>
-                <option value="rv">RV</option>
-                <option value="manufactured_home">Manufactured Home</option>
-              </select>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="available">Available</option>
-                <option value="pending">Pending</option>
-                <option value="sold">Sold</option>
-                <option value="service">Service</option>
-              </select>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSortBy('updated')}>
-                    Sort by Updated
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy('year')}>
-                    Sort by Year
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy('price')}>
-                    Sort by Price
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy('make')}>
-                    Sort by Make
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-                    {sortOrder === 'asc' ? 'Descending' : 'Ascending'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      {filteredVehicles.length === 0 ? (
-        <EmptyState
-          title="No inventory found"
-          description="No vehicles match your current filters. Try adjusting your search criteria or add new inventory."
-          icon={<Package className="h-12 w-12" />}
-          action={{
-            label: "Add Inventory",
-            onClick: handleAddInventory
-          }}
+  // Render vehicle card for grid view
+  const renderVehicleCard = (vehicle: any) => (
+    <Card key={vehicle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="aspect-video relative">
+        <img 
+          src={vehicle.media?.primaryPhoto || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400'} 
+          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+          className="w-full h-full object-cover"
         />
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredVehicles.length} of {vehicles.length} vehicles
-            </p>
-          </div>
-
-          {viewMode === 'grid' ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredVehicles.map((vehicle) => (
-                <VehicleCard
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  onView={() => handleViewVehicle(vehicle.id)}
-                  onEdit={() => handleEditVehicle(vehicle.id)}
-                  onShare={() => handleShareVehicle(vehicle)}
-                  onDelete={() => handleDeleteVehicle(vehicle.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredVehicles.map((vehicle) => (
-                <VehicleListItem
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  onView={() => handleViewVehicle(vehicle.id)}
-                  onEdit={() => handleEditVehicle(vehicle.id)}
-                  onShare={() => handleShareVehicle(vehicle)}
-                  onDelete={() => handleDeleteVehicle(vehicle.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Add Inventory Modal */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Vehicle</DialogTitle>
-          </DialogHeader>
-          <VehicleForm
-            mode="create"
-            onSave={handleCreateVehicle}
-            onCancel={() => setShowAddModal(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-// Vehicle Card Component
-interface VehicleCardProps {
-  vehicle: Vehicle
-  onView: () => void
-  onEdit: () => void
-  onShare: () => void
-  onDelete: () => void
-}
-
-function VehicleCard({ vehicle, onView, onEdit, onShare, onDelete }: VehicleCardProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'sold': return 'bg-blue-100 text-blue-800'
-      case 'service': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getTypeLabel = (type: string) => {
-    return type === 'manufactured_home' ? 'Manufactured Home' : 'RV'
-  }
-
-  return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Image */}
-      <div className="aspect-video bg-gray-100 relative">
-        {vehicle.media?.primaryPhoto ? (
-          <img
-            src={vehicle.media.primaryPhoto}
-            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-12 w-12 text-gray-400" />
-          </div>
-        )}
         <div className="absolute top-2 left-2">
-          <Badge className={getStatusColor(vehicle.status)}>
+          <Badge variant={vehicle.status === 'available' ? 'default' : 'secondary'}>
             {vehicle.status}
           </Badge>
         </div>
         <div className="absolute top-2 right-2">
           <Badge variant="outline" className="bg-white/90">
-            {getTypeLabel(vehicle.listingType)}
+            {vehicle.listingType === 'rv' ? 'RV' : 'MH'}
           </Badge>
         </div>
       </div>
-
-      {/* Content */}
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg leading-tight">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </CardTitle>
-            <CardDescription className="mt-1">
+      
+      <CardContent className="p-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </h3>
+          
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
               ID: {vehicle.inventoryId}
-            </CardDescription>
+            </div>
+            <div className="text-right">
+              {vehicle.salePrice && (
+                <div className="font-semibold text-lg">
+                  ${vehicle.salePrice.toLocaleString()}
+                </div>
+              )}
+              {vehicle.rentPrice && (
+                <div className="text-sm text-muted-foreground">
+                  ${vehicle.rentPrice}/mo
+                </div>
+              )}
+            </div>
           </div>
+
+          <div className="text-sm text-muted-foreground">
+            {vehicle.listingType === 'rv' ? (
+              <div className="flex justify-between">
+                <span>Sleeps: {vehicle.sleeps || 'N/A'}</span>
+                <span>Length: {vehicle.length || 'N/A'}ft</span>
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <span>{vehicle.bedrooms || 0}BR/{vehicle.bathrooms || 0}BA</span>
+                <span>{vehicle.dimensions?.width_ft || 'N/A'}x{vehicle.dimensions?.length_ft || 'N/A'}ft</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" onClick={() => navigate(`/inventory/${vehicle.id}`)}>
+                <Eye className="h-3 w-3 mr-1" />
+                View
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate(`/inventory/${vehicle.id}/edit`)}>
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleShareVehicle(vehicle.id)}>
+                  <Share className="h-4 w-4 mr-2" />
+                  Share
+                </DropdownMenuItem>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this vehicle? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteVehicle(vehicle.id)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // Render vehicle row for list view
+  const renderVehicleRow = (vehicle: any) => (
+    <Card key={vehicle.id} className="p-4">
+      <div className="flex items-center gap-4">
+        <img 
+          src={vehicle.media?.primaryPhoto || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=100'} 
+          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+          className="w-16 h-16 object-cover rounded"
+        />
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold truncate">
+              {vehicle.year} {vehicle.make} {vehicle.model}
+            </h3>
+            <Badge variant={vehicle.status === 'available' ? 'default' : 'secondary'} className="shrink-0">
+              {vehicle.status}
+            </Badge>
+            <Badge variant="outline" className="shrink-0">
+              {vehicle.listingType === 'rv' ? 'RV' : 'MH'}
+            </Badge>
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            ID: {vehicle.inventoryId} • {vehicle.location.city}, {vehicle.location.state}
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            {vehicle.listingType === 'rv' ? (
+              `Sleeps: ${vehicle.sleeps || 'N/A'} • Length: ${vehicle.length || 'N/A'}ft`
+            ) : (
+              `${vehicle.bedrooms || 0}BR/${vehicle.bathrooms || 0}BA • ${vehicle.dimensions?.width_ft || 'N/A'}x${vehicle.dimensions?.length_ft || 'N/A'}ft`
+            )}
+          </div>
+        </div>
+
+        <div className="text-right">
+          {vehicle.salePrice && (
+            <div className="font-semibold">
+              ${vehicle.salePrice.toLocaleString()}
+            </div>
+          )}
+          {vehicle.rentPrice && (
+            <div className="text-sm text-muted-foreground">
+              ${vehicle.rentPrice}/mo
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="outline" onClick={() => navigate(`/inventory/${vehicle.id}`)}>
+            <Eye className="h-3 w-3 mr-1" />
+            View
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate(`/inventory/${vehicle.id}/edit`)}>
+            <Edit className="h-3 w-3 mr-1" />
+            Edit
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -623,19 +376,10 @@ function VehicleCard({ vehicle, onView, onEdit, onShare, onDelete }: VehicleCard
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onView}>
-                <Eye className="h-4 w-4 mr-2" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare}>
+              <DropdownMenuItem onClick={() => handleShareVehicle(vehicle.id)}>
                 <Share className="h-4 w-4 mr-2" />
                 Share
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -652,745 +396,374 @@ function VehicleCard({ vehicle, onView, onEdit, onShare, onDelete }: VehicleCard
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+                    <AlertDialogAction onClick={() => handleDeleteVehicle(vehicle.id)}>
+                      Delete
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </CardHeader>
-
-      <CardContent className="pt-0">
-        {/* Specs */}
-        <div className="space-y-2 mb-4">
-          {vehicle.listingType === 'rv' ? (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {vehicle.sleeps && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sleeps:</span>
-                  <span>{vehicle.sleeps}</span>
-                </div>
-              )}
-              {vehicle.length && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Length:</span>
-                  <span>{vehicle.length}ft</span>
-                </div>
-              )}
-              {vehicle.slides && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slides:</span>
-                  <span>{vehicle.slides}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {vehicle.bedrooms && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bedrooms:</span>
-                  <span>{vehicle.bedrooms}</span>
-                </div>
-              )}
-              {vehicle.bathrooms && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bathrooms:</span>
-                  <span>{vehicle.bathrooms}</span>
-                </div>
-              )}
-              {vehicle.squareFootage && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sq Ft:</span>
-                  <span>{vehicle.squareFootage}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Price */}
-        <div className="space-y-1 mb-4">
-          {vehicle.salePrice && (
-            <div className="text-lg font-bold text-green-600">
-              ${vehicle.salePrice.toLocaleString()}
-              {vehicle.offerType === 'both' && <span className="text-sm text-muted-foreground"> sale</span>}
-            </div>
-          )}
-          {vehicle.rentPrice && (
-            <div className="text-lg font-bold text-blue-600">
-              ${vehicle.rentPrice.toLocaleString()}/mo
-              {vehicle.offerType === 'both' && <span className="text-sm text-muted-foreground"> rent</span>}
-            </div>
-          )}
-        </div>
-
-        {/* Location */}
-        {vehicle.location && (
-          <div className="flex items-center text-sm text-muted-foreground mb-4">
-            <MapPin className="h-4 w-4 mr-1" />
-            {vehicle.location.city}, {vehicle.location.state}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button size="sm" onClick={onView} className="flex-1">
-            <Eye className="h-4 w-4 mr-2" />
-            View
-          </Button>
-          <Button size="sm" variant="outline" onClick={onEdit} className="flex-1">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button size="sm" variant="outline" onClick={onShare}>
-            <Share className="h-4 w-4" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete this vehicle? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardContent>
+      </div>
     </Card>
   )
-}
 
-// Vehicle List Item Component (for list view)
-function VehicleListItem({ vehicle, onView, onEdit, onShare, onDelete }: VehicleCardProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'sold': return 'bg-blue-100 text-blue-800'
-      case 'service': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          {/* Image */}
-          <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0">
-            {vehicle.media?.primaryPhoto ? (
-              <img
-                src={vehicle.media.primaryPhoto}
-                alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                className="w-full h-full object-cover rounded-lg"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Package className="h-8 w-8 text-gray-400" />
-              </div>
-            )}
-          </div>
-
-          {/* Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-lg">
-                  {vehicle.year} {vehicle.make} {vehicle.model}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  ID: {vehicle.inventoryId} • {vehicle.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
-                </p>
-                {vehicle.location && (
-                  <p className="text-sm text-muted-foreground flex items-center mt-1">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {vehicle.location.city}, {vehicle.location.state}
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <Badge className={getStatusColor(vehicle.status)}>
-                  {vehicle.status}
-                </Badge>
-                <div className="mt-2">
-                  {vehicle.salePrice && (
-                    <div className="text-lg font-bold text-green-600">
-                      ${vehicle.salePrice.toLocaleString()}
-                    </div>
-                  )}
-                  {vehicle.rentPrice && (
-                    <div className="text-sm text-blue-600">
-                      ${vehicle.rentPrice.toLocaleString()}/mo
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={onView}>
-              <Eye className="h-4 w-4 mr-2" />
-              View
-            </Button>
-            <Button size="sm" variant="outline" onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button size="sm" variant="outline" onClick={onShare}>
-              <Share className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this vehicle? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// New Inventory Page
-function NewInventoryPage() {
-  const navigate = useNavigate()
-  const { toast } = useToast()
-
-  const handleSave = async (vehicleData: any) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const newVehicle = {
-        ...vehicleData,
-        id: `vh-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      toast({
-        title: 'Vehicle Added',
-        description: 'New vehicle has been added to inventory'
-      })
-
-      navigate(`/inventory/${newVehicle.id}`)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add vehicle to inventory',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCancel = () => {
-    navigate('/inventory')
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/inventory')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Inventory
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Add New Vehicle</h1>
-          <p className="text-muted-foreground">
-            Add a new vehicle to your inventory
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <VehicleForm
-            mode="create"
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// Vehicle Detail Page
-function VehicleDetailPage() {
-  const { vehicleId } = useParams<{ vehicleId: string }>()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadVehicle()
-  }, [vehicleId])
-
-  const loadVehicle = async () => {
-    try {
-      setLoading(true)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      const found = mockInventory.sampleVehicles.find(v => v.id === vehicleId)
-      setVehicle(found || null)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load vehicle details',
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEdit = () => {
-    navigate(`/inventory/${vehicleId}/edit`)
-  }
-
-  const handleShare = async () => {
-    if (!vehicle) return
-    const shareUrl = `${window.location.origin}/public/demo/listing/${vehicle.id}`
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      toast({
-        title: 'Link Copied',
-        description: 'Public listing link copied to clipboard'
-      })
-    } catch (error) {
-      toast({
-        title: 'Share Failed',
-        description: 'Could not copy link to clipboard',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!vehicle) {
+  // Handle different page views
+  if (isNewPage) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/inventory')}>
+          <Button variant="outline" onClick={() => navigate('/inventory')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Inventory
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Vehicle Not Found</h1>
-          </div>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-muted-foreground">The vehicle you're looking for could not be found.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/inventory')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Inventory
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">Add New Vehicle</h1>
             <p className="text-muted-foreground">
-              Inventory ID: {vehicle.inventoryId}
+              Add a new vehicle to your inventory
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleShare}>
-            <Share className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-          <Button onClick={handleEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </div>
-      </div>
 
-      {/* Vehicle Details */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Info */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Images */}
-          {vehicle.media?.primaryPhoto && (
-            <Card>
-              <CardContent className="p-0">
-                <img
-                  src={vehicle.media.primaryPhoto}
-                  alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                  className="w-full h-64 object-cover rounded-t-lg"
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Description */}
-          {vehicle.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{vehicle.description}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Specifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Specifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Year</label>
-                  <p>{vehicle.year}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Make</label>
-                  <p>{vehicle.make}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Model</label>
-                  <p>{vehicle.model}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Condition</label>
-                  <p className="capitalize">{vehicle.condition}</p>
-                </div>
-                {vehicle.vin && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">VIN</label>
-                    <p className="font-mono text-sm">{vehicle.vin}</p>
-                  </div>
-                )}
-                {vehicle.serialNumber && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Serial Number</label>
-                    <p className="font-mono text-sm">{vehicle.serialNumber}</p>
-                  </div>
-                )}
-                {vehicle.listingType === 'rv' ? (
-                  <>
-                    {vehicle.sleeps && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Sleeps</label>
-                        <p>{vehicle.sleeps}</p>
-                      </div>
-                    )}
-                    {vehicle.length && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Length</label>
-                        <p>{vehicle.length} ft</p>
-                      </div>
-                    )}
-                    {vehicle.slides && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Slides</label>
-                        <p>{vehicle.slides}</p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {vehicle.bedrooms && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Bedrooms</label>
-                        <p>{vehicle.bedrooms}</p>
-                      </div>
-                    )}
-                    {vehicle.bathrooms && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Bathrooms</label>
-                        <p>{vehicle.bathrooms}</p>
-                      </div>
-                    )}
-                    {vehicle.squareFootage && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Square Footage</label>
-                        <p>{vehicle.squareFootage} sq ft</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Status & Pricing */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Status & Pricing</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <div className="mt-1">
-                  <Badge className={`${vehicle.status === 'available' ? 'bg-green-100 text-green-800' : 
-                    vehicle.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    vehicle.status === 'sold' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                    {vehicle.status}
-                  </Badge>
-                </div>
-              </div>
-              {vehicle.salePrice && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Sale Price</label>
-                  <p className="text-2xl font-bold text-green-600">
-                    ${vehicle.salePrice.toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {vehicle.rentPrice && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Rent Price</label>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${vehicle.rentPrice.toLocaleString()}/mo
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Location */}
-          {vehicle.location && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{vehicle.location.city}, {vehicle.location.state}</span>
-                  </div>
-                  {vehicle.location.postalCode && (
-                    <p className="text-sm text-muted-foreground">
-                      {vehicle.location.postalCode}
-                    </p>
-                  )}
-                  {vehicle.location.communityName && (
-                    <p className="text-sm text-muted-foreground">
-                      {vehicle.location.communityName}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Features */}
-          {vehicle.features && Object.keys(vehicle.features).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Features</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {Object.entries(vehicle.features).map(([feature, enabled]) => (
-                    enabled && (
-                      <div key={feature} className="flex items-center">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-sm capitalize">
-                          {feature.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Timestamps */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Record Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Created</label>
-                <p className="text-sm">{new Date(vehicle.createdAt).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
-                <p className="text-sm">{new Date(vehicle.updatedAt).toLocaleDateString()}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Edit Vehicle Page
-function EditVehiclePage() {
-  const { vehicleId } = useParams<{ vehicleId: string }>()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadVehicle()
-  }, [vehicleId])
-
-  const loadVehicle = async () => {
-    try {
-      setLoading(true)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      const found = mockInventory.sampleVehicles.find(v => v.id === vehicleId)
-      setVehicle(found || null)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load vehicle details',
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSave = async (vehicleData: any) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast({
-        title: 'Vehicle Updated',
-        description: 'Vehicle details have been saved'
-      })
-
-      navigate(`/inventory/${vehicleId}`)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update vehicle',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleCancel = () => {
-    navigate(`/inventory/${vehicleId}`)
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!vehicle) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/inventory')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Inventory
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Vehicle Not Found</h1>
-          </div>
-        </div>
         <Card>
-          <CardContent className="p-6 text-center">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-muted-foreground">The vehicle you're looking for could not be found.</p>
+          <CardContent className="pt-6">
+            <VehicleForm
+              mode="create"
+              onSave={handleCreateVehicle}
+              onCancel={() => navigate('/inventory')}
+            />
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate(`/inventory/${vehicleId}`)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Details
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Edit {vehicle.year} {vehicle.make} {vehicle.model}
-          </h1>
-          <p className="text-muted-foreground">
-            Update vehicle information and settings
-          </p>
+  if (isEditPage && currentVehicle) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/inventory')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Inventory
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Vehicle</h1>
+            <p className="text-muted-foreground">
+              Update vehicle information
+            </p>
+          </div>
         </div>
-      </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <VehicleForm
-            mode="edit"
-            initialData={vehicle}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  )
+        <Card>
+          <CardContent className="pt-6">
+            <VehicleForm
+              mode="edit"
+              initialData={currentVehicle}
+              onSave={handleUpdateVehicle}
+              onCancel={() => navigate('/inventory')}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isDetailPage && currentVehicle) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/inventory')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Inventory
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Vehicle Details</h1>
+            <p className="text-muted-foreground">
+              View vehicle information
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <img 
+                  src={currentVehicle.media?.primaryPhoto || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=600'} 
+                  alt={`${currentVehicle.year} ${currentVehicle.make} ${currentVehicle.model}`}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    {currentVehicle.year} {currentVehicle.make} {currentVehicle.model}
+                  </h2>
+                  <p className="text-muted-foreground">ID: {currentVehicle.inventoryId}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Status:</span>
+                    <Badge className="ml-2">{currentVehicle.status}</Badge>
+                  </div>
+                  <div>
+                    <span className="font-medium">Type:</span>
+                    <span className="ml-2">{currentVehicle.listingType === 'rv' ? 'RV' : 'Manufactured Home'}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">VIN:</span>
+                    <span className="ml-2">{currentVehicle.vin || currentVehicle.serialNumber}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Location:</span>
+                    <span className="ml-2">{currentVehicle.location.city}, {currentVehicle.location.state}</span>
+                  </div>
+                </div>
+
+                {currentVehicle.salePrice && (
+                  <div>
+                    <span className="font-medium">Sale Price:</span>
+                    <span className="ml-2 text-lg font-bold">${currentVehicle.salePrice.toLocaleString()}</span>
+                  </div>
+                )}
+
+                {currentVehicle.rentPrice && (
+                  <div>
+                    <span className="font-medium">Rent Price:</span>
+                    <span className="ml-2 text-lg font-bold">${currentVehicle.rentPrice}/month</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={() => navigate(`/inventory/${currentVehicle.id}/edit`)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Vehicle
+                  </Button>
+                  <Button variant="outline" onClick={() => handleShareVehicle(currentVehicle.id)}>
+                    <Share className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Main inventory list view
+  if (isListPage || location.pathname === '/inventory') {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
+            <p className="text-muted-foreground">
+              Manage your vehicle inventory and listings
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Inventory
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Available</CardTitle>
+              <div className="h-2 w-2 bg-green-500 rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-success">{stats.available}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <div className="h-2 w-2 bg-yellow-500 rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-warning">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sold</CardTitle>
+              <div className="h-2 w-2 bg-blue-500 rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-primary">{stats.sold}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-primary">${stats.totalValue.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters and Controls */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by make, model, VIN, or inventory ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="rv">RV</SelectItem>
+                    <SelectItem value="manufactured_home">Manufactured Home</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="sold">Sold</SelectItem>
+                    <SelectItem value="service">Service</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="updated">Recently Updated</SelectItem>
+                    <SelectItem value="year">Year (Newest)</SelectItem>
+                    <SelectItem value="price">Price (Highest)</SelectItem>
+                    <SelectItem value="make">Make (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex border rounded-md">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-r-none"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-l-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredVehicles.length} of {mockInventory.sampleVehicles.length} vehicles
+            </p>
+          </div>
+
+          {filteredVehicles.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchTerm || typeFilter !== 'all' || statusFilter !== 'all' 
+                      ? 'Try adjusting your search or filters'
+                      : 'Get started by adding your first vehicle to inventory'
+                    }
+                  </p>
+                  <Button onClick={() => setShowAddModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First Vehicle
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={viewMode === 'grid' 
+              ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' 
+              : 'space-y-4'
+            }>
+              {filteredVehicles.map(vehicle => 
+                viewMode === 'grid' ? renderVehicleCard(vehicle) : renderVehicleRow(vehicle)
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Add Inventory Modal */}
+        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Vehicle</DialogTitle>
+            </DialogHeader>
+            <VehicleForm
+              mode="create"
+              onSave={handleCreateVehicle}
+              onCancel={() => setShowAddModal(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+    )
+  }
+
+  // Fallback - redirect to main inventory list
+  return <div>Loading...</div>
 }
