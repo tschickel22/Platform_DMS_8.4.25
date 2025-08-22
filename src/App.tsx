@@ -45,6 +45,7 @@ import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-bu
 // Property Listings (Admin + Public)
 import PropertyListings from '@/modules/property-listings/PropertyListings'
 import ListingDetail from '@/modules/property-listings/components/ListingDetail'
+import ListingForm from '@/modules/property-listings/components/ListingForm'
 import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
 import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
 import PublicSitePreview from '@/components/PublicSitePreview'
@@ -136,6 +137,16 @@ function App() {
 
                                   {/* Marketing → Property Listings (ADMIN) */}
                                   <Route path="/property/listings" element={<PropertyListings />} />
+                                  <Route path="/property/listings/new" element={
+                                    <ErrorBoundary>
+                                      <ListingForm mode="create" />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/property/listings/:listingId/edit" element={
+                                    <ErrorBoundary>
+                                      <ListingForm mode="edit" />
+                                    </ErrorBoundary>
+                                  } />
                                   <Route path="/property/listings/:listingId" element={<ListingDetail />} />
                                   <Route path="/brochures/*" element={
                                     <Routes>

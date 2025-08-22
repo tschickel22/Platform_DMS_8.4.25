@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 // ✅ robust import: works for named, default, or alternate keys
 import * as ListingsMock from '@/mocks/listingsMock'
+import { propertyListingsService } from '../services/propertyListingsService'
+import { PropertyListing } from '../types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -173,6 +175,37 @@ const PublicCatalogView: React.FC = () => {
       </div>
     )
   }
+  const [listings, setListings] = useState<PropertyListing[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        setLoading(true)
+        const allListings = await propertyListingsService.getListings()
+        // Filter to only active listings for public view
+        const activeListings = allListings.filter(listing => listing.status === 'active')
+        setListings(activeListings)
+      } catch (error) {
+        console.error('Failed to load listings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadListings()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading listings...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -185,6 +218,44 @@ const PublicCatalogView: React.FC = () => {
               <p className="text-muted-foreground">Browse available manufactured homes and RVs</p>
             </div>
             <div className="flex items-center space-x-2">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {listings.map((listing) => (
+              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="h-48 bg-gray-100">
+                  {listing.media.primaryPhoto ? (
+                    <img
+                      src={listing.media.primaryPhoto}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-muted-foreground">No Image</span>
+                    </div>
+                  )}
+                </div>
+                
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-lg">{listing.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {listing.year} {listing.make} {listing.model}
+                    </p>
+                    
+                    {listing.salePrice && (
+                      <p className="text-xl font-bold text-primary">
+                        {formatCurrency(listing.salePrice)}
+                      </p>
+                    )}
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {listing.location.city}, {listing.location.state}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"

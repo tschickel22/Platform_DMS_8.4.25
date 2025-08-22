@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { propertyListingsService } from '../services/propertyListingsService'
+import { PropertyListing } from '../types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -117,10 +119,113 @@ const PublicListingView: React.FC = () => {
   const primary = listing.media?.primaryPhoto ?? photos[0]
   const allImages =
     primary != null ? [primary, ...photos.filter((p: string) => p !== primary)] : photos
+  const [listing, setListing] = useState<PropertyListing | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadListing = async () => {
+      if (!listingId) return
+      
+      try {
+        setLoading(true)
+        const listingData = await propertyListingsService.getListing(listingId)
+        setListing(listingData)
+      } catch (error) {
+        console.error('Failed to load listing:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadListing()
+  }, [listingId])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading listing...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!listing) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Listing Not Found</h1>
+          <p className="text-muted-foreground">The listing you're looking for could not be found.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">{listing.title}</h1>
+            <p className="text-muted-foreground">
+              {listing.year} {listing.make} {listing.model}
+            </p>
+          </div>
+          
+          {listing.media.primaryPhoto && (
+            <div className="h-96 bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={listing.media.primaryPhoto}
+                alt={listing.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {listing.description || 'No description available.'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {listing.salePrice && (
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Price</span>
+                      <p className="text-2xl font-bold text-primary">
+                        {formatCurrency(listing.salePrice)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Location</span>
+                    <p>{listing.location.city}, {listing.location.state}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Type</span>
+                    <p className="capitalize">{listing.listingType.replace('_', ' ')}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       <div className="bg-card border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)} className="flex items-center">

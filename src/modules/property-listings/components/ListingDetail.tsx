@@ -1,459 +1,404 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { ShareListingModal } from './ShareListingModal'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  ArrowLeft,
+  ArrowLeft, 
+  Edit, 
   Share, 
-  MapPin, 
-  Calendar, 
-  Home, 
-  Bed, 
-  Bath, 
-  Square, 
+  Download, 
+  Eye,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Home,
   Car,
-  Share2,
-  Heart,
-  Phone,
-  Mail,
-  Globe
+  ExternalLink
 } from 'lucide-react'
-import { mockListings } from '@/mocks/listingsMock'
+import { PropertyListing } from '../types'
+import { usePropertyListings } from '../hooks/usePropertyListings'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
-interface ListingDetailProps {
-  listingId?: string
-}
-
-export default function ListingDetail({ listingId: propListingId }: ListingDetailProps) {
-  const { listingId: paramListingId } = useParams()
+export default function ListingDetail() {
+  const { listingId } = useParams<{ listingId: string }>()
   const navigate = useNavigate()
-  const [listing, setListing] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [shareModalOpen, setShareModalOpen] = useState(false)
-
-  const listingId = propListingId || paramListingId
+  const { listings, loading } = usePropertyListings()
+  
+  const [listing, setListing] = useState<PropertyListing | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<string>('')
 
   useEffect(() => {
-    const fetchListing = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Handle new listing case
-        if (listingId === 'new') {
-          setListing(null) // Will trigger form to show empty state
-          return
-        }
-        
-        // Ensure we have an array to search in
-        const listings = mockListings?.sampleListings || []
-        
-        // First try to find in mock data
-        const mockListing = listings.find(l => l.id === listingId)
-        
-        if (mockListing) {
-          setListing(mockListing)
-          setLoading(false)
-          return
-        }
-
-        // If not in mock data, try API call
-        // TODO: Replace with actual API call when backend is ready
-        const response = await fetch(`/.netlify/functions/listings-crud?companyId=demo&listingId=${listingId}`)
-        
-        if (response.ok) {
-          const data = await response.json()
-          setListing(data)
-        } else {
-          throw new Error('Listing not found')
-        }
-      } catch (err) {
-        console.error('Error fetching listing:', err)
-        setError('Failed to load listing details')
-      } finally {
-        setLoading(false)
-      }
+    if (listingId && listings.length > 0) {
+      const found = listings.find(l => l.id === listingId)
+      setListing(found || null)
+      setSelectedPhoto(found?.media.primaryPhoto || '')
     }
+  }, [listingId, listings])
 
-    if (listingId) {
-      fetchListing()
-    } else {
-      setError('No listing ID provided')
-      setLoading(false)
-    }
-  }, [listingId])
-
-  const handleBack = () => {
-    navigate(-1)
+  const handleEdit = () => {
+    navigate(`/property/listings/${listingId}/edit`)
   }
 
   const handleShare = () => {
-    // TODO: Implement share functionality in Phase 3
-    console.log('Share listing:', listingId)
+    const url = `${window.location.origin}/public/demo/listing/${listingId}`
+    navigator.clipboard.writeText(url)
+    alert('Listing URL copied to clipboard!')
+  }
+
+  const handlePreview = () => {
+    const url = `${window.location.origin}/public/demo/listing/${listingId}`
+    window.open(url, '_blank')
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded mb-6"></div>
-          <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading listing...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !listing) {
+  if (!listing) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Listings
-        </Button>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold mb-2">Listing Not Found</h3>
-              <p className="text-muted-foreground mb-4">
-                {error || 'The listing you\'re looking for could not be found.'}
-              </p>
-              <Button onClick={handleBack}>
-                Return to Listings
-              </Button>
-            </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Listing Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The listing you're looking for could not be found.
+            </p>
+            <Button onClick={() => navigate('/property/listings')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Listings
+            </Button>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price)
-  }
-
-  const primaryImage = listing.media?.photos?.[0] || listing.media?.primaryPhoto || 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
+  const TypeIcon = getTypeIcon(listing.listingType)
 
   return (
-    <>
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Listings
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Heart className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Hero Image */}
-          <div className="relative">
-            <img
-              src={primaryImage}
-              alt={listing.searchResultsText || `${listing.year} ${listing.make} ${listing.model}`}
-              className="w-full h-96 object-cover rounded-lg"
-            />
-            <div className="absolute top-4 left-4">
-              <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
-                {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
-              </Badge>
-            </div>
-            {listing.status && (
-              <div className="absolute top-4 right-4">
-                <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/property/listings')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Listings
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <TypeIcon className="h-5 w-5 text-muted-foreground" />
+                <h1 className="text-2xl font-bold">{listing.title}</h1>
+                <Badge className={getStatusColor(listing.status)}>
                   {listing.status}
                 </Badge>
               </div>
-            )}
-          </div>
-
-          {/* Title and Basic Info */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {listing.searchResultsText || `${listing.year} ${listing.make} ${listing.model}`}
-            </h1>
-            <div className="flex items-center text-muted-foreground mb-4">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>
-                {listing.location?.city && listing.location?.state 
-                  ? `${listing.location.city}, ${listing.location.state}`
-                  : 'Location not specified'
-                }
-              </span>
-            </div>
-            
-            {/* Key Features */}
-            <div className="flex flex-wrap gap-4 text-sm">
-              {listing.year && (
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>{listing.year}</span>
-                </div>
-              )}
-              {listing.bedrooms && (
-                <div className="flex items-center">
-                  <Bed className="h-4 w-4 mr-1" />
-                  <span>{listing.bedrooms} bed</span>
-                </div>
-              )}
-              {listing.bathrooms && (
-                <div className="flex items-center">
-                  <Bath className="h-4 w-4 mr-1" />
-                  <span>{listing.bathrooms} bath</span>
-                </div>
-              )}
-              {listing.dimensions?.length_ft && (
-                <div className="flex items-center">
-                  <Square className="h-4 w-4 mr-1" />
-                  <span>{listing.dimensions.length_ft} ft</span>
-                </div>
-              )}
-              {listing.sleeps && (
-                <div className="flex items-center">
-                  <Home className="h-4 w-4 mr-1" />
-                  <span>Sleeps {listing.sleeps}</span>
-                </div>
-              )}
+              <p className="text-muted-foreground">
+                {listing.year} {listing.make} {listing.model}
+              </p>
             </div>
           </div>
-
-          {/* Description */}
-          {listing.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {listing.description}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Features and Specifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Features & Specifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Basic Information</h4>
-                  <div className="space-y-2 text-sm">
-                    {listing.make && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Make:</span>
-                        <span>{listing.make}</span>
-                      </div>
-                    )}
-                    {listing.model && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Model:</span>
-                        <span>{listing.model}</span>
-                      </div>
-                    )}
-                    {listing.year && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Year:</span>
-                        <span>{listing.year}</span>
-                      </div>
-                    )}
-                    {listing.condition && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Condition:</span>
-                        <span className="capitalize">{listing.condition}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold mb-2">Dimensions</h4>
-                  <div className="space-y-2 text-sm">
-                    {listing.dimensions?.length_ft && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Length:</span>
-                        <span>{listing.dimensions.length_ft} ft</span>
-                      </div>
-                    )}
-                    {listing.dimensions?.width_ft && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Width:</span>
-                        <span>{listing.dimensions.width_ft} ft</span>
-                      </div>
-                    )}
-                    {listing.slides && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Slide Outs:</span>
-                        <span>{listing.slides}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Button 
-            variant="outline"
-            onClick={() => setShareModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Share className="h-4 w-4" />
-            Share
-          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handlePreview}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <Button variant="outline" onClick={handleShare}>
+              <Share className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button onClick={handleEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Pricing Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Photo Gallery */}
+            <Card>
+              <CardContent className="p-0">
+                {/* Main Photo */}
+                <div className="h-96 bg-gray-100">
+                  {selectedPhoto ? (
+                    <img
+                      src={selectedPhoto}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <TypeIcon className="h-24 w-24 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Photo Thumbnails */}
+                {listing.media.photos.length > 1 && (
+                  <div className="p-4 border-t">
+                    <div className="flex gap-2 overflow-x-auto">
+                      {listing.media.photos.map((photo, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedPhoto(photo)}
+                          className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
+                            selectedPhoto === photo ? 'border-primary' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={photo}
+                            alt={`Photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Description & Details */}
+            <Tabs defaultValue="description" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="specifications">Specifications</TabsTrigger>
+                <TabsTrigger value="features">Features</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="description">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Description</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {listing.description || 'No description available.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="specifications">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Specifications</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Year</Label>
+                        <p>{listing.year}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Make</Label>
+                        <p>{listing.make}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Model</Label>
+                        <p>{listing.model}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Condition</Label>
+                        <p className="capitalize">{listing.condition}</p>
+                      </div>
+                      
+                      {listing.listingType === 'rv' && (
+                        <>
+                          {listing.sleeps && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Sleeps</Label>
+                              <p>{listing.sleeps}</p>
+                            </div>
+                          )}
+                          {listing.length && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Length</Label>
+                              <p>{listing.length} ft</p>
+                            </div>
+                          )}
+                          {listing.slides && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Slide Outs</Label>
+                              <p>{listing.slides}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {listing.listingType === 'manufactured_home' && (
+                        <>
+                          {listing.bedrooms && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Bedrooms</Label>
+                              <p>{listing.bedrooms}</p>
+                            </div>
+                          )}
+                          {listing.bathrooms && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Bathrooms</Label>
+                              <p>{listing.bathrooms}</p>
+                            </div>
+                          )}
+                          {listing.dimensions?.sqft && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Square Feet</Label>
+                              <p>{listing.dimensions.sqft}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="features">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {Object.keys(listing.features).length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(listing.features).map(([key, value]) => (
+                          <div key={key} className="flex items-center justify-between">
+                            <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No features listed.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Pricing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 {listing.salePrice && (
                   <div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatPrice(listing.salePrice)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Sale Price</div>
+                    <Label className="text-sm font-medium text-muted-foreground">Sale Price</Label>
+                    <p className="text-2xl font-bold text-primary">
+                      {formatCurrency(listing.salePrice)}
+                    </p>
                   </div>
                 )}
                 {listing.rentPrice && (
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">
-                      {formatPrice(listing.rentPrice)}/mo
-                    </div>
-                    <div className="text-sm text-muted-foreground">Monthly Rent</div>
+                    <Label className="text-sm font-medium text-muted-foreground">Rent Price</Label>
+                    <p className="text-xl font-semibold">
+                      {formatCurrency(listing.rentPrice)}/month
+                    </p>
                   </div>
                 )}
-                {!listing.salePrice && !listing.rentPrice && (
-                  <div className="text-muted-foreground">
-                    Contact for pricing
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {listing.seller?.companyName && (
+                {listing.lotRent && (
                   <div>
-                    <div className="font-semibold">{listing.seller.companyName}</div>
+                    <Label className="text-sm font-medium text-muted-foreground">Lot Rent</Label>
+                    <p>{formatCurrency(listing.lotRent)}/month</p>
                   </div>
                 )}
-                
-                <div className="space-y-2">
-                  {listing.seller?.phone && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={`tel:${listing.seller.phone}`}>
-                        <Phone className="h-4 w-4 mr-2" />
-                        {listing.seller.phone}
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {listing.seller?.emails?.[0] && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={`mailto:${listing.seller.emails[0]}`}>
-                        <Mail className="h-4 w-4 mr-2" />
-                        {listing.seller.emails[0]}
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {listing.seller?.website && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href={listing.seller.website} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-4 w-4 mr-2" />
-                        Visit Website
-                      </a>
-                    </Button>
-                  )}
-                </div>
+              </CardContent>
+            </Card>
 
-                <Separator />
-                
-                <Button className="w-full" size="lg">
-                  Contact Seller
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Location */}
-          {listing.location && (
+            {/* Location */}
             <Card>
               <CardHeader>
-                <CardTitle>Location</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  {listing.location.address1 && (
-                    <div>{listing.location.address1}</div>
-                  )}
-                  {listing.location.city && listing.location.state && (
-                    <div>{listing.location.city}, {listing.location.state}</div>
-                  )}
-                  {listing.location.postalCode && (
-                    <div>{listing.location.postalCode}</div>
-                  )}
+              <CardContent className="space-y-2">
+                <p>{listing.location.city}, {listing.location.state}</p>
+                {listing.location.postalCode && (
+                  <p className="text-sm text-muted-foreground">{listing.location.postalCode}</p>
+                )}
+                {listing.location.communityName && (
+                  <p className="text-sm text-muted-foreground">{listing.location.communityName}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Listing Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Listing Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created</Label>
+                  <p>{formatDate(listing.createdAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
+                  <p>{formatDate(listing.updatedAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Listing Type</Label>
+                  <p className="capitalize">{listing.listingType.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Offer Type</Label>
+                  <p className="capitalize">{listing.offerType.replace('_', ' ')}</p>
                 </div>
               </CardContent>
             </Card>
-          )}
+
+            {/* Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button className="w-full" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Listing
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handlePreview}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Preview Public View
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handleShare}>
+                  <Share className="h-4 w-4 mr-2" />
+                  Share Listing
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
-
-    {/* Share Modal */}
-    <ShareListingModal
-      open={shareModalOpen}
-      onOpenChange={setShareModalOpen}
-      listing={listing}
-    />
-  </>
   )
 }
