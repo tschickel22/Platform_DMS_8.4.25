@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { clearListingPreviewCache } from '@/utils/cacheUtils';
 import {
-  Building, Home, DollarSign, Search, MapPin, Bed, Bath, Square, Users, Ruler, Eye, Trash2, Plus, Share2,
+  Building, Home, DollarSign, Search, MapPin, Bed, Bath, Square, Users, Ruler, Eye, Trash2, Plus, Share2, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ function PropertyListingsDashboard() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [invDetailsId, setInvDetailsId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const editingListing = useMemo(
     () => listings.find((l: any) => l.id === editingId) || null,
@@ -118,6 +120,20 @@ function PropertyListingsDashboard() {
   const saveEdit = (patch: any) => { if (!editingListing) return; updateListing(editingListing.id, patch); setEditingId(null); };
   const remove = (id: string) => { if (!confirm("Delete this listing?")) return; deleteListing(id); };
 
+  const handleRefreshCache = async () => {
+    setRefreshing(true);
+    try {
+      clearListingPreviewCache();
+      // Force a small delay to show the refresh state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to refresh cache:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   /** Resolve a raw listing id for a row from useEffectiveListings (ids may differ). */
   const openEdit = (row: any) => {
     const guessIds = [
@@ -170,6 +186,15 @@ function PropertyListingsDashboard() {
         <div className="flex gap-2">
           <Button variant="outline" className="flex items-center gap-2" onClick={() => setShareOpen(true)} data-pl-share-all>
             <Share2 className="h-4 w-4" /> Share All Listings
+          </Button>
+          <Button 
+            onClick={handleRefreshCache} 
+            variant="outline"
+            disabled={refreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Clear Cache'}
           </Button>
           <Button className="flex items-center gap-2" onClick={startCreate}>
             <Plus className="h-4 w-4" /> Add New Listing
