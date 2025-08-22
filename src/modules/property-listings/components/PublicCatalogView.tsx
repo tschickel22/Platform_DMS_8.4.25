@@ -1,306 +1,437 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+// ✅ robust import: works for named, default, or alternate keys
+import * as ListingsMock from '@/mocks/listingsMock'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, MapPin, Bed, Bath, Users, Ruler, ExternalLink } from 'lucide-react'
-import { mockListings, type PublicListing } from '@/mocks/listingsMock'
+import { Grid, List, MapPin, Bed, Bath, Users, Ruler, Search, Home, Car } from 'lucide-react'
 
-export function PublicCatalogView() {
-  const { companySlug, token } = useParams<{ companySlug: string; token?: string }>()
-  const [searchParams] = useSearchParams()
-  
-  const [listings, setListings] = useState<PublicListing[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [priceFilter, setPriceFilter] = useState<string>('all')
+// Turn any plausible mock module shape into an array
+const asArray = (val: any) => {
+  if (Array.isArray(val)) return val
+  if (Array.isArray(val?.listings)) return val.listings
+  if (Array.isArray(val?.sampleListings)) return val.sampleListings
+  if (Array.isArray(val?.default)) return val.default
+  return []
+}
 
-  useEffect(() => {
-    const loadListings = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+type Listing = {
+  id: string
+  title?: string
+  make?: string
+  model?: string
+  year?: number | string
+  listingType?: 'manufactured_home' | 'rv' | string
+  salePrice?: number
+  rentPrice?: number
+  length?: number | string
+  slides?: number | string
+  bedrooms?: number | string
+  bathrooms?: number | string
+  sleeps?: number | string
+  dimensions?: { sqft?: number | string } | null
+  location?: { city?: string; state?: string } | null
+  media?: {
+    primaryPhoto?: string | null
+    photos?: string[]
+  } | null
+}
 
-        // Load listings from local storage or use mock data as fallback
-        const savedListings = localStorage.getItem(`listings:${companySlug}`)
-        
-        let listingsData = mockListings
-        
-        if (savedListings) {
-          try {
-            const parsed = JSON.parse(savedListings)
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              listingsData = parsed
-            }
-          } catch (err) {
-            console.warn('Failed to parse saved listings, using mock data:', err)
-          }
-        }
+const numOrUndefined = (v: string | number | undefined | null) => {
+  if (v === '' || v === undefined || v === null) return undefined
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) ? n : undefined
+}
 
-        setListings(listingsData)
-      } catch (err) {
-        console.error('Error loading listings:', err)
-        setError('Failed to load listings')
-        // Fallback to mock data on error
-        setListings(mockListings)
-      } finally {
-        setLoading(false)
-      }
-    }
+const PublicCatalogView: React.FC = () => {
+  const { companySlug } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
 
-    loadListings()
-  }, [companySlug, token])
-
-  // Filter listings based on search and filters
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = searchTerm === '' || 
-      listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.location.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${listing.make} ${listing.model}`.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesType = typeFilter === 'all' || listing.listingType === typeFilter
-
-    let matchesPrice = true
-    if (priceFilter !== 'all') {
-      const price = listing.salePrice || listing.rentPrice || 0
-      switch (priceFilter) {
-        case 'under_100k':
-          matchesPrice = price < 100000
-          break
-        case '100k_300k':
-          matchesPrice = price >= 100000 && price <= 300000
-          break
-        case 'over_300k':
-          matchesPrice = price > 300000
-          break
-      }
-    }
-
-    return matchesSearch && matchesType && matchesPrice
+  const [loading, setLoading] = useState(false)
+  const [listings, setListings] = useState<Listing[]>([])
+  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get('q') || '')
+  const [filterType, setFilterType] = useState<string>(searchParams.get('type') || 'all')
+  const [filterOfferType, setFilterOfferType] = useState<string>(searchParams.get('offer') || 'all')
+  const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({
+    min: searchParams.get('minPrice') || '',
+    max: searchParams.get('maxPrice') || '',
   })
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Load mock data safely
+  useEffect(() => {
+    setLoading(true)
+
+    // Optional: gate with env flag
+    const USE_MOCKS = (import.meta as any)?.env?.VITE_USE_MOCKS !== 'false'
+
+    if (USE_MOCKS) {
+      const mock =
+        (ListingsMock as any).mockListings ??
+        (ListingsMock as any).listings ??
+        (ListingsMock as any).sampleListings ??
+        (ListingsMock as any).default
+
+      const data = asArray(mock)
+      console.log('Mock data found:', data)
+      setListings(data)
+      setLoading(false)
+    } else {
+      // TODO: real API call when ready
+      setListings([])
+      setLoading(false)
+    }
+  }, [])
+
+  const filteredListings = useMemo(() => {
+    let filtered = [...listings]
+
+    const q = (searchQuery || '').toLowerCase().trim()
+    if (q) {
+      filtered = filtered.filter((l) => {
+        const title = (l.title || '').toLowerCase()
+        const make = (l.make || '').toLowerCase()
+        const model = (l.model || '').toLowerCase()
+        const city = (l.location?.city || '').toLowerCase()
+        const state = (l.location?.state || '').toLowerCase()
+        return (
+          title.includes(q) ||
+          make.includes(q) ||
+          model.includes(q) ||
+          city.includes(q) ||
+          state.includes(q)
+        )
+      })
+    }
+
+    if (filterType !== 'all') {
+      filtered = filtered.filter((l) => l.listingType === filterType)
+    }
+
+    if (filterOfferType !== 'all') {
+      filtered = filtered.filter((l) => {
+        if (filterOfferType === 'for_sale') return !!l.salePrice
+        if (filterOfferType === 'for_rent') return !!l.rentPrice
+        return true
+      })
+    }
+
+    const min = numOrUndefined(priceRange.min)
+    const max = numOrUndefined(priceRange.max)
+    if (min != null || max != null) {
+      filtered = filtered.filter((l) => {
+        const price = l.salePrice ?? l.rentPrice ?? 0
+        if (min != null && price < min) return false
+        if (max != null && price > max) return false
+        return true
+      })
+    }
+
+    return filtered
+  }, [listings, searchQuery, filterType, filterOfferType, priceRange])
+
+  const updateUrlParams = (key: string, value?: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (value && value.length) next.set(key, value)
+    else next.delete(key)
+    setSearchParams(next)
+  }
+
+  const formatPrice = (price?: number) =>
+    typeof price === 'number'
+      ? new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0,
+        }).format(price)
+      : ''
+
+  const getListingTypeIcon = (type?: string) => (type === 'manufactured_home' ? Home : Car)
+
+  const handleListingClick = (listingId: string) => {
+    navigate(`/${companySlug}/listing/${listingId}`)
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading listings...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Listings</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded w-1/4" />
+            <div className="h-16 bg-muted rounded" />
+            <div className="grid gap-6 md:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-80 rounded bg-muted" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+      <div className="bg-card border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Property Listings</h1>
-              <p className="text-gray-600 mt-1">
-                {companySlug ? `${companySlug} Properties` : 'Available Properties'}
-              </p>
+              <h1 className="text-2xl font-bold">Property Listings</h1>
+              <p className="text-muted-foreground">Browse available manufactured homes and RVs</p>
             </div>
-            <div className="text-sm text-gray-500">
-              {filteredListings.length} of {listings.length} listings
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" />
+              <Input
+                placeholder="Search by make, model, location..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  updateUrlParams('q', e.target.value)
+                }}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <Select
+                value={filterType}
+                onValueChange={(value) => {
+                  setFilterType(value)
+                  updateUrlParams('type', value)
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Property Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
+                  <SelectItem value="rv">RV/Travel Trailers</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filterOfferType}
+                onValueChange={(value) => {
+                  setFilterOfferType(value)
+                  updateUrlParams('offer', value)
+                }}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Offer Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Offers</SelectItem>
+                  <SelectItem value="for_sale">For Sale</SelectItem>
+                  <SelectItem value="for_rent">For Rent</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Min Price"
+                  value={priceRange.min}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setPriceRange((r) => ({ ...r, min: v }))
+                    updateUrlParams('minPrice', v)
+                  }}
+                  className="w-[120px]"
+                />
+                <Input
+                  placeholder="Max Price"
+                  value={priceRange.max}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setPriceRange((r) => ({ ...r, max: v }))
+                    updateUrlParams('maxPrice', v)
+                  }}
+                  className="w-[120px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'} found
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search listings..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Property Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="manufactured_home">Manufactured Homes</SelectItem>
-                <SelectItem value="rv">RVs</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Price Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="under_100k">Under $100k</SelectItem>
-                <SelectItem value="100k_300k">$100k - $300k</SelectItem>
-                <SelectItem value="over_300k">Over $300k</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm('')
-                setTypeFilter('all')
-                setPriceFilter('all')
-              }}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-
-        {/* Listings Grid */}
-        {filteredListings.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredListings.map((listing) => (
-              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video relative">
-                  <img
-                    src={listing.media?.primaryPhoto || 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800'}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="secondary" className="bg-white/90">
-                      {listing.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <CardHeader>
-                  <CardTitle className="text-lg">{listing.title}</CardTitle>
-                  <CardDescription className="flex items-center text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {listing.location.city}, {listing.location.state}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* Price */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-blue-600">
-                        {listing.salePrice && `$${listing.salePrice.toLocaleString()}`}
-                        {listing.rentPrice && !listing.salePrice && `$${listing.rentPrice}/mo`}
-                        {listing.salePrice && listing.rentPrice && (
-                          <span className="text-sm font-normal text-gray-600 ml-2">
-                            or ${listing.rentPrice}/mo
-                          </span>
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Specs */}
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      {listing.listingType === 'manufactured_home' ? (
-                        <>
-                          {listing.bedrooms && (
-                            <div className="flex items-center">
-                              <Bed className="h-4 w-4 mr-1" />
-                              {listing.bedrooms} bed
-                            </div>
-                          )}
-                          {listing.bathrooms && (
-                            <div className="flex items-center">
-                              <Bath className="h-4 w-4 mr-1" />
-                              {listing.bathrooms} bath
-                            </div>
-                          )}
-                          {listing.dimensions?.sqft && (
-                            <div className="flex items-center">
-                              <Ruler className="h-4 w-4 mr-1" />
-                              {listing.dimensions.sqft} sqft
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {listing.sleeps && (
-                            <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-1" />
-                              Sleeps {listing.sleeps}
-                            </div>
-                          )}
-                          {listing.length && (
-                            <div className="flex items-center">
-                              <Ruler className="h-4 w-4 mr-1" />
-                              {listing.length}ft
-                            </div>
-                          )}
-                          {listing.slides && (
-                            <div className="flex items-center">
-                              <span className="text-xs">{listing.slides} slides</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Year, Make, Model */}
-                    <div className="text-sm text-gray-600">
-                      {listing.year} {listing.make} {listing.model}
-                    </div>
-
-                    {/* View Details Button */}
-                    <Button 
-                      className="w-full mt-4"
-                      onClick={() => {
-                        const detailUrl = `/public/${companySlug}/listing/${listing.id}`
-                        window.open(detailUrl, '_blank')
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      {/* Listings */}
+      <div className="container mx-auto px-4 py-8">
+        {filteredListings.length === 0 ? (
+          <div className="py-12 text-center">
+            <Home className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
+            <h3 className="mb-2 text-lg font-semibold">No listings found</h3>
+            <p className="text-muted-foreground">Try adjusting your search criteria or browse all listings</p>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🏠</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No listings found</h3>
-            <p className="text-gray-600">
-              {searchTerm || typeFilter !== 'all' || priceFilter !== 'all'
-                ? 'Try adjusting your search criteria'
-                : 'No properties are currently available'
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
+            {filteredListings.map((listing) => {
+              const TypeIcon = getListingTypeIcon(listing.listingType)
+
+              if (viewMode === 'list') {
+                return (
+                  <Card
+                    key={listing.id}
+                    className="cursor-pointer transition-shadow hover:shadow-md"
+                    onClick={() => handleListingClick(listing.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                          {listing.media?.primaryPhoto ? (
+                            <img
+                              src={listing.media.primaryPhoto}
+                              alt={listing.title || 'Listing'}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <TypeIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="mb-1 font-semibold">{listing.title}</h3>
+                          <p className="mb-2 text-sm text-muted-foreground">
+                            {listing.year} {listing.make} {listing.model}
+                          </p>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <MapPin className="mr-1 h-3 w-3" />
+                            {listing.location?.city}, {listing.location?.state}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {typeof listing.salePrice === 'number' && (
+                            <div className="font-bold text-green-600">{formatPrice(listing.salePrice)}</div>
+                          )}
+                          {typeof listing.rentPrice === 'number' && (
+                            <div className="font-bold text-blue-600">{formatPrice(listing.rentPrice)}/mo</div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
               }
-            </p>
+
+              return (
+                <Card
+                  key={listing.id}
+                  className="cursor-pointer transition-shadow hover:shadow-lg"
+                  onClick={() => handleListingClick(listing.id)}
+                >
+                  <div className="relative aspect-video overflow-hidden rounded-t-lg bg-muted">
+                    {listing.media?.primaryPhoto ? (
+                      <img
+                        src={listing.media.primaryPhoto}
+                        alt={listing.title || 'Listing'}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <TypeIcon className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute left-3 top-3">
+                      <Badge variant={listing.listingType === 'manufactured_home' ? 'default' : 'secondary'}>
+                        {listing.listingType === 'manufactured_home' ? 'MH' : 'RV'}
+                      </Badge>
+                    </div>
+                    {listing.media?.photos && listing.media.photos.length > 1 && (
+                      <div className="absolute right-3 top-3 rounded bg-black/50 px-2 py-1 text-xs text-white">
+                        +{listing.media.photos.length - 1} photos
+                      </div>
+                    )}
+                  </div>
+
+                  <CardContent className="p-4">
+                    <h3 className="mb-2 line-clamp-1 font-semibold">{listing.title}</h3>
+                    <p className="mb-3 text-sm text-muted-foreground">
+                      {listing.year} {listing.make} {listing.model}
+                    </p>
+
+                    {listing.listingType === 'manufactured_home' && (
+                      <div className="mb-3 flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          <Bed className="mr-1 h-3 w-3" />
+                          {listing.bedrooms}
+                        </span>
+                        <span className="flex items-center">
+                          <Bath className="mr-1 h-3 w-3" />
+                          {listing.bathrooms}
+                        </span>
+                        <span className="flex items-center">
+                          <Ruler className="mr-1 h-3 w-3" />
+                          {listing.dimensions?.sqft} sqft
+                        </span>
+                      </div>
+                    )}
+
+                    {listing.listingType === 'rv' && (
+                      <div className="mb-3 flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          <Users className="mr-1 h-3 w-3" />
+                          Sleeps {listing.sleeps}
+                        </span>
+                        <span>{listing.length}ft</span>
+                        <span>{listing.slides} slides</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-1 h-3 w-3" />
+                        {listing.location?.city}, {listing.location?.state}
+                      </div>
+                      <div className="text-right">
+                        {typeof listing.salePrice === 'number' && (
+                          <div className="font-bold text-green-600">{formatPrice(listing.salePrice)}</div>
+                        )}
+                        {typeof listing.rentPrice === 'number' && (
+                          <div className="text-sm font-bold text-blue-600">{formatPrice(listing.rentPrice)}/mo</div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
     </div>
   )
 }
+
+export { PublicCatalogView }
