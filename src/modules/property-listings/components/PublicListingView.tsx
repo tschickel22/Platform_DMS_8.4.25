@@ -119,7 +119,7 @@ const PublicListingView: React.FC = () => {
   const primary = listing.media?.primaryPhoto ?? photos[0]
   const allImages =
     primary != null ? [primary, ...photos.filter((p: string) => p !== primary)] : photos
-  const [listing, setListing] = useState<PropertyListing | null>(null)
+  const [propertyListing, setPropertyListing] = useState<PropertyListing | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -128,8 +128,8 @@ const PublicListingView: React.FC = () => {
       
       try {
         setLoading(true)
-        const listingData = await propertyListingsService.getListing(listingId)
-        setListing(listingData)
+        const foundListing = await propertyListingsService.getListingById(listingId!)
+        setPropertyListing(foundListing)
       } catch (error) {
         console.error('Failed to load listing:', error)
       } finally {
@@ -141,88 +141,59 @@ const PublicListingView: React.FC = () => {
   }, [listingId])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading listing...</p>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
   }
-
-  if (!listing) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Listing Not Found</h1>
-          <p className="text-muted-foreground">The listing you're looking for could not be found.</p>
-        </div>
-      </div>
-    )
+  if (!propertyListing) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Listing not found</div>
   }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">{listing.title}</h1>
-            <p className="text-muted-foreground">
-              {listing.year} {listing.make} {listing.model}
-            </p>
-          </div>
-          
-          {listing.media.primaryPhoto && (
-            <div className="h-96 bg-gray-100 rounded-lg overflow-hidden">
-              <img
-                src={listing.media.primaryPhoto}
-                alt={listing.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {listing.description || 'No description available.'}
-                  </p>
-                </CardContent>
-              </Card>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-4">{propertyListing.title}</h1>
+              <p className="text-gray-600 mb-6">{propertyListing.description}</p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {propertyListing.salePrice && (
+                  <div>
+                    <span className="text-sm text-gray-500">Sale Price</span>
+                    <div className="text-2xl font-bold text-green-600">${propertyListing.salePrice.toLocaleString()}</div>
+                  </div>
+                )}
+                {propertyListing.rentPrice && (
+                  <div>
+                    <span className="text-sm text-gray-500">Rent Price</span>
+                    <div className="text-2xl font-bold text-blue-600">${propertyListing.rentPrice.toLocaleString()}/mo</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <div><span className="font-semibold">Year:</span> {propertyListing.year}</div>
+                <div><span className="font-semibold">Make:</span> {propertyListing.make}</div>
+                <div><span className="font-semibold">Model:</span> {propertyListing.model}</div>
+                {propertyListing.bedrooms && <div><span className="font-semibold">Bedrooms:</span> {propertyListing.bedrooms}</div>}
+                {propertyListing.bathrooms && <div><span className="font-semibold">Bathrooms:</span> {propertyListing.bathrooms}</div>}
+                {propertyListing.sleeps && <div><span className="font-semibold">Sleeps:</span> {propertyListing.sleeps}</div>}
+                {propertyListing.length && <div><span className="font-semibold">Length:</span> {propertyListing.length} ft</div>}
+                {propertyListing.squareFootage && <div><span className="font-semibold">Square Footage:</span> {propertyListing.squareFootage} sq ft</div>}
+              </div>
             </div>
             
             <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {listing.salePrice && (
-                    <div>
-                      <span className="text-sm font-medium text-muted-foreground">Price</span>
-                      <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(listing.salePrice)}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <span className="text-sm font-medium text-muted-foreground">Location</span>
-                    <p>{listing.location.city}, {listing.location.state}</p>
-                  </div>
-                  
-                  <div>
-                    <span className="text-sm font-medium text-muted-foreground">Type</span>
-                    <p className="capitalize">{listing.listingType.replace('_', ' ')}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              {propertyListing.media?.primaryPhoto && (
+                <img src={propertyListing.media.primaryPhoto} alt={propertyListing.title} className="w-full h-64 object-cover rounded-lg mb-4" />
+              )}
+              {propertyListing.media?.photos && propertyListing.media.photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {propertyListing.media.photos.slice(0, 6).map((photo, index) => (
+                    <img key={index} src={photo} alt={`${propertyListing.title} ${index + 1}`} className="w-full h-20 object-cover rounded" />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -446,6 +417,30 @@ const PublicListingView: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Section */}
+      <div className="bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
+            <p className="text-gray-600 mb-4">Interested in {propertyListing.title}? Get in touch with us!</p>
+            
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" placeholder="Your Name" className="border rounded-md px-3 py-2" />
+              <input type="email" placeholder="Your Email" className="border rounded-md px-3 py-2" />
+              <input type="tel" placeholder="Your Phone" className="border rounded-md px-3 py-2" />
+              <textarea 
+                placeholder={`I'm interested in ${propertyListing.title}. Please contact me with more information.`}
+                className="border rounded-md px-3 py-2 md:col-span-2" 
+                rows={4}
+              ></textarea>
+              <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 md:col-span-2">
+                Send Message
+              </button>
+            </form>
           </div>
         </div>
       </div>
