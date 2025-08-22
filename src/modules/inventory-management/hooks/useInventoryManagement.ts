@@ -1,266 +1,200 @@
 import { useState, useEffect } from 'react'
-import { VehicleInventory, RVInventory, ManufacturedHomeInventory } from '../types'
-import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { mockInventory } from '@/mocks/inventoryMock'
+import { useToast } from '@/hooks/use-toast'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
-const STORAGE_KEY = 'renter-insight-inventory'
+interface Vehicle {
+  id: string
+  listingType: 'rv' | 'manufactured_home'
+  inventoryId: string
+  year: number
+  make: string
+  model: string
+  vin?: string
+  serialNumber?: string
+  condition: 'new' | 'used'
+  salePrice?: number
+  rentPrice?: number
+  offerType: 'for_sale' | 'for_rent' | 'both'
+  status: 'available' | 'pending' | 'sold' | 'service'
+  bedrooms?: number
+  bathrooms?: number
+  sleeps?: number
+  slides?: number
+  length?: number
+  dimensions?: {
+    width_ft?: number
+    length_ft?: number
+    sections?: number
+    sqft?: number
+  }
+  description?: string
+  searchResultsText?: string
+  media?: {
+    primaryPhoto?: string
+    photos?: string[]
+  }
+  location?: {
+    city?: string
+    state?: string
+    postalCode?: string
+    communityName?: string
+  }
+  features?: Record<string, boolean>
+  createdAt: string
+  updatedAt: string
+}
 
 export function useInventoryManagement() {
-  const [inventory, setInventory] = useState<VehicleInventory[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  // Load inventory from localStorage on mount
+  // Load vehicles from localStorage or use mock data
   useEffect(() => {
     try {
       setLoading(true)
-      const savedInventory = loadFromLocalStorage<VehicleInventory[]>(STORAGE_KEY, [])
+      const savedVehicles = loadFromLocalStorage<Vehicle[]>('renter-insight-inventory', [])
       
-      // If no saved inventory, use mock data
-      if (savedInventory.length === 0) {
-        const mockData = mockInventory.sampleVehicles.map(vehicle => ({
-          ...vehicle,
-          id: vehicle.id || `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: vehicle.createdAt || new Date().toISOString(),
-          updatedAt: vehicle.updatedAt || new Date().toISOString()
-        }))
-        setInventory(mockData)
-        saveToLocalStorage(STORAGE_KEY, mockData)
+      if (savedVehicles.length > 0) {
+        setVehicles(savedVehicles)
       } else {
-        setInventory(savedInventory)
+        // Use mock data as fallback
+        setVehicles(mockInventory.sampleVehicles)
+        saveToLocalStorage('renter-insight-inventory', mockInventory.sampleVehicles)
       }
       
       setError(null)
     } catch (err) {
-      console.error('Failed to load inventory:', err)
+      console.error('Error loading inventory:', err)
       setError('Failed to load inventory')
+      // Fallback to mock data
+      setVehicles(mockInventory.sampleVehicles)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Save inventory to localStorage whenever it changes
+  // Save vehicles to localStorage whenever they change
   useEffect(() => {
-    if (!loading && inventory.length > 0) {
-      saveToLocalStorage(STORAGE_KEY, inventory)
+    if (vehicles.length > 0) {
+      saveToLocalStorage('renter-insight-inventory', vehicles)
     }
-  }, [inventory, loading])
+  }, [vehicles])
 
-  const createVehicle = async (vehicleData: Omit<VehicleInventory, 'id' | 'createdAt' | 'updatedAt'>): Promise<VehicleInventory> => {
-    try {
-      const newVehicle: VehicleInventory = {
-        ...vehicleData,
-        id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      setInventory(prev => [newVehicle, ...prev])
-      return newVehicle
-    } catch (error) {
-      console.error('Failed to create vehicle:', error)
-      throw new Error('Failed to create vehicle')
+  const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vehicle> => {
+    const newVehicle: Vehicle = {
+      ...vehicleData,
+      id: `veh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      inventoryId: vehicleData.inventoryId || `INV-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
+
+    setVehicles(prev => [newVehicle, ...prev])
+    
+    toast({
+      title: 'Vehicle Added',
+      description: `${newVehicle.year} ${newVehicle.make} ${newVehicle.model} has been added to inventory.`
+    })
+
+    return newVehicle
   }
 
-  const updateVehicle = async (id: string, updates: Partial<VehicleInventory>): Promise<VehicleInventory> => {
-    try {
-      const updatedVehicle = {
-        ...updates,
-        id,
-        updatedAt: new Date().toISOString()
-      } as VehicleInventory
-
-      setInventory(prev => prev.map(item => 
-        item.id === id ? { ...item, ...updatedVehicle } : item
-      ))
-
-      return updatedVehicle
-    } catch (error) {
-      console.error('Failed to update vehicle:', error)
-      throw new Error('Failed to update vehicle')
+  const updateVehicle = async (vehicleId: string, updates: Partial<Vehicle>): Promise<Vehicle | null> => {
+    const existingVehicle = vehicles.find(v => v.id === vehicleId)
+    if (!existingVehicle) {
+      toast({
+        title: 'Error',
+        description: 'Vehicle not found.',
+        variant: 'destructive'
+      })
+      return null
     }
-  }
 
-  const deleteVehicle = async (id: string): Promise<void> => {
-    try {
-      setInventory(prev => prev.filter(item => item.id !== id))
-    } catch (error) {
-      console.error('Failed to delete vehicle:', error)
-      throw new Error('Failed to delete vehicle')
+    const updatedVehicle = {
+      ...existingVehicle,
+      ...updates,
+      updatedAt: new Date().toISOString()
     }
+
+    setVehicles(prev => prev.map(v => v.id === vehicleId ? updatedVehicle : v))
+
+    toast({
+      title: 'Vehicle Updated',
+      description: `${updatedVehicle.year} ${updatedVehicle.make} ${updatedVehicle.model} has been updated.`
+    })
+
+    return updatedVehicle
   }
 
-  const getVehicle = (id: string): VehicleInventory | null => {
-    return inventory.find(item => item.id === id) || null
+  const deleteVehicle = async (vehicleId: string): Promise<void> => {
+    const vehicle = vehicles.find(v => v.id === vehicleId)
+    if (!vehicle) return
+
+    setVehicles(prev => prev.filter(v => v.id !== vehicleId))
+
+    toast({
+      title: 'Vehicle Deleted',
+      description: `${vehicle.year} ${vehicle.make} ${vehicle.model} has been removed from inventory.`
+    })
   }
 
-  const getVehiclesByType = (type: 'rv' | 'manufactured_home'): VehicleInventory[] => {
-    return inventory.filter(item => item.listingType === type)
+  const getVehicleById = (vehicleId: string): Vehicle | null => {
+    return vehicles.find(v => v.id === vehicleId) || null
   }
 
-  const getVehiclesByStatus = (status: string): VehicleInventory[] => {
-    return inventory.filter(item => item.status === status)
+  const getVehiclesByType = (type: 'rv' | 'manufactured_home'): Vehicle[] => {
+    return vehicles.filter(v => v.listingType === type)
   }
 
-  const searchVehicles = (query: string): VehicleInventory[] => {
+  const getVehiclesByStatus = (status: string): Vehicle[] => {
+    return vehicles.filter(v => v.status === status)
+  }
+
+  const searchVehicles = (query: string): Vehicle[] => {
     const lowercaseQuery = query.toLowerCase()
-    return inventory.filter(item =>
-      item.title.toLowerCase().includes(lowercaseQuery) ||
-      item.make.toLowerCase().includes(lowercaseQuery) ||
-      item.model.toLowerCase().includes(lowercaseQuery) ||
-      item.inventoryId?.toLowerCase().includes(lowercaseQuery) ||
-      item.vin?.toLowerCase().includes(lowercaseQuery)
+    return vehicles.filter(v => 
+      v.make.toLowerCase().includes(lowercaseQuery) ||
+      v.model.toLowerCase().includes(lowercaseQuery) ||
+      v.inventoryId.toLowerCase().includes(lowercaseQuery) ||
+      (v.vin && v.vin.toLowerCase().includes(lowercaseQuery)) ||
+      (v.description && v.description.toLowerCase().includes(lowercaseQuery))
     )
   }
 
-  const exportInventory = async (items: VehicleInventory[], format: 'csv' | 'json' | 'xml'): Promise<void> => {
-    try {
-      let content = ''
-      let filename = `inventory-export-${new Date().toISOString().split('T')[0]}`
-      let mimeType = 'text/plain'
+  const getInventoryStats = () => {
+    const total = vehicles.length
+    const available = vehicles.filter(v => v.status === 'available').length
+    const pending = vehicles.filter(v => v.status === 'pending').length
+    const sold = vehicles.filter(v => v.status === 'sold').length
+    const totalValue = vehicles.reduce((sum, v) => sum + (v.salePrice || v.rentPrice || 0), 0)
+    const avgPrice = total > 0 ? totalValue / total : 0
 
-      switch (format) {
-        case 'csv':
-          const headers = [
-            'ID', 'Title', 'Type', 'Year', 'Make', 'Model', 'VIN', 'Status',
-            'Sale Price', 'Rent Price', 'City', 'State', 'Created'
-          ]
-          const rows = items.map(item => [
-            item.id,
-            item.title,
-            item.listingType,
-            item.year,
-            item.make,
-            item.model,
-            item.vin || '',
-            item.status,
-            item.salePrice || '',
-            item.rentPrice || '',
-            item.location.city,
-            item.location.state,
-            item.createdAt
-          ])
-          content = [headers, ...rows].map(row => row.join(',')).join('\n')
-          filename += '.csv'
-          mimeType = 'text/csv'
-          break
-
-        case 'json':
-          content = JSON.stringify(items, null, 2)
-          filename += '.json'
-          mimeType = 'application/json'
-          break
-
-        case 'xml':
-          content = `<?xml version="1.0" encoding="UTF-8"?>
-<inventory>
-${items.map(item => `  <item>
-    <id>${item.id}</id>
-    <title>${item.title}</title>
-    <type>${item.listingType}</type>
-    <year>${item.year}</year>
-    <make>${item.make}</make>
-    <model>${item.model}</model>
-    <status>${item.status}</status>
-    <salePrice>${item.salePrice || ''}</salePrice>
-    <rentPrice>${item.rentPrice || ''}</rentPrice>
-    <location>
-      <city>${item.location.city}</city>
-      <state>${item.location.state}</state>
-    </location>
-  </item>`).join('\n')}
-</inventory>`
-          filename += '.xml'
-          mimeType = 'application/xml'
-          break
-      }
-
-      // Create and download file
-      const blob = new Blob([content], { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Failed to export inventory:', error)
-      throw new Error('Failed to export inventory')
-    }
-  }
-
-  const importInventory = async (file: File): Promise<void> => {
-    try {
-      const text = await file.text()
-      let importedData: any[] = []
-
-      if (file.name.endsWith('.json')) {
-        importedData = JSON.parse(text)
-      } else if (file.name.endsWith('.csv')) {
-        const lines = text.split('\n')
-        const headers = lines[0].split(',')
-        importedData = lines.slice(1).map(line => {
-          const values = line.split(',')
-          const obj: any = {}
-          headers.forEach((header, index) => {
-            obj[header.trim()] = values[index]?.trim()
-          })
-          return obj
-        })
-      }
-
-      // Convert imported data to VehicleInventory format
-      const newInventory: VehicleInventory[] = importedData.map(item => ({
-        id: item.id || `imp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        listingType: item.listingType || item.type || 'rv',
-        inventoryId: item.inventoryId || item.ID,
-        title: item.title || `${item.year} ${item.make} ${item.model}`,
-        year: parseInt(item.year) || new Date().getFullYear(),
-        make: item.make || '',
-        model: item.model || '',
-        vin: item.vin || item.VIN,
-        condition: item.condition || 'used',
-        status: item.status || 'available',
-        salePrice: parseFloat(item.salePrice) || undefined,
-        rentPrice: parseFloat(item.rentPrice) || undefined,
-        offerType: item.offerType || 'for_sale',
-        description: item.description || '',
-        location: {
-          city: item.city || item['location.city'] || '',
-          state: item.state || item['location.state'] || '',
-          postalCode: item.postalCode || item['location.postalCode'] || ''
-        },
-        media: {
-          primaryPhoto: item.primaryPhoto || '',
-          photos: []
-        },
-        features: {},
-        createdAt: item.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }))
-
-      setInventory(prev => [...newInventory, ...prev])
-    } catch (error) {
-      console.error('Failed to import inventory:', error)
-      throw new Error('Failed to import inventory')
+    return {
+      total,
+      available,
+      pending,
+      sold,
+      totalValue,
+      avgPrice,
+      rvCount: vehicles.filter(v => v.listingType === 'rv').length,
+      mhCount: vehicles.filter(v => v.listingType === 'manufactured_home').length
     }
   }
 
   return {
-    inventory,
+    vehicles,
     loading,
     error,
-    createVehicle,
+    addVehicle,
     updateVehicle,
     deleteVehicle,
-    getVehicle,
+    getVehicleById,
     getVehiclesByType,
     getVehiclesByStatus,
     searchVehicles,
-    exportInventory,
-    importInventory
+    getInventoryStats
   }
 }
