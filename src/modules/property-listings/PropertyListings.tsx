@@ -21,13 +21,17 @@ import {
   Share2
 } from 'lucide-react'
 
-// Simple mock data to avoid import errors
-const mockListingsData = {
+// Mock data embedded to avoid import issues
+const mockListings = {
   sampleListings: [
     {
       id: '1',
       title: 'Modern Downtown Apartment',
+      description: 'Beautiful modern apartment in the heart of downtown with stunning city views.',
       address: '123 Main St, Downtown',
+      city: 'New York',
+      state: 'NY',
+      zipCode: '10001',
       listingType: 'rent',
       rent: 2500,
       purchasePrice: null,
@@ -42,7 +46,11 @@ const mockListingsData = {
     {
       id: '2',
       title: 'Cozy Suburban House',
+      description: 'Charming 3-bedroom house in quiet suburban neighborhood.',
       address: '456 Oak Ave, Suburbia',
+      city: 'Austin',
+      state: 'TX',
+      zipCode: '78701',
       listingType: 'rent',
       rent: 3200,
       purchasePrice: null,
@@ -57,10 +65,14 @@ const mockListingsData = {
     {
       id: '3',
       title: 'Luxury Waterfront Condo',
-      address: '789 Waterfront Blvd, Marina',
-      listingType: 'rent',
-      rent: 4500,
-      purchasePrice: null,
+      description: 'Stunning waterfront condominium with panoramic water views.',
+      address: '789 Waterfront Blvd, Marina District',
+      city: 'Miami',
+      state: 'FL',
+      zipCode: '33101',
+      listingType: 'sale',
+      rent: null,
+      purchasePrice: 850000,
       bedrooms: 2,
       bathrooms: 3,
       squareFootage: 1600,
@@ -78,7 +90,7 @@ function PropertyListingsMain() {
   const [typeFilter, setTypeFilter] = useState('all')
 
   // Filter listings based on search and filters
-  const filteredListings = mockListingsData.sampleListings.filter(listing => {
+  const filteredListings = mockListings.sampleListings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          listing.address.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || listing.status === statusFilter
@@ -87,7 +99,7 @@ function PropertyListingsMain() {
     return matchesSearch && matchesStatus && matchesType
   })
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
@@ -97,7 +109,7 @@ function PropertyListingsMain() {
     }
   }
 
-  const formatPrice = (listing) => {
+  const formatPrice = (listing: any) => {
     if (listing.listingType === 'rent') {
       return `$${listing.rent?.toLocaleString()}/mo`
     } else {
@@ -105,9 +117,12 @@ function PropertyListingsMain() {
     }
   }
 
-  const totalListings = mockListingsData.sampleListings.length
-  const activeListings = mockListingsData.sampleListings.filter(l => l.status === 'active').length
-  const pendingListings = mockListingsData.sampleListings.filter(l => l.status === 'pending').length
+  // Calculate statistics
+  const totalListings = mockListings.sampleListings.length
+  const activeListings = mockListings.sampleListings.filter(l => l.status === 'active').length
+  const pendingListings = mockListings.sampleListings.filter(l => l.status === 'pending').length
+  const avgPrice = Math.round(mockListings.sampleListings.reduce((sum, l) => 
+    sum + (l.rent || l.purchasePrice || 0), 0) / totalListings)
 
   return (
     <div className="space-y-6">
@@ -123,8 +138,8 @@ function PropertyListingsMain() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
@@ -133,14 +148,14 @@ function PropertyListingsMain() {
           <CardContent>
             <div className="text-2xl font-bold">{totalListings}</div>
             <p className="text-xs text-muted-foreground">
-              All property listings
+              All properties in system
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeListings}</div>
@@ -157,7 +172,19 @@ function PropertyListingsMain() {
           <CardContent>
             <div className="text-2xl font-bold">{pendingListings}</div>
             <p className="text-xs text-muted-foreground">
-              Under review
+              Under contract
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Price</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${avgPrice.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Average listing price
             </p>
           </CardContent>
         </Card>
@@ -169,7 +196,7 @@ function PropertyListingsMain() {
           <CardTitle>Search & Filter</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -182,7 +209,7 @@ function PropertyListingsMain() {
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -194,7 +221,7 @@ function PropertyListingsMain() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -219,11 +246,11 @@ function PropertyListingsMain() {
                 alt={listing.title}
                 className="w-full h-full object-cover"
               />
-              <Badge 
-                className={`absolute top-2 right-2 ${getStatusColor(listing.status)}`}
-              >
-                {listing.status}
-              </Badge>
+              <div className="absolute top-2 right-2">
+                <Badge className={getStatusColor(listing.status)}>
+                  {listing.status}
+                </Badge>
+              </div>
             </div>
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -256,6 +283,9 @@ function PropertyListingsMain() {
                   {listing.squareFootage} sqft
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                {listing.description}
+              </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="flex-1">
                   <Eye className="h-4 w-4 mr-1" />
@@ -265,9 +295,8 @@ function PropertyListingsMain() {
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Share2 className="h-4 w-4 mr-1" />
-                  Share
+                <Button variant="outline" size="sm">
+                  <Share2 className="h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
@@ -280,7 +309,7 @@ function PropertyListingsMain() {
           <CardContent className="pt-6">
             <div className="text-center py-12 text-muted-foreground">
               <Home className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-lg font-medium">No listings found</p>
+              <p className="text-lg font-medium mb-2">No listings found</p>
               <p>Try adjusting your search criteria or add a new listing</p>
             </div>
           </CardContent>

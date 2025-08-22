@@ -28,6 +28,7 @@ import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import PropertyListings from '@/modules/property-listings/PropertyListings'
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
                         <Route path="/admin/settings/*" element={<PlatformSettings />} />
                         <Route path="/reports/*" element={<ReportingSuite />} />
                         <Route path="/client-applications/*" element={<FinanceApplication />} />
+                        <Route path="/listings/*" element={<PropertyListings />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
