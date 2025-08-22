@@ -1,10 +1,11 @@
+// forms/VehicleForm.tsx
 import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Vehicle, VehicleStatus } from '@/types'
+import { Vehicle, VehicleStatus } from '../state/types'
 
 export interface VehicleFormProps {
   vehicle?: Vehicle
@@ -12,104 +13,103 @@ export interface VehicleFormProps {
   onCancel: () => void
 }
 
-// Named export to match: import { VehicleForm } from './forms/VehicleForm'
-export function VehicleForm({ vehicle, onSave, onCancel }: VehicleFormProps) {
-  // Use safe defaults; keep this lightweight and self-contained
-  const [vin, setVin] = useState<string>(vehicle?.vin || '')
-  const [make, setMake] = useState<string>(vehicle?.make || '')
-  const [model, setModel] = useState<string>(vehicle?.model || '')
-  const [year, setYear] = useState<number>(vehicle?.year ?? new Date().getFullYear())
-  const [price, setPrice] = useState<number>(vehicle?.price ?? 0)
-  const [location, setLocation] = useState<string>(vehicle?.location || '')
-  const [status, setStatus] = useState<VehicleStatus>(
-    (vehicle?.status as VehicleStatus) ?? (Object.values(VehicleStatus)[0] as VehicleStatus)
-  )
+const STATUS_OPTIONS: VehicleStatus[] = ['Available', 'Reserved', 'Sold', 'Pending']
 
-  const handleSave = () => {
-    onSave({
-      id: vehicle?.id, // preserve if editing
-      vin,
-      make,
-      model,
-      year,
-      price,
-      location,
+export function VehicleForm({ vehicle, onSave, onCancel }: VehicleFormProps) {
+  // very small subset for demo; extend to cover RV/MH forms as needed
+  const [type, setType] = useState<Vehicle['type']>(vehicle?.type ?? 'RV')
+  const [status, setStatus] = useState<VehicleStatus>(vehicle?.status ?? 'Available')
+  const [brand, setBrand] = useState<string>((vehicle as any)?.brand ?? (vehicle as any)?.make ?? '')
+  const [model, setModel] = useState<string>((vehicle as any)?.model ?? '')
+  const [modelDate, setModelDate] = useState<string>(String((vehicle as any)?.modelDate ?? (vehicle as any)?.year ?? ''))
+  const [price, setPrice] = useState<string>(String((vehicle as any)?.price ?? (vehicle as any)?.askingPrice ?? ''))
+  const [location, setLocation] = useState<string>((vehicle as any)?.location ?? (vehicle as any)?.city ?? '')
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const base: Partial<Vehicle> = {
+      type,
       status,
-    })
+      updatedAt: new Date().toISOString()
+    } as Partial<Vehicle>
+
+    const rvFields: Partial<Vehicle> = type === 'RV'
+      ? {
+          brand,
+          model,
+          modelDate: price ? Number(modelDate) : undefined,
+          price: price ? Number(price) : undefined,
+          location,
+        } as any
+      : {}
+
+    const mhFields: Partial<Vehicle> = type === 'MH'
+      ? {
+          make: brand,
+          model,
+          year: modelDate ? Number(modelDate) : undefined,
+          askingPrice: price ? Number(price) : undefined,
+          city: location,
+        } as any
+      : {}
+
+    onSave({ ...base, ...(type === 'RV' ? rvFields : mhFields) })
   }
 
-  // Derive status options from enum to avoid drift across branches
-  const statusOptions = (Object.values(VehicleStatus) as string[])
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle>{vehicle ? 'Edit Vehicle' : 'Add Vehicle'}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vin">VIN</Label>
-              <Input id="vin" value={vin} onChange={(e) => setVin(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value) || new Date().getFullYear())}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="make">Make</Label>
-              <Input id="make" value={make} onChange={(e) => setMake(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={String(status)}
-                onValueChange={(v) => setStatus(v as VehicleStatus)}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s.toString()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+    <form onSubmit={onSubmit}>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Type</Label>
+          <Select value={type} onValueChange={(v) => setType(v as Vehicle['type'])}>
+            <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="RV">RV</SelectItem>
+              <SelectItem value="MH">Manufactured Home</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="flex gap-2 justify-end pt-2">
-            <Button onClick={handleSave}>Save</Button>
-            <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select value={status} onValueChange={(v) => setStatus(v as VehicleStatus)}>
+            <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{type === 'RV' ? 'Brand' : 'Make'}</Label>
+          <Input value={brand} onChange={(e) => setBrand(e.target.value)} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Model</Label>
+          <Input value={model} onChange={(e) => setModel(e.target.value)} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>{type === 'RV' ? 'Model Year' : 'Year'}</Label>
+          <Input value={modelDate} onChange={(e) => setModelDate(e.target.value)} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Price</Label>
+          <Input value={price} onChange={(e) => setPrice(e.target.value)} />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label>Location / City</Label>
+          <Input value={location} onChange={(e) => setLocation(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
   )
 }
