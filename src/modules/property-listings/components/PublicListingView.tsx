@@ -49,7 +49,7 @@ const PublicListingView: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [listing, setListing] = useState<any>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contact-form`, {
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
