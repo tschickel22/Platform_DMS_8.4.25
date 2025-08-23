@@ -379,10 +379,6 @@ function InventoryList() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Inventory Management</h1>
-            <p className="ri-page-description">Manage your RV and manufactured home inventory</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
               <QrCode className="h-4 w-4 mr-2" />
               Scan Barcode
             </Button>
