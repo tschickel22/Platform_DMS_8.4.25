@@ -392,9 +392,7 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            <Button onClick={handleCreateVehicle}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Home
+        
             <Button onClick={() => setShowAddModal(true)}>
               
             </Button>
