@@ -8,10 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { InventoryTable } from './components/InventoryTable'
-import VehicleDetail from './components/VehicleDetail'
+import AddEditHomeModal from './components/AddEditHomeModal'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import AddEditHomeModal from './components/AddEditHomeModal'
@@ -229,6 +228,7 @@ function InventoryList() {
           vehicle={selectedVehicle}
           open={showVehicleDetail}
           onOpenChange={(open) => setShowVehicleDetail(open)}
+          onEdit={handleEditVehicle}
         />
       )}
 

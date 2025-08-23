@@ -1,47 +1,64 @@
 import React from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react'
+import { Edit, Eye, MoreHorizontal, Trash2, Plus, CheckSquare } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface InventoryTableProps {
   vehicles: any[]
   onEdit: (vehicle: any) => void
-  onDelete: (vehicleId: string) => void
   onView: (vehicle: any) => void
+  onStatusChange: (vehicleId: string, status: string) => void
+  onCreateTask: (vehicle: any) => void
+  onDelete: (vehicleId: string) => void
 }
 
 export function InventoryTable({
   vehicles,
   onEdit,
-  onDelete,
   onView,
+  onStatusChange,
+  onCreateTask,
+  onDelete
 }: InventoryTableProps) {
-  const getStatusColor = (raw: string) => {
-    const status = (raw || '').toLowerCase()
-    switch (status) {
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
       case 'available':
-      case 'instock':
         return 'bg-green-100 text-green-800'
-      case 'sold':
-      case 'soldout':
-        return 'bg-blue-100 text-blue-800'
       case 'reserved':
-      case 'preorder':
         return 'bg-yellow-100 text-yellow-800'
-      case 'service':
+      case 'sold':
+        return 'bg-blue-100 text-blue-800'
+      case 'pending':
         return 'bg-orange-100 text-orange-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
   }
 
-  if (!vehicles?.length) {
+  const getVehicleInfo = (vehicle: any) => {
+    const year = vehicle.year || vehicle.modelDate || ''
+    const make = vehicle.make || vehicle.brand || ''
+    const model = vehicle.model || ''
+    return `${year} ${make} ${model}`.trim()
+  }
+
+  const getPrice = (vehicle: any) => {
+    return vehicle.price || vehicle.salePrice || vehicle.askingPrice || 0
+  }
+
+  const getIdentifier = (vehicle: any) => {
+    return vehicle.vin || vehicle.vehicleIdentificationNumber || vehicle.serialNumber || 'N/A'
+  }
+
+  if (!vehicles || vehicles.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No inventory items found</p>
+      <div className="text-center py-8 text-muted-foreground">
+        <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+        <p className="text-lg font-medium mb-2">No inventory found</p>
+        <p>Add your first home or RV to get started</p>
       </div>
     )
   }
@@ -51,116 +68,79 @@ export function InventoryTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Vehicle</TableHead>
+            <TableHead>Vehicle Info</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Price</TableHead>
+            <TableHead>VIN/Serial</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Location</TableHead>
+            <TableHead>Price</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {vehicles.map((vehicle: any) => {
-            const typeLabel =
-              vehicle?.listingType?.toLowerCase() === 'rv' || vehicle?.type === 'RV'
-                ? 'RV'
-                : vehicle?.listingType?.toLowerCase() === 'mh' || vehicle?.type === 'MH'
-                ? 'MH'
-                : (vehicle?.listingType || vehicle?.type || 'N/A')
-
-            const statusText =
-              vehicle?.status ||
-              vehicle?.availability ||
-              'Unknown'
-
-            return (
-              <TableRow key={vehicle.id}>
-                <TableCell>
-                  <div className="flex items-center space-x-3">
-                    {vehicle?.media?.primaryPhoto && (
-                      <img
-                        src={vehicle.media.primaryPhoto}
-                        alt={`${vehicle?.make || ''} ${vehicle?.model || ''}`}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium">
-                        {vehicle?.year ? `${vehicle.year} ` : ''}
-                        {vehicle?.make || ''} {vehicle?.model || ''}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {vehicle?.vin || vehicle?.serialNumber || 'No VIN/Serial'}
-                      </div>
-                    </div>
+          {vehicles.map((vehicle) => (
+            <TableRow key={vehicle.id}>
+              <TableCell>
+                <div className="font-medium">{getVehicleInfo(vehicle)}</div>
+                <div className="text-sm text-muted-foreground">
+                  {vehicle.inventoryId || vehicle.stockNumber || `ID: ${vehicle.id}`}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">
+                  {vehicle.type || vehicle.listingType || 'Unknown'}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-mono text-sm">
+                {getIdentifier(vehicle)}
+              </TableCell>
+              <TableCell>
+                <Badge className={getStatusColor(vehicle.status)}>
+                  {vehicle.status || 'Unknown'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="font-medium">
+                  {formatCurrency(getPrice(vehicle))}
+                </div>
+                {vehicle.rentPrice && (
+                  <div className="text-sm text-muted-foreground">
+                    Rent: {formatCurrency(vehicle.rentPrice)}
                   </div>
-                </TableCell>
-
-                <TableCell>
-                  <Badge variant="outline">{typeLabel}</Badge>
-                </TableCell>
-
-                <TableCell>
-                  <div className="space-y-1">
-                    {vehicle?.salePrice != null && (
-                      <div className="text-sm">Sale: {formatCurrency(vehicle.salePrice)}</div>
-                    )}
-                    {vehicle?.rentPrice != null && (
-                      <div className="text-sm text-muted-foreground">
-                        Rent: {formatCurrency(vehicle.rentPrice)}/mo
-                      </div>
-                    )}
-                    {vehicle?.price != null && vehicle?.salePrice == null && (
-                      <div className="text-sm">Price: {formatCurrency(vehicle.price)}</div>
-                    )}
-                    {vehicle?.askingPrice != null && vehicle?.salePrice == null && (
-                      <div className="text-sm">Asking: {formatCurrency(vehicle.askingPrice)}</div>
-                    )}
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <Badge className={getStatusColor(statusText)}>{statusText}</Badge>
-                </TableCell>
-
-                <TableCell>
-                  <div className="text-sm">
-                    {vehicle?.location?.city && vehicle?.location?.state
-                      ? `${vehicle.location.city}, ${vehicle.location.state}`
-                      : 'Not specified'}
-                  </div>
-                </TableCell>
-
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onView(vehicle)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(vehicle)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete(vehicle.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            )
-          })}
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onView(vehicle)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(vehicle)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCreateTask(vehicle)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Task
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(vehicle.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
