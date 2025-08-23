@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { useTasks } from '@/hooks/useTasks'
@@ -20,6 +20,7 @@ import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
 /* removed unused TagSelector/TagType imports */
 import { Task, TaskModule, TaskPriority } from '@/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
 
 /** Helpers */
 const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
@@ -38,7 +39,6 @@ const getPrice = (v: any) => {
 
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle, updateVehicle } = useInventoryManagement() as any
-    useInventoryManagement() as any
   const { toast } = useToast()
   const { createTask } = useTasks()
 
@@ -460,7 +460,7 @@ function InventoryList() {
             onView={handleViewVehicle}
             onStatusChange={handleStatusChange}
             onCreateTask={handleCreateTaskForVehicle}
-            onDelete={(v: Vehicle) => handleDeleteVehicle((v as any).id)}
+            onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
           />
         </CardContent>
       </Card>
