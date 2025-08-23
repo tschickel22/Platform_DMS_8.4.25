@@ -5,21 +5,16 @@ import { useTasks } from '@/hooks/useTasks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import AddEditHomeModal from './components/AddEditHomeModal'
+
 import { useInventoryManagement } from './hooks/useInventoryManagement'
-import { InventoryTable } from './components/InventoryTable'       // ✅ missing import
-// Use the full-featured forms shipped in your ZIP
-import RVInventoryForm from './forms/RVInventoryForm'
-import MHInventoryForm from './forms/MHInventoryForm'
+import { InventoryTable } from './components/InventoryTable'
 import VehicleDetail from './components/VehicleDetail'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
+import AddEditHomeModal from './components/AddEditHomeModal'
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 
@@ -43,20 +38,23 @@ function InventoryList() {
   const { toast } = useToast()
   const { createTask } = useTasks()
 
-  const [showVehicleForm, setShowVehicleForm] = useState(false)
+  // UI state
   const [showVehicleDetail, setShowVehicleDetail] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
-  const [formType, setFormType] = useState<'RV' | 'MH'>(selectedVehicle?.type ?? 'MH')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editingHome, setEditingHome] = useState(null)
-  const [showEditModal, setShowEditModal] = useState(false)
 
-  /** Derived stats (robust to enum/string statuses and mixed price fields) */
+  // Add/Edit Home (single button retained uses this modal)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
+
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+
+  /** Derived stats */
   const stats = useMemo(() => {
     const total = vehicles.length
     let available = 0, reserved = 0, sold = 0
@@ -72,14 +70,9 @@ function InventoryList() {
   }, [vehicles])
 
   /** Actions */
-  const handleCreateVehicle = () => {
-    setSelectedVehicle(null)
-    setShowVehicleForm(true)
-  }
-
   const handleEditVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle)
-    setShowVehicleForm(true)
+    setEditingHome(vehicle)
+    setShowEditModal(true)
   }
 
   const handleViewVehicle = (vehicle: Vehicle) => {
@@ -106,31 +99,6 @@ function InventoryList() {
     }
   }
 
-  const handleSaveVehicle = async (vehicleData: Partial<Vehicle>) => {
-    try {
-      if (selectedVehicle) {
-        // Prefer full update if the hook supports it; otherwise fall back to status-only update.
-        if (typeof updateVehicle === 'function') {
-          await updateVehicle(selectedVehicle.id, vehicleData)
-        } else {
-          await updateVehicleStatus(selectedVehicle.id, (vehicleData.status ?? selectedVehicle.status) as VehicleStatus)
-        }
-        toast({ title: 'Vehicle Updated', description: 'Vehicle information has been updated' })
-      } else {
-        await createVehicle(vehicleData)
-        toast({ title: 'Vehicle Added', description: 'New vehicle has been added to inventory' })
-      }
-      setShowVehicleForm(false)
-      setSelectedVehicle(null)
-    } catch {
-      toast({
-        title: 'Error',
-        description: `Failed to ${selectedVehicle ? 'update' : 'create'} vehicle`,
-        variant: 'destructive'
-      })
-    }
-  }
-
   const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[]) => {
     try {
       for (const vehicle of vehiclesToImport) {
@@ -150,16 +118,9 @@ function InventoryList() {
       setShowVehicleDetail(true)
       toast({ title: 'Vehicle Found', description: `Found existing vehicle with VIN: ${data}` })
     } else {
-      setSelectedVehicle(null)
-      setShowVehicleForm(true)
-      // Pre-fill VIN in the form (best-effort for the current implementation)
-      setTimeout(() => {
-        const vinInput = document.getElementById('vin') as HTMLInputElement | null
-        if (vinInput) {
-          vinInput.value = data
-          vinInput.dispatchEvent(new Event('input', { bubbles: true }))
-        }
-      }, 100)
+      // Open the add modal with VIN prefilled if your AddEditHomeModal supports it via props;
+      // otherwise, just open and let the user fill.
+      setShowAddModal(true)
       toast({ title: 'New VIN Scanned', description: `Creating new vehicle with VIN: ${data}` })
     }
     setShowBarcodeScanner(false)
@@ -201,6 +162,7 @@ function InventoryList() {
     setShowTaskForm(true)
   }
 
+  // Add/Edit handlers for the AddEditHomeModal
   const handleAddHome = async (homeData: any) => {
     try {
       await createVehicle(homeData)
@@ -261,94 +223,6 @@ function InventoryList() {
         />
       )}
 
-      {/* Vehicle Form (modal with full-featured RV/MH forms) */}
-      <Dialog
-        open={showVehicleForm}
-        onOpenChange={(open) => {
-          if (!open) setSelectedVehicle(null)
-          setShowVehicleForm(open)
-        }}
-      >
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>{selectedVehicle ? 'Edit Inventory' : 'Add Inventory'}</DialogTitle>
-          </DialogHeader>
-
-          {/* Type selector when creating a new record */}
-          {!selectedVehicle && (
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Inventory type</Label>
-                <Select value={formType} onValueChange={(v) => setFormType(v as 'RV' | 'MH')}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RV">RV</SelectItem>
-                    <SelectItem value="MH">Manufactured Home</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {/* Render the appropriate, detailed form from your ZIP */}
-          {(selectedVehicle?.type ?? formType) === 'RV' ? (
-            <RVInventoryForm
-              initialData={selectedVehicle || {
-                type: 'RV',
-                status: 'Available',
-                brand: '',
-                model: '',
-                modelDate: new Date().getFullYear(),
-                vehicleIdentificationNumber: '',
-                price: 0,
-                color: '',
-                description: '',
-              }}
-              onSubmit={async (data: any) => {
-                if (selectedVehicle) {
-                  await (typeof updateVehicle === 'function'
-                    ? updateVehicle(selectedVehicle.id, { ...data, type: 'RV' })
-                    : updateVehicleStatus(selectedVehicle.id, data.status || 'Available'))
-                } else {
-                  await createVehicle({ ...data, type: 'RV' })
-                }
-                setShowVehicleForm(false)
-                setSelectedVehicle(null)
-              }}
-              onCancel={() => { setShowVehicleForm(false); setSelectedVehicle(null) }}
-            />
-          ) : (
-            <MHInventoryForm
-              initialData={selectedVehicle || {
-                type: 'MH',
-                status: 'Available',
-                make: '',
-                model: '',
-                year: new Date().getFullYear(),
-                serialNumber: '',
-                askingPrice: 0,
-                color: '',
-                description: '',
-                city: '',
-                state: '',
-              }}
-              onSubmit={async (data: any) => {
-                if (selectedVehicle) {
-                  await (typeof updateVehicle === 'function'
-                    ? updateVehicle(selectedVehicle.id, { ...data, type: 'MH' })
-                    : updateVehicleStatus(selectedVehicle.id, data.status || 'Available'))
-                } else {
-                  await createVehicle({ ...data, type: 'MH' })
-                }
-                setShowVehicleForm(false)
-                setSelectedVehicle(null)
-              }}
-              onCancel={() => { setShowVehicleForm(false); setSelectedVehicle(null) }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Vehicle Detail Modal */}
       {showVehicleDetail && selectedVehicle && (
         <VehicleDetail
@@ -392,12 +266,9 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            <Button onClick={handleCreateVehicle}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Home
+            {/* Single Add Home button (right) with "+" icon */}
             <Button onClick={() => setShowAddModal(true)}>
-              
-            </Button>
+              <Plus className="h-4 w-4 mr-2" />
               Add Home
             </Button>
           </div>
@@ -491,23 +362,25 @@ function InventoryList() {
         <CardContent>
           <InventoryTable
             vehicles={filteredVehicles}
-            onEdit={handleEditVehicle}
             onView={handleViewVehicle}
+            onEdit={handleEditVehicle}
+            onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
             onStatusChange={handleStatusChange}
             onCreateTask={handleCreateTaskForVehicle}
-            onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
+            // If your table uses a flag to show action buttons, uncomment the next line:
+            // showActions
           />
         </CardContent>
       </Card>
 
-      {/* Add/Edit Home Modals */}
+      {/* Add / Edit Home Modals */}
       <AddEditHomeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handleAddHome}
         mode="add"
       />
-      
+
       <AddEditHomeModal
         isOpen={showEditModal}
         onClose={() => {
@@ -515,7 +388,7 @@ function InventoryList() {
           setEditingHome(null)
         }}
         onSave={handleEditHome}
-        editingHome={editingHome}
+        editingHome={editingHome as any}
         mode="edit"
       />
     </div>
