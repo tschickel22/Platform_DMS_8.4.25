@@ -1,9 +1,29 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Edit, Eye, MoreHorizontal, Trash2, Plus, CheckSquare } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import {
+  Edit,
+  Eye,
+  MoreHorizontal,
+  Trash2,
+  Plus,
+  CheckSquare,
+  Package // 🛠️ FIX: this was missing and caused the runtime error
+} from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface InventoryTableProps {
@@ -19,12 +39,12 @@ export function InventoryTable({
   vehicles,
   onEdit,
   onView,
-  onStatusChange,
+  onStatusChange, // currently unused in UI; kept for future status actions
   onCreateTask,
   onDelete
 }: InventoryTableProps) {
   const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+    switch ((status || '').toLowerCase()) {
       case 'available':
         return 'bg-green-100 text-green-800'
       case 'reserved':
@@ -45,13 +65,11 @@ export function InventoryTable({
     return `${year} ${make} ${model}`.trim()
   }
 
-  const getPrice = (vehicle: any) => {
-    return vehicle.price || vehicle.salePrice || vehicle.askingPrice || 0
-  }
+  const getPrice = (vehicle: any) =>
+    vehicle.price ?? vehicle.salePrice ?? vehicle.askingPrice ?? 0
 
-  const getIdentifier = (vehicle: any) => {
-    return vehicle.vin || vehicle.vehicleIdentificationNumber || vehicle.serialNumber || 'N/A'
-  }
+  const getIdentifier = (vehicle: any) =>
+    vehicle.vin || vehicle.vehicleIdentificationNumber || vehicle.serialNumber || 'N/A'
 
   if (!vehicles || vehicles.length === 0) {
     return (
@@ -77,8 +95,8 @@ export function InventoryTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {vehicles.map((vehicle) => (
-            <TableRow key={vehicle.id}>
+          {vehicles.map((vehicle, i) => (
+            <TableRow key={vehicle.id ?? i}>
               <TableCell>
                 <div className="font-medium">{getVehicleInfo(vehicle)}</div>
                 <div className="text-sm text-muted-foreground">
@@ -129,8 +147,8 @@ export function InventoryTable({
                       <Plus className="mr-2 h-4 w-4" />
                       Create Task
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(vehicle.id)}
+                    <DropdownMenuItem
+                      onClick={() => onDelete(String(vehicle.id))}
                       className="text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
