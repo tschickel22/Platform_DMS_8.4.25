@@ -25,7 +25,7 @@ import { mockFinance } from '@/mocks/financeMock'
 import { mockAgreements } from '@/mocks/agreementsMock'
 import { mockServiceOps } from '@/mocks/serviceOpsMock'
 import { mockFinanceApplications } from '@/modules/finance-application/mocks/financeApplicationMock'
-import { useMockDataDiscovery, getPortalSectionsWithCounts } from '@/utils/mockDataDiscovery'
+import { useMockDataDiscovery } from '@/utils/mockDataDiscovery'
 
 function ClientDashboard() {
   const { getDisplayName, getDisplayEmail, getCustomerId, isProxying, proxiedClient } = usePortal()
@@ -369,6 +369,9 @@ function ClientPortalContent({ children }: ClientPortalContentProps) {
   )
 }
 
-export default function ClientPortal({ children }: { children: React.ReactNode }) {
-  return <ClientPortalContent>{children}</ClientPortalContent>
+export default function ClientPortal({ children }: { children?: React.ReactNode }) {
+  // If no children provided, render the dashboard
+  const content = children || <ClientDashboard />
+  
+  return <ClientPortalContent>{content}</ClientPortalContent>
 }

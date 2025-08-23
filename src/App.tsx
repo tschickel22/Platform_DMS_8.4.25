@@ -27,7 +27,7 @@ import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
 import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
-import ClientPortal from '@/modules/client-portal/ClientPortal'
+import ClientPortalRoutes from '@/modules/client-portal/ClientPortal'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
@@ -93,7 +93,7 @@ function App() {
                         element={
                           <ProtectedRoute>
                             <ErrorBoundary>
-                              <ClientPortal />
+                              <ClientPortalRoutes />
                             </ErrorBoundary>
                           </ProtectedRoute>
                         }
