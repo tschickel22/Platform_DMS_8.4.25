@@ -11,48 +11,53 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { 
-  Save, 
-  X, 
-  Upload, 
-  MapPin, 
-  DollarSign, 
+import {
+  Save,
+  X,
+  MapPin,
+  DollarSign,
   Home as HomeIcon,
   Truck,
   Wrench,
   Image as ImageIcon,
   Plus,
-  Trash2
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// Helper to normalize list-like fields that may arrive as string/undefined
-const asArray = (v: unknown): string[] =>
-  Array.isArray(v)
-    ? (v as string[])
-    : typeof v === 'string'
-      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
-      : []
+/** Normalizers ------------------------------------------------------------ */
+const toStringArray = (v: any): string[] => {
+  if (Array.isArray(v)) return v.filter(Boolean).map(String)
+  if (typeof v === 'string')
+    return v
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+  if (v && typeof v === 'object') {
+    // If object like { featureA: true, featureB: false } -> ["featureA"]
+    return Object.keys(v).filter(k => !!(v as Record<string, any>)[k])
+  }
+  return []
+}
 
+const toPhotosArray = (v: any): string[] => toStringArray(v)
+
+/** Types ------------------------------------------------------------------ */
 interface HomeFormData {
-  // Basic Info
   homeType: 'rv' | 'manufactured_home' | ''
   inventoryId: string
-  
-  // Common Fields
+
   year: number | ''
   make: string
   model: string
   condition: 'new' | 'used' | 'certified'
   status: 'available' | 'reserved' | 'sold' | 'service' | 'delivered'
-  
-  // Pricing
+
   salePrice: number | ''
   rentPrice: number | ''
   cost: number | ''
   offerType: 'for_sale' | 'for_rent' | 'both'
-  
-  // Location
+
   location: {
     city: string
     state: string
@@ -61,19 +66,17 @@ interface HomeFormData {
     communityName?: string
     lotNumber?: string
   }
-  
-  // Media
+
   media: {
     primaryPhoto: string
     photos: string[]
   }
-  
-  // Description & Marketing
+
   description: string
   searchResultsText: string
-  features: string[]
-  
-  // RV Specific Fields
+  features: string[] // free-form tag list
+
+  // RV
   vin?: string
   sleeps?: number | ''
   slides?: number | ''
@@ -82,8 +85,8 @@ interface HomeFormData {
   engine?: string
   transmission?: 'manual' | 'automatic'
   odometerMiles?: number | ''
-  
-  // Manufactured Home Specific Fields
+
+  // MH
   serialNumber?: string
   bedrooms?: number | ''
   bathrooms?: number | ''
@@ -93,8 +96,8 @@ interface HomeFormData {
     sections?: number | ''
     sqft?: number | ''
   }
-  
-  // Features (different for each type)
+
+  // Type-specific checkbox feature sets
   rvFeatures?: {
     generator?: boolean
     solar?: boolean
@@ -102,7 +105,7 @@ interface HomeFormData {
     slideOut?: boolean
     garage?: boolean
   }
-  
+
   mhFeatures?: {
     centralAir?: boolean
     fireplace?: boolean
@@ -113,8 +116,7 @@ interface HomeFormData {
     shed?: boolean
     energyStar?: boolean
   }
-  
-  // Timestamps
+
   createdAt?: string
   updatedAt?: string
 }
@@ -122,11 +124,35 @@ interface HomeFormData {
 interface AddEditHomeModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (data: HomeFormData) => void
+  onSave: (data: HomeFormData) => void | Promise<void>
   editingHome?: any
   mode: 'add' | 'edit'
 }
 
+/** Static options --------------------------------------------------------- */
+const stateOptions = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
+]
+
+const rvMakes = [
+  'Airstream','Coachmen','Forest River','Jayco','Keystone',
+  'Thor','Winnebago','Grand Design','Heartland','Dutchmen',
+  'Palomino','Gulf Stream','Northwood','Prime Time','KZ'
+]
+
+const mhMakes = [
+  'Clayton','Champion','Fleetwood','Skyline','Cavco',
+  'Nobility','Redman','Schult','Southern Energy','TRU'
+]
+
+const commonFeatures = [
+  'Air Conditioning','Heating','Kitchen','Bathroom','Storage',
+  'Entertainment System','WiFi Ready','Pet Friendly','Smoke Free'
+]
+
+/** Defaults --------------------------------------------------------------- */
 const defaultFormData: HomeFormData = {
   homeType: '',
   inventoryId: '',
@@ -145,11 +171,11 @@ const defaultFormData: HomeFormData = {
     postalCode: '',
     address: '',
     communityName: '',
-    lotNumber: ''
+    lotNumber: '',
   },
   media: {
     primaryPhoto: '',
-    photos: []
+    photos: [],
   },
   description: '',
   searchResultsText: '',
@@ -158,14 +184,14 @@ const defaultFormData: HomeFormData = {
     width_ft: '',
     length_ft: '',
     sections: '',
-    sqft: ''
+    sqft: '',
   },
   rvFeatures: {
     generator: false,
     solar: false,
     awning: false,
     slideOut: false,
-    garage: false
+    garage: false,
   },
   mhFeatures: {
     centralAir: false,
@@ -175,40 +201,17 @@ const defaultFormData: HomeFormData = {
     vaultedCeilings: false,
     deck: false,
     shed: false,
-    energyStar: false
-  }
+    energyStar: false,
+  },
 }
 
-const stateOptions = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-]
-
-const rvMakes = [
-  'Airstream', 'Coachmen', 'Forest River', 'Jayco', 'Keystone', 
-  'Thor', 'Winnebago', 'Grand Design', 'Heartland', 'Dutchmen',
-  'Palomino', 'Gulf Stream', 'Northwood', 'Prime Time', 'KZ'
-]
-
-const mhMakes = [
-  'Clayton', 'Champion', 'Fleetwood', 'Skyline', 'Cavco',
-  'Nobility', 'Redman', 'Schult', 'Southern Energy', 'TRU'
-]
-
-const commonFeatures = [
-  'Air Conditioning', 'Heating', 'Kitchen', 'Bathroom', 'Storage',
-  'Entertainment System', 'WiFi Ready', 'Pet Friendly', 'Smoke Free'
-]
-
-export default function AddEditHomeModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  editingHome, 
-  mode 
+/** Component -------------------------------------------------------------- */
+export default function AddEditHomeModal({
+  isOpen,
+  onClose,
+  onSave,
+  editingHome,
+  mode,
 }: AddEditHomeModalProps) {
   const [formData, setFormData] = useState<HomeFormData>(defaultFormData)
   const [activeTab, setActiveTab] = useState('basic')
@@ -216,32 +219,41 @@ export default function AddEditHomeModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  // Load editing data
+  /** Load data into the form safely when editing */
   useEffect(() => {
     if (mode === 'edit' && editingHome) {
+      const incomingFeaturesArray = toStringArray(
+        editingHome.features ?? editingHome.additionalFeatures
+      )
+
       setFormData({
         ...defaultFormData,
         ...editingHome,
-        homeType: editingHome.listingType || '',
+        homeType: editingHome.listingType || editingHome.homeType || '',
+        features: incomingFeaturesArray,
+        media: {
+          primaryPhoto: String(editingHome?.media?.primaryPhoto ?? editingHome?.primaryPhoto ?? ''),
+          photos: toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos),
+        },
         dimensions: {
           ...defaultFormData.dimensions,
-          ...editingHome.dimensions
+          ...(editingHome.dimensions || {}),
         },
         rvFeatures: {
           ...defaultFormData.rvFeatures,
-          ...editingHome.features
+          ...(editingHome.rvFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
         },
         mhFeatures: {
           ...defaultFormData.mhFeatures,
-          ...editingHome.features
-        }
+          ...(editingHome.mhFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
+        },
       })
     } else {
       setFormData(defaultFormData)
     }
   }, [mode, editingHome, isOpen])
 
-  // Reset form when modal closes
+  /** Reset when closing */
   useEffect(() => {
     if (!isOpen) {
       setFormData(defaultFormData)
@@ -250,114 +262,122 @@ export default function AddEditHomeModal({
     }
   }, [isOpen])
 
+  /** Helpers to update nested fields and clear errors */
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => {
       const keys = field.split('.')
       if (keys.length === 1) {
         return { ...prev, [field]: value }
-      } else if (keys.length === 2) {
+      }
+      if (keys.length === 2) {
+        const [k1, k2] = keys
         return {
           ...prev,
-          [keys[0]]: {
-            ...prev[keys[0] as keyof HomeFormData],
-            [keys[1]]: value
-          }
+          [k1]: {
+            ...(prev as any)[k1],
+            [k2]: value,
+          },
         }
       }
       return prev
     })
-    
-    // Clear error when field is updated
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
   }
 
+  /** Validation */
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.homeType) newErrors.homeType = 'Home type is required'
     if (!formData.year) newErrors.year = 'Year is required'
     if (!formData.make) newErrors.make = 'Make is required'
     if (!formData.model) newErrors.model = 'Model is required'
     if (!formData.inventoryId) newErrors.inventoryId = 'Inventory ID is required'
-    
+
     if (formData.offerType === 'for_sale' || formData.offerType === 'both') {
       if (!formData.salePrice) newErrors.salePrice = 'Sale price is required'
     }
     if (formData.offerType === 'for_rent' || formData.offerType === 'both') {
       if (!formData.rentPrice) newErrors.rentPrice = 'Rent price is required'
     }
-    
+
     if (!formData.location.city) newErrors['location.city'] = 'City is required'
     if (!formData.location.state) newErrors['location.state'] = 'State is required'
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
+  /** Submit */
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
-        variant: 'destructive'
+        variant: 'destructive',
       })
       return
     }
 
     setIsSubmitting(true)
     try {
-      // Generate inventory ID if not provided
-      if (!formData.inventoryId) {
-        const prefix = formData.homeType === 'rv' ? 'INV-RV' : 'INV-MH'
+      const data: HomeFormData = {
+        ...formData,
+        features: toStringArray(formData.features),
+        media: {
+          primaryPhoto: formData.media.primaryPhoto || '',
+          photos: toPhotosArray(formData.media.photos),
+        },
+      }
+
+      if (!data.inventoryId) {
+        const prefix = data.homeType === 'rv' ? 'INV-RV' : 'INV-MH'
         const timestamp = Date.now().toString().slice(-6)
-        formData.inventoryId = `${prefix}-${timestamp}`
+        data.inventoryId = `${prefix}-${timestamp}`
       }
 
-      // Set timestamps
       const now = new Date().toISOString()
-      if (mode === 'add') {
-        formData.createdAt = now
-      }
-      formData.updatedAt = now
+      if (mode === 'add') data.createdAt = now
+      data.updatedAt = now
 
-      await onSave(formData)
-      
+      await onSave(data)
+
       toast({
         title: mode === 'add' ? 'Home Added' : 'Home Updated',
-        description: `${formData.year} ${formData.make} ${formData.model} has been ${mode === 'add' ? 'added' : 'updated'} successfully.`
+        description: `${data.year} ${data.make} ${data.model} has been ${mode === 'add' ? 'added' : 'updated'} successfully.`,
       })
-      
+
       onClose()
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: `Failed to ${mode} home. Please try again.`,
-        variant: 'destructive'
+        variant: 'destructive',
       })
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  /** Feature chips (free-form) */
+  const currentFeatures = toStringArray(formData.features)
   const addFeature = (feature: string) => {
-    if (!formData.features.includes(feature)) {
-      updateFormData('features', [...formData.features, feature])
+    if (!currentFeatures.includes(feature)) {
+      updateFormData('features', [...currentFeatures, feature])
     }
   }
-
   const removeFeature = (feature: string) => {
-    updateFormData('features', formData.features.filter(f => f !== feature))
+    updateFormData('features', currentFeatures.filter(f => f !== feature))
   }
 
+  /** Media helpers */
+  const photos = toPhotosArray(formData.media.photos)
   const addPhoto = (url: string) => {
-    updateFormData('media.photos', [...formData.media.photos, url])
+    updateFormData('media.photos', [...photos, url])
   }
-
   const removePhoto = (index: number) => {
-    const newPhotos = formData.media.photos.filter((_, i) => i !== index)
-    updateFormData('media.photos', newPhotos)
+    const next = photos.filter((_, i) => i !== index)
+    updateFormData('media.photos', next)
   }
 
   return (
@@ -372,7 +392,7 @@ export default function AddEditHomeModal({
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Home Type Selection - Always First */}
+            {/* Type picker */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="text-lg">Home Type</CardTitle>
@@ -399,7 +419,7 @@ export default function AddEditHomeModal({
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => updateFormData('homeType', 'manufactured_home')}
@@ -421,13 +441,10 @@ export default function AddEditHomeModal({
                     </div>
                   </button>
                 </div>
-                {errors.homeType && (
-                  <p className="text-sm text-destructive mt-2">{errors.homeType}</p>
-                )}
+                {errors.homeType && <p className="text-sm text-destructive mt-2">{errors.homeType}</p>}
               </CardContent>
             </Card>
 
-            {/* Form Tabs - Only show after home type is selected */}
             {formData.homeType && (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -439,7 +456,7 @@ export default function AddEditHomeModal({
                   <TabsTrigger value="media" className="text-xs">Media</TabsTrigger>
                 </TabsList>
 
-                {/* Basic Information Tab */}
+                {/* Basic */}
                 <TabsContent value="basic" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -455,13 +472,11 @@ export default function AddEditHomeModal({
                           <Input
                             id="inventoryId"
                             value={formData.inventoryId}
-                            onChange={(e) => updateFormData('inventoryId', e.target.value)}
+                            onChange={e => updateFormData('inventoryId', e.target.value)}
                             placeholder="INV-001"
                             className={errors.inventoryId ? 'border-destructive' : ''}
                           />
-                          {errors.inventoryId && (
-                            <p className="text-sm text-destructive mt-1">{errors.inventoryId}</p>
-                          )}
+                          {errors.inventoryId && <p className="text-sm text-destructive mt-1">{errors.inventoryId}</p>}
                         </div>
 
                         <div>
@@ -470,37 +485,30 @@ export default function AddEditHomeModal({
                             id="year"
                             type="number"
                             value={formData.year}
-                            onChange={(e) => updateFormData('year', parseInt(e.target.value) || '')}
+                            onChange={e => updateFormData('year', parseInt(e.target.value) || '')}
                             placeholder="2024"
-                            min="1900"
+                            min={1900}
                             max={new Date().getFullYear() + 1}
                             className={errors.year ? 'border-destructive' : ''}
                           />
-                          {errors.year && (
-                            <p className="text-sm text-destructive mt-1">{errors.year}</p>
-                          )}
+                          {errors.year && <p className="text-sm text-destructive mt-1">{errors.year}</p>}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="make">Make *</Label>
-                          <Select 
-                            value={formData.make} 
-                            onValueChange={(value) => updateFormData('make', value)}
-                          >
+                          <Select value={formData.make} onValueChange={v => updateFormData('make', v)}>
                             <SelectTrigger className={errors.make ? 'border-destructive' : ''}>
                               <SelectValue placeholder="Select make" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(formData.homeType === 'rv' ? rvMakes : mhMakes).map((make) => (
-                                <SelectItem key={make} value={make}>{make}</SelectItem>
+                              {(formData.homeType === 'rv' ? rvMakes : mhMakes).map(m => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {errors.make && (
-                            <p className="text-sm text-destructive mt-1">{errors.make}</p>
-                          )}
+                          {errors.make && <p className="text-sm text-destructive mt-1">{errors.make}</p>}
                         </div>
 
                         <div>
@@ -508,26 +516,19 @@ export default function AddEditHomeModal({
                           <Input
                             id="model"
                             value={formData.model}
-                            onChange={(e) => updateFormData('model', e.target.value)}
+                            onChange={e => updateFormData('model', e.target.value)}
                             placeholder="Model name"
                             className={errors.model ? 'border-destructive' : ''}
                           />
-                          {errors.model && (
-                            <p className="text-sm text-destructive mt-1">{errors.model}</p>
-                          )}
+                          {errors.model && <p className="text-sm text-destructive mt-1">{errors.model}</p>}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="condition">Condition</Label>
-                          <Select 
-                            value={formData.condition} 
-                            onValueChange={(value) => updateFormData('condition', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
+                          <Select value={formData.condition} onValueChange={v => updateFormData('condition', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="new">New</SelectItem>
                               <SelectItem value="used">Used</SelectItem>
@@ -538,13 +539,8 @@ export default function AddEditHomeModal({
 
                         <div>
                           <Label htmlFor="status">Status</Label>
-                          <Select 
-                            value={formData.status} 
-                            onValueChange={(value) => updateFormData('status', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
+                          <Select value={formData.status} onValueChange={v => updateFormData('status', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="available">Available</SelectItem>
                               <SelectItem value="reserved">Reserved</SelectItem>
@@ -556,26 +552,26 @@ export default function AddEditHomeModal({
                         </div>
                       </div>
 
-                      {/* Type-specific ID field */}
                       <div>
-                        <Label htmlFor="typeId">
-                          {formData.homeType === 'rv' ? 'VIN' : 'Serial Number'}
-                        </Label>
+                        <Label htmlFor="typeId">{formData.homeType === 'rv' ? 'VIN' : 'Serial Number'}</Label>
                         <Input
                           id="typeId"
                           value={formData.homeType === 'rv' ? formData.vin || '' : formData.serialNumber || ''}
-                          onChange={(e) => updateFormData(
-                            formData.homeType === 'rv' ? 'vin' : 'serialNumber', 
-                            e.target.value
-                          )}
-                          placeholder={formData.homeType === 'rv' ? 'Vehicle Identification Number' : 'Serial Number'}
+                          onChange={e =>
+                            updateFormData(formData.homeType === 'rv' ? 'vin' : 'serialNumber', e.target.value)
+                          }
+                          placeholder={
+                            formData.homeType === 'rv'
+                              ? 'Vehicle Identification Number'
+                              : 'Serial Number'
+                          }
                         />
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Specifications Tab */}
+                {/* Specs */}
                 <TabsContent value="specs" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -594,33 +590,31 @@ export default function AddEditHomeModal({
                                 id="sleeps"
                                 type="number"
                                 value={formData.sleeps || ''}
-                                onChange={(e) => updateFormData('sleeps', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('sleeps', parseInt(e.target.value) || '')}
                                 placeholder="4"
-                                min="1"
-                                max="20"
+                                min={1}
+                                max={20}
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="slides">Slide Outs</Label>
                               <Input
                                 id="slides"
                                 type="number"
                                 value={formData.slides || ''}
-                                onChange={(e) => updateFormData('slides', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('slides', parseInt(e.target.value) || '')}
                                 placeholder="1"
-                                min="0"
-                                max="10"
+                                min={0}
+                                max={10}
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="length">Length (ft)</Label>
                               <Input
                                 id="length"
                                 type="number"
                                 value={formData.length || ''}
-                                onChange={(e) => updateFormData('length', parseFloat(e.target.value) || '')}
+                                onChange={e => updateFormData('length', parseFloat(e.target.value) || '')}
                                 placeholder="28.5"
                                 step="0.1"
                               />
@@ -630,13 +624,8 @@ export default function AddEditHomeModal({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <Label htmlFor="fuelType">Fuel Type</Label>
-                              <Select 
-                                value={formData.fuelType || ''} 
-                                onValueChange={(value) => updateFormData('fuelType', value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select fuel type" />
-                                </SelectTrigger>
+                              <Select value={formData.fuelType || ''} onValueChange={v => updateFormData('fuelType', v)}>
+                                <SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="gasoline">Gasoline</SelectItem>
                                   <SelectItem value="diesel">Diesel</SelectItem>
@@ -645,16 +634,13 @@ export default function AddEditHomeModal({
                                 </SelectContent>
                               </Select>
                             </div>
-
                             <div>
                               <Label htmlFor="transmission">Transmission</Label>
-                              <Select 
-                                value={formData.transmission || ''} 
-                                onValueChange={(value) => updateFormData('transmission', value)}
+                              <Select
+                                value={formData.transmission || ''}
+                                onValueChange={v => updateFormData('transmission', v)}
                               >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select transmission" />
-                                </SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Select transmission" /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="automatic">Automatic</SelectItem>
                                   <SelectItem value="manual">Manual</SelectItem>
@@ -669,20 +655,19 @@ export default function AddEditHomeModal({
                               <Input
                                 id="engine"
                                 value={formData.engine || ''}
-                                onChange={(e) => updateFormData('engine', e.target.value)}
+                                onChange={e => updateFormData('engine', e.target.value)}
                                 placeholder="Ford V10"
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="odometerMiles">Odometer (miles)</Label>
                               <Input
                                 id="odometerMiles"
                                 type="number"
                                 value={formData.odometerMiles || ''}
-                                onChange={(e) => updateFormData('odometerMiles', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('odometerMiles', parseInt(e.target.value) || '')}
                                 placeholder="15000"
-                                min="0"
+                                min={0}
                               />
                             </div>
                           </div>
@@ -698,24 +683,23 @@ export default function AddEditHomeModal({
                                 id="bedrooms"
                                 type="number"
                                 value={formData.bedrooms || ''}
-                                onChange={(e) => updateFormData('bedrooms', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('bedrooms', parseInt(e.target.value) || '')}
                                 placeholder="3"
-                                min="1"
-                                max="10"
+                                min={1}
+                                max={10}
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="bathrooms">Bathrooms</Label>
                               <Input
                                 id="bathrooms"
                                 type="number"
                                 value={formData.bathrooms || ''}
-                                onChange={(e) => updateFormData('bathrooms', parseFloat(e.target.value) || '')}
+                                onChange={e => updateFormData('bathrooms', parseFloat(e.target.value) || '')}
                                 placeholder="2"
-                                step="0.5"
-                                min="1"
-                                max="10"
+                                step={0.5}
+                                min={1}
+                                max={10}
                               />
                             </div>
                           </div>
@@ -727,42 +711,39 @@ export default function AddEditHomeModal({
                                 id="width_ft"
                                 type="number"
                                 value={formData.dimensions?.width_ft || ''}
-                                onChange={(e) => updateFormData('dimensions.width_ft', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('dimensions.width_ft', parseInt(e.target.value) || '')}
                                 placeholder="28"
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="length_ft">Length (ft)</Label>
                               <Input
                                 id="length_ft"
                                 type="number"
                                 value={formData.dimensions?.length_ft || ''}
-                                onChange={(e) => updateFormData('dimensions.length_ft', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('dimensions.length_ft', parseInt(e.target.value) || '')}
                                 placeholder="66"
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="sections">Sections</Label>
                               <Input
                                 id="sections"
                                 type="number"
                                 value={formData.dimensions?.sections || ''}
-                                onChange={(e) => updateFormData('dimensions.sections', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('dimensions.sections', parseInt(e.target.value) || '')}
                                 placeholder="2"
-                                min="1"
-                                max="3"
+                                min={1}
+                                max={3}
                               />
                             </div>
-
                             <div>
                               <Label htmlFor="sqft">Square Feet</Label>
                               <Input
                                 id="sqft"
                                 type="number"
                                 value={formData.dimensions?.sqft || ''}
-                                onChange={(e) => updateFormData('dimensions.sqft', parseInt(e.target.value) || '')}
+                                onChange={e => updateFormData('dimensions.sqft', parseInt(e.target.value) || '')}
                                 placeholder="1450"
                               />
                             </div>
@@ -773,7 +754,7 @@ export default function AddEditHomeModal({
                   </Card>
                 </TabsContent>
 
-                {/* Pricing Tab */}
+                {/* Pricing */}
                 <TabsContent value="pricing" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -785,13 +766,8 @@ export default function AddEditHomeModal({
                     <CardContent className="space-y-4">
                       <div>
                         <Label htmlFor="offerType">Offer Type</Label>
-                        <Select 
-                          value={formData.offerType} 
-                          onValueChange={(value) => updateFormData('offerType', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Select value={formData.offerType} onValueChange={v => updateFormData('offerType', v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="for_sale">For Sale Only</SelectItem>
                             <SelectItem value="for_rent">For Rent Only</SelectItem>
@@ -808,14 +784,12 @@ export default function AddEditHomeModal({
                               id="salePrice"
                               type="number"
                               value={formData.salePrice || ''}
-                              onChange={(e) => updateFormData('salePrice', parseFloat(e.target.value) || '')}
+                              onChange={e => updateFormData('salePrice', parseFloat(e.target.value) || '')}
                               placeholder="45000"
-                              min="0"
+                              min={0}
                               className={errors.salePrice ? 'border-destructive' : ''}
                             />
-                            {errors.salePrice && (
-                              <p className="text-sm text-destructive mt-1">{errors.salePrice}</p>
-                            )}
+                            {errors.salePrice && <p className="text-sm text-destructive mt-1">{errors.salePrice}</p>}
                           </div>
                         )}
 
@@ -826,14 +800,12 @@ export default function AddEditHomeModal({
                               id="rentPrice"
                               type="number"
                               value={formData.rentPrice || ''}
-                              onChange={(e) => updateFormData('rentPrice', parseFloat(e.target.value) || '')}
+                              onChange={e => updateFormData('rentPrice', parseFloat(e.target.value) || '')}
                               placeholder="350"
-                              min="0"
+                              min={0}
                               className={errors.rentPrice ? 'border-destructive' : ''}
                             />
-                            {errors.rentPrice && (
-                              <p className="text-sm text-destructive mt-1">{errors.rentPrice}</p>
-                            )}
+                            {errors.rentPrice && <p className="text-sm text-destructive mt-1">{errors.rentPrice}</p>}
                           </div>
                         )}
 
@@ -843,9 +815,9 @@ export default function AddEditHomeModal({
                             id="cost"
                             type="number"
                             value={formData.cost || ''}
-                            onChange={(e) => updateFormData('cost', parseFloat(e.target.value) || '')}
+                            onChange={e => updateFormData('cost', parseFloat(e.target.value) || '')}
                             placeholder="35000"
-                            min="0"
+                            min={0}
                           />
                         </div>
                       </div>
@@ -853,7 +825,7 @@ export default function AddEditHomeModal({
                   </Card>
                 </TabsContent>
 
-                {/* Location Tab */}
+                {/* Location */}
                 <TabsContent value="location" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -869,33 +841,26 @@ export default function AddEditHomeModal({
                           <Input
                             id="city"
                             value={formData.location.city}
-                            onChange={(e) => updateFormData('location.city', e.target.value)}
+                            onChange={e => updateFormData('location.city', e.target.value)}
                             placeholder="Phoenix"
                             className={errors['location.city'] ? 'border-destructive' : ''}
                           />
-                          {errors['location.city'] && (
-                            <p className="text-sm text-destructive mt-1">{errors['location.city']}</p>
-                          )}
+                          {errors['location.city'] && <p className="text-sm text-destructive mt-1">{errors['location.city']}</p>}
                         </div>
 
                         <div>
                           <Label htmlFor="state">State *</Label>
-                          <Select 
-                            value={formData.location.state} 
-                            onValueChange={(value) => updateFormData('location.state', value)}
-                          >
+                          <Select value={formData.location.state} onValueChange={v => updateFormData('location.state', v)}>
                             <SelectTrigger className={errors['location.state'] ? 'border-destructive' : ''}>
                               <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                             <SelectContent>
-                              {stateOptions.map((state) => (
-                                <SelectItem key={state} value={state}>{state}</SelectItem>
+                              {stateOptions.map(s => (
+                                <SelectItem key={s} value={s}>{s}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {errors['location.state'] && (
-                            <p className="text-sm text-destructive mt-1">{errors['location.state']}</p>
-                          )}
+                          {errors['location.state'] && <p className="text-sm text-destructive mt-1">{errors['location.state']}</p>}
                         </div>
 
                         <div>
@@ -903,7 +868,7 @@ export default function AddEditHomeModal({
                           <Input
                             id="postalCode"
                             value={formData.location.postalCode}
-                            onChange={(e) => updateFormData('location.postalCode', e.target.value)}
+                            onChange={e => updateFormData('location.postalCode', e.target.value)}
                             placeholder="85001"
                           />
                         </div>
@@ -914,7 +879,7 @@ export default function AddEditHomeModal({
                         <Input
                           id="address"
                           value={formData.location.address || ''}
-                          onChange={(e) => updateFormData('location.address', e.target.value)}
+                          onChange={e => updateFormData('location.address', e.target.value)}
                           placeholder="123 Main Street"
                         />
                       </div>
@@ -926,17 +891,16 @@ export default function AddEditHomeModal({
                             <Input
                               id="communityName"
                               value={formData.location.communityName || ''}
-                              onChange={(e) => updateFormData('location.communityName', e.target.value)}
+                              onChange={e => updateFormData('location.communityName', e.target.value)}
                               placeholder="Sunset Palms Mobile Home Community"
                             />
                           </div>
-
                           <div>
                             <Label htmlFor="lotNumber">Lot Number</Label>
                             <Input
                               id="lotNumber"
                               value={formData.location.lotNumber || ''}
-                              onChange={(e) => updateFormData('location.lotNumber', e.target.value)}
+                              onChange={e => updateFormData('location.lotNumber', e.target.value)}
                               placeholder="42"
                             />
                           </div>
@@ -946,14 +910,13 @@ export default function AddEditHomeModal({
                   </Card>
                 </TabsContent>
 
-                {/* Features Tab */}
+                {/* Features */}
                 <TabsContent value="features" className="space-y-6">
                   <Card>
                     <CardHeader>
                       <CardTitle>Features & Amenities</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Type-specific features */}
                       {formData.homeType === 'rv' && (
                         <div>
                           <Label className="text-base font-medium">RV Features</Label>
@@ -962,10 +925,8 @@ export default function AddEditHomeModal({
                               <div key={key} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={key}
-                                  checked={value}
-                                  onCheckedChange={(checked) => 
-                                    updateFormData(`rvFeatures.${key}`, checked)
-                                  }
+                                  checked={!!value}
+                                  onCheckedChange={checked => updateFormData(`rvFeatures.${key}`, !!checked)}
                                 />
                                 <Label htmlFor={key} className="capitalize">
                                   {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -984,10 +945,8 @@ export default function AddEditHomeModal({
                               <div key={key} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={key}
-                                  checked={value}
-                                  onCheckedChange={(checked) => 
-                                    updateFormData(`mhFeatures.${key}`, checked)
-                                  }
+                                  checked={!!value}
+                                  onCheckedChange={checked => updateFormData(`mhFeatures.${key}`, !!checked)}
                                 />
                                 <Label htmlFor={key} className="capitalize">
                                   {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -1000,13 +959,13 @@ export default function AddEditHomeModal({
 
                       <Separator />
 
-                      {/* Custom Features */}
+                      {/* Custom free-form features */}
                       <div>
                         <Label className="text-base font-medium">Additional Features</Label>
                         <div className="mt-3 space-y-3">
                           <div className="flex flex-wrap gap-2">
-                            {asArray(formData.features).map((feature, index) => (
-                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                            {currentFeatures.map((feature, idx) => (
+                              <Badge key={`${feature}-${idx}`} variant="secondary" className="flex items-center gap-1">
                                 {feature}
                                 <button
                                   type="button"
@@ -1018,11 +977,11 @@ export default function AddEditHomeModal({
                               </Badge>
                             ))}
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-2">
                             {commonFeatures
-                              .filter(f => !formData.features.includes(f))
-                              .map((feature) => (
+                              .filter(f => !currentFeatures.includes(f))
+                              .map(feature => (
                                 <Button
                                   key={feature}
                                   type="button"
@@ -1042,7 +1001,7 @@ export default function AddEditHomeModal({
                   </Card>
                 </TabsContent>
 
-                {/* Media Tab */}
+                {/* Media */}
                 <TabsContent value="media" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -1057,7 +1016,7 @@ export default function AddEditHomeModal({
                         <Input
                           id="primaryPhoto"
                           value={formData.media.primaryPhoto}
-                          onChange={(e) => updateFormData('media.primaryPhoto', e.target.value)}
+                          onChange={e => updateFormData('media.primaryPhoto', e.target.value)}
                           placeholder="https://example.com/photo.jpg"
                         />
                       </div>
@@ -1065,14 +1024,14 @@ export default function AddEditHomeModal({
                       <div>
                         <Label className="text-base font-medium">Additional Photos</Label>
                         <div className="space-y-3 mt-3">
-                          {asArray(formData.media.photos).map((photo, index) => (
+                          {photos.map((photo, index) => (
                             <div key={index} className="flex gap-2">
                               <Input
                                 value={photo}
-                                onChange={(e) => {
-                                  const newPhotos = [...formData.media.photos]
-                                  newPhotos[index] = e.target.value
-                                  updateFormData('media.photos', newPhotos)
+                                onChange={e => {
+                                  const next = [...photos]
+                                  next[index] = e.target.value
+                                  updateFormData('media.photos', next)
                                 }}
                                 placeholder="Photo URL"
                                 className="flex-1"
@@ -1087,13 +1046,8 @@ export default function AddEditHomeModal({
                               </Button>
                             </div>
                           ))}
-                          
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => addPhoto('')}
-                            className="w-full"
-                          >
+
+                          <Button type="button" variant="outline" onClick={() => addPhoto('')} className="w-full">
                             <Plus className="h-4 w-4 mr-2" />
                             Add Photo URL
                           </Button>
@@ -1112,7 +1066,7 @@ export default function AddEditHomeModal({
                         <Textarea
                           id="description"
                           value={formData.description}
-                          onChange={(e) => updateFormData('description', e.target.value)}
+                          onChange={e => updateFormData('description', e.target.value)}
                           placeholder="Detailed description of the home..."
                           rows={4}
                         />
@@ -1123,7 +1077,7 @@ export default function AddEditHomeModal({
                         <Input
                           id="searchResultsText"
                           value={formData.searchResultsText}
-                          onChange={(e) => updateFormData('searchResultsText', e.target.value)}
+                          onChange={e => updateFormData('searchResultsText', e.target.value)}
                           placeholder="2023 Forest River Cherokee - 28ft Travel Trailer"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
@@ -1144,8 +1098,8 @@ export default function AddEditHomeModal({
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               disabled={isSubmitting || !formData.homeType}
               className="sm:min-w-[120px]"
             >
