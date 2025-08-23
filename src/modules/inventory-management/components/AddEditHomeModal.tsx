@@ -26,6 +26,14 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// Helper to normalize list-like fields that may arrive as string/undefined
+const asArray = (v: unknown): string[] =>
+  Array.isArray(v)
+    ? (v as string[])
+    : typeof v === 'string'
+      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
+      : []
+
 interface HomeFormData {
   // Basic Info
   homeType: 'rv' | 'manufactured_home' | ''
@@ -997,7 +1005,7 @@ export default function AddEditHomeModal({
                         <Label className="text-base font-medium">Additional Features</Label>
                         <div className="mt-3 space-y-3">
                           <div className="flex flex-wrap gap-2">
-                            {formData.features.map((feature, index) => (
+                            {asArray(formData.features).map((feature, index) => (
                               <Badge key={index} variant="secondary" className="flex items-center gap-1">
                                 {feature}
                                 <button
@@ -1057,7 +1065,7 @@ export default function AddEditHomeModal({
                       <div>
                         <Label className="text-base font-medium">Additional Photos</Label>
                         <div className="space-y-3 mt-3">
-                          {formData.media.photos.map((photo, index) => (
+                          {asArray(formData.media.photos).map((photo, index) => (
                             <div key={index} className="flex gap-2">
                               <Input
                                 value={photo}
