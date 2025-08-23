@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { useTasks } from '@/hooks/useTasks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button' 
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -12,13 +12,13 @@ import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-re
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
+import { InventoryTable } from './components/InventoryTable'       // ✅ missing import
 // Use the full-featured forms shipped in your ZIP
 import RVInventoryForm from './forms/RVInventoryForm'
 import MHInventoryForm from './forms/MHInventoryForm'
 import VehicleDetail from './components/VehicleDetail'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
-/* removed unused TagSelector/TagType imports */
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 
@@ -50,7 +50,6 @@ function InventoryList() {
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [formType, setFormType] = useState<'RV' | 'MH'>(selectedVehicle?.type ?? 'MH')
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'import'>('dashboard')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
 
   /** Derived stats (robust to enum/string statuses and mixed price fields) */
@@ -200,7 +199,6 @@ function InventoryList() {
 
   /** Filters */
   const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
-    setActiveTab('inventory')
     setStatusFilter(status)
   }
 
