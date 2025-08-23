@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import AddEditHomeModal from './components/AddEditHomeModal'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { InventoryTable } from './components/InventoryTable'       // ✅ missing import
 // Use the full-featured forms shipped in your ZIP
@@ -234,7 +235,7 @@ function InventoryList() {
       <Dialog
         open={showVehicleForm}
         onOpenChange={(open) => {
-          setShowVehicleForm(open)
+            <Button onClick={() => setShowAddModal(true)}>
           if (!open) setSelectedVehicle(null)
         }}
       >
@@ -455,7 +456,7 @@ function InventoryList() {
           <InventoryTable
             vehicles={filteredVehicles}
             onEdit={handleEditVehicle}
-            onView={handleViewVehicle}
+            <Button onClick={() => setShowAddModal(true)}>
             onStatusChange={handleStatusChange}
             onCreateTask={handleCreateTaskForVehicle}
             onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
@@ -471,6 +472,28 @@ export default function InventoryManagement() {
     <Routes>
       <Route path="/" element={<InventoryList />} />
       <Route path="/*" element={<InventoryList />} />
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingHome, setEditingHome] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
     </Routes>
   )
 }
+
+      {/* Add/Edit Home Modals */}
+      <AddEditHomeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleAddHome}
+        mode="add"
+      />
+      
+      <AddEditHomeModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingHome(null)
+        }}
+        onSave={handleEditHome}
+        editingHome={editingHome}
+        mode="edit"
+      />
