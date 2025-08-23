@@ -52,6 +52,9 @@ function InventoryList() {
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
   const [formType, setFormType] = useState<'RV' | 'MH'>(selectedVehicle?.type ?? 'MH')
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingHome, setEditingHome] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   /** Derived stats (robust to enum/string statuses and mixed price fields) */
   const stats = useMemo(() => {
@@ -198,6 +201,33 @@ function InventoryList() {
     setShowTaskForm(true)
   }
 
+  const handleAddHome = async (homeData: any) => {
+    try {
+      await createVehicle(homeData)
+      setShowAddModal(false)
+      toast({ title: 'Home Added', description: 'New home has been added to inventory' })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add home', variant: 'destructive' })
+    }
+  }
+
+  const handleEditHome = async (homeData: any) => {
+    try {
+      if (editingHome) {
+        if (typeof updateVehicle === 'function') {
+          await updateVehicle((editingHome as any).id, homeData)
+        } else {
+          await updateVehicleStatus((editingHome as any).id, homeData.status)
+        }
+        setShowEditModal(false)
+        setEditingHome(null)
+        toast({ title: 'Home Updated', description: 'Home information has been updated' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update home', variant: 'destructive' })
+    }
+  }
+
   /** Filters */
   const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
     setStatusFilter(status)
@@ -235,8 +265,8 @@ function InventoryList() {
       <Dialog
         open={showVehicleForm}
         onOpenChange={(open) => {
-            <Button onClick={() => setShowAddModal(true)}>
           if (!open) setSelectedVehicle(null)
+          setShowVehicleForm(open)
         }}
       >
         <DialogContent className="max-w-5xl">
@@ -364,6 +394,9 @@ function InventoryList() {
               <Plus className="h-4 w-4 mr-2" />
               Add Home
             </Button>
+            <Button onClick={() => setShowAddModal(true)}>
+              Add Home
+            </Button>
           </div>
         </div>
       </div>
@@ -456,28 +489,13 @@ function InventoryList() {
           <InventoryTable
             vehicles={filteredVehicles}
             onEdit={handleEditVehicle}
-            <Button onClick={() => setShowAddModal(true)}>
+            onView={handleViewVehicle}
             onStatusChange={handleStatusChange}
             onCreateTask={handleCreateTaskForVehicle}
             onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
           />
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-export default function InventoryManagement() {
-  return (
-    <Routes>
-      <Route path="/" element={<InventoryList />} />
-      <Route path="/*" element={<InventoryList />} />
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editingHome, setEditingHome] = useState(null)
-  const [showEditModal, setShowEditModal] = useState(false)
-    </Routes>
-  )
-}
 
       {/* Add/Edit Home Modals */}
       <AddEditHomeModal
@@ -497,3 +515,15 @@ export default function InventoryManagement() {
         editingHome={editingHome}
         mode="edit"
       />
+    </div>
+  )
+}
+
+export default function InventoryManagement() {
+  return (
+    <Routes>
+      <Route path="/" element={<InventoryList />} />
+      <Route path="/*" element={<InventoryList />} />
+    </Routes>
+  )
+}
