@@ -396,7 +396,6 @@ function InventoryList() {
               <Plus className="h-4 w-4 mr-2" />
               Add Home
             </Button>
-            <Button onClick={() => setShowAddModal(true)}>
               Add Home
             </Button>
           </div>
