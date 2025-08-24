@@ -162,14 +162,6 @@ interface HomeFormData {
     deck?: boolean
     shed?: boolean
     energyStar?: boolean
-  }
-
-  createdAt?: string
-  updatedAt?: string
-}
-
-interface AddEditHomeModalProps {
-  mode: 'add' | 'edit'
   editingHome?: any
   onSave: (data: any) => void
   onClose: () => void
