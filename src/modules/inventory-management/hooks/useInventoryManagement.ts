@@ -1,171 +1,125 @@
 import { useState, useEffect } from 'react'
+import { Vehicle, VehicleStatus } from '@/types'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { mockInventory } from '@/mocks/inventoryMock'
 
-export interface InventoryVehicle {
-  id: string
-  listingType: 'rv' | 'manufactured_home'
-  inventoryId: string
-  year: number
-  make: string
-  model: string
-  condition: 'new' | 'used' | 'certified'
-  status: 'available' | 'reserved' | 'sold' | 'service' | 'delivered'
-  salePrice?: number
-  rentPrice?: number
-  cost?: number
-  offerType: 'for_sale' | 'for_rent' | 'both'
-  
-  // RV specific
-  vin?: string
-  sleeps?: number
-  slides?: number
-  length?: number
-  fuelType?: string
-  engine?: string
-  transmission?: string
-  odometerMiles?: number
-  
-  // Manufactured Home specific
-  serialNumber?: string
-  bedrooms?: number
-  bathrooms?: number
-  dimensions?: {
-    width_ft?: number
-    length_ft?: number
-    sections?: number
-    sqft?: number
-  }
-  
-  location?: {
-    city: string
-    state: string
-    postalCode?: string
-    address?: string
-    communityName?: string
-    lotNumber?: string
-  }
-  
-  media?: {
-    primaryPhoto?: string
-    photos?: string[]
-  }
-  
-  description?: string
-  searchResultsText?: string
-  features?: any
-  
-  createdAt: string
-  updatedAt: string
-}
-
 export function useInventoryManagement() {
-  const [vehicles, setVehicles] = useState<InventoryVehicle[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Load vehicles from localStorage on mount
   useEffect(() => {
     try {
-      setLoading(true)
-      const savedVehicles = loadFromLocalStorage<InventoryVehicle[]>('renter-insight-inventory', [])
+      const savedVehicles = loadFromLocalStorage<Vehicle[]>('renter-insight-vehicles', [])
       
       // If no saved vehicles, use mock data
       if (savedVehicles.length === 0) {
-        const mockVehicles = mockInventory.sampleVehicles.map(vehicle => ({
-          ...vehicle,
-          createdAt: vehicle.createdAt || new Date().toISOString(),
-          updatedAt: vehicle.updatedAt || new Date().toISOString()
+        const mockVehicles = mockInventory.sampleVehicles.map((vehicle: any) => ({
+          id: vehicle.id,
+          vin: vehicle.vin || vehicle.serialNumber || '',
+          make: vehicle.make,
+          model: vehicle.model,
+          year: vehicle.year,
+          type: vehicle.listingType === 'rv' ? 'rv' : 'manufactured_home',
+          status: vehicle.status || 'available',
+          price: vehicle.salePrice || vehicle.rentPrice || 0,
+          cost: vehicle.cost || 0,
+          location: vehicle.location?.city || '',
+          features: vehicle.features ? Object.keys(vehicle.features).filter(key => vehicle.features[key]) : [],
+          images: vehicle.media?.photos || [],
+          customFields: {},
+          createdAt: new Date(vehicle.createdAt || Date.now()),
+          updatedAt: new Date(vehicle.updatedAt || Date.now())
         }))
+        
         setVehicles(mockVehicles)
-        saveToLocalStorage('renter-insight-inventory', mockVehicles)
+        saveToLocalStorage('renter-insight-vehicles', mockVehicles)
       } else {
         setVehicles(savedVehicles)
       }
-      
-      setError(null)
     } catch (err) {
-      console.error('Failed to load inventory:', err)
-      setError('Failed to load inventory data')
+      console.error('Error loading vehicles:', err)
+      setError('Failed to load vehicles')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Save vehicles to localStorage whenever vehicles change
+  // Save vehicles to localStorage whenever they change
   useEffect(() => {
-    if (!loading) {
-      saveToLocalStorage('renter-insight-inventory', vehicles)
+    if (vehicles.length > 0) {
+      saveToLocalStorage('renter-insight-vehicles', vehicles)
     }
-  }, [vehicles, loading])
+  }, [vehicles])
 
-  const addVehicle = async (vehicleData: Partial<InventoryVehicle>): Promise<InventoryVehicle> => {
-    const newVehicle: InventoryVehicle = {
+  const createVehicle = async (vehicleData: Partial<Vehicle>): Promise<Vehicle> => {
+    const newVehicle: Vehicle = {
       id: `vehicle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      listingType: vehicleData.listingType || 'rv',
-      inventoryId: vehicleData.inventoryId || `INV-${Date.now()}`,
-      year: vehicleData.year || new Date().getFullYear(),
+      vin: vehicleData.vin || '',
       make: vehicleData.make || '',
       model: vehicleData.model || '',
-      condition: vehicleData.condition || 'new',
+      year: vehicleData.year || new Date().getFullYear(),
+      type: vehicleData.type || 'manufactured_home',
       status: vehicleData.status || 'available',
-      offerType: vehicleData.offerType || 'for_sale',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...vehicleData
+      price: vehicleData.price || 0,
+      cost: vehicleData.cost || 0,
+      location: vehicleData.location || '',
+      features: vehicleData.features || [],
+      images: vehicleData.images || [],
+      customFields: vehicleData.customFields || {},
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
 
     setVehicles(prev => [newVehicle, ...prev])
     return newVehicle
   }
 
-  const updateVehicle = async (id: string, updates: Partial<InventoryVehicle>): Promise<InventoryVehicle | null> => {
+  const updateVehicle = async (vehicleId: string, updates: Partial<Vehicle>): Promise<Vehicle | null> => {
+    const existingVehicle = vehicles.find(v => v.id === vehicleId)
+    if (!existingVehicle) return null
+
     const updatedVehicle = {
+      ...existingVehicle,
       ...updates,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }
 
-    setVehicles(prev => prev.map(vehicle => 
-      vehicle.id === id 
-        ? { ...vehicle, ...updatedVehicle }
-        : vehicle
-    ))
-
-    const vehicle = vehicles.find(v => v.id === id)
-    return vehicle ? { ...vehicle, ...updatedVehicle } : null
+    setVehicles(prev => prev.map(v => v.id === vehicleId ? updatedVehicle : v))
+    return updatedVehicle
   }
 
-  const deleteVehicle = async (id: string): Promise<void> => {
-    setVehicles(prev => prev.filter(vehicle => vehicle.id !== id))
+  const updateVehicleStatus = async (vehicleId: string, status: VehicleStatus): Promise<void> => {
+    await updateVehicle(vehicleId, { status })
   }
 
-  const getVehiclesByType = (type: 'rv' | 'manufactured_home') => {
-    return vehicles.filter(vehicle => vehicle.listingType === type)
+  const deleteVehicle = async (vehicleId: string): Promise<void> => {
+    setVehicles(prev => prev.filter(v => v.id !== vehicleId))
   }
 
-  const getVehiclesByStatus = (status: string) => {
-    return vehicles.filter(vehicle => vehicle.status === status)
+  const getVehicleById = (vehicleId: string): Vehicle | null => {
+    return vehicles.find(v => v.id === vehicleId) || null
   }
 
-  const searchVehicles = (query: string) => {
-    const lowercaseQuery = query.toLowerCase()
-    return vehicles.filter(vehicle =>
-      vehicle.make.toLowerCase().includes(lowercaseQuery) ||
-      vehicle.model.toLowerCase().includes(lowercaseQuery) ||
-      vehicle.inventoryId.toLowerCase().includes(lowercaseQuery) ||
-      vehicle.description?.toLowerCase().includes(lowercaseQuery)
-    )
+  const getVehiclesByStatus = (status: VehicleStatus): Vehicle[] => {
+    return vehicles.filter(v => v.status === status)
+  }
+
+  const getVehiclesByType = (type: string): Vehicle[] => {
+    return vehicles.filter(v => v.type === type)
   }
 
   return {
     vehicles,
     loading,
     error,
-    addVehicle,
+    createVehicle,
     updateVehicle,
+    updateVehicleStatus,
     deleteVehicle,
-    getVehiclesByType,
+    getVehicleById,
     getVehiclesByStatus,
-    searchVehicles
+    getVehiclesByType
   }
 }
