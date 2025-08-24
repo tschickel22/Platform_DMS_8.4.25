@@ -42,6 +42,14 @@ const toStringArray = (v: any): string[] => {
 
 const toPhotosArray = (v: any): string[] => toStringArray(v)
 
+// Helper to normalize list-like fields that may arrive as string/undefined
+const asArray = (v: unknown): string[] =>
+  Array.isArray(v)
+    ? (v as string[])
+    : typeof v === 'string'
+      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
+      : []
+
 /** Types ------------------------------------------------------------------ */
 interface HomeFormData {
   homeType: 'rv' | 'manufactured_home' | ''
@@ -122,11 +130,10 @@ interface HomeFormData {
 }
 
 interface AddEditHomeModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (data: HomeFormData) => void | Promise<void>
-  editingHome?: any
   mode: 'add' | 'edit'
+  editingHome?: any
+  onSave: (data: any) => void
+  onClose: () => void
 }
 
 /** Static options --------------------------------------------------------- */
@@ -205,15 +212,61 @@ const defaultFormData: HomeFormData = {
   },
 }
 
-/** Component -------------------------------------------------------------- */
-export default function AddEditHomeModal({
-  isOpen,
-  onClose,
-  onSave,
-  editingHome,
-  mode,
-}: AddEditHomeModalProps) {
-  const [formData, setFormData] = useState<HomeFormData>(defaultFormData)
+export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEditHomeModalProps) {
+  const [selectedType, setSelectedType] = useState<'rv' | 'manufactured_home'>(
+    editingHome?.listingType || editingHome?.customFields?.listingType || 'rv'
+  )
+  const [currentStep, setCurrentStep] = useState(mode === 'edit' ? 1 : 0)
+
+  // Initialize form data from editing home
+  const [formData, setFormData] = useState(() => {
+    if (editingHome) {
+      return {
+        // Basic info
+        year: editingHome.year || '',
+        make: editingHome.make || '',
+        model: editingHome.model || '',
+        vin: editingHome.vin || '',
+        condition: editingHome.customFields?.condition || 'new',
+        salePrice: editingHome.price || editingHome.salePrice || '',
+        rentPrice: editingHome.customFields?.rentPrice || '',
+        offerType: editingHome.customFields?.offerType || 'for_sale',
+        status: editingHome.status || 'available',
+        description: editingHome.customFields?.description || '',
+        
+        // RV specific
+        sleeps: editingHome.customFields?.sleeps || editingHome.sleeps || '',
+        slides: editingHome.customFields?.slides || editingHome.slides || '',
+        length: editingHome.customFields?.length || editingHome.length || '',
+        fuelType: editingHome.customFields?.fuelType || '',
+        engine: editingHome.customFields?.engine || '',
+        transmission: editingHome.customFields?.transmission || '',
+        odometerMiles: editingHome.customFields?.odometerMiles || '',
+        
+        // MH specific
+        bedrooms: editingHome.customFields?.bedrooms || editingHome.bedrooms || '',
+        bathrooms: editingHome.customFields?.bathrooms || editingHome.bathrooms || '',
+        squareFootage: editingHome.customFields?.dimensions?.sqft || editingHome.customFields?.squareFootage || '',
+        sections: editingHome.customFields?.dimensions?.sections || '',
+        
+        // Location
+        city: editingHome.location?.split(',')[0]?.trim() || editingHome.customFields?.city || '',
+        state: editingHome.location?.split(',')[1]?.trim() || editingHome.customFields?.state || '',
+        postalCode: editingHome.customFields?.postalCode || '',
+        communityName: editingHome.customFields?.communityName || '',
+        
+        // Media
+        primaryPhoto: editingHome.customFields?.primaryPhoto || editingHome.media?.primaryPhoto || '',
+        photos: asArray(editingHome.images || editingHome.media?.photos),
+        
+        // Features and amenities
+        features: asArray(editingHome.features),
+        amenities: asArray(editingHome.customFields?.amenities)
+      }
+    }
+    return getDefaultFormData()
+  })
+
   const [activeTab, setActiveTab] = useState('basic')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -306,6 +359,58 @@ export default function AddEditHomeModal({
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  const handleSave = () => {
+    const vehicleData = {
+      vin: formData.vin,
+      make: formData.make,
+      model: formData.model,
+      year: parseInt(formData.year) || new Date().getFullYear(),
+      type: selectedType === 'rv' ? 'RV' : 'SINGLE_WIDE',
+      status: formData.status.toUpperCase(),
+      price: parseFloat(formData.salePrice) || 0,
+      cost: parseFloat(formData.salePrice) * 0.8 || 0,
+      location: `${formData.city}, ${formData.state}`,
+      features: asArray(formData.features),
+      images: formData.photos || [],
+      customFields: {
+        listingType: selectedType,
+        condition: formData.condition,
+        rentPrice: parseFloat(formData.rentPrice) || undefined,
+        offerType: formData.offerType,
+        description: formData.description,
+        
+        // RV specific
+        sleeps: selectedType === 'rv' ? parseInt(formData.sleeps) || undefined : undefined,
+        slides: selectedType === 'rv' ? parseInt(formData.slides) || undefined : undefined,
+        length: selectedType === 'rv' ? parseFloat(formData.length) || undefined : undefined,
+        fuelType: selectedType === 'rv' ? formData.fuelType : undefined,
+        engine: selectedType === 'rv' ? formData.engine : undefined,
+        transmission: selectedType === 'rv' ? formData.transmission : undefined,
+        odometerMiles: selectedType === 'rv' ? parseInt(formData.odometerMiles) || undefined : undefined,
+        
+        // MH specific
+        bedrooms: selectedType === 'manufactured_home' ? parseInt(formData.bedrooms) || undefined : undefined,
+        bathrooms: selectedType === 'manufactured_home' ? parseInt(formData.bathrooms) || undefined : undefined,
+        squareFootage: selectedType === 'manufactured_home' ? parseInt(formData.squareFootage) || undefined : undefined,
+        sections: selectedType === 'manufactured_home' ? parseInt(formData.sections) || undefined : undefined,
+        
+        // Location
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postalCode,
+        communityName: formData.communityName,
+        
+        // Media
+        primaryPhoto: formData.primaryPhoto,
+        
+        // Amenities
+        amenities: asArray(formData.amenities)
+      }
+    }
+
+    onSave(vehicleData)
   }
 
   /** Submit */
@@ -994,6 +1099,123 @@ export default function AddEditHomeModal({
                                   {feature}
                                 </Button>
                               ))}
+                          </div>
+
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Features</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                              {asArray(formData.features).map((feature: string, index: number) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                  <Input
+                                    value={feature}
+                                    onChange={(e) => {
+                                      const newFeatures = [...asArray(formData.features)]
+                                      newFeatures[index] = e.target.value
+                                      setFormData({ ...formData, features: newFeatures })
+                                    }}
+                                    placeholder="Feature name"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newFeatures = asArray(formData.features).filter((_, i) => i !== index)
+                                      setFormData({ ...formData, features: newFeatures })
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                const newFeatures = [...asArray(formData.features), '']
+                                setFormData({ ...formData, features: newFeatures })
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Feature
+                            </Button>
+                          </div>
+
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Amenities</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                              {asArray(formData.amenities).map((amenity: string, index: number) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                  <Input
+                                    value={amenity}
+                                    onChange={(e) => {
+                                      const newAmenities = [...asArray(formData.amenities)]
+                                      newAmenities[index] = e.target.value
+                                      setFormData({ ...formData, amenities: newAmenities })
+                                    }}
+                                    placeholder="Amenity name"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newAmenities = asArray(formData.amenities).filter((_, i) => i !== index)
+                                      setFormData({ ...formData, amenities: newAmenities })
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                const newAmenities = [...asArray(formData.amenities), '']
+                                setFormData({ ...formData, amenities: newAmenities })
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Amenity
+                            </Button>
+                          </div>
+
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Photos</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                              {asArray(formData.photos).map((photo: string, index: number) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                  <Input
+                                    value={photo}
+                                    onChange={(e) => {
+                                      const newPhotos = [...asArray(formData.photos)]
+                                      newPhotos[index] = e.target.value
+                                      setFormData({ ...formData, photos: newPhotos })
+                                    }}
+                                    placeholder="Photo URL"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newPhotos = asArray(formData.photos).filter((_, i) => i !== index)
+                                      setFormData({ ...formData, photos: newPhotos })
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                const newPhotos = [...asArray(formData.photos), '']
+                                setFormData({ ...formData, photos: newPhotos })
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Photo
+                            </Button>
                           </div>
                         </div>
                       </div>
