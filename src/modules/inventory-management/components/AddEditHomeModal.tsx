@@ -25,63 +25,25 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// Helper to normalize list-like fields that may arrive as string/undefined
-const asArray = (v: unknown): string[] =>
+/** ----------------------------------------------------------------
+ * Small helpers (single definitions to avoid “already declared”)
+ * ---------------------------------------------------------------- */
+const toArray = (v: unknown): string[] =>
   Array.isArray(v)
     ? (v as string[])
     : typeof v === 'string'
-      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
+      ? (v as string)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : []
 
-// Default form data structure
-const getDefaultFormData = () => ({
-  inventoryId: '',
-  year: new Date().getFullYear(),
-  make: '',
-  model: '',
-  condition: 'new',
-  salePrice: 0,
-  rentPrice: 0,
-  offerType: 'for_sale',
-  status: 'available',
-  bedrooms: 2,
-  bathrooms: 1,
-  dimensions: {
-    width_ft: 14,
-    length_ft: 60,
-    sections: 1
-  },
-  description: '',
-  searchResultsText: '',
-  location: {
-    city: '',
-    state: '',
-    postalCode: '',
-    communityName: ''
-  },
-  features: [],
-  amenities: [],
-  photos: []
-})
+const toStringArray = (v: unknown): string[] => toArray(v)
+const toPhotosArray = (v: unknown): string[] => toArray(v)
 
-/** Normalizers ------------------------------------------------------------ */
-const toStringArray = (v: any): string[] => {
-  if (Array.isArray(v)) return v.filter(Boolean).map(String)
-  if (typeof v === 'string')
-    return v
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
-  if (v && typeof v === 'object') {
-    // If object like { featureA: true, featureB: false } -> ["featureA"]
-    return Object.keys(v).filter(k => !!(v as Record<string, any>)[k])
-  }
-  return []
-}
-
-const toPhotosArray = (v: any): string[] => toStringArray(v)
-
-/** Types ------------------------------------------------------------------ */
+/** ----------------------------------------------------------------
+ * Types
+ * ---------------------------------------------------------------- */
 interface HomeFormData {
   homeType: 'rv' | 'manufactured_home' | ''
   inventoryId: string
@@ -113,7 +75,12 @@ interface HomeFormData {
 
   description: string
   searchResultsText: string
-  features: string[] // free-form tag list
+  features: string[]
+
+  // Optional “extra” arrays some parts of the UI expect at the root
+  // (kept to preserve behavior without refactors)
+  amenities?: string[]
+  photos?: string[]
 
   // RV
   vin?: string
@@ -136,7 +103,6 @@ interface HomeFormData {
     sqft?: number | ''
   }
 
-  // Type-specific checkbox feature sets
   rvFeatures?: {
     generator?: boolean
     solar?: boolean
@@ -161,11 +127,13 @@ interface AddEditHomeModalProps {
   mode: 'add' | 'edit'
   isOpen: boolean
   editingHome?: any
-  onSave: (data: any) => void
+  onSave: (data: any) => void | Promise<void>
   onClose: () => void
 }
 
-/** Static options --------------------------------------------------------- */
+/** ----------------------------------------------------------------
+ * Static options
+ * ---------------------------------------------------------------- */
 const stateOptions = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
   'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
@@ -188,7 +156,9 @@ const commonFeatures = [
   'Entertainment System','WiFi Ready','Pet Friendly','Smoke Free'
 ]
 
-/** Defaults --------------------------------------------------------------- */
+/** ----------------------------------------------------------------
+ * Defaults
+ * ---------------------------------------------------------------- */
 const defaultFormData: HomeFormData = {
   homeType: '',
   inventoryId: '',
@@ -216,6 +186,8 @@ const defaultFormData: HomeFormData = {
   description: '',
   searchResultsText: '',
   features: [],
+  amenities: [],
+  photos: [],
   dimensions: {
     width_ft: '',
     length_ft: '',
@@ -241,135 +213,101 @@ const defaultFormData: HomeFormData = {
   },
 }
 
+/** ----------------------------------------------------------------
+ * Component
+ * ---------------------------------------------------------------- */
 export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }: AddEditHomeModalProps) {
-  const [selectedType, setSelectedType] = useState<'rv' | 'manufactured_home'>(
+  const [selectedType] = useState<'rv' | 'manufactured_home'>(
     editingHome?.listingType || editingHome?.customFields?.listingType || 'rv'
   )
-  const [currentStep, setCurrentStep] = useState(mode === 'edit' ? 1 : 0)
-
-  // Initialize form data from editing home
-  const [formData, setFormData] = useState(() => {
-    if (editingHome) {
-      return {
-        // Basic info
-        year: editingHome.year || '',
-        make: editingHome.make || '',
-        model: editingHome.model || '',
-        vin: editingHome.vin || '',
-        condition: editingHome.customFields?.condition || 'new',
-        salePrice: editingHome.price || editingHome.salePrice || '',
-        rentPrice: editingHome.customFields?.rentPrice || '',
-        offerType: editingHome.customFields?.offerType || 'for_sale',
-        status: editingHome.status || 'available',
-        description: editingHome.customFields?.description || '',
-        
-        // RV specific
-        sleeps: editingHome.customFields?.sleeps || editingHome.sleeps || '',
-        slides: editingHome.customFields?.slides || editingHome.slides || '',
-        length: editingHome.customFields?.length || editingHome.length || '',
-        fuelType: editingHome.customFields?.fuelType || '',
-        engine: editingHome.customFields?.engine || '',
-        transmission: editingHome.customFields?.transmission || '',
-        odometerMiles: editingHome.customFields?.odometerMiles || '',
-        
-        // MH specific
-        bedrooms: editingHome.customFields?.bedrooms || editingHome.bedrooms || '',
-        bathrooms: editingHome.customFields?.bathrooms || editingHome.bathrooms || '',
-        squareFootage: editingHome.customFields?.dimensions?.sqft || editingHome.customFields?.squareFootage || '',
-        sections: editingHome.customFields?.dimensions?.sections || '',
-        
-        // Location
-        city: editingHome.location?.split(',')[0]?.trim() || editingHome.customFields?.city || '',
-        state: editingHome.location?.split(',')[1]?.trim() || editingHome.customFields?.state || '',
-        postalCode: editingHome.customFields?.postalCode || '',
-        communityName: editingHome.customFields?.communityName || '',
-        
-        // Features and photos
-        features: asArray(editingHome.features),
-        amenities: asArray(editingHome.amenities || editingHome.media?.photos),
-        photos: asArray(editingHome.photos || editingHome.media?.photos),
-        dimensions: {
-          ...getDefaultFormData().dimensions,
-          ...(editingHome.dimensions || {})
-        },
-        location: {
-          ...getDefaultFormData().location,
-          ...(editingHome.location || {})
-        }
-      }
-    }
-    return getDefaultFormData()
-  })
-
-
   const [activeTab, setActiveTab] = useState('basic')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  /** Load data into the form safely when editing */
-  useEffect(() => {
-    if (mode === 'edit' && editingHome) {
-      const incomingFeaturesArray = toStringArray(
-        editingHome.features ?? editingHome.additionalFeatures
-      )
+  // Build initial form state (kept close to your original behavior)
+  const [formData, setFormData] = useState<HomeFormData>(() => {
+    if (!editingHome) return { ...defaultFormData }
 
-      setFormData({
-        ...defaultFormData,
-        ...editingHome,
-        homeType: editingHome.listingType || editingHome.homeType || '',
-        features: incomingFeaturesArray,
-        media: {
-          primaryPhoto: String(editingHome?.media?.primaryPhoto ?? editingHome?.primaryPhoto ?? ''),
-          photos: toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos),
-        },
-        dimensions: {
-          ...defaultFormData.dimensions,
-          ...(editingHome.dimensions || {}),
-        },
-        rvFeatures: {
-          ...defaultFormData.rvFeatures,
-          ...(editingHome.rvFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
-        },
-        mhFeatures: {
-          ...defaultFormData.mhFeatures,
-          ...(editingHome.mhFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
-        },
-      })
-    } else {
-      setFormData(defaultFormData)
+    const features = toArray(editingHome.features ?? editingHome.additionalFeatures)
+    const mediaPhotos = toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos)
+
+    return {
+      ...defaultFormData,
+      ...editingHome,
+      homeType: editingHome.listingType || editingHome.homeType || '',
+      year: editingHome.year ?? '',
+      make: editingHome.make ?? '',
+      model: editingHome.model ?? '',
+      vin: editingHome.vin ?? '',
+      condition: editingHome.customFields?.condition || 'new',
+      salePrice: editingHome.price ?? editingHome.salePrice ?? '',
+      rentPrice: editingHome.customFields?.rentPrice ?? '',
+      offerType: editingHome.customFields?.offerType || 'for_sale',
+      status: editingHome.status || 'available',
+      description: editingHome.customFields?.description || '',
+      bedrooms: editingHome.customFields?.bedrooms ?? editingHome.bedrooms ?? '',
+      bathrooms: editingHome.customFields?.bathrooms ?? editingHome.bathrooms ?? '',
+      features,
+      amenities: toArray(editingHome.amenities),
+      photos: toArray(editingHome.photos),
+      media: {
+        primaryPhoto: String(editingHome?.media?.primaryPhoto ?? editingHome?.primaryPhoto ?? ''),
+        photos: mediaPhotos,
+      },
+      dimensions: {
+        width_ft: editingHome.customFields?.dimensions?.width_ft ?? editingHome.dimensions?.width_ft ?? '',
+        length_ft: editingHome.customFields?.dimensions?.length_ft ?? editingHome.dimensions?.length_ft ?? '',
+        sections: editingHome.customFields?.dimensions?.sections ?? editingHome.dimensions?.sections ?? '',
+        sqft: editingHome.customFields?.dimensions?.sqft ?? editingHome.dimensions?.sqft ?? '',
+      },
+      rvFeatures: {
+        ...defaultFormData.rvFeatures,
+        ...(editingHome.rvFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
+      },
+      mhFeatures: {
+        ...defaultFormData.mhFeatures,
+        ...(editingHome.mhFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
+      },
+      location: {
+        city: editingHome.location?.split?.(',')?.[0]?.trim() || editingHome.customFields?.city || '',
+        state: editingHome.location?.split?.(',')?.[1]?.trim() || editingHome.customFields?.state || '',
+        postalCode: editingHome.customFields?.postalCode || '',
+        address: editingHome.customFields?.address || '',
+        communityName: editingHome.customFields?.communityName || '',
+        lotNumber: editingHome.customFields?.lotNumber || '',
+      },
+      sleeps: editingHome.customFields?.sleeps ?? editingHome.sleeps ?? '',
+      slides: editingHome.customFields?.slides ?? editingHome.slides ?? '',
+      length: editingHome.customFields?.length ?? editingHome.length ?? '',
+      fuelType: editingHome.customFields?.fuelType ?? '',
+      engine: editingHome.customFields?.engine ?? '',
+      transmission: editingHome.customFields?.transmission ?? '',
+      odometerMiles: editingHome.customFields?.odometerMiles ?? '',
     }
-  }, [mode, editingHome, isOpen])
+  })
 
-  /** Reset when closing */
+  /** Reset when dialog closes */
   useEffect(() => {
     if (!isOpen) {
-      setFormData(defaultFormData)
+      setFormData({ ...defaultFormData })
       setActiveTab('basic')
       setErrors({})
     }
   }, [isOpen])
 
-  /** Helpers to update nested fields and clear errors */
-  const updateFormData = (field: string, value: any) => {
+  /** Nested update helper */
+  const updateFormData = (path: string, value: any) => {
     setFormData(prev => {
-      const keys = field.split('.')
-      if (keys.length === 1) {
-        return { ...prev, [field]: value }
-      }
+      const keys = path.split('.')
+      if (keys.length === 1) return { ...prev, [path]: value }
       if (keys.length === 2) {
         const [k1, k2] = keys
-        return {
-          ...prev,
-          [k1]: {
-            ...(prev as any)[k1],
-            [k2]: value,
-          },
-        }
+        return { ...prev, [k1]: { ...(prev as any)[k1], [k2]: value } }
       }
       return prev
     })
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
+    if (errors[path]) setErrors(prev => ({ ...prev, [path]: '' }))
   }
 
   /** Validation */
@@ -396,6 +334,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     return Object.keys(newErrors).length === 0
   }
 
+  /** Save payload (kept identical in structure to your original) */
   const handleSave = () => {
     const vehicleData = {
       vin: formData.vin,
@@ -407,7 +346,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
       price: parseFloat(formData.salePrice.toString()) || 0,
       cost: parseFloat(formData.salePrice.toString()) * 0.8 || 0,
       location: `${formData.location.city}, ${formData.location.state}`,
-      features: asArray(formData.features),
+      features: toArray(formData.features),
       images: formData.media.photos || [],
       customFields: {
         listingType: selectedType,
@@ -415,7 +354,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
         rentPrice: parseFloat(formData.rentPrice.toString()) || undefined,
         offerType: formData.offerType,
         description: formData.description,
-        
+
         // RV specific
         sleeps: selectedType === 'rv' ? parseInt(formData.sleeps?.toString() || '') || undefined : undefined,
         slides: selectedType === 'rv' ? parseInt(formData.slides?.toString() || '') || undefined : undefined,
@@ -424,28 +363,28 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
         engine: selectedType === 'rv' ? formData.engine : undefined,
         transmission: selectedType === 'rv' ? formData.transmission : undefined,
         odometerMiles: selectedType === 'rv' ? parseInt(formData.odometerMiles?.toString() || '') || undefined : undefined,
-        
+
         // MH specific
         bedrooms: selectedType === 'manufactured_home' ? parseInt(formData.bedrooms?.toString() || '') || undefined : undefined,
         bathrooms: selectedType === 'manufactured_home' ? parseInt(formData.bathrooms?.toString() || '') || undefined : undefined,
         squareFootage: selectedType === 'manufactured_home' ? parseInt(formData.dimensions?.sqft?.toString() || '') || undefined : undefined,
         sections: selectedType === 'manufactured_home' ? parseInt(formData.dimensions?.sections?.toString() || '') || undefined : undefined,
-        
+
         // Location
         city: formData.location.city,
         state: formData.location.state,
         postalCode: formData.location.postalCode,
         communityName: formData.location.communityName,
-        
+
         // Amenities
-        amenities: asArray(formData.features)
-      }
+        amenities: toArray(formData.features),
+      },
     }
 
     onSave(vehicleData)
   }
 
-  /** Submit */
+  /** Submit (unchanged behavior) */
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast({
@@ -474,8 +413,8 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
       }
 
       const now = new Date().toISOString()
-      if (mode === 'add') (data as any).createdAt = now;
-      (data as any).updatedAt = now;
+      if (mode === 'add') (data as any).createdAt = now
+      ;(data as any).updatedAt = now
 
       await onSave(data)
 
@@ -496,28 +435,21 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     }
   }
 
-  const currentFeatures = asArray(formData.features)
-  
+  /** Helpers for features & media editors (behavior preserved) */
+  const currentFeatures = toArray(formData.features)
   const addFeature = (feature: string) => {
     if (feature && !currentFeatures.includes(feature)) {
       updateFormData('features', [...currentFeatures, feature])
     }
   }
-  
   const removeFeature = (feature: string) => {
     updateFormData('features', currentFeatures.filter(f => f !== feature))
   }
 
-  /** Media helpers */
-  const photos = toPhotosArray(formData.media.photos)
-  const addPhoto = (url: string) => {
-    updateFormData('media.photos', [...photos, url])
-  }
-  
-  const removePhoto = (index: number) => {
-    const currentPhotos = asArray(formData.media.photos)
-    updateFormData('media.photos', currentPhotos.filter((_, i) => i !== index))
-  }
+  const photosList = toPhotosArray(formData.media.photos)
+  const addPhoto = (url: string) => updateFormData('media.photos', [...photosList, url])
+  const removePhoto = (index: number) =>
+    updateFormData('media.photos', photosList.filter((_, i) => i !== index))
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -755,7 +687,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                                 value={formData.length || ''}
                                 onChange={e => updateFormData('length', parseFloat(e.target.value) || '')}
                                 placeholder="28.5"
-                                step="0.1"
+                                step={0.1}
                               />
                             </div>
                           </div>
@@ -1138,12 +1070,12 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Features</h3>
                             <div className="grid grid-cols-2 gap-2">
-                              {asArray(formData.features).map((feature: string, index: number) => (
+                              {toArray(formData.features).map((feature: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                   <Input
                                     value={feature}
                                     onChange={(e) => {
-                                      const newFeatures = [...asArray(formData.features)]
+                                      const newFeatures = [...toArray(formData.features)]
                                       newFeatures[index] = e.target.value
                                       setFormData({ ...formData, features: newFeatures })
                                     }}
@@ -1153,7 +1085,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const newFeatures = asArray(formData.features).filter((_, i) => i !== index)
+                                      const newFeatures = toArray(formData.features).filter((_, i) => i !== index)
                                       setFormData({ ...formData, features: newFeatures })
                                     }}
                                   >
@@ -1165,7 +1097,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                             <Button
                               variant="outline"
                               onClick={() => {
-                                const newFeatures = [...asArray(formData.features), '']
+                                const newFeatures = [...toArray(formData.features), '']
                                 setFormData({ ...formData, features: newFeatures })
                               }}
                             >
@@ -1177,12 +1109,12 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Amenities</h3>
                             <div className="grid grid-cols-2 gap-2">
-                              {asArray((formData as any).amenities).map((amenity: string, index: number) => (
+                              {toArray((formData as any).amenities).map((amenity: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                   <Input
                                     value={amenity}
                                     onChange={(e) => {
-                                      const newAmenities = [...asArray((formData as any).amenities)]
+                                      const newAmenities = [...toArray((formData as any).amenities)]
                                       newAmenities[index] = e.target.value
                                       setFormData({ ...formData, amenities: newAmenities } as any)
                                     }}
@@ -1192,7 +1124,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const newAmenities = asArray((formData as any).amenities).filter((_, i) => i !== index)
+                                      const newAmenities = toArray((formData as any).amenities).filter((_, i) => i !== index)
                                       setFormData({ ...formData, amenities: newAmenities } as any)
                                     }}
                                   >
@@ -1204,7 +1136,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                             <Button
                               variant="outline"
                               onClick={() => {
-                                const newAmenities = [...asArray((formData as any).amenities), '']
+                                const newAmenities = [...toArray((formData as any).amenities), '']
                                 setFormData({ ...formData, amenities: newAmenities } as any)
                               }}
                             >
@@ -1216,12 +1148,12 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Photos</h3>
                             <div className="grid grid-cols-1 gap-2">
-                              {asArray((formData as any).photos).map((photo: string, index: number) => (
+                              {toArray((formData as any).photos).map((photo: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                   <Input
                                     value={photo}
                                     onChange={(e) => {
-                                      const newPhotos = [...asArray((formData as any).photos)]
+                                      const newPhotos = [...toArray((formData as any).photos)]
                                       newPhotos[index] = e.target.value
                                       setFormData({ ...formData, photos: newPhotos } as any)
                                     }}
@@ -1231,7 +1163,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const newPhotos = asArray((formData as any).photos).filter((_, i) => i !== index)
+                                      const newPhotos = toArray((formData as any).photos).filter((_, i) => i !== index)
                                       setFormData({ ...formData, photos: newPhotos } as any)
                                     }}
                                   >
@@ -1243,7 +1175,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                             <Button
                               variant="outline"
                               onClick={() => {
-                                const newPhotos = [...asArray((formData as any).photos), '']
+                                const newPhotos = [...toArray((formData as any).photos), '']
                                 setFormData({ ...formData, photos: newPhotos } as any)
                               }}
                             >
@@ -1280,12 +1212,12 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                       <div>
                         <Label className="text-base font-medium">Additional Photos</Label>
                         <div className="space-y-3 mt-3">
-                          {photos.map((photo, index) => (
+                          {photosList.map((photo, index) => (
                             <div key={index} className="flex gap-2">
                               <Input
                                 value={photo}
                                 onChange={e => {
-                                  const next = [...photos]
+                                  const next = [...photosList]
                                   next[index] = e.target.value
                                   updateFormData('media.photos', next)
                                 }}
@@ -1376,6 +1308,5 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     </Dialog>
   )
 }
-
 
 export default AddEditHomeModal
