@@ -81,14 +81,6 @@ const toStringArray = (v: any): string[] => {
 
 const toPhotosArray = (v: any): string[] => toStringArray(v)
 
-// Helper to normalize list-like fields that may arrive as string/undefined
-const asArray = (v: unknown): string[] =>
-  Array.isArray(v)
-    ? (v as string[])
-    : typeof v === 'string'
-      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
-      : []
-
 /** Types ------------------------------------------------------------------ */
 interface HomeFormData {
   homeType: 'rv' | 'manufactured_home' | ''
@@ -162,6 +154,12 @@ interface HomeFormData {
     deck?: boolean
     shed?: boolean
     energyStar?: boolean
+  }
+}
+
+interface AddEditHomeModalProps {
+  mode: 'add' | 'edit'
+  isOpen: boolean
   editingHome?: any
   onSave: (data: any) => void
   onClose: () => void
@@ -243,7 +241,7 @@ const defaultFormData: HomeFormData = {
   },
 }
 
-export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEditHomeModalProps) {
+export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }: AddEditHomeModalProps) {
   const [selectedType, setSelectedType] = useState<'rv' | 'manufactured_home'>(
     editingHome?.listingType || editingHome?.customFields?.listingType || 'rv'
   )
@@ -286,11 +284,7 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
         postalCode: editingHome.customFields?.postalCode || '',
         communityName: editingHome.customFields?.communityName || '',
         
-  const [formData, setFormData] = useState(() => {
-    if (mode === 'edit' && editingHome) {
-      return {
-        ...getDefaultFormData(),
-        ...editingHome,
+        // Features and photos
         features: asArray(editingHome.features),
         amenities: asArray(editingHome.amenities || editingHome.media?.photos),
         photos: asArray(editingHome.photos || editingHome.media?.photos),
@@ -407,58 +401,44 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
       vin: formData.vin,
       make: formData.make,
       model: formData.model,
-      year: parseInt(formData.year) || new Date().getFullYear(),
+      year: parseInt(formData.year.toString()) || new Date().getFullYear(),
       type: selectedType === 'rv' ? 'RV' : 'SINGLE_WIDE',
       status: formData.status.toUpperCase(),
-      price: parseFloat(formData.salePrice) || 0,
-      cost: parseFloat(formData.salePrice) * 0.8 || 0,
-      location: `${formData.city}, ${formData.state}`,
+      price: parseFloat(formData.salePrice.toString()) || 0,
+      cost: parseFloat(formData.salePrice.toString()) * 0.8 || 0,
+      location: `${formData.location.city}, ${formData.location.state}`,
       features: asArray(formData.features),
-      images: formData.photos || [],
+      images: formData.media.photos || [],
       customFields: {
         listingType: selectedType,
         condition: formData.condition,
-        rentPrice: parseFloat(formData.rentPrice) || undefined,
+        rentPrice: parseFloat(formData.rentPrice.toString()) || undefined,
         offerType: formData.offerType,
         description: formData.description,
         
         // RV specific
-        sleeps: selectedType === 'rv' ? parseInt(formData.sleeps) || undefined : undefined,
-        slides: selectedType === 'rv' ? parseInt(formData.slides) || undefined : undefined,
-        length: selectedType === 'rv' ? parseFloat(formData.length) || undefined : undefined,
+        sleeps: selectedType === 'rv' ? parseInt(formData.sleeps?.toString() || '') || undefined : undefined,
+        slides: selectedType === 'rv' ? parseInt(formData.slides?.toString() || '') || undefined : undefined,
+        length: selectedType === 'rv' ? parseFloat(formData.length?.toString() || '') || undefined : undefined,
         fuelType: selectedType === 'rv' ? formData.fuelType : undefined,
         engine: selectedType === 'rv' ? formData.engine : undefined,
         transmission: selectedType === 'rv' ? formData.transmission : undefined,
-        odometerMiles: selectedType === 'rv' ? parseInt(formData.odometerMiles) || undefined : undefined,
+        odometerMiles: selectedType === 'rv' ? parseInt(formData.odometerMiles?.toString() || '') || undefined : undefined,
         
         // MH specific
-        bedrooms: selectedType === 'manufactured_home' ? parseInt(formData.bedrooms) || undefined : undefined,
-        bathrooms: selectedType === 'manufactured_home' ? parseInt(formData.bathrooms) || undefined : undefined,
-        squareFootage: selectedType === 'manufactured_home' ? parseInt(formData.squareFootage) || undefined : undefined,
-        sections: selectedType === 'manufactured_home' ? parseInt(formData.sections) || undefined : undefined,
+        bedrooms: selectedType === 'manufactured_home' ? parseInt(formData.bedrooms?.toString() || '') || undefined : undefined,
+        bathrooms: selectedType === 'manufactured_home' ? parseInt(formData.bathrooms?.toString() || '') || undefined : undefined,
+        squareFootage: selectedType === 'manufactured_home' ? parseInt(formData.dimensions?.sqft?.toString() || '') || undefined : undefined,
+        sections: selectedType === 'manufactured_home' ? parseInt(formData.dimensions?.sections?.toString() || '') || undefined : undefined,
         
         // Location
-        city: formData.city,
-        state: formData.state,
-        postalCode: formData.postalCode,
-          ...getDefaultFormData(),
-          ...editingHome,
-          features: asArray(editingHome.features),
-          amenities: asArray(editingHome.amenities || editingHome.media?.photos),
-          photos: asArray(editingHome.photos || editingHome.media?.photos),
-          dimensions: {
-            ...getDefaultFormData().dimensions,
-            ...(editingHome.dimensions || {})
-          },
-          location: {
-            ...getDefaultFormData().location,
-            ...(editingHome.location || {})
-          }
+        city: formData.location.city,
+        state: formData.location.state,
+        postalCode: formData.location.postalCode,
+        communityName: formData.location.communityName,
         
-        setHomeType(editingHome.listingType || selectedType)
         // Amenities
-        amenities: asArray(formData.amenities)
-        setHomeType(selectedType)
+        amenities: asArray(formData.features)
       }
     }
 
@@ -494,10 +474,9 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
       }
 
       const now = new Date().toISOString()
-      if (mode === 'add') data.createdAt = now
-      data.updatedAt = now
+      if (mode === 'add') (data as any).createdAt = now;
+      (data as any).updatedAt = now;
 
-      listingType: homeType,
       await onSave(data)
 
       toast({
@@ -509,24 +488,22 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
     } catch {
       toast({
         title: 'Error',
-      const currentFeatures = asArray(formData.features)
-    const currentFeatures = asArray(formData.features)
-    setFormData(prev => ({
-      ...prev,
-      features: currentFeatures.filter((_, i) => i !== index)
-    }))
+        description: 'Failed to save home. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
       setIsSubmitting(false)
     }
   }
 
-      const currentAmenities = asArray(formData.amenities)
-      setFormData(prev => ({
-        ...prev,
-        amenities: [...currentAmenities, newAmenity.trim()]
-      }))
+  const currentFeatures = asArray(formData.features)
+  
+  const addFeature = (feature: string) => {
+    if (feature && !currentFeatures.includes(feature)) {
       updateFormData('features', [...currentFeatures, feature])
     }
   }
+  
   const removeFeature = (feature: string) => {
     updateFormData('features', currentFeatures.filter(f => f !== feature))
   }
@@ -535,11 +512,11 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
   const photos = toPhotosArray(formData.media.photos)
   const addPhoto = (url: string) => {
     updateFormData('media.photos', [...photos, url])
-    const currentAmenities = asArray(formData.amenities)
-    setFormData(prev => ({
-      ...prev,
-      amenities: currentAmenities.filter((_, i) => i !== index)
-    }))
+  }
+  
+  const removePhoto = (index: number) => {
+    const currentPhotos = asArray(formData.media.photos)
+    updateFormData('media.photos', currentPhotos.filter((_, i) => i !== index))
   }
 
   return (
@@ -588,9 +565,7 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
                     className={cn(
                       'p-4 border-2 rounded-lg text-left transition-all',
                       formData.homeType === 'manufactured_home'
-                        ? 'border-primary bg-pri                  )
-                  }
-mary/5'
+                        ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
                     )}
                   >
@@ -634,12 +609,7 @@ mary/5'
                         <div>
                           <Label htmlFor="inventoryId">Inventory ID *</Label>
                           <Input
-                      
-                            )
-                            )
-                            }
-  )
-}      id="inventoryId"
+                            id="inventoryId"
                             value={formData.inventoryId}
                             onChange={e => updateFormData('inventoryId', e.target.value)}
                             placeholder="INV-001"
@@ -838,7 +808,7 @@ mary/5'
                                 placeholder="15000"
                                 min={0}
                               />
-              {asArray(formData.features).map((feature, index) => (
+                            </div>
                           </div>
                         </>
                       )}
@@ -1207,14 +1177,14 @@ mary/5'
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Amenities</h3>
                             <div className="grid grid-cols-2 gap-2">
-                              {asArray(formData.amenities).map((amenity: string, index: number) => (
+                              {asArray((formData as any).amenities).map((amenity: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                   <Input
                                     value={amenity}
                                     onChange={(e) => {
-                                      const newAmenities = [...asArray(formData.amenities)]
+                                      const newAmenities = [...asArray((formData as any).amenities)]
                                       newAmenities[index] = e.target.value
-                                      setFormData({ ...formData, amenities: newAmenities })
+                                      setFormData({ ...formData, amenities: newAmenities } as any)
                                     }}
                                     placeholder="Amenity name"
                                   />
@@ -1222,8 +1192,8 @@ mary/5'
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const newAmenities = asArray(formData.amenities).filter((_, i) => i !== index)
-                                      setFormData({ ...formData, amenities: newAmenities })
+                                      const newAmenities = asArray((formData as any).amenities).filter((_, i) => i !== index)
+                                      setFormData({ ...formData, amenities: newAmenities } as any)
                                     }}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1234,8 +1204,8 @@ mary/5'
                             <Button
                               variant="outline"
                               onClick={() => {
-                                const newAmenities = [...asArray(formData.amenities), '']
-                                setFormData({ ...formData, amenities: newAmenities })
+                                const newAmenities = [...asArray((formData as any).amenities), '']
+                                setFormData({ ...formData, amenities: newAmenities } as any)
                               }}
                             >
                               <Plus className="h-4 w-4 mr-2" />
@@ -1246,14 +1216,14 @@ mary/5'
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Photos</h3>
                             <div className="grid grid-cols-1 gap-2">
-                              {asArray(formData.photos).map((photo: string, index: number) => (
+                              {asArray((formData as any).photos).map((photo: string, index: number) => (
                                 <div key={index} className="flex items-center space-x-2">
                                   <Input
                                     value={photo}
                                     onChange={(e) => {
-                                      const newPhotos = [...asArray(formData.photos)]
+                                      const newPhotos = [...asArray((formData as any).photos)]
                                       newPhotos[index] = e.target.value
-                                      setFormData({ ...formData, photos: newPhotos })
+                                      setFormData({ ...formData, photos: newPhotos } as any)
                                     }}
                                     placeholder="Photo URL"
                                   />
@@ -1261,8 +1231,8 @@ mary/5'
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const newPhotos = asArray(formData.photos).filter((_, i) => i !== index)
-                                      setFormData({ ...formData, photos: newPhotos })
+                                      const newPhotos = asArray((formData as any).photos).filter((_, i) => i !== index)
+                                      setFormData({ ...formData, photos: newPhotos } as any)
                                     }}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1273,8 +1243,8 @@ mary/5'
                             <Button
                               variant="outline"
                               onClick={() => {
-                                const newPhotos = [...asArray(formData.photos), '']
-                                setFormData({ ...formData, photos: newPhotos })
+                                const newPhotos = [...asArray((formData as any).photos), '']
+                                setFormData({ ...formData, photos: newPhotos } as any)
                               }}
                             >
                               <Plus className="h-4 w-4 mr-2" />
@@ -1323,7 +1293,6 @@ mary/5'
                                 className="flex-1"
                               />
                               <Button
-              {asArray(formData.amenities).map((amenity, index) => (
                                 variant="outline"
                                 size="sm"
                                 onClick={() => removePhoto(index)}
@@ -1350,9 +1319,9 @@ mary/5'
                       <div>
                         <Label htmlFor="description">Description</Label>
                         <Textarea
-            {asArray(formData.photos).length > 0 && (
+                          id="description"
                           value={formData.description}
-                {asArray(formData.photos).map((photo, index) => (
+                          onChange={e => updateFormData('description', e.target.value)}
                           placeholder="Detailed description of the home..."
                           rows={4}
                         />
@@ -1362,11 +1331,10 @@ mary/5'
                         <Label htmlFor="searchResultsText">Search Results Text</Label>
                         <Input
                           id="searchResultsText"
-                        const currentPhotos = asArray(formData.photos)
-                        setFormData(prev => ({
-                          ...prev,
-                          photos: currentPhotos.filter((_, i) => i !== index)
-                        }))
+                          value={formData.searchResultsText}
+                          onChange={e => updateFormData('searchResultsText', e.target.value)}
+                          placeholder="Brief text for search results"
+                        />
                         <p className="text-xs text-muted-foreground mt-1">
                           This text appears in search results and listings
                         </p>
