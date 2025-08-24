@@ -25,25 +25,18 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/** ----------------------------------------------------------------
- * Small helpers (single definitions to avoid “already declared”)
- * ---------------------------------------------------------------- */
+/* ----------------------- Helpers (single definitions) ---------------------- */
 const toArray = (v: unknown): string[] =>
   Array.isArray(v)
     ? (v as string[])
     : typeof v === 'string'
-      ? (v as string)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
+      ? (v as string).split(',').map(s => s.trim()).filter(Boolean)
       : []
 
 const toStringArray = (v: unknown): string[] => toArray(v)
 const toPhotosArray = (v: unknown): string[] => toArray(v)
 
-/** ----------------------------------------------------------------
- * Types
- * ---------------------------------------------------------------- */
+/* ---------------------------------- Types --------------------------------- */
 interface HomeFormData {
   homeType: 'rv' | 'manufactured_home' | ''
   inventoryId: string
@@ -76,9 +69,6 @@ interface HomeFormData {
   description: string
   searchResultsText: string
   features: string[]
-
-  // Optional “extra” arrays some parts of the UI expect at the root
-  // (kept to preserve behavior without refactors)
   amenities?: string[]
   photos?: string[]
 
@@ -131,9 +121,7 @@ interface AddEditHomeModalProps {
   onClose: () => void
 }
 
-/** ----------------------------------------------------------------
- * Static options
- * ---------------------------------------------------------------- */
+/* ----------------------------- Static options ----------------------------- */
 const stateOptions = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
   'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
@@ -156,9 +144,7 @@ const commonFeatures = [
   'Entertainment System','WiFi Ready','Pet Friendly','Smoke Free'
 ]
 
-/** ----------------------------------------------------------------
- * Defaults
- * ---------------------------------------------------------------- */
+/* -------------------------------- Defaults -------------------------------- */
 const defaultFormData: HomeFormData = {
   homeType: '',
   inventoryId: '',
@@ -213,21 +199,18 @@ const defaultFormData: HomeFormData = {
   },
 }
 
-/** ----------------------------------------------------------------
- * Component
- * ---------------------------------------------------------------- */
+/* -------------------------------- Component ------------------------------- */
 export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }: AddEditHomeModalProps) {
-  const [selectedType] = useState<'rv' | 'manufactured_home'>(
-    editingHome?.listingType || editingHome?.customFields?.listingType || 'rv'
-  )
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('basic')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { toast } = useToast()
 
-  // Build initial form state (kept close to your original behavior)
+  // Initial state
   const [formData, setFormData] = useState<HomeFormData>(() => {
     if (!editingHome) return { ...defaultFormData }
+    const initialType: 'rv' | 'manufactured_home' =
+      editingHome.listingType || editingHome.homeType || 'rv'
 
     const features = toArray(editingHome.features ?? editingHome.additionalFeatures)
     const mediaPhotos = toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos)
@@ -235,7 +218,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     return {
       ...defaultFormData,
       ...editingHome,
-      homeType: editingHome.listingType || editingHome.homeType || '',
+      homeType: initialType,
       year: editingHome.year ?? '',
       make: editingHome.make ?? '',
       model: editingHome.model ?? '',
@@ -287,7 +270,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     }
   })
 
-  /** Reset when dialog closes */
+  // Reset on close
   useEffect(() => {
     if (!isOpen) {
       setFormData({ ...defaultFormData })
@@ -296,7 +279,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     }
   }, [isOpen])
 
-  /** Nested update helper */
+  // Update helper
   const updateFormData = (path: string, value: any) => {
     setFormData(prev => {
       const keys = path.split('.')
@@ -310,11 +293,11 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     if (errors[path]) setErrors(prev => ({ ...prev, [path]: '' }))
   }
 
-  /** Validation */
+  // Validation
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.homeType) newErrors.homeType = 'Home type is required'
+    if (mode === 'add' && !formData.homeType) newErrors.homeType = 'Home type is required'
     if (!formData.year) newErrors.year = 'Year is required'
     if (!formData.make) newErrors.make = 'Make is required'
     if (!formData.model) newErrors.model = 'Model is required'
@@ -334,8 +317,10 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     return Object.keys(newErrors).length === 0
   }
 
-  /** Save payload (kept identical in structure to your original) */
+  // Save payload (unchanged behavior)
   const handleSave = () => {
+    const selectedType = formData.homeType === 'manufactured_home' ? 'manufactured_home' : 'rv'
+
     const vehicleData = {
       vin: formData.vin,
       make: formData.make,
@@ -355,7 +340,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
         offerType: formData.offerType,
         description: formData.description,
 
-        // RV specific
+        // RV
         sleeps: selectedType === 'rv' ? parseInt(formData.sleeps?.toString() || '') || undefined : undefined,
         slides: selectedType === 'rv' ? parseInt(formData.slides?.toString() || '') || undefined : undefined,
         length: selectedType === 'rv' ? parseFloat(formData.length?.toString() || '') || undefined : undefined,
@@ -364,7 +349,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
         transmission: selectedType === 'rv' ? formData.transmission : undefined,
         odometerMiles: selectedType === 'rv' ? parseInt(formData.odometerMiles?.toString() || '') || undefined : undefined,
 
-        // MH specific
+        // MH
         bedrooms: selectedType === 'manufactured_home' ? parseInt(formData.bedrooms?.toString() || '') || undefined : undefined,
         bathrooms: selectedType === 'manufactured_home' ? parseInt(formData.bathrooms?.toString() || '') || undefined : undefined,
         squareFootage: selectedType === 'manufactured_home' ? parseInt(formData.dimensions?.sqft?.toString() || '') || undefined : undefined,
@@ -376,7 +361,6 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
         postalCode: formData.location.postalCode,
         communityName: formData.location.communityName,
 
-        // Amenities
         amenities: toArray(formData.features),
       },
     }
@@ -384,7 +368,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     onSave(vehicleData)
   }
 
-  /** Submit (unchanged behavior) */
+  // Submit
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast({
@@ -399,11 +383,14 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     try {
       const data: HomeFormData = {
         ...formData,
+        // ensure arrays are arrays
         features: toStringArray(formData.features),
         media: {
           primaryPhoto: formData.media.primaryPhoto || '',
           photos: toPhotosArray(formData.media.photos),
         },
+        // ensure a type in edit mode if it was missing
+        homeType: (formData.homeType || 'rv') as 'rv' | 'manufactured_home',
       }
 
       if (!data.inventoryId) {
@@ -417,12 +404,10 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
       ;(data as any).updatedAt = now
 
       await onSave(data)
-
       toast({
         title: mode === 'add' ? 'Home Added' : 'Home Updated',
         description: `${data.year} ${data.make} ${data.model} has been ${mode === 'add' ? 'added' : 'updated'} successfully.`,
       })
-
       onClose()
     } catch {
       toast({
@@ -435,7 +420,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     }
   }
 
-  /** Helpers for features & media editors (behavior preserved) */
+  // UI helpers
   const currentFeatures = toArray(formData.features)
   const addFeature = (feature: string) => {
     if (feature && !currentFeatures.includes(feature)) {
@@ -463,59 +448,62 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Type picker */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Home Type</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('homeType', 'rv')}
-                    className={cn(
-                      'p-4 border-2 rounded-lg text-left transition-all',
-                      formData.homeType === 'rv'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Truck className="h-6 w-6 text-primary" />
-                      <div>
-                        <div className="font-medium">RV</div>
-                        <div className="text-sm text-muted-foreground">
-                          Recreational Vehicles, Motorhomes, Travel Trailers
+            {/* Show type picker ONLY when adding. In edit mode we skip this entirely. */}
+            {mode === 'add' && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Home Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('homeType', 'rv')}
+                      className={cn(
+                        'p-4 border-2 rounded-lg text-left transition-all',
+                        formData.homeType === 'rv'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Truck className="h-6 w-6 text-primary" />
+                        <div>
+                          <div className="font-medium">RV</div>
+                          <div className="text-sm text-muted-foreground">
+                            Recreational Vehicles, Motorhomes, Travel Trailers
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('homeType', 'manufactured_home')}
-                    className={cn(
-                      'p-4 border-2 rounded-lg text-left transition-all',
-                      formData.homeType === 'manufactured_home'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <HomeIcon className="h-6 w-6 text-primary" />
-                      <div>
-                        <div className="font-medium">Manufactured Home</div>
-                        <div className="text-sm text-muted-foreground">
-                          Mobile Homes, Modular Homes, Park Models
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('homeType', 'manufactured_home')}
+                      className={cn(
+                        'p-4 border-2 rounded-lg text-left transition-all',
+                        formData.homeType === 'manufactured_home'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <HomeIcon className="h-6 w-6 text-primary" />
+                        <div>
+                          <div className="font-medium">Manufactured Home</div>
+                          <div className="text-sm text-muted-foreground">
+                            Mobile Homes, Modular Homes, Park Models
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                </div>
-                {errors.homeType && <p className="text-sm text-destructive mt-2">{errors.homeType}</p>}
-              </CardContent>
-            </Card>
+                    </button>
+                  </div>
+                  {errors.homeType && <p className="text-sm text-destructive mt-2">{errors.homeType}</p>}
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Tabs render if we have a type; in edit mode we prefill it */}
             {formData.homeType && (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -1030,7 +1018,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
 
                       <Separator />
 
-                      {/* Custom free-form features */}
+                      {/* Free-form lists */}
                       <div>
                         <Label className="text-base font-medium">Additional Features</Label>
                         <div className="mt-3 space-y-3">
