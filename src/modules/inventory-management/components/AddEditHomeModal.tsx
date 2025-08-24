@@ -206,69 +206,73 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Initial state
-  const [formData, setFormData] = useState<HomeFormData>(() => {
-    if (!editingHome) return { ...defaultFormData }
-    const initialType: 'rv' | 'manufactured_home' =
-      editingHome.listingType || editingHome.homeType || 'rv'
+  // Base state (may be overwritten by effect when editingHome arrives)
+  const [formData, setFormData] = useState<HomeFormData>({ ...defaultFormData })
 
-    const features = toArray(editingHome.features ?? editingHome.additionalFeatures)
-    const mediaPhotos = toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos)
+  // Hydrate when opening in EDIT mode (handles async arrival of editingHome)
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && editingHome) {
+      const initialType: 'rv' | 'manufactured_home' =
+        editingHome.listingType || editingHome.homeType || 'rv'
 
-    return {
-      ...defaultFormData,
-      ...editingHome,
-      homeType: initialType,
-      year: editingHome.year ?? '',
-      make: editingHome.make ?? '',
-      model: editingHome.model ?? '',
-      vin: editingHome.vin ?? '',
-      condition: editingHome.customFields?.condition || 'new',
-      salePrice: editingHome.price ?? editingHome.salePrice ?? '',
-      rentPrice: editingHome.customFields?.rentPrice ?? '',
-      offerType: editingHome.customFields?.offerType || 'for_sale',
-      status: editingHome.status || 'available',
-      description: editingHome.customFields?.description || '',
-      bedrooms: editingHome.customFields?.bedrooms ?? editingHome.bedrooms ?? '',
-      bathrooms: editingHome.customFields?.bathrooms ?? editingHome.bathrooms ?? '',
-      features,
-      amenities: toArray(editingHome.amenities),
-      photos: toArray(editingHome.photos),
-      media: {
-        primaryPhoto: String(editingHome?.media?.primaryPhoto ?? editingHome?.primaryPhoto ?? ''),
-        photos: mediaPhotos,
-      },
-      dimensions: {
-        width_ft: editingHome.customFields?.dimensions?.width_ft ?? editingHome.dimensions?.width_ft ?? '',
-        length_ft: editingHome.customFields?.dimensions?.length_ft ?? editingHome.dimensions?.length_ft ?? '',
-        sections: editingHome.customFields?.dimensions?.sections ?? editingHome.dimensions?.sections ?? '',
-        sqft: editingHome.customFields?.dimensions?.sqft ?? editingHome.dimensions?.sqft ?? '',
-      },
-      rvFeatures: {
-        ...defaultFormData.rvFeatures,
-        ...(editingHome.rvFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
-      },
-      mhFeatures: {
-        ...defaultFormData.mhFeatures,
-        ...(editingHome.mhFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
-      },
-      location: {
-        city: editingHome.location?.split?.(',')?.[0]?.trim() || editingHome.customFields?.city || '',
-        state: editingHome.location?.split?.(',')?.[1]?.trim() || editingHome.customFields?.state || '',
-        postalCode: editingHome.customFields?.postalCode || '',
-        address: editingHome.customFields?.address || '',
-        communityName: editingHome.customFields?.communityName || '',
-        lotNumber: editingHome.customFields?.lotNumber || '',
-      },
-      sleeps: editingHome.customFields?.sleeps ?? editingHome.sleeps ?? '',
-      slides: editingHome.customFields?.slides ?? editingHome.slides ?? '',
-      length: editingHome.customFields?.length ?? editingHome.length ?? '',
-      fuelType: editingHome.customFields?.fuelType ?? '',
-      engine: editingHome.customFields?.engine ?? '',
-      transmission: editingHome.customFields?.transmission ?? '',
-      odometerMiles: editingHome.customFields?.odometerMiles ?? '',
+      const features = toArray(editingHome.features ?? editingHome.additionalFeatures)
+      const mediaPhotos = toPhotosArray(editingHome?.media?.photos ?? editingHome?.photos)
+
+      setFormData({
+        ...defaultFormData,
+        ...editingHome,
+        homeType: initialType,
+        year: editingHome.year ?? '',
+        make: editingHome.make ?? '',
+        model: editingHome.model ?? '',
+        vin: editingHome.vin ?? '',
+        condition: editingHome.customFields?.condition || 'new',
+        salePrice: editingHome.price ?? editingHome.salePrice ?? '',
+        rentPrice: editingHome.customFields?.rentPrice ?? '',
+        offerType: editingHome.customFields?.offerType || 'for_sale',
+        status: editingHome.status || 'available',
+        description: editingHome.customFields?.description || '',
+        bedrooms: editingHome.customFields?.bedrooms ?? editingHome.bedrooms ?? '',
+        bathrooms: editingHome.customFields?.bathrooms ?? editingHome.bathrooms ?? '',
+        features,
+        amenities: toArray(editingHome.amenities),
+        photos: toArray(editingHome.photos),
+        media: {
+          primaryPhoto: String(editingHome?.media?.primaryPhoto ?? editingHome?.primaryPhoto ?? ''),
+          photos: mediaPhotos,
+        },
+        dimensions: {
+          width_ft: editingHome.customFields?.dimensions?.width_ft ?? editingHome.dimensions?.width_ft ?? '',
+          length_ft: editingHome.customFields?.dimensions?.length_ft ?? editingHome.dimensions?.length_ft ?? '',
+          sections: editingHome.customFields?.dimensions?.sections ?? editingHome.dimensions?.sections ?? '',
+          sqft: editingHome.customFields?.dimensions?.sqft ?? editingHome.dimensions?.sqft ?? '',
+        },
+        rvFeatures: {
+          ...defaultFormData.rvFeatures,
+          ...(editingHome.rvFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
+        },
+        mhFeatures: {
+          ...defaultFormData.mhFeatures,
+          ...(editingHome.mhFeatures || (typeof editingHome.features === 'object' ? editingHome.features : {})),
+        },
+        location: {
+          city: editingHome.location?.split?.(',')?.[0]?.trim() || editingHome.customFields?.city || '',
+          state: editingHome.location?.split?.(',')?.[1]?.trim() || editingHome.customFields?.state || '',
+          postalCode: editingHome.customFields?.postalCode || '',
+          address: editingHome.customFields?.address || '',
+          communityName: editingHome.customFields?.communityName || '',
+          lotNumber: editingHome.customFields?.lotNumber || '',
+        },
+        sleeps: editingHome.customFields?.sleeps ?? editingHome.sleeps ?? '',
+        slides: editingHome.customFields?.slides ?? editingHome.slides ?? '',
+        length: editingHome.customFields?.length ?? editingHome.length ?? '',
+        fuelType: editingHome.customFields?.fuelType ?? '',
+        engine: editingHome.customFields?.engine ?? '',
+        transmission: editingHome.customFields?.transmission ?? '',
+        odometerMiles: editingHome.customFields?.odometerMiles ?? '',
+      })
     }
-  })
+  }, [isOpen, mode, editingHome])
 
   // Reset on close
   useEffect(() => {
@@ -317,7 +321,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     return Object.keys(newErrors).length === 0
   }
 
-  // Save payload (unchanged behavior)
+  // Save payload
   const handleSave = () => {
     const selectedType = formData.homeType === 'manufactured_home' ? 'manufactured_home' : 'rv'
 
@@ -383,14 +387,12 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
     try {
       const data: HomeFormData = {
         ...formData,
-        // ensure arrays are arrays
         features: toStringArray(formData.features),
         media: {
           primaryPhoto: formData.media.primaryPhoto || '',
           photos: toPhotosArray(formData.media.photos),
         },
-        // ensure a type in edit mode if it was missing
-        homeType: (formData.homeType || 'rv') as 'rv' | 'manufactured_home',
+        homeType: (formData.homeType || (mode === 'edit' ? 'rv' : '')) as 'rv' | 'manufactured_home' | '',
       }
 
       if (!data.inventoryId) {
@@ -436,6 +438,9 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
   const removePhoto = (index: number) =>
     updateFormData('media.photos', photosList.filter((_, i) => i !== index))
 
+  const effectiveType: 'rv' | 'manufactured_home' | '' =
+    formData.homeType || (mode === 'edit' ? 'rv' : '')
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
@@ -448,7 +453,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Show type picker ONLY when adding. In edit mode we skip this entirely. */}
+            {/* Show type picker ONLY when adding. */}
             {mode === 'add' && (
               <Card className="mb-6">
                 <CardHeader>
@@ -503,8 +508,8 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
               </Card>
             )}
 
-            {/* Tabs render if we have a type; in edit mode we prefill it */}
-            {formData.homeType && (
+            {/* Tabs always render in edit; in add they render after choosing a type */}
+            {effectiveType && (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
                   <TabsTrigger value="basic" className="text-xs">Basic</TabsTrigger>
@@ -562,7 +567,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                               <SelectValue placeholder="Select make" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(formData.homeType === 'rv' ? rvMakes : mhMakes).map(m => (
+                              {(effectiveType === 'rv' ? rvMakes : mhMakes).map(m => (
                                 <SelectItem key={m} value={m}>{m}</SelectItem>
                               ))}
                             </SelectContent>
@@ -612,18 +617,14 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                       </div>
 
                       <div>
-                        <Label htmlFor="typeId">{formData.homeType === 'rv' ? 'VIN' : 'Serial Number'}</Label>
+                        <Label htmlFor="typeId">{effectiveType === 'rv' ? 'VIN' : 'Serial Number'}</Label>
                         <Input
                           id="typeId"
-                          value={formData.homeType === 'rv' ? formData.vin || '' : formData.serialNumber || ''}
+                          value={effectiveType === 'rv' ? formData.vin || '' : formData.serialNumber || ''}
                           onChange={e =>
-                            updateFormData(formData.homeType === 'rv' ? 'vin' : 'serialNumber', e.target.value)
+                            updateFormData(effectiveType === 'rv' ? 'vin' : 'serialNumber', e.target.value)
                           }
-                          placeholder={
-                            formData.homeType === 'rv'
-                              ? 'Vehicle Identification Number'
-                              : 'Serial Number'
-                          }
+                          placeholder={effectiveType === 'rv' ? 'Vehicle Identification Number' : 'Serial Number'}
                         />
                       </div>
                     </CardContent>
@@ -640,7 +641,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {formData.homeType === 'rv' && (
+                      {effectiveType === 'rv' && (
                         <>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
@@ -733,7 +734,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                         </>
                       )}
 
-                      {formData.homeType === 'manufactured_home' && (
+                      {effectiveType === 'manufactured_home' && (
                         <>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -943,7 +944,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                         />
                       </div>
 
-                      {formData.homeType === 'manufactured_home' && (
+                      {effectiveType === 'manufactured_home' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <Label htmlFor="communityName">Community Name</Label>
@@ -976,7 +977,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                       <CardTitle>Features & Amenities</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {formData.homeType === 'rv' && (
+                      {effectiveType === 'rv' && (
                         <div>
                           <Label className="text-base font-medium">RV Features</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
@@ -996,7 +997,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
                         </div>
                       )}
 
-                      {formData.homeType === 'manufactured_home' && (
+                      {effectiveType === 'manufactured_home' && (
                         <div>
                           <Label className="text-base font-medium">Home Features</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
@@ -1275,7 +1276,7 @@ export function AddEditHomeModal({ mode, isOpen, editingHome, onSave, onClose }:
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.homeType}
+              disabled={isSubmitting || (mode === 'add' && !formData.homeType)}
               className="sm:min-w-[120px]"
             >
               {isSubmitting ? (
