@@ -596,7 +596,9 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
                     className={cn(
                       'p-4 border-2 rounded-lg text-left transition-all',
                       formData.homeType === 'manufactured_home'
-                        ? 'border-primary bg-primary/5'
+                        ? 'border-primary bg-pri                  )
+                  }
+mary/5'
                         : 'border-border hover:border-primary/50'
                     )}
                   >
@@ -640,7 +642,12 @@ export function AddEditHomeModal({ mode, editingHome, onSave, onClose }: AddEdit
                         <div>
                           <Label htmlFor="inventoryId">Inventory ID *</Label>
                           <Input
-                            id="inventoryId"
+                      
+                            )
+                            )
+                            }
+  )
+}      id="inventoryId"
                             value={formData.inventoryId}
                             onChange={e => updateFormData('inventoryId', e.target.value)}
                             placeholder="INV-001"
