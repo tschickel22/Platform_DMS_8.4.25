@@ -5,7 +5,8 @@ import { useTasks } from '@/hooks/useTasks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign, Edit, Eye, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
@@ -16,7 +17,7 @@ import AddEditHomeModal from './components/AddEditHomeModal'
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 
-/** Helpers */
+/** ---------- Helpers ---------- */
 const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
   const s = String(val ?? '').toLowerCase()
   if (s.startsWith('avail')) return 'available'
@@ -31,6 +32,62 @@ const getPrice = (v: any) => {
   return Number.isFinite(n) ? n : 0
 }
 
+/** ---------- Local Detail Dialog (fixes undefined component) ---------- */
+type VehicleDetailDialogProps = {
+  vehicle: Vehicle
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onEdit: (vehicle: Vehicle) => void
+}
+
+function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDetailDialogProps) {
+  const v: any = vehicle
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {`${v?.year ?? ''} ${v?.make ?? v?.brand ?? ''} ${v?.model ?? ''}`.trim() || 'Inventory Item'}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div className="text-muted-foreground">VIN</div>
+              <div className="font-medium">{v?.vin || '—'}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Status</div>
+              <div className="font-medium capitalize">{String(v?.status ?? '—')}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Price</div>
+              <div className="font-medium">{formatCurrency(getPrice(v))}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Location</div>
+              <div className="font-medium">{v?.location ?? v?.city ?? '—'}</div>
+            </div>
+          </div>
+
+          {v?.description && (
+            <div className="text-sm">
+              <div className="text-muted-foreground mb-1">Description</div>
+              <div className="whitespace-pre-wrap">{v.description}</div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button onClick={() => onEdit(vehicle)}>Edit</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** ---------- Main List ---------- */
 function InventoryList() {
   const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle, updateVehicle } = useInventoryManagement() as any
   const { toast } = useToast()
@@ -116,8 +173,6 @@ function InventoryList() {
       setShowVehicleDetail(true)
       toast({ title: 'Vehicle Found', description: `Found existing vehicle with VIN: ${data}` })
     } else {
-      // Open the add modal with VIN prefilled if your AddEditHomeModal supports it via props;
-      // otherwise, just open and let the user fill.
       setShowAddModal(true)
       toast({ title: 'New VIN Scanned', description: `Creating new vehicle with VIN: ${data}` })
     }
@@ -160,7 +215,6 @@ function InventoryList() {
     setShowTaskForm(true)
   }
 
-  // Add/Edit handlers for the AddEditHomeModal
   const handleAddHome = async (homeData: any) => {
     try {
       await createVehicle(homeData)
@@ -198,13 +252,12 @@ function InventoryList() {
     return vehicles.filter((v: any) => toStatusKey(v.status) === statusFilter)
   }, [vehicles, statusFilter])
 
-  /** Common tile props (keyboard accessible) */
-  const tileProps = (handler: () => void) => ({
+  /** Keyboard-accessible tile handlers (no className here to avoid prop collisions) */
+  const tileHandlers = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
     onClick: handler,
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
-    className: 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition'
   })
 
   return (
@@ -223,7 +276,7 @@ function InventoryList() {
 
       {/* Vehicle Detail Modal */}
       {showVehicleDetail && selectedVehicle && (
-        <VehicleDetail
+        <VehicleDetailDialog
           vehicle={selectedVehicle}
           open={showVehicleDetail}
           onOpenChange={(open) => setShowVehicleDetail(open)}
@@ -265,7 +318,6 @@ function InventoryList() {
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Button>
-            {/* Single Add Home button (right) with "+" icon */}
             <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Home
@@ -276,7 +328,10 @@ function InventoryList() {
 
       {/* Stats Cards */}
       <div className="ri-stats-grid">
-        <Card {...tileProps(() => applyTileFilter('all'))} className="bg-gradient-to-br from-blue-50 to-blue-100/50">
+        <Card
+          {...tileHandlers(() => applyTileFilter('all'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-blue-50 to-blue-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Units</CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
@@ -290,7 +345,10 @@ function InventoryList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => applyTileFilter('available'))} className="bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card
+          {...tileHandlers(() => applyTileFilter('available'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-green-50 to-green-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Available</CardTitle>
             <Package className="h-4 w-4 text-green-600" />
@@ -304,7 +362,10 @@ function InventoryList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => applyTileFilter('reserved'))} className="bg-gradient-to-br from-orange-50 to-orange-100/50">
+        <Card
+          {...tileHandlers(() => applyTileFilter('reserved'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-orange-50 to-orange-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">Reserved</CardTitle>
             <Package className="h-4 w-4 text-yellow-600" />
@@ -318,7 +379,10 @@ function InventoryList() {
           </CardContent>
         </Card>
 
-        <Card {...tileProps(() => applyTileFilter('sold'))} className="bg-gradient-to-br from-rose-50 to-rose-100/50">
+        <Card
+          {...tileHandlers(() => applyTileFilter('sold'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-rose-50 to-rose-100/50"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-rose-900">Sold</CardTitle>
           </CardHeader>
@@ -366,8 +430,6 @@ function InventoryList() {
             onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
             onStatusChange={handleStatusChange}
             onCreateTask={handleCreateTaskForVehicle}
-            // If your table uses a flag to show action buttons, uncomment the next line:
-            // showActions
           />
         </CardContent>
       </Card>
@@ -394,6 +456,7 @@ function InventoryList() {
   )
 }
 
+/** ---------- Routed Wrapper ---------- */
 export default function InventoryManagement() {
   return (
     <Routes>
