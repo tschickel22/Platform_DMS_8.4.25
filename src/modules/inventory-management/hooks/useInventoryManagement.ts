@@ -1,30 +1,19 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 
-export interface InventoryItem {
+export interface Vehicle {
   id: string
-  listingType: 'manufactured_home' | 'rv'
+  listingType: 'rv' | 'manufactured_home'
   inventoryId: string
   year: number
   make: string
   model: string
-  vin?: string
-  serialNumber?: string
   condition: 'new' | 'used' | 'refurbished'
-  salePrice: number
-  rentPrice?: number
+  status: 'available' | 'pending' | 'sold' | 'service'
   offerType: 'for_sale' | 'for_rent' | 'both'
-  status: 'available' | 'reserved' | 'sold' | 'service'
-  
-  // Manufactured Home specific
-  bedrooms?: number
-  bathrooms?: number
-  dimensions?: {
-    width_ft?: number
-    length_ft?: number
-    sections?: number
-  }
+  salePrice?: number
+  rentPrice?: number
   
   // RV specific
   sleeps?: number
@@ -35,6 +24,23 @@ export interface InventoryItem {
   transmission?: string
   odometerMiles?: number
   
+  // MH specific
+  bedrooms?: number
+  bathrooms?: number
+  dimensions?: {
+    width_ft?: number
+    length_ft?: number
+    sections?: number
+    squareFeet?: number
+  }
+  serialNumber?: string
+  roofType?: string
+  sidingType?: string
+  foundationType?: string
+  heatingType?: string
+  coolingType?: string
+  
+  // Common
   description?: string
   searchResultsText?: string
   location?: {
@@ -43,156 +49,172 @@ export interface InventoryItem {
     postalCode?: string
     communityName?: string
   }
-  features?: Record<string, boolean>
+  features?: any
   media?: {
     primaryPhoto?: string
     photos?: string[]
   }
+  keyFeatures?: string[]
   createdAt: string
   updatedAt: string
 }
 
-const STORAGE_KEY = 'renter-insight-inventory'
-
 export function useInventoryManagement() {
-  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const { toast } = useToast()
 
-  // Load inventory from localStorage on mount
+  // Load vehicles from localStorage on mount
   useEffect(() => {
     try {
-      const savedInventory = loadFromLocalStorage<InventoryItem[]>(STORAGE_KEY, [])
-      setInventory(savedInventory)
+      const savedVehicles = loadFromLocalStorage<Vehicle[]>('inventory-vehicles', [])
+      setVehicles(savedVehicles)
     } catch (err) {
-      console.error('Failed to load inventory:', err)
       setError('Failed to load inventory data')
+      console.error('Error loading vehicles:', err)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Save inventory to localStorage whenever it changes
+  // Save vehicles to localStorage whenever vehicles change
   useEffect(() => {
     if (!loading) {
-      saveToLocalStorage(STORAGE_KEY, inventory)
+      saveToLocalStorage('inventory-vehicles', vehicles)
     }
-  }, [inventory, loading])
+  }, [vehicles, loading])
 
-  const addInventoryItem = async (itemData: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const newItem: InventoryItem = {
-        ...itemData,
-        id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      const newVehicle: Vehicle = {
+        ...vehicleData,
+        id: `vehicle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
 
-      setInventory(prev => [newItem, ...prev])
+      setVehicles(prev => [newVehicle, ...prev])
       
       toast({
         title: 'Success',
-        description: 'Inventory item added successfully'
+        description: `${vehicleData.listingType === 'rv' ? 'RV' : 'Manufactured Home'} added successfully`
       })
 
-      return newItem
+      return newVehicle
     } catch (err) {
-      console.error('Failed to add inventory item:', err)
+      const errorMessage = 'Failed to add vehicle'
+      setError(errorMessage)
       toast({
         title: 'Error',
-        description: 'Failed to add inventory item',
+        description: errorMessage,
         variant: 'destructive'
       })
       throw err
     }
   }
 
-  const updateInventoryItem = async (id: string, updates: Partial<InventoryItem>) => {
+  const updateVehicle = async (id: string, updates: Partial<Vehicle>) => {
     try {
-      setInventory(prev => prev.map(item => 
-        item.id === id 
-          ? { ...item, ...updates, updatedAt: new Date().toISOString() }
-          : item
+      setVehicles(prev => prev.map(vehicle => 
+        vehicle.id === id 
+          ? { ...vehicle, ...updates, updatedAt: new Date().toISOString() }
+          : vehicle
       ))
 
       toast({
         title: 'Success',
-        description: 'Inventory item updated successfully'
+        description: 'Vehicle updated successfully'
       })
     } catch (err) {
-      console.error('Failed to update inventory item:', err)
+      const errorMessage = 'Failed to update vehicle'
+      setError(errorMessage)
       toast({
         title: 'Error',
-        description: 'Failed to update inventory item',
+        description: errorMessage,
         variant: 'destructive'
       })
       throw err
     }
   }
 
-  const deleteInventoryItem = async (id: string) => {
+  const deleteVehicle = async (id: string) => {
     try {
-      setInventory(prev => prev.filter(item => item.id !== id))
+      setVehicles(prev => prev.filter(vehicle => vehicle.id !== id))
       
       toast({
         title: 'Success',
-        description: 'Inventory item deleted successfully'
+        description: 'Vehicle deleted successfully'
       })
     } catch (err) {
-      console.error('Failed to delete inventory item:', err)
+      const errorMessage = 'Failed to delete vehicle'
+      setError(errorMessage)
       toast({
         title: 'Error',
-        description: 'Failed to delete inventory item',
+        description: errorMessage,
         variant: 'destructive'
       })
       throw err
     }
   }
 
-  const getInventoryByType = (type: 'manufactured_home' | 'rv') => {
-    return inventory.filter(item => item.listingType === type)
+  const getVehiclesByType = (type: 'rv' | 'manufactured_home') => {
+    return vehicles.filter(vehicle => vehicle.listingType === type)
   }
 
-  const searchInventory = (searchTerm: string) => {
-    const term = searchTerm.toLowerCase()
-    return inventory.filter(item => 
-      item.make.toLowerCase().includes(term) ||
-      item.model.toLowerCase().includes(term) ||
-      item.inventoryId.toLowerCase().includes(term) ||
-      item.year.toString().includes(term) ||
-      (item.description && item.description.toLowerCase().includes(term)) ||
-      (item.location?.city && item.location.city.toLowerCase().includes(term))
+  const getVehiclesByStatus = (status: string) => {
+    return vehicles.filter(vehicle => vehicle.status === status)
+  }
+
+  const searchVehicles = (term: string) => {
+    if (!term) return vehicles
+    
+    const searchLower = term.toLowerCase()
+    return vehicles.filter(vehicle => 
+      vehicle.make?.toLowerCase().includes(searchLower) ||
+      vehicle.model?.toLowerCase().includes(searchLower) ||
+      vehicle.inventoryId?.toLowerCase().includes(searchLower) ||
+      vehicle.year?.toString().includes(term)
     )
   }
 
   const getInventoryStats = () => {
-    const total = inventory.length
-    const available = inventory.filter(item => item.status === 'available').length
-    const reserved = inventory.filter(item => item.status === 'reserved').length
-    const sold = inventory.filter(item => item.status === 'sold').length
-    const totalValue = inventory.reduce((sum, item) => sum + (item.salePrice || 0), 0)
-    const averagePrice = total > 0 ? totalValue / total : 0
+    const total = vehicles.length
+    const available = vehicles.filter(v => v.status === 'available').length
+    const pending = vehicles.filter(v => v.status === 'pending').length
+    const sold = vehicles.filter(v => v.status === 'sold').length
+    const rvCount = vehicles.filter(v => v.listingType === 'rv').length
+    const mhCount = vehicles.filter(v => v.listingType === 'manufactured_home').length
 
     return {
       total,
       available,
-      reserved,
+      pending,
       sold,
-      totalValue,
-      averagePrice
+      rvCount,
+      mhCount
     }
   }
 
   return {
-    inventory,
+    vehicles,
     loading,
     error,
-    addInventoryItem,
-    updateInventoryItem,
-    deleteInventoryItem,
-    getInventoryByType,
-    searchInventory,
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    typeFilter,
+    setTypeFilter,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
+    getVehiclesByType,
+    getVehiclesByStatus,
+    searchVehicles,
     getInventoryStats
   }
 }
