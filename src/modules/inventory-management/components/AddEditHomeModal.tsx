@@ -15,26 +15,19 @@ export default function AddEditHomeModal({
   onSubmit, 
   initialData 
 }: AddEditHomeModalProps) {
-  const handleSubmit = (data: any) => {
-    onSubmit(data)
-    onClose()
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {initialData ? 'Edit Manufactured Home' : 'Add New Manufactured Home'}
+            {initialData ? 'Edit Manufactured Home' : 'Add Manufactured Home'}
           </DialogTitle>
         </DialogHeader>
-        <div className="mt-4">
-          <MHInventoryForm
-            initialData={initialData}
-            onSubmit={handleSubmit}
-            onCancel={onClose}
-          />
-        </div>
+        <MHInventoryForm
+          initialData={initialData}
+          onSubmit={onSubmit}
+          onCancel={onClose}
+        />
       </DialogContent>
     </Dialog>
   )
