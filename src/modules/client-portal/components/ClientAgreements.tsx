@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FileText, Download, Eye } from 'lucide-react'
+import { FileText, Eye, Download, PenTool } from 'lucide-react'
 import { usePortal } from '@/contexts/PortalContext'
 import { mockAgreements } from '@/mocks/agreementsMock'
 import { formatDate } from '@/lib/utils'
@@ -10,25 +10,50 @@ import { formatDate } from '@/lib/utils'
 export function ClientAgreements() {
   const { getDisplayName, getCustomerId } = usePortal()
   const customerId = getCustomerId()
+  const customerName = getDisplayName()
   
   // Filter agreements for the current customer
   const customerAgreements = mockAgreements.sampleAgreements.filter(agreement => 
-    agreement.customerId === customerId || agreement.customerName === getDisplayName()
+    agreement.customerId === customerId || agreement.customerName === customerName
   )
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'SIGNED':
       case 'ACTIVE':
-        return 'default'
+        return 'bg-green-100 text-green-800'
       case 'PENDING':
-        return 'destructive'
+        return 'bg-yellow-100 text-yellow-800'
+      case 'DRAFT':
+        return 'bg-gray-100 text-gray-800'
       case 'EXPIRED':
       case 'CANCELLED':
-        return 'secondary'
+        return 'bg-red-100 text-red-800'
       default:
-        return 'outline'
+        return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  if (customerAgreements.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Your Agreements</h1>
+          <p className="text-muted-foreground">
+            Review and manage your agreements
+          </p>
+        </div>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p>No agreements found for your account</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -36,142 +61,64 @@ export function ClientAgreements() {
       <div>
         <h1 className="text-2xl font-bold">Your Agreements</h1>
         <p className="text-muted-foreground">
-          Review and manage your agreements and contracts
+          Review and manage your agreements
         </p>
       </div>
 
-      {/* Agreement Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Agreements</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customerAgreements.length}</div>
-            <p className="text-xs text-muted-foreground">
-              All agreements
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Signature</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {customerAgreements.filter(a => a.status === 'PENDING').length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Require action
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {customerAgreements.filter(a => ['SIGNED', 'ACTIVE'].includes(a.status)).length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Signed & active
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Agreements List */}
-      <div className="space-y-4">
+      <div className="grid gap-4">
         {customerAgreements.map((agreement) => (
           <Card key={agreement.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">
-                    {agreement.type.replace('_', ' ').toUpperCase()} Agreement
-                  </CardTitle>
-                  <CardDescription>
-                    {agreement.vehicleInfo && `Vehicle: ${agreement.vehicleInfo} • `}
-                    Created: {formatDate(agreement.createdAt)}
-                  </CardDescription>
-                </div>
-                <Badge variant={getStatusColor(agreement.status)}>
+                <CardTitle className="text-lg">{agreement.type} Agreement</CardTitle>
+                <Badge className={getStatusColor(agreement.status)}>
                   {agreement.status}
                 </Badge>
               </div>
+              <CardDescription>
+                Created: {formatDate(agreement.createdAt)} • Vehicle: {agreement.vehicleInfo}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {agreement.terms.substring(0, 150)}...
-              </p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                <div>
-                  <p className="text-muted-foreground">Effective Date</p>
-                  <p className="font-medium">{formatDate(agreement.effectiveDate)}</p>
-                </div>
-                {agreement.expirationDate && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {agreement.terms}
+                </p>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Expiration Date</p>
-                    <p className="font-medium">{formatDate(agreement.expirationDate)}</p>
+                    <p className="text-muted-foreground">Effective Date</p>
+                    <p className="font-medium">{formatDate(agreement.effectiveDate)}</p>
                   </div>
-                )}
-                {agreement.totalAmount && (
-                  <div>
-                    <p className="text-muted-foreground">Total Amount</p>
-                    <p className="font-medium">${agreement.totalAmount.toLocaleString()}</p>
-                  </div>
-                )}
-                {agreement.signedAt && (
-                  <div>
-                    <p className="text-muted-foreground">Signed Date</p>
-                    <p className="font-medium">{formatDate(agreement.signedAt)}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {agreement.documents.map((doc) => (
-                    <Button key={doc.id} variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      {doc.name}
-                    </Button>
-                  ))}
+                  {agreement.totalAmount && (
+                    <div>
+                      <p className="text-muted-foreground">Total Amount</p>
+                      <p className="font-medium">${agreement.totalAmount.toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
                 
-                {agreement.status === 'PENDING' && (
-                  <Button>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Review & Sign
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Agreement
                   </Button>
-                )}
+                  {agreement.status === 'PENDING' && (
+                    <Button size="sm">
+                      <PenTool className="h-4 w-4 mr-2" />
+                      Sign Agreement
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-
-      {/* Empty State */}
-      {customerAgreements.length === 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold mb-2">No Agreements Found</h3>
-              <p className="text-muted-foreground">
-                You don't have any agreements at this time.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
