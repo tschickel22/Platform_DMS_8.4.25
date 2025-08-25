@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign, Home, Truck, Edit, Trash2 } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { useInventoryManagement } from './hooks/useInventoryManagement'
+import { useInventoryManagement } from '../hooks/useInventoryManagement'
 import { InventoryTable } from './components/InventoryTable'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
