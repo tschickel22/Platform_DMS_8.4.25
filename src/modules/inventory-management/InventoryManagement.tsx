@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+// src/modules/inventory-management/InventoryManagement.tsx
+import React, { useMemo, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { useTasks } from '@/hooks/useTasks'
@@ -8,16 +9,22 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
+import { Task, TaskModule, TaskPriority } from '@/types'
+import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { formatCurrency } from '@/lib/utils'
+
+// local module bits
 import { useInventoryManagement } from './hooks/useInventoryManagement'
 import { InventoryTable } from './components/InventoryTable'
 import { CSVImport } from './components/CSVImport'
 import { BarcodeScanner } from './components/BarcodeScanner'
 import AddEditHomeModal from './components/AddEditHomeModal'
-import { Task, TaskModule, TaskPriority } from '@/types'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
 
-/** ---------- Helpers ---------- */
+/* --------------------- safety helpers --------------------- */
+const asArray = <T,>(v: T[] | undefined | null): T[] => (Array.isArray(v) ? v : [])
+const noopAsync = async (..._args: any[]) => {}
+/* ---------------------------------------------------------- */
+
 const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
   const s = String(val ?? '').toLowerCase()
   if (s.startsWith('avail')) return 'available'
@@ -26,20 +33,18 @@ const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending
   if (s.startsWith('pend')) return 'pending'
   return 'other'
 }
-
 const getPrice = (v: any) => {
   const n = Number(v?.price ?? v?.askingPrice ?? 0)
   return Number.isFinite(n) ? n : 0
 }
 
-/** ---------- Local Detail Dialog ---------- */
+/* ---------- Tiny local detail dialog (no dependency on other files) ---------- */
 type VehicleDetailDialogProps = {
   vehicle: Vehicle
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit: (vehicle: Vehicle) => void
 }
-
 function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDetailDialogProps) {
   const v: any = vehicle
   return (
@@ -52,31 +57,17 @@ function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDet
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-muted-foreground">VIN</div>
-              <div className="font-medium">{v?.vin || '—'}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Status</div>
-              <div className="font-medium capitalize">{String(v?.status ?? '—')}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Price</div>
-              <div className="font-medium">{formatCurrency(getPrice(v))}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Location</div>
-              <div className="font-medium">{v?.location ?? v?.city ?? '—'}</div>
-            </div>
+            <div><div className="text-muted-foreground">VIN</div><div className="font-medium">{v?.vin || '—'}</div></div>
+            <div><div className="text-muted-foreground">Status</div><div className="font-medium capitalize">{String(v?.status ?? '—')}</div></div>
+            <div><div className="text-muted-foreground">Price</div><div className="font-medium">{formatCurrency(getPrice(v))}</div></div>
+            <div><div className="text-muted-foreground">Location</div><div className="font-medium">{v?.location ?? v?.city ?? '—'}</div></div>
           </div>
-
           {v?.description && (
             <div className="text-sm">
               <div className="text-muted-foreground mb-1">Description</div>
               <div className="whitespace-pre-wrap">{v.description}</div>
             </div>
           )}
-
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
             <Button onClick={() => onEdit(vehicle)}>Edit</Button>
@@ -87,22 +78,16 @@ function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDet
   )
 }
 
-/** ---------- Main List ---------- */
+/* --------------------------------- List --------------------------------- */
 function InventoryList() {
-  const {
-    vehicles: vehiclesFromHook,
-    createVehicle,
-    updateVehicleStatus,
-    deleteVehicle,
-    updateVehicle,
-  } = (useInventoryManagement() as any) ?? {}
+  const im = (useInventoryManagement() as any) ?? {}
 
-  // SAFETY: always work with arrays / functions even if hook is undefined during init
-  const vehicles: Vehicle[] = Array.isArray(vehiclesFromHook) ? vehiclesFromHook : []
-  const safeCreate = typeof createVehicle === 'function' ? createVehicle : async () => {}
-  const safeUpdateStatus = typeof updateVehicleStatus === 'function' ? updateVehicleStatus : async () => {}
-  const safeDelete = typeof deleteVehicle === 'function' ? deleteVehicle : async () => {}
-  const safeUpdate = typeof updateVehicle === 'function' ? updateVehicle : async () => {}
+  // guard every value/function coming from the hook
+  const vehicles: Vehicle[] = asArray<Vehicle>(im?.vehicles)
+  const createVehicle = typeof im?.createVehicle === 'function' ? im.createVehicle : noopAsync
+  const updateVehicleStatus = typeof im?.updateVehicleStatus === 'function' ? im.updateVehicleStatus : noopAsync
+  const deleteVehicle = typeof im?.deleteVehicle === 'function' ? im.deleteVehicle : noopAsync
+  const updateVehicle = typeof im?.updateVehicle === 'function' ? im.updateVehicle : noopAsync
 
   const { toast } = useToast()
   const { createTask } = useTasks()
@@ -116,44 +101,34 @@ function InventoryList() {
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
-  // Add/Edit Home
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
 
-  /** Derived stats (safe over undefined) */
+  // stats (safe on first render)
   const stats = useMemo(() => {
-    const list = vehicles ?? []
-    const total = list.length
-    let available = 0, reserved = 0, sold = 0
-    let totalValue = 0
+    const list = vehicles
+    let available = 0, reserved = 0, sold = 0, totalValue = 0
     for (const v of list) {
-      const k = toStatusKey((v as any).status)
+      const k = toStatusKey((v as any)?.status)
       if (k === 'available') available++
       else if (k === 'reserved') reserved++
       else if (k === 'sold') sold++
       totalValue += getPrice(v)
     }
-    return { total, available, reserved, sold, totalValue }
+    return { total: list.length, available, reserved, sold, totalValue }
   }, [vehicles])
 
-  /** Actions */
-  const handleEditVehicle = (vehicle: Vehicle) => {
-    setEditingHome(vehicle)
-    setShowEditModal(true)
-  }
-
-  const handleViewVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle)
-    setShowVehicleDetail(true)
-  }
+  // actions
+  const handleEditVehicle = (vehicle: Vehicle) => { setEditingHome(vehicle); setShowEditModal(true) }
+  const handleViewVehicle = (vehicle: Vehicle) => { setSelectedVehicle(vehicle); setShowVehicleDetail(true) }
 
   const handleDeleteVehicle = async (vehicleId: string) => {
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return
     try {
-      await safeDelete(vehicleId)
+      await deleteVehicle(vehicleId)
       toast({ title: 'Vehicle Deleted', description: 'The vehicle has been removed from inventory' })
     } catch {
       toast({ title: 'Error', description: 'Failed to delete vehicle', variant: 'destructive' })
@@ -162,27 +137,25 @@ function InventoryList() {
 
   const handleStatusChange = async (vehicleId: string, status: VehicleStatus | any) => {
     try {
-      await safeUpdateStatus(vehicleId, status as VehicleStatus)
+      await updateVehicleStatus(vehicleId, status as VehicleStatus)
       toast({ title: 'Status Updated', description: `Vehicle status changed to ${String(status)}` })
     } catch {
       toast({ title: 'Error', description: 'Failed to update vehicle status', variant: 'destructive' })
     }
   }
 
-  const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[]) => {
+  const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[] = []) => {
     try {
-      for (const vehicle of vehiclesToImport ?? []) {
-        await safeCreate(vehicle)
-      }
+      for (const v of vehiclesToImport) await createVehicle(v)
       setShowCSVImport(false)
-      toast({ title: 'Import Successful', description: `Imported ${vehiclesToImport?.length ?? 0} vehicles` })
+      toast({ title: 'Import Successful', description: `Imported ${vehiclesToImport.length} vehicles` })
     } catch {
       toast({ title: 'Import Failed', description: 'There was an error importing the vehicles', variant: 'destructive' })
     }
   }
 
   const handleBarcodeScanned = (data: string) => {
-    const existing = (vehicles ?? []).find((v: any) => String(v?.vin ?? '') === data)
+    const existing = vehicles.find((v: any) => String(v?.vin ?? '') === data)
     if (existing) {
       setSelectedVehicle(existing)
       setShowVehicleDetail(true)
@@ -232,7 +205,7 @@ function InventoryList() {
 
   const handleAddHome = async (homeData: any) => {
     try {
-      await safeCreate(homeData)
+      await createVehicle(homeData)
       setShowAddModal(false)
       toast({ title: 'Home Added', description: 'New home has been added to inventory' })
     } catch {
@@ -243,7 +216,7 @@ function InventoryList() {
   const handleEditHome = async (homeData: any) => {
     try {
       if (editingHome) {
-        await safeUpdate((editingHome as any).id, homeData)
+        await updateVehicle((editingHome as any).id, homeData)
         setShowEditModal(false)
         setEditingHome(null)
         toast({ title: 'Home Updated', description: 'Home information has been updated' })
@@ -253,18 +226,13 @@ function InventoryList() {
     }
   }
 
-  /** Filters */
-  const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
-    setStatusFilter(status)
-  }
-
+  // filter
   const filteredVehicles = useMemo(() => {
-    const list = vehicles ?? []
+    const list = vehicles
     if (statusFilter === 'all') return list
     return list.filter((v: any) => toStatusKey(v?.status) === statusFilter)
   }, [vehicles, statusFilter])
 
-  /** Keyboard-accessible tile handlers */
   const tileHandlers = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
@@ -274,19 +242,14 @@ function InventoryList() {
 
   return (
     <div className="space-y-8">
-      {/* Task Form Modal */}
       {showTaskForm && (
         <TaskForm
           initialData={initialTaskData}
           onSave={handleCreateTask}
-          onCancel={() => {
-            setShowTaskForm(false)
-            setInitialTaskData(undefined)
-          }}
+          onCancel={() => { setShowTaskForm(false); setInitialTaskData(undefined) }}
         />
       )}
 
-      {/* Vehicle Detail Modal */}
       {showVehicleDetail && selectedVehicle && (
         <VehicleDetailDialog
           vehicle={selectedVehicle}
@@ -296,105 +259,75 @@ function InventoryList() {
         />
       )}
 
-      {/* CSV Import Modal */}
       {showCSVImport && (
-        <CSVImport
-          onImport={handleImportCSV}
-          onCancel={() => setShowCSVImport(false)}
-        />
+        <CSVImport onImport={handleImportCSV} onCancel={() => setShowCSVImport(false)} />
       )}
 
-      {/* Barcode Scanner Modal */}
       {showBarcodeScanner && (
-        <BarcodeScanner
-          onScan={handleBarcodeScanned}
-          onClose={() => setShowBarcodeScanner(false)}
-        />
+        <BarcodeScanner onScan={handleBarcodeScanned} onClose={() => setShowBarcodeScanner(false)} />
       )}
 
-      {/* Page Header */}
+      {/* Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Inventory Management</h1>
-            <p className="ri-page-description">
-              Manage your RV and manufactured home inventory
-            </p>
+            <p className="ri-page-description">Manage your RV and manufactured home inventory</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Scan Barcode
+              <QrCode className="h-4 w-4 mr-2" /> Scan Barcode
             </Button>
             <Button variant="outline" onClick={() => setShowCSVImport(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import CSV
+              <Upload className="h-4 w-4 mr-2" /> Import CSV
             </Button>
             <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Home
+              <Plus className="h-4 w-4 mr-2" /> Add Home
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="ri-stats-grid">
-        <Card
-          {...tileHandlers(() => applyTileFilter('all'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-blue-50 to-blue-100/50"
-        >
+        <Card {...tileHandlers(() => setStatusFilter('all'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Total Units</CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
-            <p className="text-xs text-blue-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +5 units this month
-            </p>
+            <p className="text-xs text-blue-600 flex items-center mt-1"><TrendingUp className="h-3 w-3 mr-1" />+5 units this month</p>
           </CardContent>
         </Card>
 
-        <Card
-          {...tileHandlers(() => applyTileFilter('available'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-green-50 to-green-100/50"
-        >
+        <Card {...tileHandlers(() => setStatusFilter('available'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-green-50 to-green-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Available</CardTitle>
             <Package className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">{stats.available}</div>
-            <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Ready for sale
-            </p>
+            <p className="text-xs text-green-600 flex items-center mt-1"><TrendingUp className="h-3 w-3 mr-1" />Ready for sale</p>
           </CardContent>
         </Card>
 
-        <Card
-          {...tileHandlers(() => applyTileFilter('reserved'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-orange-50 to-orange-100/50"
-        >
+        <Card {...tileHandlers(() => setStatusFilter('reserved'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-orange-50 to-orange-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-900">Reserved</CardTitle>
             <Package className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">{stats.reserved}</div>
-            <p className="text-xs text-yellow-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Pending sale
-            </p>
+            <p className="text-xs text-yellow-600 flex items-center mt-1"><TrendingUp className="h-3 w-3 mr-1" />Pending sale</p>
           </CardContent>
         </Card>
 
-        <Card
-          {...tileHandlers(() => applyTileFilter('sold'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-rose-50 to-rose-100/50"
-        >
+        <Card {...tileHandlers(() => setStatusFilter('sold'))}
+          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-rose-50 to-rose-100/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-rose-900">Sold</CardTitle>
           </CardHeader>
@@ -410,25 +343,21 @@ function InventoryList() {
             <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-900">
-              {formatCurrency(stats.totalValue)}
-            </div>
+            <div className="text-2xl font-bold text-purple-900">{formatCurrency(stats.totalValue)}</div>
             <p className="text-xs text-purple-600 flex items-center mt-1">Inventory value</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter Indicator */}
+      {/* Active filter chip */}
       {statusFilter !== 'all' && (
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary">Filtered by: {statusFilter}</Badge>
-          <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-            Clear Filter
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setStatusFilter('all')}>Clear Filter</Button>
         </div>
       )}
 
-      {/* Inventory Table */}
+      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Inventory</CardTitle>
@@ -446,20 +375,16 @@ function InventoryList() {
         </CardContent>
       </Card>
 
-      {/* Add / Edit Home Modals */}
+      {/* Add/Edit */}
       <AddEditHomeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handleAddHome}
         mode="add"
       />
-
       <AddEditHomeModal
         isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false)
-          setEditingHome(null)
-        }}
+        onClose={() => { setShowEditModal(false); setEditingHome(null) }}
         onSave={handleEditHome}
         editingHome={editingHome as any}
         mode="edit"
@@ -468,7 +393,7 @@ function InventoryList() {
   )
 }
 
-/** ---------- Routed Wrapper ---------- */
+/* ------------------------------- Routes ------------------------------- */
 export default function InventoryManagement() {
   return (
     <Routes>
