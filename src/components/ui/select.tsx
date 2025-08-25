@@ -11,21 +11,14 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
   if (Array.isArray(children)) {
     return children
       .map((c) =>
-        typeof c === 'string' || typeof c === 'number' || React.isValidElement(c)
-          ? c
-          : null
+        typeof c === 'string' || typeof c === 'number' || React.isValidElement(c) ? c : null
       )
       .filter(Boolean)
   }
   if (typeof children === 'object') {
     const any = children as any
     const candidate =
-      any?.label ??
-      any?.name ??
-      any?.title ??
-      any?.displayName ??
-      any?.templateName ??
-      any?.id
+      any?.label ?? any?.name ?? any?.title ?? any?.displayName ?? any?.templateName ?? any?.id
     if (typeof candidate === 'string' || typeof candidate === 'number') {
       return String(candidate)
     }
@@ -48,6 +41,8 @@ const SelectTrigger = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
+    /** Prevent form submission when used inside a <form> */
+    type="button"
     className={cn(
       'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
       className
@@ -197,7 +192,7 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 export {
   Select,
   SelectGroup,
-  SelectValue,          // our safe wrapper
+  SelectValue, // our safe wrapper
   SelectTrigger,
   SelectContent,
   SelectLabel,
