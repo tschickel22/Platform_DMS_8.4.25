@@ -18,6 +18,11 @@ import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { EmptyState } from '@/components/ui/empty-state'
 
+// --- safety helpers ---
+const asArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : []
+const noopAsync = async (..._args: any[]) => {}
+const noop = () => []
+
 /** ---------- Helpers ---------- */
 const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
   const s = String(val ?? '').toLowerCase()
