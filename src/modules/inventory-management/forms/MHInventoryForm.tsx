@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { X, Plus, Upload } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
 
 interface MHInventoryFormProps {
   initialData?: any
@@ -16,39 +17,37 @@ interface MHInventoryFormProps {
 }
 
 export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHInventoryFormProps) {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  
+  // Form state
   const [formData, setFormData] = useState({
-    // Basic Information
+    listingType: 'manufactured_home',
     inventoryId: '',
-    year: '',
+    year: new Date().getFullYear(),
     make: '',
     model: '',
     serialNumber: '',
     condition: 'new',
-    
-    // Pricing
-    salePrice: '',
-    rentPrice: '',
-    cost: '',
+    salePrice: 0,
+    rentPrice: 0,
     offerType: 'for_sale',
-    
-    // Specifications
-    bedrooms: '',
-    bathrooms: '',
+    status: 'available',
+    bedrooms: 2,
+    bathrooms: 1,
     dimensions: {
-      width_ft: '',
-      length_ft: '',
-      sections: '1'
+      width_ft: 14,
+      length_ft: 60,
+      sections: 1
     },
-    
-    // Location
+    description: '',
+    searchResultsText: '',
     location: {
       city: '',
       state: '',
       postalCode: '',
       communityName: ''
     },
-    
-    // Features
     features: {
       centralAir: false,
       fireplace: false,
@@ -59,60 +58,46 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
       shed: false,
       energyStar: false
     },
-    
-    // Media
     media: {
       primaryPhoto: '',
       photos: []
-    },
-    
-    // Marketing
-    description: '',
-    searchResultsText: '',
-    
-    // Status
-    status: 'available',
-    
-    // Custom fields
-    customFields: {}
+    }
   })
 
   // Initialize form with existing data
   useEffect(() => {
     if (initialData) {
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        ...formData,
         ...initialData,
         // Ensure nested objects are properly merged
         dimensions: {
-          ...prev.dimensions,
+          ...formData.dimensions,
           ...(initialData.dimensions || {})
         },
         location: {
-          ...prev.location,
+          ...formData.location,
           ...(initialData.location || {})
         },
         features: {
-          ...prev.features,
+          ...formData.features,
           ...(initialData.features || {})
         },
         media: {
-          ...prev.media,
+          ...formData.media,
           ...(initialData.media || {})
         }
-      }))
+      })
     }
   }, [initialData])
 
-  // Handle input changes for text fields
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
   }
 
-  // Handle nested object changes
   const handleNestedChange = (parent: string, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -123,7 +108,6 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     }))
   }
 
-  // Handle feature toggle changes
   const handleFeatureChange = (feature: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -134,71 +118,42 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     }))
   }
 
-  // Handle photo upload
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (files && files.length > 0) {
-      const file = files[0]
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        if (formData.media.primaryPhoto === '') {
-          setFormData(prev => ({
-            ...prev,
-            media: {
-              ...prev.media,
-              primaryPhoto: result
-            }
-          }))
-        } else {
-          setFormData(prev => ({
-            ...prev,
-            media: {
-              ...prev.media,
-              photos: [...prev.media.photos, result]
-            }
-          }))
-        }
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  // Remove photo
-  const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      media: {
-        ...prev.media,
-        photos: prev.media.photos.filter((_, i) => i !== index)
-      }
-    }))
-  }
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Convert string numbers to actual numbers for submission
-    const processedData = {
-      ...formData,
-      year: formData.year ? parseInt(formData.year) : undefined,
-      salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
-      rentPrice: formData.rentPrice ? parseFloat(formData.rentPrice) : undefined,
-      cost: formData.cost ? parseFloat(formData.cost) : undefined,
-      bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-      bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-      dimensions: {
-        width_ft: formData.dimensions.width_ft ? parseInt(formData.dimensions.width_ft) : undefined,
-        length_ft: formData.dimensions.length_ft ? parseInt(formData.dimensions.length_ft) : undefined,
-        sections: formData.dimensions.sections ? parseInt(formData.dimensions.sections) : 1
-      },
-      listingType: 'manufactured_home',
-      createdAt: initialData?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    setLoading(true)
+
+    try {
+      // Validate required fields
+      if (!formData.make || !formData.model || !formData.inventoryId) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please fill in all required fields',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Generate search results text if not provided
+      if (!formData.searchResultsText) {
+        formData.searchResultsText = `${formData.year} ${formData.make} ${formData.model} - ${formData.bedrooms}BR/${formData.bathrooms}BA`
+      }
+
+      await onSubmit(formData)
+      
+      toast({
+        title: 'Success',
+        description: initialData ? 'Home updated successfully' : 'Home added successfully'
+      })
+    } catch (error) {
+      console.error('Form submission error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save home. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
     }
-    
-    onSubmit(processedData)
   }
 
   const conditionOptions = [
@@ -210,21 +165,14 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
   const offerTypeOptions = [
     { value: 'for_sale', label: 'For Sale' },
     { value: 'for_rent', label: 'For Rent' },
-    { value: 'both', label: 'Both Sale & Rent' }
+    { value: 'both', label: 'Both' }
   ]
 
   const statusOptions = [
     { value: 'available', label: 'Available' },
     { value: 'reserved', label: 'Reserved' },
     { value: 'sold', label: 'Sold' },
-    { value: 'service', label: 'In Service' },
-    { value: 'delivered', label: 'Delivered' }
-  ]
-
-  const sectionOptions = [
-    { value: '1', label: 'Single Wide' },
-    { value: '2', label: 'Double Wide' },
-    { value: '3', label: 'Triple Wide' }
+    { value: 'service', label: 'In Service' }
   ]
 
   const stateOptions = [
@@ -283,12 +231,11 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="specs">Specifications</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="media">Photos</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
@@ -297,9 +244,9 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="inventoryId">Inventory ID</Label>
+                  <Label htmlFor="inventoryId">Inventory ID *</Label>
                   <Input
                     id="inventoryId"
                     value={formData.inventoryId}
@@ -309,23 +256,22 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                   />
                 </div>
                 <div>
-                  <Label htmlFor="year">Year</Label>
+                  <Label htmlFor="year">Year *</Label>
                   <Input
                     id="year"
                     type="number"
                     value={formData.year}
-                    onChange={(e) => handleInputChange('year', e.target.value)}
-                    placeholder="2024"
+                    onChange={(e) => handleInputChange('year', parseInt(e.target.value) || new Date().getFullYear())}
                     min="1900"
-                    max="2030"
+                    max={new Date().getFullYear() + 1}
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="make">Make</Label>
+                  <Label htmlFor="make">Make *</Label>
                   <Input
                     id="make"
                     value={formData.make}
@@ -335,7 +281,7 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                   />
                 </div>
                 <div>
-                  <Label htmlFor="model">Model</Label>
+                  <Label htmlFor="model">Model *</Label>
                   <Input
                     id="model"
                     value={formData.model}
@@ -346,7 +292,7 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="serialNumber">Serial Number</Label>
                   <Input
@@ -354,13 +300,12 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                     value={formData.serialNumber}
                     onChange={(e) => handleInputChange('serialNumber', e.target.value)}
                     placeholder="CL123456789"
-                    required
                   />
                 </div>
                 <div>
                   <Label htmlFor="condition">Condition</Label>
-                  <Select 
-                    value={formData.condition} 
+                  <Select
+                    value={formData.condition}
                     onValueChange={(value) => handleInputChange('condition', value)}
                   >
                     <SelectTrigger>
@@ -377,141 +322,147 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  value={formData.status} 
-                  onValueChange={(value) => handleInputChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="offerType">Offer Type</Label>
-                <Select 
-                  value={formData.offerType} 
-                  onValueChange={(value) => handleInputChange('offerType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select offer type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {offerTypeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                {(formData.offerType === 'for_sale' || formData.offerType === 'both') && (
-                  <div>
-                    <Label htmlFor="salePrice">Sale Price</Label>
-                    <Input
-                      id="salePrice"
-                      type="number"
-                      value={formData.salePrice}
-                      onChange={(e) => handleInputChange('salePrice', e.target.value)}
-                      placeholder="95000"
-                      min="0"
-                    />
-                  </div>
-                )}
-                
-                {(formData.offerType === 'for_rent' || formData.offerType === 'both') && (
-                  <div>
-                    <Label htmlFor="rentPrice">Rent Price (Monthly)</Label>
-                    <Input
-                      id="rentPrice"
-                      type="number"
-                      value={formData.rentPrice}
-                      onChange={(e) => handleInputChange('rentPrice', e.target.value)}
-                      placeholder="1200"
-                      min="0"
-                    />
-                  </div>
-                )}
-                
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="cost">Cost</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    value={formData.cost}
-                    onChange={(e) => handleInputChange('cost', e.target.value)}
-                    placeholder="75000"
-                    min="0"
-                  />
+                  <Label htmlFor="offerType">Offer Type</Label>
+                  <Select
+                    value={formData.offerType}
+                    onValueChange={(value) => handleInputChange('offerType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select offer type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {offerTypeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => handleInputChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sections">Sections</Label>
+                  <Select
+                    value={formData.dimensions.sections.toString()}
+                    onValueChange={(value) => handleNestedChange('dimensions', 'sections', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sections" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Single Wide</SelectItem>
+                      <SelectItem value="2">Double Wide</SelectItem>
+                      <SelectItem value="3">Triple Wide</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="specs" className="space-y-4">
+        <TabsContent value="details" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Specifications</CardTitle>
+              <CardTitle>Pricing & Specifications</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="bedrooms">Bedrooms</Label>
+                  <Label htmlFor="salePrice">Sale Price</Label>
                   <Input
-                    id="bedrooms"
+                    id="salePrice"
                     type="number"
-                    value={formData.bedrooms}
-                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    placeholder="3"
-                    min="1"
-                    max="10"
+                    value={formData.salePrice}
+                    onChange={(e) => handleInputChange('salePrice', parseFloat(e.target.value) || 0)}
+                    placeholder="95000"
+                    min="0"
+                    step="100"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bathrooms">Bathrooms</Label>
+                  <Label htmlFor="rentPrice">Rent Price (Monthly)</Label>
                   <Input
-                    id="bathrooms"
+                    id="rentPrice"
                     type="number"
-                    step="0.5"
-                    value={formData.bathrooms}
-                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    placeholder="2"
-                    min="1"
-                    max="10"
+                    value={formData.rentPrice}
+                    onChange={(e) => handleInputChange('rentPrice', parseFloat(e.target.value) || 0)}
+                    placeholder="1200"
+                    min="0"
+                    step="50"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="bedrooms">Bedrooms</Label>
+                  <Select
+                    value={formData.bedrooms.toString()}
+                    onValueChange={(value) => handleInputChange('bedrooms', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bedrooms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Bedroom</SelectItem>
+                      <SelectItem value="2">2 Bedrooms</SelectItem>
+                      <SelectItem value="3">3 Bedrooms</SelectItem>
+                      <SelectItem value="4">4 Bedrooms</SelectItem>
+                      <SelectItem value="5">5+ Bedrooms</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="bathrooms">Bathrooms</Label>
+                  <Select
+                    value={formData.bathrooms.toString()}
+                    onValueChange={(value) => handleInputChange('bathrooms', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bathrooms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Bathroom</SelectItem>
+                      <SelectItem value="1.5">1.5 Bathrooms</SelectItem>
+                      <SelectItem value="2">2 Bathrooms</SelectItem>
+                      <SelectItem value="2.5">2.5 Bathrooms</SelectItem>
+                      <SelectItem value="3">3+ Bathrooms</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="width">Width (ft)</Label>
                   <Input
                     id="width"
                     type="number"
                     value={formData.dimensions.width_ft}
-                    onChange={(e) => handleNestedChange('dimensions', 'width_ft', e.target.value)}
+                    onChange={(e) => handleNestedChange('dimensions', 'width_ft', parseFloat(e.target.value) || 0)}
                     placeholder="28"
-                    min="10"
-                    max="50"
+                    min="0"
+                    step="0.1"
                   />
                 </div>
                 <div>
@@ -520,30 +471,55 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                     id="length"
                     type="number"
                     value={formData.dimensions.length_ft}
-                    onChange={(e) => handleNestedChange('dimensions', 'length_ft', e.target.value)}
+                    onChange={(e) => handleNestedChange('dimensions', 'length_ft', parseFloat(e.target.value) || 0)}
                     placeholder="66"
-                    min="20"
-                    max="100"
+                    min="0"
+                    step="0.1"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="sections">Sections</Label>
-                  <Select 
-                    value={formData.dimensions.sections} 
-                    onValueChange={(value) => handleNestedChange('dimensions', 'sections', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sections" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sectionOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Describe the manufactured home..."
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="searchResultsText">Search Results Text</Label>
+                <Input
+                  id="searchResultsText"
+                  value={formData.searchResultsText}
+                  onChange={(e) => handleInputChange('searchResultsText', e.target.value)}
+                  placeholder="Auto-generated from year, make, model, and specs"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Features</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(formData.features).map(([feature, enabled]) => (
+                  <div key={feature} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={feature}
+                      checked={enabled}
+                      onCheckedChange={(checked) => handleFeatureChange(feature, !!checked)}
+                    />
+                    <Label htmlFor={feature} className="text-sm">
+                      {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -555,7 +531,7 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
               <CardTitle>Location Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="city">City</Label>
                   <Input
@@ -563,13 +539,12 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                     value={formData.location.city}
                     onChange={(e) => handleNestedChange('location', 'city', e.target.value)}
                     placeholder="Tampa"
-                    required
                   />
                 </div>
                 <div>
                   <Label htmlFor="state">State</Label>
-                  <Select 
-                    value={formData.location.state} 
+                  <Select
+                    value={formData.location.state}
                     onValueChange={(value) => handleNestedChange('location', 'state', value)}
                   >
                     <SelectTrigger>
@@ -586,7 +561,7 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="postalCode">Postal Code</Label>
                   <Input
@@ -610,63 +585,10 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
           </Card>
         </TabsContent>
 
-        <TabsContent value="features" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Features & Amenities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(formData.features).map(([feature, enabled]) => (
-                  <div key={feature} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={feature}
-                      checked={enabled}
-                      onChange={(e) => handleFeatureChange(feature, e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                    <Label htmlFor={feature} className="text-sm">
-                      {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Marketing Content</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Brand new 2023 Clayton double-wide manufactured home. Modern finishes and energy-efficient features."
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="searchResultsText">Search Results Text</Label>
-                <Input
-                  id="searchResultsText"
-                  value={formData.searchResultsText}
-                  onChange={(e) => handleInputChange('searchResultsText', e.target.value)}
-                  placeholder="2023 Clayton The Edge - 3BR/2BA Double-wide"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="media" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Photos</CardTitle>
+              <CardTitle>Photos & Media</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -675,48 +597,20 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                   id="primaryPhoto"
                   value={formData.media.primaryPhoto}
                   onChange={(e) => handleNestedChange('media', 'primaryPhoto', e.target.value)}
-                  placeholder="https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg"
+                  placeholder="https://example.com/photo.jpg"
                 />
               </div>
-
-              <div>
-                <Label>Upload Photos</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    id="photo-upload"
+              
+              {formData.media.primaryPhoto && (
+                <div className="mt-2">
+                  <img 
+                    src={formData.media.primaryPhoto} 
+                    alt="Primary photo preview" 
+                    className="w-32 h-24 object-cover rounded border"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
                   />
-                  <label htmlFor="photo-upload" className="cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600">Click to upload photos</p>
-                  </label>
-                </div>
-              </div>
-
-              {formData.media.photos.length > 0 && (
-                <div>
-                  <Label>Additional Photos</Label>
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    {formData.media.photos.map((photo, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={photo}
-                          alt={`Photo ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(index)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </CardContent>
@@ -724,12 +618,13 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-end space-x-2 pt-4 border-t">
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-4 pt-6 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">
-          {initialData ? 'Update Home' : 'Add Home'}
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving...' : (initialData ? 'Update Home' : 'Add Home')}
         </Button>
       </div>
     </form>
