@@ -408,6 +408,22 @@ function InventoryList() {
 
       {/* Filter Indicator */}
       {statusFilter !== 'all' && (
+      {/* Add/Edit Modals */}
+      <AddEditHomeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddItem}
+      />
+      
+      {editingItem && (
+        <AddEditHomeModal
+          isOpen={true}
+          onClose={() => setEditingItem(null)}
+          onSubmit={handleEditItem}
+          initialData={editingItem}
+        />
+      )}
+
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary">Filtered by: {statusFilter}</Badge>
           <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
@@ -423,8 +439,8 @@ function InventoryList() {
           <CardDescription>Click actions to view, edit, create tasks, or delete</CardDescription>
         </CardHeader>
         <CardContent>
-          <InventoryTable
-            vehicles={filteredVehicles}
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">{stats.available} available</p>
             onView={handleViewVehicle}
             onEdit={handleEditVehicle}
             onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
@@ -433,8 +449,10 @@ function InventoryList() {
           />
         </CardContent>
       </Card>
-
-      {/* Add / Edit Home Modals */}
+            <div className="text-2xl font-bold">{stats.available}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.total > 0 ? Math.round((stats.available / stats.total) * 100) : 0}% of inventory
+            </p>
       <AddEditHomeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -443,8 +461,10 @@ function InventoryList() {
       />
 
       <AddEditHomeModal
-        isOpen={showEditModal}
-        onClose={() => {
+            <div className="text-2xl font-bold">${(stats.totalValue / 1000000).toFixed(1)}M</div>
+            <p className="text-xs text-muted-foreground">
+              Avg: ${Math.round(stats.averagePrice).toLocaleString()}
+            </p>
           setShowEditModal(false)
           setEditingHome(null)
         }}
@@ -453,13 +473,338 @@ function InventoryList() {
         mode="edit"
       />
     </div>
-  )
-}
+            <div className="text-2xl font-bold">{stats.sold}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.reserved} reserved
+            </p>
 
+import { useInventoryManagement } from './hooks/useInventoryManagement'
+import AddEditHomeModal from './components/AddEditHomeModal'
+import { EmptyState } from '@/components/ui/empty-state'
 /** ---------- Routed Wrapper ---------- */
 export default function InventoryManagement() {
-  return (
-    <Routes>
+  const {
+    inventory,
+    loading,
+    error,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    getInventoryByType,
+    searchInventory,
+    getInventoryStats
+  } = useInventoryManagement()
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+
+  // Get filtered inventory
+  const filteredInventory = React.useMemo(() => {
+    let filtered = searchTerm ? searchInventory(searchTerm) : inventory
+    
+    if (filterType !== 'all') {
+      filtered = filtered.filter(item => item.listingType === filterType)
+    }
+    
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus)
+    }
+    
+    return filtered
+  }, [inventory, searchTerm, filterType, filterStatus, searchInventory])
+
+  const stats = getInventoryStats()
+
+  const handleAddItem = async (data: any) => {
+    try {
+      await addInventoryItem(data)
+      setShowAddModal(false)
+    } catch (error) {
+      console.error('Failed to add inventory item:', error)
+    }
+  }
+
+  const handleEditItem = async (data: any) => {
+          <Button onClick={() => setShowAddModal(true)}>
+      if (editingItem) {
+        await updateInventoryItem(editingItem.id, data)
+        setEditingItem(null)
+      }
+    } catch (error) {
+      console.error('Failed to update inventory item:', error)
+    }
+  }
+
+  const handleDeleteItem = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      try {
+        await deleteInventoryItem(id)
+      } catch (error) {
+        console.error('Failed to delete inventory item:', error)
+      }
+    }
+  }
+
+          {filteredInventory.length === 0 ? (
+            <EmptyState
+              title="No inventory items found"
+              description="Get started by adding your first inventory item"
+              icon={<Package className="h-12 w-12" />}
+              action={{
+                label: "Add First Item",
+                onClick: () => setShowAddModal(true)
+              }}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInventory.map((item) => (
+                <Card key={item.id} className="overflow-hidden">
+                  <div className="aspect-video bg-gray-100 relative">
+                    {item.media?.primaryPhoto ? (
+                      <img 
+                        src={item.media.primaryPhoto} 
+                        alt={`${item.make} ${item.model}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    <Badge 
+                      className="absolute top-2 right-2"
+                      variant={item.status === 'available' ? 'default' : 'secondary'}
+                    >
+                      {item.status}
+                    </Badge>
+                  </div>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">
+                      {item.year} {item.make} {item.model}
+                    </CardTitle>
+                    <CardDescription>
+                      {item.inventoryId} • {item.listingType === 'manufactured_home' ? 'Manufactured Home' : 'RV'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Sale Price</span>
+                        <span className="font-semibold">${item.salePrice?.toLocaleString() || 'N/A'}</span>
+                      </div>
+                      {item.rentPrice && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Rent Price</span>
+                          <span className="font-semibold">${item.rentPrice.toLocaleString()}/mo</span>
+                        </div>
+                      )}
+                      {item.listingType === 'manufactured_home' && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Bedrooms/Baths</span>
+                          <span>{item.bedrooms || 0}BR / {item.bathrooms || 0}BA</span>
+                        </div>
+                      )}
+                      {item.listingType === 'rv' && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sleeps/Length</span>
+                          <span>{item.sleeps || 0} / {item.length || 0}ft</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setEditingItem(item)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDeleteItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+            <div key={i} className="animate-pulse">
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          {filteredInventory.filter(item => item.listingType === 'manufactured_home').length === 0 ? (
+            <EmptyState
+              title="No manufactured homes found"
+              description="Add manufactured homes to your inventory"
+              icon={<Home className="h-12 w-12" />}
+              action={{
+                label: "Add Manufactured Home",
+                onClick: () => setShowAddModal(true)
+              }}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInventory
+                .filter(item => item.listingType === 'manufactured_home')
+                .map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="aspect-video bg-gray-100 relative">
+                      {item.media?.primaryPhoto ? (
+                        <img 
+                          src={item.media.primaryPhoto} 
+                          alt={`${item.make} ${item.model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Home className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge 
+                        className="absolute top-2 right-2"
+                        variant={item.status === 'available' ? 'default' : 'secondary'}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">
+                        {item.year} {item.make} {item.model}
+                      </CardTitle>
+                      <CardDescription>
+                        {item.inventoryId} • {item.bedrooms || 0}BR / {item.bathrooms || 0}BA
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sale Price</span>
+                          <span className="font-semibold">${item.salePrice?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        {item.rentPrice && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Rent Price</span>
+                            <span className="font-semibold">${item.rentPrice.toLocaleString()}/mo</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Square Feet</span>
+                          <span>{item.dimensions?.squareFeet || 'N/A'} sq ft</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingItem(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
+        <div className="text-center py-12">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+          {filteredInventory.filter(item => item.listingType === 'rv').length === 0 ? (
+            <EmptyState
+              title="No RVs found"
+              description="Add RVs to your inventory"
+              icon={<Truck className="h-12 w-12" />}
+              action={{
+                label: "Add RV",
+                onClick: () => setShowAddModal(true)
+              }}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInventory
+                .filter(item => item.listingType === 'rv')
+                .map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="aspect-video bg-gray-100 relative">
+                      {item.media?.primaryPhoto ? (
+                        <img 
+                          src={item.media.primaryPhoto} 
+                          alt={`${item.make} ${item.model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Truck className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge 
+                        className="absolute top-2 right-2"
+                        variant={item.status === 'available' ? 'default' : 'secondary'}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">
+                        {item.year} {item.make} {item.model}
+                      </CardTitle>
+                      <CardDescription>
+                        {item.inventoryId} • Sleeps {item.sleeps || 0}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sale Price</span>
+                          <span className="font-semibold">${item.salePrice?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        {item.rentPrice && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Rent Price</span>
+                            <span className="font-semibold">${item.rentPrice.toLocaleString()}/mo</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Length</span>
+                          <span>{item.length || 'N/A'} ft</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingItem(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
       <Route path="/" element={<InventoryList />} />
       <Route path="/*" element={<InventoryList />} />
     </Routes>
