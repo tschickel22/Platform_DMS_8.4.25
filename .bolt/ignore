@@ -1,97 +1,102 @@
-# Ignore node modules and build artifacts
-node_modules/
-dist/
-.vite/
-build/
-out/
+# --- BOLT-FIRST, MINIMAL CONTEXT STRATEGY ---
+# Start by ignoring everything, then whitelist only what Bolt needs.
+**
 
-# Ignore environment variables
-.env
-.env.local
-.env.*.local
+# --- Project root files Bolt may need ---
+!package.json
+!package-lock.json
+!pnpm-lock.yaml
+!yarn.lock
+!tsconfig*.json
+!vite.config.*
+!postcss.config.*
+!tailwind.config.*
+!index.html
 
-# Ignore editor/IDE specific files
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
+# Keep Bolt’s own metadata available (don’t hide the engine from itself)
+!.bolt/**
+!.github/**
 
-# Ignore logs and debug files
+# --- Allow core src scaffolding ---
+!src/
+!src/main.tsx
+!src/App.tsx
+!src/index.css
+
+# Shared code used across modules (keep these in to avoid “cannot find module”)
+!src/components/**
+!src/hooks/**
+!src/lib/**
+!src/types/**
+!src/contexts/**
+!src/utils/**
+!src/mocks/**
+
+# --- Focused module allow-list (edit this list as your “working set”) ---
+# Block the whole modules tree…
+src/modules/**
+
+# …then selectively re-include only what you’re actively editing:
+!src/modules/brochures/**
+!src/modules/inventory-management/**
+!src/modules/land-management/**
+!src/modules/property-listings/**
+
+
+# --- Public assets (keep lightweight, skip huge media) ---
+!public/
+# Allow common small assets dirs; big media stays ignored by default
+public/**
+!public/assets/**
+!public/images/**
+# (Optional) If you have big media dirs, keep them ignored:
+public/videos/**
+public/media/**
+public/uploads/**
+public/**.mp4
+public/**.mov
+public/**.zip
+
+# --- Ignore common heavy / noisy stuff everywhere ---
+node_modules/**
+dist/**
+build/**
+out/**
+.vite/**
+.cache/**
+.next/**
+.nuxt/**
+.parcel-cache/**
+.rollup.cache/**
+.svelte-kit/**
+.turbo/**
+.vercel/**
+.yarn/**
+.pnpm-store/**
+
+# Editors, OS, logs
+.vscode/**
+.idea/**
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-*.pnpm-debug.log*
-
-# Ignore test/coverage reports
-coverage/
-.nyc_output/
-*.tap
-*.xunit.xml
-*.lcov
-*.lcov.info
-
-# Ignore temporary files and caches
 *.tmp
-*.bak
 *.swp
 *.swo
-.cache/
-.next/
-.nuxt/
-.parcel-cache/
-.rollup.cache/
-.svelte-kit/
-.turbo/
-.vercel/
-.yarn/
-.pnpm-store/
+*.bak
 
-# Ignore user-specific files
-.bash_history
-.zsh_history
-.npm/
-.yarn-cache/
+# Tests / stories / snapshots (Bolt doesn’t need these to fix app code)
+**/__tests__/**
+**/__mocks__/**
+**/*.test.*
+**/*.spec.*
+**/*.stories.*
+**/*.snap
 
-# Ignore Bolt-specific internal files (if any, usually handled by Bolt itself)
-.bolt/
+# Docs & scripts not required for live fixes
+docs/**
+scripts/**
 
-# --- STRICT MODULE IGNORING ---
-# Ignore all apps/ directories (assuming they are separate deployments)
-apps/
-
-# Ignore all src/modules/ directories by default
-src/modules/
-
-# EXCEPT for the ones needed for Brochure Builder and its direct interactions
-# These lines will re-include the necessary directories
-!src/modules/brochures/
-!src/modules/brochures/**
-!src/modules/inventory-management/
-!src/modules/inventory-management/**
-!src/modules/land-management/
-!src/modules/land-management/**
-!src/modules/property-listings/
-!src/modules/property-listings/**
-!src/modules/quote-builder/
-!src/modules/quote-builder/**
-!src/modules/website-builder/
-
-# Ensure core src/ directories are not ignored
-!src/App.tsx
-!src/main.tsx
-!src/index.css
-!src/lib/
-!src/lib/**
-!src/components/
-!src/components/**
-!src/contexts/
-!src/contexts/**
-!src/hooks/
-!src/hooks/**
-!src/utils/
-!src/utils/**
-!src/mocks/
-!src/mocks/**
-!src/types/
-!src/types/**
+# Large design/source files
+**/*.psd
+**/*.ai
+**/*.fig
+**/*.sketch
