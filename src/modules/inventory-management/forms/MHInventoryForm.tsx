@@ -1,29 +1,15 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { 
-  Home, 
-  Zap, 
-  Droplets, 
-  Thermometer, 
-  Shield, 
-  Palette, 
-  Wrench,
-  MapPin,
-  DollarSign,
-  FileText,
-  Camera,
-  Plus,
-  X
-} from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { X, Upload, Home, Zap, Shield, Leaf, Archive, Smartphone, Accessibility } from 'lucide-react'
 
 interface MHInventoryFormProps {
   initialData?: any
@@ -41,12 +27,11 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     condition: initialData?.condition || 'new',
     
     // Pricing
+    offerType: initialData?.offerType || 'for_sale',
     salePrice: initialData?.salePrice || '',
     rentPrice: initialData?.rentPrice || '',
-    cost: initialData?.cost || '',
-    offerType: initialData?.offerType || 'for_sale',
     
-    // Dimensions & Layout
+    // Dimensions
     bedrooms: initialData?.bedrooms || '',
     bathrooms: initialData?.bathrooms || '',
     squareFootage: initialData?.squareFootage || '',
@@ -59,89 +44,36 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     state: initialData?.location?.state || '',
     postalCode: initialData?.location?.postalCode || '',
     communityName: initialData?.location?.communityName || '',
-    lotNumber: initialData?.location?.lotNumber || '',
     
-    // Structural Features
-    roofType: initialData?.features?.roofType || '',
-    sidingType: initialData?.features?.sidingType || '',
-    foundationType: initialData?.features?.foundationType || '',
-    insulationType: initialData?.features?.insulationType || '',
-    windowType: initialData?.features?.windowType || '',
+    // Structure
+    roofType: initialData?.roofType || '',
+    sidingType: initialData?.sidingType || '',
+    foundationType: initialData?.foundationType || '',
+    hvacType: initialData?.hvacType || '',
     
-    // Electrical Features
-    electricalPanel: initialData?.features?.electricalPanel || '',
-    outlets: initialData?.features?.outlets || '',
-    lighting: initialData?.features?.lighting || '',
-    
-    // Plumbing Features
-    plumbingType: initialData?.features?.plumbingType || '',
-    waterHeaterType: initialData?.features?.waterHeaterType || '',
-    waterHeaterSize: initialData?.features?.waterHeaterSize || '',
-    
-    // HVAC Features
-    heatingType: initialData?.features?.heatingType || '',
-    coolingType: initialData?.features?.coolingType || '',
-    ductworkType: initialData?.features?.ductworkType || '',
-    
-    // Kitchen Features
-    kitchenAppliances: initialData?.features?.kitchenAppliances || [],
-    counterTopType: initialData?.features?.counterTopType || '',
-    cabinetType: initialData?.features?.cabinetType || '',
-    
-    // Bathroom Features
-    bathroomFixtures: initialData?.features?.bathroomFixtures || [],
-    vanityType: initialData?.features?.vanityType || '',
-    
-    // Flooring
-    flooringTypes: initialData?.features?.flooringTypes || [],
-    
-    // Interior Features
-    ceilingHeight: initialData?.features?.ceilingHeight || '',
-    ceilingType: initialData?.features?.ceilingType || '',
-    
-    // Exterior Features
-    porchType: initialData?.features?.porchType || '',
-    deckSize: initialData?.features?.deckSize || '',
-    
-    // Amenities & Upgrades
-    amenities: initialData?.features?.amenities || [],
-    upgrades: initialData?.features?.upgrades || [],
-    
-    // Safety & Compliance
-    safetyFeatures: initialData?.features?.safetyFeatures || [],
-    certifications: initialData?.features?.certifications || [],
-    
-    // Energy Efficiency
-    energyFeatures: initialData?.features?.energyFeatures || [],
-    energyRating: initialData?.features?.energyRating || '',
-    
-    // Accessibility
-    accessibilityFeatures: initialData?.features?.accessibilityFeatures || [],
-    
-    // Storage
-    storageFeatures: initialData?.features?.storageFeatures || [],
-    
-    // Technology
-    technologyFeatures: initialData?.features?.technologyFeatures || [],
-    
-    // Warranty & Service
-    warrantyInfo: initialData?.features?.warrantyInfo || '',
-    serviceHistory: initialData?.features?.serviceHistory || '',
-    
-    // Marketing
-    description: initialData?.description || '',
-    searchResultsText: initialData?.searchResultsText || '',
-    keyFeatures: initialData?.keyFeatures || [],
+    // Features
+    features: initialData?.features || {},
     
     // Media
     primaryPhoto: initialData?.media?.primaryPhoto || '',
     photos: initialData?.media?.photos || [],
     
-    // Status
-    status: initialData?.status || 'available'
+    // Marketing
+    description: initialData?.description || '',
+    searchResultsText: initialData?.searchResultsText || '',
+    keyFeatures: initialData?.keyFeatures || []
   })
 
-  const [activeTab, setActiveTab] = useState('basic')
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
+  const [keyFeatureInput, setKeyFeatureInput] = useState('')
+
+  useEffect(() => {
+    // Initialize selected features from form data
+    const features = Object.entries(formData.features)
+      .filter(([_, value]) => value === true)
+      .map(([key, _]) => key)
+    setSelectedFeatures(features)
+  }, [formData.features])
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -150,82 +82,53 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     }))
   }
 
-  const handleArrayToggle = (field: string, item: string) => {
+  const handleFeatureToggle = (featureKey: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].includes(item)
-        ? prev[field].filter((i: string) => i !== item)
-        : [...prev[field], item]
+      features: {
+        ...prev.features,
+        [featureKey]: checked
+      }
+    }))
+  }
+
+  const handleAddKeyFeature = () => {
+    if (keyFeatureInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        keyFeatures: [...prev.keyFeatures, keyFeatureInput.trim()]
+      }))
+      setKeyFeatureInput('')
+    }
+  }
+
+  const handleRemoveKeyFeature = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      keyFeatures: prev.keyFeatures.filter((_, i) => i !== index)
     }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Transform form data to match expected structure
+    // Transform data for submission
     const submitData = {
       ...formData,
-      listingType: 'manufactured_home',
+      year: parseInt(formData.year) || undefined,
+      bedrooms: parseInt(formData.bedrooms) || undefined,
+      bathrooms: parseFloat(formData.bathrooms) || undefined,
+      squareFootage: parseInt(formData.squareFootage) || undefined,
+      width: parseInt(formData.width) || undefined,
+      length: parseInt(formData.length) || undefined,
+      sections: parseInt(formData.sections) || 1,
+      salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
+      rentPrice: formData.rentPrice ? parseFloat(formData.rentPrice) : undefined,
       location: {
         city: formData.city,
         state: formData.state,
         postalCode: formData.postalCode,
-        communityName: formData.communityName,
-        lotNumber: formData.lotNumber
-      },
-      dimensions: {
-        width_ft: parseInt(formData.width) || 0,
-        length_ft: parseInt(formData.length) || 0,
-        sections: parseInt(formData.sections) || 1,
-        squareFootage: parseInt(formData.squareFootage) || 0
-      },
-      features: {
-        // Structural
-        roofType: formData.roofType,
-        sidingType: formData.sidingType,
-        foundationType: formData.foundationType,
-        insulationType: formData.insulationType,
-        windowType: formData.windowType,
-        
-        // Systems
-        electricalPanel: formData.electricalPanel,
-        outlets: formData.outlets,
-        lighting: formData.lighting,
-        plumbingType: formData.plumbingType,
-        waterHeaterType: formData.waterHeaterType,
-        waterHeaterSize: formData.waterHeaterSize,
-        heatingType: formData.heatingType,
-        coolingType: formData.coolingType,
-        ductworkType: formData.ductworkType,
-        
-        // Interior
-        kitchenAppliances: formData.kitchenAppliances,
-        counterTopType: formData.counterTopType,
-        cabinetType: formData.cabinetType,
-        bathroomFixtures: formData.bathroomFixtures,
-        vanityType: formData.vanityType,
-        flooringTypes: formData.flooringTypes,
-        ceilingHeight: formData.ceilingHeight,
-        ceilingType: formData.ceilingType,
-        
-        // Exterior
-        porchType: formData.porchType,
-        deckSize: formData.deckSize,
-        
-        // Features & Amenities
-        amenities: formData.amenities,
-        upgrades: formData.upgrades,
-        safetyFeatures: formData.safetyFeatures,
-        certifications: formData.certifications,
-        energyFeatures: formData.energyFeatures,
-        energyRating: formData.energyRating,
-        accessibilityFeatures: formData.accessibilityFeatures,
-        storageFeatures: formData.storageFeatures,
-        technologyFeatures: formData.technologyFeatures,
-        
-        // Service
-        warrantyInfo: formData.warrantyInfo,
-        serviceHistory: formData.serviceHistory
+        communityName: formData.communityName
       },
       media: {
         primaryPhoto: formData.primaryPhoto,
@@ -236,257 +139,262 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
     onSubmit(submitData)
   }
 
-  // Feature options organized by category
-  const featureOptions = {
-    structural: {
-      roofTypes: ['Gable', 'Hip', 'Shed', 'Gambrel', 'Metal', 'Shingle', 'Membrane'],
-      sidingTypes: ['Vinyl', 'Fiber Cement', 'Wood', 'Metal', 'Brick', 'Stone', 'Composite'],
-      foundationTypes: ['Concrete Slab', 'Crawl Space', 'Basement', 'Pier & Beam', 'Permanent Foundation'],
-      insulationTypes: ['Fiberglass', 'Foam', 'Cellulose', 'Spray Foam', 'Radiant Barrier'],
-      windowTypes: ['Single Pane', 'Double Pane', 'Triple Pane', 'Low-E', 'Vinyl', 'Wood', 'Aluminum']
+  // Feature categories with comprehensive options
+  const featureCategories = [
+    {
+      id: 'standard',
+      name: 'Standard Amenities',
+      icon: Home,
+      features: [
+        { key: 'centralAir', label: 'Central Air Conditioning' },
+        { key: 'fireplace', label: 'Fireplace' },
+        { key: 'dishwasher', label: 'Dishwasher' },
+        { key: 'washerDryer', label: 'Washer/Dryer Hookups' },
+        { key: 'vaultedCeilings', label: 'Vaulted Ceilings' },
+        { key: 'deck', label: 'Deck/Porch' },
+        { key: 'shed', label: 'Storage Shed' },
+        { key: 'garbageDisposal', label: 'Garbage Disposal' },
+        { key: 'ceilingFans', label: 'Ceiling Fans' },
+        { key: 'walkInCloset', label: 'Walk-in Closet' },
+        { key: 'masterBathTub', label: 'Master Bath Tub' },
+        { key: 'separateShower', label: 'Separate Shower' },
+        { key: 'doubleSinks', label: 'Double Sinks' },
+        { key: 'kitchenIsland', label: 'Kitchen Island' },
+        { key: 'pantry', label: 'Pantry' },
+        { key: 'laundryRoom', label: 'Dedicated Laundry Room' },
+        { key: 'mudroom', label: 'Mudroom' },
+        { key: 'frontPorch', label: 'Front Porch' },
+        { key: 'backPorch', label: 'Back Porch' },
+        { key: 'carport', label: 'Carport' },
+        { key: 'garage', label: 'Garage' },
+        { key: 'fencedYard', label: 'Fenced Yard' },
+        { key: 'landscaping', label: 'Professional Landscaping' },
+        { key: 'sprinklerSystem', label: 'Sprinkler System' },
+        { key: 'outdoorLighting', label: 'Outdoor Lighting' }
+      ]
     },
-    electrical: {
-      panels: ['100 Amp', '150 Amp', '200 Amp', 'Upgraded Panel'],
-      outlets: ['Standard', 'GFCI Protected', 'USB Outlets', 'Smart Outlets'],
-      lighting: ['LED Throughout', 'Recessed Lighting', 'Ceiling Fans', 'Under Cabinet', 'Exterior Lighting']
+    {
+      id: 'premium',
+      name: 'Premium Upgrades',
+      icon: Zap,
+      features: [
+        { key: 'graniteCounters', label: 'Granite Countertops' },
+        { key: 'stainlessAppliances', label: 'Stainless Steel Appliances' },
+        { key: 'hardwoodFloors', label: 'Hardwood Floors' },
+        { key: 'tileFloors', label: 'Tile Floors' },
+        { key: 'carpetFloors', label: 'Carpet Floors' },
+        { key: 'laminateFloors', label: 'Laminate Floors' },
+        { key: 'customCabinets', label: 'Custom Cabinetry' },
+        { key: 'crownMolding', label: 'Crown Molding' },
+        { key: 'chairRail', label: 'Chair Rail' },
+        { key: 'wainscoting', label: 'Wainscoting' },
+        { key: 'trayceiling', label: 'Tray Ceiling' },
+        { key: 'cofferedCeiling', label: 'Coffered Ceiling' },
+        { key: 'skylights', label: 'Skylights' },
+        { key: 'bayWindows', label: 'Bay Windows' },
+        { key: 'frenchDoors', label: 'French Doors' },
+        { key: 'slidingDoors', label: 'Sliding Patio Doors' },
+        { key: 'wetBar', label: 'Wet Bar' },
+        { key: 'wineCooler', label: 'Wine Cooler' },
+        { key: 'builtInEntertainment', label: 'Built-in Entertainment Center' },
+        { key: 'customLighting', label: 'Custom Lighting Package' }
+      ]
     },
-    plumbing: {
-      types: ['PEX', 'Copper', 'CPVC', 'PVC'],
-      waterHeaterTypes: ['Electric', 'Gas', 'Tankless', 'Heat Pump'],
-      waterHeaterSizes: ['30 Gallon', '40 Gallon', '50 Gallon', '80 Gallon', 'Tankless']
+    {
+      id: 'safety',
+      name: 'Safety & Security',
+      icon: Shield,
+      features: [
+        { key: 'smokeDetectors', label: 'Smoke Detectors' },
+        { key: 'carbonMonoxideDetector', label: 'Carbon Monoxide Detector' },
+        { key: 'securitySystem', label: 'Security System' },
+        { key: 'securityCameras', label: 'Security Cameras' },
+        { key: 'motionLights', label: 'Motion Sensor Lights' },
+        { key: 'deadbolts', label: 'Deadbolt Locks' },
+        { key: 'windowLocks', label: 'Window Security Locks' },
+        { key: 'fireExtinguisher', label: 'Fire Extinguisher' },
+        { key: 'emergencyExits', label: 'Emergency Exit Windows' },
+        { key: 'stormShelter', label: 'Storm Shelter/Safe Room' },
+        { key: 'gfciOutlets', label: 'GFCI Outlets' },
+        { key: 'surgeProtection', label: 'Whole House Surge Protection' },
+        { key: 'backupGenerator', label: 'Backup Generator' },
+        { key: 'floodVents', label: 'Flood Vents' },
+        { key: 'hurricaneStraps', label: 'Hurricane Tie-downs' }
+      ]
     },
-    hvac: {
-      heatingTypes: ['Central Heat', 'Heat Pump', 'Baseboard', 'Radiant Floor', 'Ductless Mini-Split'],
-      coolingTypes: ['Central Air', 'Heat Pump', 'Window Units', 'Ductless Mini-Split'],
-      ductworkTypes: ['Traditional Ducts', 'Flexible Ducts', 'Ductless System']
+    {
+      id: 'energy',
+      name: 'Energy Efficiency',
+      icon: Leaf,
+      features: [
+        { key: 'energyStar', label: 'Energy Star Certified' },
+        { key: 'solarPanels', label: 'Solar Panels' },
+        { key: 'solarWaterHeater', label: 'Solar Water Heater' },
+        { key: 'tanklessWaterHeater', label: 'Tankless Water Heater' },
+        { key: 'programmableThermostat', label: 'Programmable Thermostat' },
+        { key: 'doublePane', label: 'Double Pane Windows' },
+        { key: 'triplePane', label: 'Triple Pane Windows' },
+        { key: 'lowEWindows', label: 'Low-E Windows' },
+        { key: 'extraInsulation', label: 'Extra Insulation' },
+        { key: 'radiantBarrier', label: 'Radiant Barrier' },
+        { key: 'energyEfficientAppliances', label: 'Energy Efficient Appliances' },
+        { key: 'ledLighting', label: 'LED Lighting Package' },
+        { key: 'smartThermostat', label: 'Smart Thermostat' },
+        { key: 'heatPump', label: 'Heat Pump System' },
+        { key: 'geothermal', label: 'Geothermal System' }
+      ]
     },
-    kitchen: {
-      appliances: ['Refrigerator', 'Range/Oven', 'Microwave', 'Dishwasher', 'Garbage Disposal', 'Ice Maker', 'Wine Cooler'],
-      counterTops: ['Laminate', 'Granite', 'Quartz', 'Marble', 'Butcher Block', 'Concrete', 'Tile'],
-      cabinets: ['Standard', 'Soft Close', 'Pull-Out Drawers', 'Lazy Susan', 'Crown Molding', 'Under Cabinet Lighting']
+    {
+      id: 'storage',
+      name: 'Storage Solutions',
+      icon: Archive,
+      features: [
+        { key: 'walkInPantry', label: 'Walk-in Pantry' },
+        { key: 'linen', label: 'Linen Closet' },
+        { key: 'coatCloset', label: 'Coat Closet' },
+        { key: 'hallCloset', label: 'Hall Closet' },
+        { key: 'bedroomClosets', label: 'Bedroom Closets' },
+        { key: 'masterCloset', label: 'Master Bedroom Closet' },
+        { key: 'utilityCloset', label: 'Utility Closet' },
+        { key: 'storageClosets', label: 'Additional Storage Closets' },
+        { key: 'atticStorage', label: 'Attic Storage' },
+        { key: 'underStairStorage', label: 'Under-stair Storage' },
+        { key: 'builtInShelving', label: 'Built-in Shelving' },
+        { key: 'kitchenCabinets', label: 'Extra Kitchen Cabinets' },
+        { key: 'bathroomCabinets', label: 'Bathroom Cabinets' },
+        { key: 'outsideStorage', label: 'Outside Storage' }
+      ]
     },
-    bathroom: {
-      fixtures: ['Standard Tub', 'Garden Tub', 'Walk-in Shower', 'Dual Vanity', 'Linen Closet', 'Exhaust Fan'],
-      vanityTypes: ['Single Vanity', 'Double Vanity', 'Floating Vanity', 'Traditional Vanity']
+    {
+      id: 'technology',
+      name: 'Technology Features',
+      icon: Smartphone,
+      features: [
+        { key: 'smartHome', label: 'Smart Home Package' },
+        { key: 'wifiPrewired', label: 'WiFi Pre-wired' },
+        { key: 'cablePrewired', label: 'Cable/Internet Pre-wired' },
+        { key: 'phonePrewired', label: 'Phone Pre-wired' },
+        { key: 'securityPrewired', label: 'Security System Pre-wired' },
+        { key: 'surround', label: 'Surround Sound Pre-wired' },
+        { key: 'smartDoorbell', label: 'Smart Doorbell' },
+        { key: 'smartLocks', label: 'Smart Door Locks' },
+        { key: 'smartLighting', label: 'Smart Lighting Controls' },
+        { key: 'smartAppliances', label: 'Smart Appliances' },
+        { key: 'homeAutomation', label: 'Home Automation Hub' },
+        { key: 'voiceControl', label: 'Voice Control Ready' },
+        { key: 'usbOutlets', label: 'USB Charging Outlets' },
+        { key: 'wirelessCharging', label: 'Wireless Charging Stations' },
+        { key: 'fiberOptic', label: 'Fiber Optic Ready' }
+      ]
     },
-    flooring: {
-      types: ['Carpet', 'Hardwood', 'Laminate', 'Vinyl Plank', 'Tile', 'Linoleum', 'Concrete']
-    },
-    interior: {
-      ceilingHeights: ['8 ft', '9 ft', '10 ft', 'Vaulted', 'Cathedral'],
-      ceilingTypes: ['Flat', 'Textured', 'Coffered', 'Tray', 'Vaulted', 'Exposed Beam']
-    },
-    exterior: {
-      porchTypes: ['None', 'Front Porch', 'Wrap Around', 'Covered Porch', 'Screened Porch'],
-      deckSizes: ['None', 'Small (8x10)', 'Medium (12x16)', 'Large (16x20)', 'Custom Size']
-    },
-    amenities: [
-      'Central Air', 'Fireplace', 'Dishwasher', 'Washer/Dryer Hookup', 'Washer/Dryer Included',
-      'Vaulted Ceilings', 'Walk-in Closet', 'Master Suite', 'Open Floor Plan', 'Island Kitchen',
-      'Pantry', 'Linen Closet', 'Utility Room', 'Mudroom', 'Home Office', 'Bonus Room',
-      'Covered Parking', 'Storage Shed', 'Deck', 'Patio', 'Landscaping', 'Sprinkler System'
-    ],
-    upgrades: [
-      'Premium Flooring', 'Granite Countertops', 'Stainless Steel Appliances', 'Custom Cabinets',
-      'Crown Molding', 'Chair Rail', 'Wainscoting', 'Coffered Ceilings', 'Recessed Lighting',
-      'Smart Home Features', 'Security System', 'Whole House Generator', 'Solar Panels',
-      'Energy Star Appliances', 'Low-E Windows', 'Upgraded HVAC', 'Tankless Water Heater'
-    ],
-    safety: [
-      'Smoke Detectors', 'Carbon Monoxide Detectors', 'Fire Extinguisher', 'Security System',
-      'Deadbolt Locks', 'Window Locks', 'Motion Lights', 'Emergency Exits', 'GFCI Outlets',
-      'Whole House Surge Protection', 'Storm Shutters', 'Safe Room'
-    ],
-    certifications: [
-      'Energy Star Certified', 'HUD Approved', 'IRC Compliant', 'Local Building Code',
-      'Wind Zone Rated', 'Seismic Zone Rated', 'Flood Zone Compliant', 'ADA Compliant'
-    ],
-    energy: [
-      'Energy Star Appliances', 'LED Lighting', 'Programmable Thermostat', 'High Efficiency HVAC',
-      'Insulated Windows', 'Extra Insulation', 'Solar Ready', 'Solar Panels', 'Energy Recovery Ventilator'
-    ],
-    accessibility: [
-      'Wheelchair Accessible', 'Ramp Access', 'Wide Doorways', 'Accessible Bathroom', 'Grab Bars',
-      'Lower Countertops', 'Accessible Light Switches', 'Roll-in Shower', 'Accessible Parking'
-    ],
-    storage: [
-      'Walk-in Closets', 'Linen Closets', 'Pantry', 'Utility Room', 'Attic Storage',
-      'Under-stair Storage', 'Built-in Shelving', 'Storage Shed', 'Garage', 'Carport'
-    ],
-    technology: [
-      'Pre-wired for Cable/Internet', 'Smart Home Ready', 'Security System Pre-wire',
-      'Surround Sound Pre-wire', 'USB Outlets', 'Smart Thermostat', 'Smart Doorbell',
-      'WiFi Extenders', 'Ethernet Wiring', 'Fiber Optic Ready'
-    ]
+    {
+      id: 'accessibility',
+      name: 'Accessibility Features',
+      icon: Accessibility,
+      features: [
+        { key: 'adaCompliant', label: 'ADA Compliant' },
+        { key: 'wheelchairAccessible', label: 'Wheelchair Accessible' },
+        { key: 'rampAccess', label: 'Ramp Access' },
+        { key: 'wideHallways', label: 'Wide Hallways' },
+        { key: 'wideDoorways', label: 'Wide Doorways' },
+        { key: 'rollInShower', label: 'Roll-in Shower' },
+        { key: 'grabBars', label: 'Grab Bars' },
+        { key: 'lowerCounters', label: 'Lowered Countertops' },
+        { key: 'lowerSwitches', label: 'Lowered Light Switches' },
+        { key: 'leverHandles', label: 'Lever Door Handles' },
+        { key: 'noStepEntry', label: 'No-step Entry' },
+        { key: 'accessibleParking', label: 'Accessible Parking' },
+        { key: 'visualAlerts', label: 'Visual Alert System' }
+      ]
+    }
+  ]
+
+  const getSelectedCount = (categoryId: string) => {
+    const category = featureCategories.find(c => c.id === categoryId)
+    if (!category) return 0
+    return category.features.filter(f => formData.features[f.key]).length
   }
-
-  const [selectedImages, setSelectedImages] = useState<string[]>(formData.photos)
-
-  const handleImageAdd = (url: string) => {
-    setSelectedImages(prev => [...prev, url])
-    handleInputChange('photos', [...selectedImages, url])
-  }
-
-  const handleImageRemove = (index: number) => {
-    const newImages = selectedImages.filter((_, i) => i !== index)
-    setSelectedImages(newImages)
-    handleInputChange('photos', newImages)
-  }
-
-  const CheckboxGroup = ({ 
-    title, 
-    options, 
-    field, 
-    icon: Icon 
-  }: { 
-    title: string
-    options: string[]
-    field: string
-    icon: React.ComponentType<any>
-  }) => (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-          {options.map((option) => (
-            <div key={option} className="flex items-center space-x-2">
-              <Checkbox
-                id={`${field}-${option}`}
-                checked={formData[field].includes(option)}
-                onCheckedChange={() => handleArrayToggle(field, option)}
-              />
-              <Label htmlFor={`${field}-${option}`} className="text-sm font-normal">
-                {option}
-              </Label>
-            </div>
-          ))}
-        </div>
-        {formData[field].length > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex flex-wrap gap-1">
-              {formData[field].map((item: string) => (
-                <Badge key={item} variant="secondary" className="text-xs">
-                  {item}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          {initialData ? 'Edit' : 'Add'} Manufactured Home
-        </h1>
-        <p className="text-muted-foreground">
-          Complete all sections to create a comprehensive listing
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {initialData ? 'Edit Manufactured Home' : 'Add New Manufactured Home'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="basic">Basic</TabsTrigger>
+                <TabsTrigger value="structure">Structure</TabsTrigger>
+                <TabsTrigger value="features">Features</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="marketing">Marketing</TabsTrigger>
+              </TabsList>
 
-      <form onSubmit={handleSubmit}>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="structure">Structure</TabsTrigger>
-            <TabsTrigger value="systems">Systems</TabsTrigger>
-            <TabsTrigger value="interior">Interior</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
-          </Tabs>
-
-          {/* Basic Information Tab */}
-          <TabsContent value="basic" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Basic Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Basic Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="year">Year</Label>
-                      <Input
-                        id="year"
-                        type="number"
-                        value={formData.year}
-                        onChange={(e) => handleInputChange('year', e.target.value)}
-                        placeholder="2024"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="condition">Condition</Label>
-                      <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="new">New</SelectItem>
-                          <SelectItem value="used">Used</SelectItem>
-                          <SelectItem value="refurbished">Refurbished</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
+              {/* Basic Information Tab */}
+              <TabsContent value="basic" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="make">Manufacturer</Label>
+                    <Label htmlFor="year">Year *</Label>
+                    <Input
+                      id="year"
+                      type="number"
+                      value={formData.year}
+                      onChange={(e) => handleInputChange('year', e.target.value)}
+                      placeholder="2024"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="make">Make *</Label>
                     <Input
                       id="make"
                       value={formData.make}
                       onChange={(e) => handleInputChange('make', e.target.value)}
-                      placeholder="Clayton, Champion, Fleetwood..."
+                      placeholder="Clayton"
+                      required
                     />
                   </div>
-                  
                   <div>
-                    <Label htmlFor="model">Model</Label>
+                    <Label htmlFor="model">Model *</Label>
                     <Input
                       id="model"
                       value={formData.model}
                       onChange={(e) => handleInputChange('model', e.target.value)}
-                      placeholder="The Edge, Titan, Berkshire..."
+                      placeholder="The Edge"
+                      required
                     />
                   </div>
-                  
                   <div>
                     <Label htmlFor="serialNumber">Serial Number</Label>
                     <Input
                       id="serialNumber"
                       value={formData.serialNumber}
                       onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-                      placeholder="Serial/HUD number"
+                      placeholder="CLT123456789"
                     />
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Pricing */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Pricing & Availability
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="condition">Condition</Label>
+                    <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="used">Used</SelectItem>
+                        <SelectItem value="refurbished">Refurbished</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label htmlFor="offerType">Offer Type</Label>
                     <Select value={formData.offerType} onValueChange={(value) => handleInputChange('offerType', value)}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select offer type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="for_sale">For Sale</SelectItem>
@@ -495,68 +403,43 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  {(formData.offerType === 'for_sale' || formData.offerType === 'both') && (
-                    <div>
-                      <Label htmlFor="salePrice">Sale Price</Label>
-                      <Input
-                        id="salePrice"
-                        type="number"
-                        value={formData.salePrice}
-                        onChange={(e) => handleInputChange('salePrice', e.target.value)}
-                        placeholder="125000"
-                      />
-                    </div>
-                  )}
-                  
-                  {(formData.offerType === 'for_rent' || formData.offerType === 'both') && (
-                    <div>
-                      <Label htmlFor="rentPrice">Monthly Rent</Label>
-                      <Input
-                        id="rentPrice"
-                        type="number"
-                        value={formData.rentPrice}
-                        onChange={(e) => handleInputChange('rentPrice', e.target.value)}
-                        placeholder="1200"
-                      />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <Label htmlFor="cost">Cost Basis</Label>
-                    <Input
-                      id="cost"
-                      type="number"
-                      value={formData.cost}
-                      onChange={(e) => handleInputChange('cost', e.target.value)}
-                      placeholder="Internal cost"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="sold">Sold</SelectItem>
-                        <SelectItem value="rented">Rented</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Dimensions & Layout */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dimensions & Layout</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Pricing */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Pricing</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(formData.offerType === 'for_sale' || formData.offerType === 'both') && (
+                      <div>
+                        <Label htmlFor="salePrice">Sale Price</Label>
+                        <Input
+                          id="salePrice"
+                          type="number"
+                          value={formData.salePrice}
+                          onChange={(e) => handleInputChange('salePrice', e.target.value)}
+                          placeholder="95000"
+                        />
+                      </div>
+                    )}
+                    {(formData.offerType === 'for_rent' || formData.offerType === 'both') && (
+                      <div>
+                        <Label htmlFor="rentPrice">Monthly Rent</Label>
+                        <Input
+                          id="rentPrice"
+                          type="number"
+                          value={formData.rentPrice}
+                          onChange={(e) => handleInputChange('rentPrice', e.target.value)}
+                          placeholder="1200"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dimensions */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Dimensions</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="bedrooms">Bedrooms</Label>
                       <Input
@@ -578,20 +461,29 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         placeholder="2"
                       />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="squareFootage">Square Footage</Label>
-                    <Input
-                      id="squareFootage"
-                      type="number"
-                      value={formData.squareFootage}
-                      onChange={(e) => handleInputChange('squareFootage', e.target.value)}
-                      placeholder="1450"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="squareFootage">Square Footage</Label>
+                      <Input
+                        id="squareFootage"
+                        type="number"
+                        value={formData.squareFootage}
+                        onChange={(e) => handleInputChange('squareFootage', e.target.value)}
+                        placeholder="1450"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sections">Sections</Label>
+                      <Select value={formData.sections} onValueChange={(value) => handleInputChange('sections', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sections" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Single Wide</SelectItem>
+                          <SelectItem value="2">Double Wide</SelectItem>
+                          <SelectItem value="3">Triple Wide</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label htmlFor="width">Width (ft)</Label>
                       <Input
@@ -612,40 +504,20 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         placeholder="66"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="sections">Sections</Label>
-                      <Select value={formData.sections} onValueChange={(value) => handleInputChange('sections', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Single Wide</SelectItem>
-                          <SelectItem value="2">Double Wide</SelectItem>
-                          <SelectItem value="3">Triple Wide</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Location */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Location
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Location */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Location</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="city">City</Label>
                       <Input
                         id="city"
                         value={formData.city}
                         onChange={(e) => handleInputChange('city', e.target.value)}
-                        placeholder="Austin"
+                        placeholder="Tampa"
                       />
                     </div>
                     <div>
@@ -654,53 +526,34 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         id="state"
                         value={formData.state}
                         onChange={(e) => handleInputChange('state', e.target.value)}
-                        placeholder="TX"
+                        placeholder="FL"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="postalCode">Postal Code</Label>
+                      <Input
+                        id="postalCode"
+                        value={formData.postalCode}
+                        onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                        placeholder="33601"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="communityName">Community Name</Label>
+                      <Input
+                        id="communityName"
+                        value={formData.communityName}
+                        onChange={(e) => handleInputChange('communityName', e.target.value)}
+                        placeholder="Sunset Palms Mobile Home Community"
                       />
                     </div>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input
-                      id="postalCode"
-                      value={formData.postalCode}
-                      onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                      placeholder="78701"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="communityName">Community Name</Label>
-                    <Input
-                      id="communityName"
-                      value={formData.communityName}
-                      onChange={(e) => handleInputChange('communityName', e.target.value)}
-                      placeholder="Sunset Palms Mobile Home Community"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="lotNumber">Lot Number</Label>
-                    <Input
-                      id="lotNumber"
-                      value={formData.lotNumber}
-                      onChange={(e) => handleInputChange('lotNumber', e.target.value)}
-                      placeholder="42"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                </div>
+              </TabsContent>
 
-          {/* Structure Tab */}
-          <TabsContent value="structure" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Roof & Exterior</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              {/* Structure Tab */}
+              <TabsContent value="structure" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="roofType">Roof Type</Label>
                     <Select value={formData.roofType} onValueChange={(value) => handleInputChange('roofType', value)}>
@@ -708,13 +561,13 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         <SelectValue placeholder="Select roof type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {featureOptions.structural.roofTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        <SelectItem value="shingle">Asphalt Shingle</SelectItem>
+                        <SelectItem value="metal">Metal</SelectItem>
+                        <SelectItem value="tile">Tile</SelectItem>
+                        <SelectItem value="rubber">Rubber Membrane</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
                   <div>
                     <Label htmlFor="sidingType">Siding Type</Label>
                     <Select value={formData.sidingType} onValueChange={(value) => handleInputChange('sidingType', value)}>
@@ -722,48 +575,14 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         <SelectValue placeholder="Select siding type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {featureOptions.structural.sidingTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        <SelectItem value="vinyl">Vinyl</SelectItem>
+                        <SelectItem value="fiber_cement">Fiber Cement</SelectItem>
+                        <SelectItem value="wood">Wood</SelectItem>
+                        <SelectItem value="metal">Metal</SelectItem>
+                        <SelectItem value="brick">Brick</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="porchType">Porch Type</Label>
-                    <Select value={formData.porchType} onValueChange={(value) => handleInputChange('porchType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select porch type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.exterior.porchTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="deckSize">Deck Size</Label>
-                    <Select value={formData.deckSize} onValueChange={(value) => handleInputChange('deckSize', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select deck size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.exterior.deckSizes.map(size => (
-                          <SelectItem key={size} value={size}>{size}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Foundation & Insulation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="foundationType">Foundation Type</Label>
                     <Select value={formData.foundationType} onValueChange={(value) => handleInputChange('foundationType', value)}>
@@ -771,659 +590,209 @@ export default function MHInventoryForm({ initialData, onSubmit, onCancel }: MHI
                         <SelectValue placeholder="Select foundation type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {featureOptions.structural.foundationTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        <SelectItem value="pier_beam">Pier & Beam</SelectItem>
+                        <SelectItem value="concrete_slab">Concrete Slab</SelectItem>
+                        <SelectItem value="crawl_space">Crawl Space</SelectItem>
+                        <SelectItem value="basement">Basement</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
                   <div>
-                    <Label htmlFor="insulationType">Insulation Type</Label>
-                    <Select value={formData.insulationType} onValueChange={(value) => handleInputChange('insulationType', value)}>
+                    <Label htmlFor="hvacType">HVAC Type</Label>
+                    <Select value={formData.hvacType} onValueChange={(value) => handleInputChange('hvacType', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select insulation type" />
+                        <SelectValue placeholder="Select HVAC type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {featureOptions.structural.insulationTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        <SelectItem value="central_air">Central Air & Heat</SelectItem>
+                        <SelectItem value="heat_pump">Heat Pump</SelectItem>
+                        <SelectItem value="window_units">Window Units</SelectItem>
+                        <SelectItem value="mini_split">Mini Split System</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="windowType">Window Type</Label>
-                    <Select value={formData.windowType} onValueChange={(value) => handleInputChange('windowType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select window type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.structural.windowTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                </div>
+              </TabsContent>
 
-          {/* Systems Tab */}
-          <TabsContent value="systems" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Electrical */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Electrical System
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="electricalPanel">Electrical Panel</Label>
-                    <Select value={formData.electricalPanel} onValueChange={(value) => handleInputChange('electricalPanel', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select panel type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.electrical.panels.map(panel => (
-                          <SelectItem key={panel} value={panel}>{panel}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="outlets">Outlet Features</Label>
-                    <Select value={formData.outlets} onValueChange={(value) => handleInputChange('outlets', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select outlet features" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.electrical.outlets.map(outlet => (
-                          <SelectItem key={outlet} value={outlet}>{outlet}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="lighting">Lighting Features</Label>
-                    <Select value={formData.lighting} onValueChange={(value) => handleInputChange('lighting', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select lighting features" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.electrical.lighting.map(light => (
-                          <SelectItem key={light} value={light}>{light}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Features Tab */}
+              <TabsContent value="features" className="space-y-6">
+                <div className="space-y-6">
+                  {featureCategories.map((category) => {
+                    const Icon = category.icon
+                    const selectedCount = getSelectedCount(category.id)
+                    
+                    return (
+                      <Card key={category.id}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center justify-between text-base">
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-5 w-5" />
+                              {category.name}
+                            </div>
+                            {selectedCount > 0 && (
+                              <Badge variant="secondary">
+                                {selectedCount} selected
+                              </Badge>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ScrollArea className="h-48">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
+                              {category.features.map((feature) => (
+                                <div key={feature.key} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={feature.key}
+                                    checked={formData.features[feature.key] || false}
+                                    onCheckedChange={(checked) => handleFeatureToggle(feature.key, checked as boolean)}
+                                  />
+                                  <Label htmlFor={feature.key} className="text-sm font-normal cursor-pointer">
+                                    {feature.label}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </TabsContent>
 
-              {/* Plumbing */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Droplets className="h-4 w-4" />
-                    Plumbing System
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="plumbingType">Plumbing Type</Label>
-                    <Select value={formData.plumbingType} onValueChange={(value) => handleInputChange('plumbingType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select plumbing type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.plumbing.types.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="waterHeaterType">Water Heater Type</Label>
-                    <Select value={formData.waterHeaterType} onValueChange={(value) => handleInputChange('waterHeaterType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select water heater type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.plumbing.waterHeaterTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="waterHeaterSize">Water Heater Size</Label>
-                    <Select value={formData.waterHeaterSize} onValueChange={(value) => handleInputChange('waterHeaterSize', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select water heater size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.plumbing.waterHeaterSizes.map(size => (
-                          <SelectItem key={size} value={size}>{size}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* HVAC */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Thermometer className="h-4 w-4" />
-                    HVAC System
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="heatingType">Heating Type</Label>
-                    <Select value={formData.heatingType} onValueChange={(value) => handleInputChange('heatingType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select heating type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.hvac.heatingTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="coolingType">Cooling Type</Label>
-                    <Select value={formData.coolingType} onValueChange={(value) => handleInputChange('coolingType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select cooling type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.hvac.coolingTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="ductworkType">Ductwork Type</Label>
-                    <Select value={formData.ductworkType} onValueChange={(value) => handleInputChange('ductworkType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select ductwork type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.hvac.ductworkTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Interior Tab */}
-          <TabsContent value="interior" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Kitchen */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Kitchen Features</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Kitchen Appliances</Label>
-                    <div className="grid grid-cols-1 gap-2 mt-2 max-h-32 overflow-y-auto border rounded-md p-3">
-                      {featureOptions.kitchen.appliances.map((appliance) => (
-                        <div key={appliance} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`appliance-${appliance}`}
-                            checked={formData.kitchenAppliances.includes(appliance)}
-                            onCheckedChange={() => handleArrayToggle('kitchenAppliances', appliance)}
-                          />
-                          <Label htmlFor={`appliance-${appliance}`} className="text-sm">
-                            {appliance}
-                          </Label>
-                        </div>
-                      ))}
+              {/* Media Tab */}
+              <TabsContent value="media" className="space-y-6">
+                <div>
+                  <Label htmlFor="primaryPhoto">Primary Photo URL</Label>
+                  <Input
+                    id="primaryPhoto"
+                    value={formData.primaryPhoto}
+                    onChange={(e) => handleInputChange('primaryPhoto', e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                  />
+                  {formData.primaryPhoto && (
+                    <div className="mt-2">
+                      <img 
+                        src={formData.primaryPhoto} 
+                        alt="Primary photo preview" 
+                        className="w-32 h-24 object-cover rounded border"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="counterTopType">Counter Top Type</Label>
-                    <Select value={formData.counterTopType} onValueChange={(value) => handleInputChange('counterTopType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select counter top type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.kitchen.counterTops.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="cabinetType">Cabinet Features</Label>
-                    <Select value={formData.cabinetType} onValueChange={(value) => handleInputChange('cabinetType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select cabinet features" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.kitchen.cabinets.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+                  )}
+                </div>
 
-              {/* Bathroom */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bathroom Features</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Bathroom Fixtures</Label>
-                    <div className="grid grid-cols-1 gap-2 mt-2 max-h-32 overflow-y-auto border rounded-md p-3">
-                      {featureOptions.bathroom.fixtures.map((fixture) => (
-                        <div key={fixture} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`fixture-${fixture}`}
-                            checked={formData.bathroomFixtures.includes(fixture)}
-                            onCheckedChange={() => handleArrayToggle('bathroomFixtures', fixture)}
-                          />
-                          <Label htmlFor={`fixture-${fixture}`} className="text-sm">
-                            {fixture}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="vanityType">Vanity Type</Label>
-                    <Select value={formData.vanityType} onValueChange={(value) => handleInputChange('vanityType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vanity type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.bathroom.vanityTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Flooring & Ceilings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Flooring & Ceilings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Flooring Types</Label>
-                    <div className="grid grid-cols-1 gap-2 mt-2 max-h-32 overflow-y-auto border rounded-md p-3">
-                      {featureOptions.flooring.types.map((type) => (
-                        <div key={type} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`flooring-${type}`}
-                            checked={formData.flooringTypes.includes(type)}
-                            onCheckedChange={() => handleArrayToggle('flooringTypes', type)}
-                          />
-                          <Label htmlFor={`flooring-${type}`} className="text-sm">
-                            {type}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="ceilingHeight">Ceiling Height</Label>
-                    <Select value={formData.ceilingHeight} onValueChange={(value) => handleInputChange('ceilingHeight', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select ceiling height" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.interior.ceilingHeights.map(height => (
-                          <SelectItem key={height} value={height}>{height}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="ceilingType">Ceiling Type</Label>
-                    <Select value={formData.ceilingType} onValueChange={(value) => handleInputChange('ceilingType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select ceiling type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {featureOptions.interior.ceilingTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Features Tab */}
-          <TabsContent value="features" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CheckboxGroup
-                title="Amenities & Comfort"
-                options={featureOptions.amenities}
-                field="amenities"
-                icon={Home}
-              />
-              
-              <CheckboxGroup
-                title="Premium Upgrades"
-                options={featureOptions.upgrades}
-                field="upgrades"
-                icon={Palette}
-              />
-              
-              <CheckboxGroup
-                title="Safety Features"
-                options={featureOptions.safety}
-                field="safetyFeatures"
-                icon={Shield}
-              />
-              
-              <CheckboxGroup
-                title="Energy Efficiency"
-                options={featureOptions.energy}
-                field="energyFeatures"
-                icon={Zap}
-              />
-              
-              <CheckboxGroup
-                title="Storage Solutions"
-                options={featureOptions.storage}
-                field="storageFeatures"
-                icon={Package}
-              />
-              
-              <CheckboxGroup
-                title="Technology Features"
-                options={featureOptions.technology}
-                field="technologyFeatures"
-                icon={Wrench}
-              />
-              
-              <CheckboxGroup
-                title="Accessibility Features"
-                options={featureOptions.accessibility}
-                field="accessibilityFeatures"
-                icon={Shield}
-              />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Certifications & Compliance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                    {featureOptions.certifications.map((cert) => (
-                      <div key={cert} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`cert-${cert}`}
-                          checked={formData.certifications.includes(cert)}
-                          onCheckedChange={() => handleArrayToggle('certifications', cert)}
+                <div>
+                  <Label>Additional Photos</Label>
+                  <div className="space-y-2">
+                    {formData.photos.map((photo: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={photo}
+                          onChange={(e) => {
+                            const newPhotos = [...formData.photos]
+                            newPhotos[index] = e.target.value
+                            handleInputChange('photos', newPhotos)
+                          }}
+                          placeholder="https://example.com/photo.jpg"
                         />
-                        <Label htmlFor={`cert-${cert}`} className="text-sm font-normal">
-                          {cert}
-                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newPhotos = formData.photos.filter((_: string, i: number) => i !== index)
+                            handleInputChange('photos', newPhotos)
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleInputChange('photos', [...formData.photos, ''])}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Add Photo
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </TabsContent>
 
-            {/* Additional Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Energy Rating</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={formData.energyRating} onValueChange={(value) => handleInputChange('energyRating', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select energy rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A+">A+ (Highest Efficiency)</SelectItem>
-                      <SelectItem value="A">A (High Efficiency)</SelectItem>
-                      <SelectItem value="B">B (Good Efficiency)</SelectItem>
-                      <SelectItem value="C">C (Standard Efficiency)</SelectItem>
-                      <SelectItem value="D">D (Below Standard)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Warranty Information</CardTitle>
-                </CardHeader>
-                <CardContent>
+              {/* Marketing Tab */}
+              <TabsContent value="marketing" className="space-y-6">
+                <div>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
-                    value={formData.warrantyInfo}
-                    onChange={(e) => handleInputChange('warrantyInfo', e.target.value)}
-                    placeholder="Warranty details, coverage, and terms..."
-                    rows={3}
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Describe the manufactured home..."
+                    rows={4}
                   />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                </div>
 
-          {/* Media Tab */}
-          <TabsContent value="media" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Primary Photo */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    Primary Photo
-                  </CardTitle>
-                  <CardDescription>
-                    Main photo that will be displayed in listings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <Input
-                      value={formData.primaryPhoto}
-                      onChange={(e) => handleInputChange('primaryPhoto', e.target.value)}
-                      placeholder="Enter image URL or upload"
-                    />
-                    {formData.primaryPhoto && (
-                      <div className="relative">
-                        <img 
-                          src={formData.primaryPhoto} 
-                          alt="Primary photo preview" 
-                          className="w-full h-48 object-cover rounded-md"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                <div>
+                  <Label htmlFor="searchResultsText">Search Results Text</Label>
+                  <Input
+                    id="searchResultsText"
+                    value={formData.searchResultsText}
+                    onChange={(e) => handleInputChange('searchResultsText', e.target.value)}
+                    placeholder="2023 Clayton The Edge - 3BR/2BA Double-wide"
+                  />
+                </div>
 
-              {/* Additional Photos */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Photos</CardTitle>
-                  <CardDescription>
-                    Add multiple photos to showcase the home
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <div>
+                  <Label>Key Features</Label>
+                  <div className="space-y-2">
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Enter image URL"
+                        value={keyFeatureInput}
+                        onChange={(e) => setKeyFeatureInput(e.target.value)}
+                        placeholder="Add a key feature..."
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
-                            const input = e.target as HTMLInputElement
-                            if (input.value) {
-                              handleImageAdd(input.value)
-                              input.value = ''
-                            }
+                            handleAddKeyFeature()
                           }
                         }}
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={(e) => {
-                          const input = (e.target as HTMLElement).parentElement?.querySelector('input')
-                          if (input?.value) {
-                            handleImageAdd(input.value)
-                            input.value = ''
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
+                      <Button type="button" onClick={handleAddKeyFeature}>
+                        Add
                       </Button>
                     </div>
-                    
-                    {selectedImages.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {selectedImages.map((url, index) => (
-                          <div key={index} className="relative group">
-                            <img 
-                              src={url} 
-                              alt={`Photo ${index + 1}`} 
-                              className="w-full h-24 object-cover rounded-md"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleImageRemove(index)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Marketing Content */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Marketing & Description
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      placeholder="Detailed description of the manufactured home..."
-                      rows={4}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="searchResultsText">Search Results Text</Label>
-                    <Input
-                      id="searchResultsText"
-                      value={formData.searchResultsText}
-                      onChange={(e) => handleInputChange('searchResultsText', e.target.value)}
-                      placeholder="Brief text for search results and listings"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label>Key Features (for marketing)</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2">
                       {formData.keyFeatures.map((feature: string, index: number) => (
                         <Badge key={index} variant="secondary" className="flex items-center gap-1">
                           {feature}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => {
-                              const newFeatures = formData.keyFeatures.filter((_: any, i: number) => i !== index)
-                              handleInputChange('keyFeatures', newFeatures)
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                          <X 
+                            className="h-3 w-3 cursor-pointer" 
+                            onClick={() => handleRemoveKeyFeature(index)}
+                          />
                         </Badge>
                       ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const feature = prompt('Enter key feature:')
-                          if (feature) {
-                            handleInputChange('keyFeatures', [...formData.keyFeatures, feature])
-                          }
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Feature
-                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+                </div>
+              </TabsContent>
+            </Tabs>
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-4 pt-6 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {initialData ? 'Update' : 'Create'} Manufactured Home
-          </Button>
-        </div>
-      </form>
+            {/* Form Actions */}
+            <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {initialData ? 'Update Home' : 'Add Home'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
