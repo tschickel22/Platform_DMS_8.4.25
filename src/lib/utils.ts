@@ -34,9 +34,9 @@ export function generateId(): string {
   return Math.random().toString(36).substr(2, 9)
 }
 
-// Use global timer functions directly
-const setTimeoutFn = setTimeout
-const clearTimeoutFn = clearTimeout
+// Use global timer functions with explicit globalThis reference
+const setTimeoutFn = globalThis.setTimeout
+const clearTimeoutFn = globalThis.clearTimeout
 
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
