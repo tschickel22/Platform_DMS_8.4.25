@@ -1,479 +1,694 @@
-import React, { useState, useMemo } from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { useToast } from '@/hooks/use-toast'
-import { useTasks } from '@/hooks/useTasks'
+import React, { useState, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
-import { Vehicle, VehicleStatus } from '@/types'
-import { formatCurrency } from '@/lib/utils'
-import { useInventoryManagement } from './hooks/useInventoryManagement'
-import { InventoryTable } from './components/InventoryTable'
-import { CSVImport } from './components/CSVImport'
-import { BarcodeScanner } from './components/BarcodeScanner'
-import AddEditHomeModal from './components/AddEditHomeModal'
-import { Task, TaskModule, TaskPriority } from '@/types'
-import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { X, Plus, Upload, Camera, Star } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 
-/** ---------- Helpers ---------- */
-const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
-  const s = String(val ?? '').toLowerCase()
-  if (s.startsWith('avail')) return 'available'
-  if (s.startsWith('reser')) return 'reserved'
-  if (s.startsWith('sold')) return 'sold'
-  if (s.startsWith('pend')) return 'pending'
-  return 'other'
+/** ------- helpers to make array ops safe ------- */
+const asArray = <T,>(v: T[] | undefined | null): T[] => (Array.isArray(v) ? v : [])
+
+/** ------- types ------- */
+interface MHInventoryFormProps {
+  onSubmit: (data: any) => void
+  onCancel: () => void
+  initialData?: any
 }
 
-const getPrice = (v: any) => {
-  const n = Number(v?.price ?? v?.askingPrice ?? 0)
-  return Number.isFinite(n) ? n : 0
+type ImageFile = {
+  id: string
+  url: string
+  isCover: boolean
+  file?: File
 }
 
-/** ---------- Local Detail Dialog ---------- */
-type VehicleDetailDialogProps = {
-  vehicle: Vehicle
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onEdit: (vehicle: Vehicle) => void
-}
+export default function MHInventoryForm({ onSubmit, onCancel, initialData }: MHInventoryFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDetailDialogProps) {
-  const v: any = vehicle
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {`${v?.year ?? ''} ${v?.make ?? v?.brand ?? ''} ${v?.model ?? ''}`.trim() || 'Inventory Item'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-muted-foreground">VIN</div>
-              <div className="font-medium">{v?.vin || '—'}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Status</div>
-              <div className="font-medium capitalize">{String(v?.status ?? '—')}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Price</div>
-              <div className="font-medium">{formatCurrency(getPrice(v))}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Location</div>
-              <div className="font-medium">{v?.location ?? v?.city ?? '—'}</div>
-            </div>
-          </div>
+  const [formData, setFormData] = useState<any>({
+    // Basic Information
+    vin: initialData?.vin ?? '',
+    make: initialData?.make ?? '',
+    model: initialData?.model ?? '',
+    year: initialData?.year ?? new Date().getFullYear(),
+    serialNumber: initialData?.serialNumber ?? 'MHF295739J',
+    color: initialData?.color ?? 'Yellow',
 
-          {v?.description && (
-            <div className="text-sm">
-              <div className="text-muted-foreground mb-1">Description</div>
-              <div className="whitespace-pre-wrap">{v.description}</div>
-            </div>
-          )}
+    // Mobile Home Specific
+    homeType: initialData?.homeType ?? 'Mobile',
+    width: initialData?.width ?? 28,
+    length: initialData?.length ?? 66,
+    width2: initialData?.width2 ?? '',
+    length2: initialData?.length2 ?? '',
+    width3: initialData?.width3 ?? '',
+    length3: initialData?.length3 ?? '',
+    squareFootage: initialData?.squareFootage ?? '',
+    bedrooms: initialData?.bedrooms ?? '3',
+    bathrooms: initialData?.bathrooms ?? '3',
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-            <Button onClick={() => onEdit(vehicle)}>Edit</Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
+    // Construction Details
+    exteriorMaterial: initialData?.exteriorMaterial ?? 'Vinyl',
+    roofMaterial: initialData?.roofMaterial ?? 'Shingled',
+    flooringType: initialData?.flooringType ?? '',
+    insulationType: initialData?.insulationType ?? '',
+    ceilingType: initialData?.ceilingType ?? 'Drywall',
+    wallType: initialData?.wallType ?? 'Drywall',
 
-/** ---------- Main List ---------- */
-function InventoryList() {
-  const {
-    vehicles: vehiclesFromHook,
-    createVehicle,
-    updateVehicleStatus,
-    deleteVehicle,
-    updateVehicle,
-  } = (useInventoryManagement() as any) ?? {}
+    // Condition & Status
+    condition: initialData?.condition ?? '',
+    availability: initialData?.availability ?? '',
+    location: initialData?.location ?? '',
 
-  // SAFETY: always work with arrays / functions even if hook is undefined during init
-  const vehicles: Vehicle[] = Array.isArray(vehiclesFromHook) ? vehiclesFromHook : []
-  const safeCreate = typeof createVehicle === 'function' ? createVehicle : async () => {}
-  const safeUpdateStatus = typeof updateVehicleStatus === 'function' ? updateVehicleStatus : async () => {}
-  const safeDelete = typeof deleteVehicle === 'function' ? deleteVehicle : async () => {}
-  const safeUpdate = typeof updateVehicle === 'function' ? updateVehicle : async () => {}
+    // Features & Amenities
+    hasFireplace: initialData?.hasFireplace ?? true,
+    hasDeck: initialData?.hasDeck ?? true,
+    hasStorage: initialData?.hasStorage ?? false,
+    hasCarport: initialData?.hasCarport ?? false,
+    centralAir: initialData?.centralAir ?? true,
+    garage: initialData?.garage ?? true,
+    thermopane: initialData?.thermopane ?? false,
+    gutters: initialData?.gutters ?? true,
+    shutters: initialData?.shutters ?? true,
+    patio: initialData?.patio ?? false,
+    cathedralCeiling: initialData?.cathedralCeiling ?? true,
+    ceilingFan: initialData?.ceilingFan ?? true,
+    skylight: initialData?.skylight ?? true,
+    walkinCloset: initialData?.walkinCloset ?? true,
+    laundryRoom: initialData?.laundryRoom ?? true,
+    pantry: initialData?.pantry ?? true,
+    sunRoom: initialData?.sunRoom ?? true,
+    basement: initialData?.basement ?? false,
+    gardenTub: initialData?.gardenTub ?? true,
+    garbageDisposal: initialData?.garbageDisposal ?? true,
+    refrigerator: initialData?.refrigerator ?? false,
+    microwave: initialData?.microwave ?? false,
+    oven: initialData?.oven ?? false,
+    dishwasher: initialData?.dishwasher ?? true,
+    clothesWasher: initialData?.clothesWasher ?? false,
+    clothesDryer: initialData?.clothesDryer ?? false,
 
-  const { toast } = useToast()
-  const { createTask } = useTasks()
+    // Pricing & Terms
+    msrp: initialData?.msrp ?? 10000,
+    salePrice: initialData?.salePrice ?? '',
+    cost: initialData?.cost ?? '',
+    terms: initialData?.terms ?? 'Financing availabled ...',
+    utilities: initialData?.utilities ?? 125,
+    repo: initialData?.repo ?? false,
+    packageType: initialData?.packageType ?? '',
+    salePending: initialData?.salePending ?? false,
 
-  // UI state
-  const [showVehicleDetail, setShowVehicleDetail] = useState(false)
-  const [showCSVImport, setShowCSVImport] = useState(false)
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+    // Additional Features
+    features: asArray<string>(initialData?.features),
 
-  const [showTaskForm, setShowTaskForm] = useState(false)
-  const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
+    // Description
+    description: initialData?.description ?? 'This is a great looking home in excellent condition ...',
 
-  // Add/Edit Home
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
+    // Media Links
+    photoURL: initialData?.photoURL ?? 'http://www.seller.com/photo.php?key=13432',
+    virtualTour: initialData?.virtualTour ?? 'https://www.youtube.com/watch?v=wTPR4f8QLEQ',
+    salesPhoto: initialData?.salesPhoto ?? 'http://www.seller.com/photo.php?key=13432',
 
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
-
-  /** Derived stats (safe over undefined) */
-  const stats = useMemo(() => {
-    const list = vehicles ?? []
-    const total = list.length
-    let available = 0, reserved = 0, sold = 0
-    let totalValue = 0
-    for (const v of list) {
-      const k = toStatusKey((v as any).status)
-      if (k === 'available') available++
-      else if (k === 'reserved') reserved++
-      else if (k === 'sold') sold++
-      totalValue += getPrice(v)
-    }
-    return { total, available, reserved, sold, totalValue }
-  }, [vehicles])
-
-  /** Actions */
-  const handleEditVehicle = (vehicle: Vehicle) => {
-    setEditingHome(vehicle)
-    setShowEditModal(true)
-  }
-
-  const handleViewVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle)
-    setShowVehicleDetail(true)
-  }
-
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle?')) return
-    try {
-      await safeDelete(vehicleId)
-      toast({ title: 'Vehicle Deleted', description: 'The vehicle has been removed from inventory' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to delete vehicle', variant: 'destructive' })
-    }
-  }
-
-  const handleStatusChange = async (vehicleId: string, status: VehicleStatus | any) => {
-    try {
-      await safeUpdateStatus(vehicleId, status as VehicleStatus)
-      toast({ title: 'Status Updated', description: `Vehicle status changed to ${String(status)}` })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to update vehicle status', variant: 'destructive' })
-    }
-  }
-
-  const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[]) => {
-    try {
-      for (const vehicle of vehiclesToImport ?? []) {
-        await safeCreate(vehicle)
-      }
-      setShowCSVImport(false)
-      toast({ title: 'Import Successful', description: `Imported ${vehiclesToImport?.length ?? 0} vehicles` })
-    } catch {
-      toast({ title: 'Import Failed', description: 'There was an error importing the vehicles', variant: 'destructive' })
-    }
-  }
-
-  const handleBarcodeScanned = (data: string) => {
-    const existing = (vehicles ?? []).find((v: any) => String(v?.vin ?? '') === data)
-    if (existing) {
-      setSelectedVehicle(existing)
-      setShowVehicleDetail(true)
-      toast({ title: 'Vehicle Found', description: `Found existing vehicle with VIN: ${data}` })
-    } else {
-      setShowAddModal(true)
-      toast({ title: 'New VIN Scanned', description: `Creating new vehicle with VIN: ${data}` })
-    }
-    setShowBarcodeScanner(false)
-  }
-
-  const handleCreateTask = async (taskData: Partial<Task>) => {
-    try {
-      await createTask(taskData)
-      setShowTaskForm(false)
-      setInitialTaskData(undefined)
-      toast({ title: 'Task Created', description: 'Task has been created successfully' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to create task', variant: 'destructive' })
-    }
-  }
-
-  const handleCreateTaskForVehicle = (vehicle: Vehicle) => {
-    const key = toStatusKey((vehicle as any).status)
-    const priority = key === 'pending' ? TaskPriority.HIGH : TaskPriority.LOW
-    const dueDate = key === 'pending'
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000)
-      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-
-    setInitialTaskData({
-      sourceId: (vehicle as any).id,
-      sourceType: 'vehicle',
-      module: TaskModule.CRM,
-      title: `Follow up on ${(vehicle as any).year ?? (vehicle as any).modelDate} ${(vehicle as any).make ?? (vehicle as any).brand} ${(vehicle as any).model ?? ''}`.trim(),
-      priority,
-      dueDate,
-      link: `/inventory`,
-      customFields: {
-        vehicleVin: (vehicle as any).vin,
-        vehiclePrice: getPrice(vehicle),
-        vehicleLocation: (vehicle as any).location ?? (vehicle as any).city,
-        vehicleStatus: (vehicle as any).status
-      }
-    })
-    setShowTaskForm(true)
-  }
-
-  const handleAddHome = async (homeData: any) => {
-    try {
-      await safeCreate(homeData)
-      setShowAddModal(false)
-      toast({ title: 'Home Added', description: 'New home has been added to inventory' })
-    } catch {
-      toast({ title: 'Error', description: 'Failed to add home', variant: 'destructive' })
-    }
-  }
-
-  const handleEditHome = async (homeData: any) => {
-    try {
-      if (editingHome) {
-        await safeUpdate((editingHome as any).id, homeData)
-        setShowEditModal(false)
-        setEditingHome(null)
-        toast({ title: 'Home Updated', description: 'Home information has been updated' })
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to update home', variant: 'destructive' })
-    }
-  }
-
-  /** Filters */
-  const applyTileFilter = (status: 'all' | 'available' | 'sold' | 'reserved') => {
-    setStatusFilter(status)
-  }
-
-  const filteredVehicles = useMemo(() => {
-    const list = vehicles ?? []
-    if (statusFilter === 'all') return list
-    return list.filter((v: any) => toStatusKey(v?.status) === statusFilter)
-  }, [vehicles, statusFilter])
-
-  /** Keyboard-accessible tile handlers */
-  const tileHandlers = (handler: () => void) => ({
-    role: 'button' as const,
-    tabIndex: 0,
-    onClick: handler,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') handler() },
+    // Images (normalize to ImageFile[])
+    images: asArray<string>(initialData?.images).map((img, index) => ({
+      id: `image-${index}`,
+      url: String(img),
+      isCover: index === 0,
+    })) as ImageFile[],
   })
 
+  const [newFeature, setNewFeature] = useState('')
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }))
+  }
+
+  const addFeature = () => {
+    const f = newFeature.trim()
+    if (!f) return
+    setFormData((prev: any) => ({
+      ...prev,
+      features: [...asArray(prev.features), f],
+    }))
+    setNewFeature('')
+  }
+
+  const removeFeature = (index: number) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      features: asArray(prev.features).filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.vin || !formData.make || !formData.model || !formData.year) {
+      alert('Please fill in all required fields (VIN, Make, Model, Year)')
+      return
+    }
+    onSubmit({
+      ...formData,
+      features: asArray(formData.features),
+      images: asArray<ImageFile>(formData.images),
+    })
+  }
+
+  /** ---------- images ---------- */
+  const handleFileSelect = () => fileInputRef.current?.click()
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const newImages: ImageFile[] = Array.from(files).map((file, idx) => ({
+      id: `file-${Date.now()}-${idx}`,
+      url: URL.createObjectURL(file),
+      isCover: false,
+      file,
+    }))
+
+    setFormData((prev: any) => {
+      const existing = asArray<ImageFile>(prev.images)
+      const updated = [...existing, ...newImages]
+      if (!updated.some(i => i.isCover) && updated.length > 0) {
+        updated[0].isCover = true
+      }
+      return { ...prev, images: updated }
+    })
+  }
+
+  const handleRemoveImage = (id: string) => {
+    setFormData((prev: any) => {
+      const current = asArray<ImageFile>(prev.images)
+      const updated = current.filter(img => img.id !== id)
+      const removedWasCover = current.find(img => img.id === id)?.isCover
+      if (removedWasCover && updated.length > 0) updated[0].isCover = true
+      return { ...prev, images: updated }
+    })
+  }
+
+  const handleSetCoverImage = (id: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      images: asArray<ImageFile>(prev.images).map(img => ({ ...img, isCover: img.id === id })),
+    }))
+  }
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    setFormData((prev: any) => {
+      const arr = [...asArray<ImageFile>(prev.images)]
+      const [moved] = arr.splice(result.source.index, 1)
+      arr.splice(result.destination!.index, 0, moved)
+      return { ...prev, images: arr }
+    })
+  }
+
+  /** ---------- options ---------- */
+  const makeOptions = [
+    'Clayton', 'Champion', 'Fleetwood', 'Skyline', 'Palm Harbor', 'Cavco', 'Deer Valley',
+    'Redman', 'Schult', 'Marlette', 'Liberty', 'Oakwood', 'Southern Energy', 'TRU',
+    'Fairmont', 'Friendship', 'Homes of Merit', 'Kit', 'Legacy', 'Nobility'
+  ]
+  const homeTypeOptions = [
+    'Single Wide', 'Double Wide', 'Triple Wide', 'Modular Home', 'Park Model',
+    'Tiny Home', 'Manufactured Home', 'Mobile Home'
+  ]
+  const bedroomOptions = ['1', '2', '3', '4', '5', '6+']
+  const bathroomOptions = ['1', '1.5', '2', '2.5', '3', '3.5', '4+']
+  const exteriorMaterialOptions = ['Vinyl Siding', 'Fiber Cement', 'Wood Siding', 'Metal Siding', 'Brick', 'Stone', 'Stucco', 'Composite']
+  const roofMaterialOptions = ['Asphalt Shingles', 'Metal Roofing', 'TPO', 'EPDM', 'Built-up Roofing', 'Tile']
+  const flooringOptions = ['Carpet', 'Vinyl Plank', 'Laminate', 'Hardwood', 'Tile', 'Linoleum', 'Concrete']
+  const insulationOptions = ['Fiberglass', 'Foam Board', 'Spray Foam', 'Cellulose', 'Mineral Wool', 'Reflective']
+  const conditionOptions = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Needs Work', 'Fixer Upper']
+  const availabilityOptions = ['Available', 'Sold', 'Pending', 'On Hold', 'In Transit', 'Setup Required']
+  const locationOptions = ['On Lot', 'In Transit', 'Factory', 'Customer Site', 'Storage', 'Display Model']
+  const packageTypeOptions = ['Standard', 'Premium', 'Luxury', 'Basic', 'Custom']
+  const stateOptions = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+
   return (
-    <div className="space-y-8">
-      {/* Task Form Modal */}
-      {showTaskForm && (
-        <TaskForm
-          initialData={initialTaskData}
-          onSave={handleCreateTask}
-          onCancel={() => {
-            setShowTaskForm(false)
-            setInitialTaskData(undefined)
-          }}
-        />
-      )}
-
-      {/* Vehicle Detail Modal */}
-      {showVehicleDetail && selectedVehicle && (
-        <VehicleDetailDialog
-          vehicle={selectedVehicle}
-          open={showVehicleDetail}
-          onOpenChange={(open) => setShowVehicleDetail(open)}
-          onEdit={handleEditVehicle}
-        />
-      )}
-
-      {/* CSV Import Modal */}
-      {showCSVImport && (
-        <CSVImport
-          onImport={handleImportCSV}
-          onCancel={() => setShowCSVImport(false)}
-        />
-      )}
-
-      {/* Barcode Scanner Modal */}
-      {showBarcodeScanner && (
-        <BarcodeScanner
-          onScan={handleBarcodeScanned}
-          onClose={() => setShowBarcodeScanner(false)}
-        />
-      )}
-
-      {/* Page Header */}
-      <div className="ri-page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="ri-page-title">Inventory Management</h1>
-            <p className="ri-page-description">
-              Manage your RV and manufactured home inventory
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Scan Barcode
-            </Button>
-            <Button variant="outline" onClick={() => setShowCSVImport(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import CSV
-            </Button>
-            <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Home
-            </Button>
-          </div>
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{initialData ? 'Edit Mobile Home' : 'Add Mobile Home'}</h1>
+          <p className="text-muted-foreground">
+            {initialData ? 'Update mobile home information' : 'Add a new mobile home to inventory'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button onClick={handleSubmit}>{initialData ? 'Update Home' : 'Add Home'}</Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="ri-stats-grid">
-        <Card
-          {...tileHandlers(() => applyTileFilter('all'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-blue-50 to-blue-100/50"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Total Units</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>Enter the basic details about the mobile home</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
-            <p className="text-xs text-blue-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +5 units this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          {...tileHandlers(() => applyTileFilter('available'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-green-50 to-green-100/50"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Available</CardTitle>
-            <Package className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{stats.available}</div>
-            <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Ready for sale
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          {...tileHandlers(() => applyTileFilter('reserved'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-orange-50 to-orange-100/50"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-900">Reserved</CardTitle>
-            <Package className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-900">{stats.reserved}</div>
-            <p className="text-xs text-yellow-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Pending sale
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          {...tileHandlers(() => applyTileFilter('sold'))}
-          className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shadow-sm border-0 hover:shadow-md transition bg-gradient-to-br from-rose-50 to-rose-100/50"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-rose-900">Sold</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-rose-900">{stats.sold}</div>
-            <p className="text-xs text-rose-600 flex items-center mt-1">Completed</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">
-              {formatCurrency(stats.totalValue)}
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vin">VIN/HUD Label *</Label>
+                <Input id="vin" value={formData.vin} onChange={(e) => handleInputChange('vin', e.target.value)} placeholder="Enter VIN or HUD label number" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="serialNumber">Serial Number</Label>
+                <Input id="serialNumber" value={formData.serialNumber} onChange={(e) => handleInputChange('serialNumber', e.target.value)} placeholder="Enter serial number" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="make">Make *</Label>
+                <Select value={formData.make || ''} onValueChange={(v) => handleInputChange('make', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select make" /></SelectTrigger>
+                  <SelectContent>{makeOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="model">Model *</Label>
+                <Input id="model" value={formData.model} onChange={(e) => handleInputChange('model', e.target.value)} placeholder="Enter model" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="year">Year *</Label>
+                <Input id="year" type="number" value={formData.year} onChange={(e) => handleInputChange('year', parseInt(e.target.value))} placeholder="Enter year" min="1900" max={new Date().getFullYear() + 1} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="homeType">Home Type *</Label>
+                <Select value={formData.homeType || ''} onValueChange={(v) => handleInputChange('homeType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select home type" /></SelectTrigger>
+                  <SelectContent>{homeTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Input id="color" value={formData.color} onChange={(e) => handleInputChange('color', e.target.value)} placeholder="Enter color" />
+              </div>
             </div>
-            <p className="text-xs text-purple-600 flex items-center mt-1">Inventory value</p>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Filter Indicator */}
-      {statusFilter !== 'all' && (
-        <div className="flex items-center gap-2 mb-4">
-          <Badge variant="secondary">Filtered by: {statusFilter}</Badge>
-          <Button variant="ghost" size="sm" onClick={() => applyTileFilter('all')}>
-            Clear Filter
-          </Button>
+        {/* Address Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Address Details</CardTitle>
+            <CardDescription>Information about where the mobile home is sited</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="locationType">Location Type</Label>
+                <Input id="locationType" value={formData.locationType} onChange={(e) => handleInputChange('locationType', e.target.value)} placeholder="e.g., Community" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="communityKey">Community Key</Label>
+                <Input id="communityKey" value={formData.communityKey} onChange={(e) => handleInputChange('communityKey', e.target.value)} placeholder="e.g., 161" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="communityName">Community Name</Label>
+                <Input id="communityName" value={formData.communityName} onChange={(e) => handleInputChange('communityName', e.target.value)} placeholder="e.g., Chateau Algoma Estates" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address1">Address Line 1</Label>
+                <Input id="address1" value={formData.address1} onChange={(e) => handleInputChange('address1', e.target.value)} placeholder="e.g., 12345 Maple Street" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address2">Address Line 2</Label>
+                <Input id="address2" value={formData.address2} onChange={(e) => handleInputChange('address2', e.target.value)} placeholder="Enter second address line (if any)" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input id="city" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} placeholder="e.g., Rockford" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select value={formData.state || ''} onValueChange={(v) => handleInputChange('state', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                  <SelectContent>{stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zip9">Zip Code</Label>
+                <Input id="zip9" value={formData.zip9} onChange={(e) => handleInputChange('zip9', e.target.value)} placeholder="e.g., 493414321" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="countyName">County Name</Label>
+                <Input id="countyName" value={formData.countyName} onChange={(e) => handleInputChange('countyName', e.target.value)} placeholder="e.g., Kent" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dimensions & Layout */}
+        <Card>
+          <CardHeader><CardTitle>Dimensions & Layout</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="width">Primary Width (ft)</Label>
+                <Input id="width" type="number" value={formData.width} onChange={(e) => handleInputChange('width', parseFloat(e.target.value))} placeholder="Enter primary width in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length">Primary Length (ft)</Label>
+                <Input id="length" type="number" value={formData.length} onChange={(e) => handleInputChange('length', parseFloat(e.target.value))} placeholder="Enter primary length in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="width2">Secondary Width (ft)</Label>
+                <Input id="width2" type="number" value={formData.width2} onChange={(e) => handleInputChange('width2', parseFloat(e.target.value))} placeholder="Enter secondary width in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length2">Secondary Length (ft)</Label>
+                <Input id="length2" type="number" value={formData.length2} onChange={(e) => handleInputChange('length2', parseFloat(e.target.value))} placeholder="Enter secondary length in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="width3">Tertiary Width (ft)</Label>
+                <Input id="width3" type="number" value={formData.width3} onChange={(e) => handleInputChange('width3', parseFloat(e.target.value))} placeholder="Enter tertiary width in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="length3">Tertiary Length (ft)</Label>
+                <Input id="length3" type="number" value={formData.length3} onChange={(e) => handleInputChange('length3', parseFloat(e.target.value))} placeholder="Enter tertiary length in feet" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="squareFootage">Square Footage</Label>
+                <Input id="squareFootage" type="number" value={formData.squareFootage} onChange={(e) => handleInputChange('squareFootage', e.target.value)} placeholder="Enter square footage" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bedrooms">Bedrooms</Label>
+                <Select value={formData.bedrooms} onValueChange={(v) => handleInputChange('bedrooms', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select bedrooms" /></SelectTrigger>
+                  <SelectContent>{bedroomOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bathrooms">Bathrooms</Label>
+                <Select value={formData.bathrooms} onValueChange={(v) => handleInputChange('bathrooms', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select bathrooms" /></SelectTrigger>
+                  <SelectContent>{bathroomOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Construction Details */}
+        <Card>
+          <CardHeader><CardTitle>Construction Details</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="exteriorMaterial">Exterior Material</Label>
+                <Select value={formData.exteriorMaterial} onValueChange={(v) => handleInputChange('exteriorMaterial', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select exterior material" /></SelectTrigger>
+                  <SelectContent>{exteriorMaterialOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roofMaterial">Roof Material</Label>
+                <Select value={formData.roofMaterial || ''} onValueChange={(v) => handleInputChange('roofMaterial', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select roof material" /></SelectTrigger>
+                  <SelectContent>{roofMaterialOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="flooringType">Flooring Type</Label>
+                <Select value={formData.flooringType || ''} onValueChange={(v) => handleInputChange('flooringType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select flooring type" /></SelectTrigger>
+                  <SelectContent>{flooringOptions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="insulationType">Insulation Type</Label>
+                <Select value={formData.insulationType} onValueChange={(v) => handleInputChange('insulationType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select insulation type" /></SelectTrigger>
+                  <SelectContent>{insulationOptions.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ceilingType">Ceiling Type</Label>
+                <Input id="ceilingType" value={formData.ceilingType} onChange={(e) => handleInputChange('ceilingType', e.target.value)} placeholder="e.g., Drywall" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="wallType">Wall Type</Label>
+                <Input id="wallType" value={formData.wallType} onChange={(e) => handleInputChange('wallType', e.target.value)} placeholder="e.g., Drywall" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Condition & Status */}
+        <Card>
+          <CardHeader><CardTitle>Condition & Status</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condition</Label>
+                <Select value={formData.condition || ''} onValueChange={(v) => handleInputChange('condition', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select condition" /></SelectTrigger>
+                  <SelectContent>{conditionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="availability">Availability</Label>
+                <Select value={formData.availability || ''} onValueChange={(v) => handleInputChange('availability', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select availability" /></SelectTrigger>
+                  <SelectContent>{availabilityOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Select value={formData.location} onValueChange={(v) => handleInputChange('location', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+                  <SelectContent>{locationOptions.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Features & Amenities */}
+        <Card>
+          <CardHeader><CardTitle>Features & Amenities</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                ['hasFireplace','Fireplace'],
+                ['hasDeck','Deck/Porch'],
+                ['hasStorage','Storage Shed'],
+                ['hasCarport','Carport'],
+                ['centralAir','Central Air'],
+                ['garage','Garage'],
+                ['thermopane','Thermopane Windows'],
+                ['gutters','Gutters'],
+                ['shutters','Shutters'],
+                ['patio','Patio'],
+                ['cathedralCeiling','Cathedral Ceiling'],
+                ['ceilingFan','Ceiling Fan'],
+                ['skylight','Skylight'],
+                ['walkinCloset','Walk-in Closet'],
+                ['laundryRoom','Laundry Room'],
+                ['pantry','Pantry'],
+                ['sunRoom','Sun Room'],
+                ['basement','Basement'],
+                ['gardenTub','Garden Tub'],
+                ['garbageDisposal','Garbage Disposal'],
+                ['refrigerator','Refrigerator'],
+                ['microwave','Microwave'],
+                ['oven','Oven'],
+                ['dishwasher','Dishwasher'],
+                ['clothesWasher','Clothes Washer'],
+                ['clothesDryer','Clothes Dryer'],
+              ].map(([key, label]) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={String(key)}
+                    checked={Boolean(formData[key as keyof typeof formData])}
+                    onCheckedChange={(checked) => handleInputChange(String(key), !!checked)}
+                  />
+                  <Label htmlFor={String(key)}>{label}</Label>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pricing & Terms */}
+        <Card>
+          <CardHeader><CardTitle>Pricing & Terms</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="msrp">MSRP</Label>
+                <Input id="msrp" type="number" value={formData.msrp} onChange={(e) => handleInputChange('msrp', e.target.value)} placeholder="Enter MSRP" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="salePrice">Sale Price</Label>
+                <Input id="salePrice" type="number" value={formData.salePrice} onChange={(e) => handleInputChange('salePrice', e.target.value)} placeholder="Enter sale price" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cost">Cost</Label>
+                <Input id="cost" type="number" value={formData.cost} onChange={(e) => handleInputChange('cost', e.target.value)} placeholder="Enter cost" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="terms">Terms of Sale Description</Label>
+              <Textarea id="terms" rows={3} value={formData.terms} onChange={(e) => handleInputChange('terms', e.target.value)} placeholder="Enter terms of sale description" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="utilities">Approx. Monthly Utilities</Label>
+                <Input id="utilities" type="number" value={formData.utilities} onChange={(e) => handleInputChange('utilities', e.target.value)} placeholder="Enter estimated utilities" />
+              </div>
+              <div className="flex items-center space-x-2 mt-6">
+                <Checkbox id="repo" checked={formData.repo} onCheckedChange={(c) => handleInputChange('repo', !!c)} />
+                <Label htmlFor="repo">Repossessed Home</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="packageType">Package Type</Label>
+                <Select value={formData.packageType || ''} onValueChange={(v) => handleInputChange('packageType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select package type" /></SelectTrigger>
+                  <SelectContent>{packageTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="salePending" checked={formData.salePending} onCheckedChange={(c) => handleInputChange('salePending', !!c)} />
+                <Label htmlFor="salePending">Sale Pending</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Additional Features */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Features</CardTitle>
+            <CardDescription>Add any additional features or amenities</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder="Enter a feature"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); addFeature() }
+                }}
+              />
+              <Button type="button" onClick={addFeature}><Plus className="h-4 w-4" /></Button>
+            </div>
+
+            {asArray<string>(formData.features).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {asArray<string>(formData.features).map((feature, index) => (
+                  <Badge key={`${feature}-${index}`} variant="secondary" className="flex items-center gap-1">
+                    {feature}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeFeature(index)} />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Description */}
+        <Card>
+          <CardHeader><CardTitle>Description</CardTitle></CardHeader>
+          <CardContent>
+            <Textarea rows={4} value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} placeholder="Enter detailed description..." />
+          </CardContent>
+        </Card>
+
+        {/* Images & Media Links */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Images & Media</CardTitle>
+            <CardDescription>Upload photos of the mobile home or link to external media</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <input type="file" multiple accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Drag and drop images here, or click to select files</p>
+                <Button type="button" variant="outline" size="sm" onClick={handleFileSelect}>
+                  <Camera className="h-4 w-4 mr-2" /> Select Images
+                </Button>
+              </div>
+            </div>
+
+            {asArray<ImageFile>(formData.images).length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">Uploaded Images</h3>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <Droppable droppableId="images">
+                    {(provided) => (
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {asArray<ImageFile>(formData.images).map((image, index) => (
+                          <Draggable key={image.id} draggableId={image.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`relative group border rounded-lg overflow-hidden ${
+                                  image.isCover ? 'border-2 border-primary' : 'border-gray-200'
+                                } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                              >
+                                <img src={image.url} alt={`Mobile Home Image ${index + 1}`} className="w-full h-32 object-cover" />
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                  {image.isCover && <Badge className="bg-primary text-primary-foreground">Cover</Badge>}
+                                  {!image.isCover && (
+                                    <Button type="button" variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleSetCoverImage(image.id)} title="Set as cover image">
+                                      <Star className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleRemoveImage(image.id)}
+                                    title="Remove image"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              </div>
+            )}
+
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="photoURL">Photo URL</Label>
+              <Input id="photoURL" value={formData.photoURL} onChange={(e) => handleInputChange('photoURL', e.target.value)} placeholder="Enter URL for a photo of the home" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="virtualTour">Virtual Tour URL</Label>
+              <Input id="virtualTour" value={formData.virtualTour} onChange={(e) => handleInputChange('virtualTour', e.target.value)} placeholder="Enter URL for a virtual tour video" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salesPhoto">Sales Photo URL</Label>
+              <Input id="salesPhoto" value={formData.salesPhoto} onChange={(e) => handleInputChange('salesPhoto', e.target.value)} placeholder="Enter URL for sales agent/company logo photo" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bottom actions */}
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="submit">{initialData ? 'Update Home' : 'Add Home'}</Button>
         </div>
-      )}
-
-      {/* Inventory Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventory</CardTitle>
-          <CardDescription>Click actions to view, edit, create tasks, or delete</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <InventoryTable
-            vehicles={filteredVehicles}
-            onView={handleViewVehicle}
-            onEdit={handleEditVehicle}
-            onDelete={(arg: any) => handleDeleteVehicle(typeof arg === 'string' ? arg : arg?.id)}
-            onStatusChange={handleStatusChange}
-            onCreateTask={handleCreateTaskForVehicle}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Add / Edit Home Modals */}
-      <AddEditHomeModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSave={handleAddHome}
-        mode="add"
-      />
-
-      <AddEditHomeModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false)
-          setEditingHome(null)
-        }}
-        onSave={handleEditHome}
-        editingHome={editingHome as any}
-        mode="edit"
-      />
+      </form>
     </div>
-  )
-}
-
-/** ---------- Routed Wrapper ---------- */
-export default function InventoryManagement() {
-  return (
-    <Routes>
-      <Route path="/" element={<InventoryList />} />
-      <Route path="/*" element={<InventoryList />} />
-    </Routes>
   )
 }
