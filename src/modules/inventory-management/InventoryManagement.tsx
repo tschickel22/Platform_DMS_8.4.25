@@ -32,7 +32,7 @@ const getPrice = (v: any) => {
   return Number.isFinite(n) ? n : 0
 }
 
-/** ---------- Local Detail Dialog (fixes undefined component) ---------- */
+/** ---------- Local Detail Dialog ---------- */
 type VehicleDetailDialogProps = {
   vehicle: Vehicle
   open: boolean
@@ -89,7 +89,21 @@ function VehicleDetailDialog({ vehicle, open, onOpenChange, onEdit }: VehicleDet
 
 /** ---------- Main List ---------- */
 function InventoryList() {
-  const { vehicles, createVehicle, updateVehicleStatus, deleteVehicle, updateVehicle } = useInventoryManagement() as any
+  const {
+    vehicles: vehiclesFromHook,
+    createVehicle,
+    updateVehicleStatus,
+    deleteVehicle,
+    updateVehicle,
+  } = (useInventoryManagement() as any) ?? {}
+
+  // SAFETY: always work with arrays / functions even if hook is undefined during init
+  const vehicles: Vehicle[] = Array.isArray(vehiclesFromHook) ? vehiclesFromHook : []
+  const safeCreate = typeof createVehicle === 'function' ? createVehicle : async () => {}
+  const safeUpdateStatus = typeof updateVehicleStatus === 'function' ? updateVehicleStatus : async () => {}
+  const safeDelete = typeof deleteVehicle === 'function' ? deleteVehicle : async () => {}
+  const safeUpdate = typeof updateVehicle === 'function' ? updateVehicle : async () => {}
+
   const { toast } = useToast()
   const { createTask } = useTasks()
 
@@ -102,19 +116,20 @@ function InventoryList() {
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
-  // Add/Edit Home (single button retained uses this modal)
+  // Add/Edit Home
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
 
-  /** Derived stats */
+  /** Derived stats (safe over undefined) */
   const stats = useMemo(() => {
-    const total = vehicles.length
+    const list = vehicles ?? []
+    const total = list.length
     let available = 0, reserved = 0, sold = 0
     let totalValue = 0
-    for (const v of vehicles) {
+    for (const v of list) {
       const k = toStatusKey((v as any).status)
       if (k === 'available') available++
       else if (k === 'reserved') reserved++
@@ -138,7 +153,7 @@ function InventoryList() {
   const handleDeleteVehicle = async (vehicleId: string) => {
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return
     try {
-      await deleteVehicle(vehicleId)
+      await safeDelete(vehicleId)
       toast({ title: 'Vehicle Deleted', description: 'The vehicle has been removed from inventory' })
     } catch {
       toast({ title: 'Error', description: 'Failed to delete vehicle', variant: 'destructive' })
@@ -147,7 +162,7 @@ function InventoryList() {
 
   const handleStatusChange = async (vehicleId: string, status: VehicleStatus | any) => {
     try {
-      await updateVehicleStatus(vehicleId, status as VehicleStatus)
+      await safeUpdateStatus(vehicleId, status as VehicleStatus)
       toast({ title: 'Status Updated', description: `Vehicle status changed to ${String(status)}` })
     } catch {
       toast({ title: 'Error', description: 'Failed to update vehicle status', variant: 'destructive' })
@@ -156,18 +171,18 @@ function InventoryList() {
 
   const handleImportCSV = async (vehiclesToImport: Partial<Vehicle>[]) => {
     try {
-      for (const vehicle of vehiclesToImport) {
-        await createVehicle(vehicle)
+      for (const vehicle of vehiclesToImport ?? []) {
+        await safeCreate(vehicle)
       }
       setShowCSVImport(false)
-      toast({ title: 'Import Successful', description: `Imported ${vehiclesToImport.length} vehicles` })
+      toast({ title: 'Import Successful', description: `Imported ${vehiclesToImport?.length ?? 0} vehicles` })
     } catch {
       toast({ title: 'Import Failed', description: 'There was an error importing the vehicles', variant: 'destructive' })
     }
   }
 
   const handleBarcodeScanned = (data: string) => {
-    const existing = vehicles.find((v: any) => String(v?.vin ?? '') === data)
+    const existing = (vehicles ?? []).find((v: any) => String(v?.vin ?? '') === data)
     if (existing) {
       setSelectedVehicle(existing)
       setShowVehicleDetail(true)
@@ -217,7 +232,7 @@ function InventoryList() {
 
   const handleAddHome = async (homeData: any) => {
     try {
-      await createVehicle(homeData)
+      await safeCreate(homeData)
       setShowAddModal(false)
       toast({ title: 'Home Added', description: 'New home has been added to inventory' })
     } catch {
@@ -228,11 +243,7 @@ function InventoryList() {
   const handleEditHome = async (homeData: any) => {
     try {
       if (editingHome) {
-        if (typeof updateVehicle === 'function') {
-          await updateVehicle((editingHome as any).id, homeData)
-        } else {
-          await updateVehicleStatus((editingHome as any).id, homeData.status)
-        }
+        await safeUpdate((editingHome as any).id, homeData)
         setShowEditModal(false)
         setEditingHome(null)
         toast({ title: 'Home Updated', description: 'Home information has been updated' })
@@ -248,11 +259,12 @@ function InventoryList() {
   }
 
   const filteredVehicles = useMemo(() => {
-    if (statusFilter === 'all') return vehicles
-    return vehicles.filter((v: any) => toStatusKey(v.status) === statusFilter)
+    const list = vehicles ?? []
+    if (statusFilter === 'all') return list
+    return list.filter((v: any) => toStatusKey(v?.status) === statusFilter)
   }, [vehicles, statusFilter])
 
-  /** Keyboard-accessible tile handlers (no className here to avoid prop collisions) */
+  /** Keyboard-accessible tile handlers */
   const tileHandlers = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
