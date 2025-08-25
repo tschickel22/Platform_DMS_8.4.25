@@ -13,7 +13,7 @@ import { useInventoryManagement } from '../hooks/useInventoryManagement'
 import { InventoryTable } from '../components/InventoryTable'
 import { CSVImport } from '../components/CSVImport'
 import { BarcodeScanner } from '../components/BarcodeScanner'
-import AddEditHomeModal from './components/AddEditHomeModal'
+import AddEditHomeModal from '../components/AddEditHomeModal' // <-- fixed path
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -33,7 +33,7 @@ const getPrice = (v: any) => {
   return Number.isFinite(n) ? n : 0
 }
 
-/** ---------- Local Detail Dialog (fixes undefined component) ---------- */
+/** ---------- Local Detail Dialog ---------- */
 type VehicleDetailDialogProps = {
   vehicle: Vehicle
   open: boolean
@@ -103,7 +103,7 @@ function InventoryList() {
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<Partial<Task> | undefined>(undefined)
 
-  // Add/Edit Home (single button retained uses this modal)
+  // Add/Edit Home
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
@@ -298,7 +298,7 @@ function InventoryList() {
     return vehicles.filter((v: any) => toStatusKey(v.status) === statusFilter)
   }, [vehicles, statusFilter])
 
-  /** Keyboard-accessible tile handlers (no className here to avoid prop collisions) */
+  /** Keyboard-accessible tile handlers */
   const tileHandlers = (handler: () => void) => ({
     role: 'button' as const,
     tabIndex: 0,
@@ -484,7 +484,7 @@ function InventoryList() {
       <AddEditHomeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSave={handleAddHome}
+        onSubmit={handleAddHome}   // normalized to onSubmit
         mode="add"
       />
 
@@ -494,7 +494,7 @@ function InventoryList() {
           setShowEditModal(false)
           setEditingHome(null)
         }}
-        onSave={handleEditHome}
+        onSubmit={handleEditHome}  // normalized to onSubmit
         editingHome={editingHome as any}
         mode="edit"
       />
@@ -503,7 +503,7 @@ function InventoryList() {
         <AddEditHomeModal
           isOpen={true}
           onClose={() => setEditingItem(null)}
-          onSave={handleEditItem}
+          onSubmit={handleEditItem} // normalized to onSubmit
           initialData={editingItem}
         />
       )}
@@ -533,15 +533,8 @@ export default function InventoryManagement() {
   // Get filtered inventory
   const filteredInventory = React.useMemo(() => {
     let filtered = searchTerm ? searchInventory(searchTerm) : inventory
-    
-    if (filterType !== 'all') {
-      filtered = filtered.filter(item => item.listingType === filterType)
-    }
-    
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(item => item.status === filterStatus)
-    }
-    
+    if (filterType !== 'all') filtered = filtered.filter(item => item.listingType === filterType)
+    if (filterStatus !== 'all') filtered = filtered.filter(item => item.status === filterStatus)
     return filtered
   }, [inventory, searchTerm, filterType, filterStatus, searchInventory])
 
@@ -646,10 +639,7 @@ export default function InventoryManagement() {
               title="No manufactured homes found"
               description="Add manufactured homes to your inventory"
               icon={<Home className="h-12 w-12" />}
-              action={{
-                label: "Add Manufactured Home",
-                onClick: () => setShowAddModal(true)
-              }}
+              action={{ label: "Add Manufactured Home", onClick: () => setShowAddModal(true) }}
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -659,20 +649,13 @@ export default function InventoryManagement() {
                   <Card key={item.id} className="overflow-hidden">
                     <div className="aspect-video bg-gray-100 relative">
                       {item.media?.primaryPhoto ? (
-                        <img 
-                          src={item.media.primaryPhoto} 
-                          alt={`${item.make} ${item.model}`}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={item.media.primaryPhoto} alt={`${item.make} ${item.model}`} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Home className="h-12 w-12 text-gray-400" />
                         </div>
                       )}
-                      <Badge 
-                        className="absolute top-2 right-2"
-                        variant={item.status === 'available' ? 'default' : 'secondary'}
-                      >
+                      <Badge className="absolute top-2 right-2" variant={item.status === 'available' ? 'default' : 'secondary'}>
                         {item.status}
                       </Badge>
                     </div>
@@ -702,21 +685,11 @@ export default function InventoryManagement() {
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
+                        <Button size="sm" variant="outline" onClick={() => setEditingItem(item)}>
+                          <Edit className="h-4 w-4 mr-1" /> Edit
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDeleteItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteItem(item.id)}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
                       </div>
                     </CardContent>
@@ -765,10 +738,7 @@ export default function InventoryManagement() {
               title="No RVs found"
               description="Add RVs to your inventory"
               icon={<Truck className="h-12 w-12" />}
-              action={{
-                label: "Add RV",
-                onClick: () => setShowAddModal(true)
-              }}
+              action={{ label: "Add RV", onClick: () => setShowAddModal(true) }}
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -778,20 +748,13 @@ export default function InventoryManagement() {
                   <Card key={item.id} className="overflow-hidden">
                     <div className="aspect-video bg-gray-100 relative">
                       {item.media?.primaryPhoto ? (
-                        <img 
-                          src={item.media.primaryPhoto} 
-                          alt={`${item.make} ${item.model}`}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={item.media.primaryPhoto} alt={`${item.make} ${item.model}`} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Truck className="h-12 w-12 text-gray-400" />
                         </div>
                       )}
-                      <Badge 
-                        className="absolute top-2 right-2"
-                        variant={item.status === 'available' ? 'default' : 'secondary'}
-                      >
+                      <Badge className="absolute top-2 right-2" variant={item.status === 'available' ? 'default' : 'secondary'}>
                         {item.status}
                       </Badge>
                     </div>
@@ -821,21 +784,11 @@ export default function InventoryManagement() {
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
+                        <Button size="sm" variant="outline" onClick={() => setEditingItem(item)}>
+                          <Edit className="h-4 w-4 mr-1" /> Edit
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDeleteItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteItem(item.id)}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
                       </div>
                     </CardContent>
