@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign } from 'lucide-react'
+import { Package, Plus, Upload, QrCode, TrendingUp, DollarSign, Home, Truck, Edit, Trash2 } from 'lucide-react'
 import { Vehicle, VehicleStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from './hooks/useInventoryManagement'
@@ -16,6 +16,7 @@ import { BarcodeScanner } from './components/BarcodeScanner'
 import AddEditHomeModal from './components/AddEditHomeModal'
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
+import { EmptyState } from '@/components/ui/empty-state'
 
 /** ---------- Helpers ---------- */
 const toStatusKey = (val: unknown): 'available' | 'reserved' | 'sold' | 'pending' | 'other' => {
@@ -108,6 +109,10 @@ function InventoryList() {
   const [editingHome, setEditingHome] = useState<Vehicle | null>(null)
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold' | 'reserved'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [editingItem, setEditingItem] = useState<any>(null)
 
   /** Derived stats */
   const stats = useMemo(() => {
@@ -121,7 +126,8 @@ function InventoryList() {
       else if (k === 'sold') sold++
       totalValue += getPrice(v)
     }
-    return { total, available, reserved, sold, totalValue }
+    const averagePrice = total > 0 ? totalValue / total : 0
+    return { total, available, reserved, sold, totalValue, averagePrice }
   }, [vehicles])
 
   /** Actions */
@@ -239,6 +245,46 @@ function InventoryList() {
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to update home', variant: 'destructive' })
+    }
+  }
+
+  const handleAddItem = async (data: any) => {
+    try {
+      await createVehicle(data)
+      setShowAddModal(false)
+      toast({ title: 'Item Added', description: 'New item has been added to inventory' })
+    } catch (error) {
+      console.error('Failed to add inventory item:', error)
+      toast({ title: 'Error', description: 'Failed to add item', variant: 'destructive' })
+    }
+  }
+
+  const handleEditItem = async (data: any) => {
+    try {
+      if (editingItem) {
+        if (typeof updateVehicle === 'function') {
+          await updateVehicle(editingItem.id, data)
+        } else {
+          await updateVehicleStatus(editingItem.id, data.status)
+        }
+        setEditingItem(null)
+        toast({ title: 'Item Updated', description: 'Item information has been updated' })
+      }
+    } catch (error) {
+      console.error('Failed to update inventory item:', error)
+      toast({ title: 'Error', description: 'Failed to update item', variant: 'destructive' })
+    }
+  }
+
+  const handleDeleteItem = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      try {
+        await deleteVehicle(id)
+        toast({ title: 'Item Deleted', description: 'The item has been removed from inventory' })
+      } catch (error) {
+        console.error('Failed to delete inventory item:', error)
+        toast({ title: 'Error', description: 'Failed to delete item', variant: 'destructive' })
+      }
     }
   }
 
@@ -434,6 +480,7 @@ function InventoryList() {
         </CardContent>
       </Card>
 
+      {/* Add/Edit Modals */}
       <AddEditHomeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -451,15 +498,368 @@ function InventoryList() {
         editingHome={editingHome as any}
         mode="edit"
       />
+
+      {editingItem && (
+        <AddEditHomeModal
+          isOpen={true}
+          onClose={() => setEditingItem(null)}
+          onSave={handleEditItem}
+          initialData={editingItem}
+        />
+      )}
     </div>
   )
 }
 
 /** ---------- Routed Wrapper ---------- */
 export default function InventoryManagement() {
+  const {
+    inventory,
+    loading,
+    error,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    getInventoryByType,
+    searchInventory,
+    getInventoryStats
+  } = useInventoryManagement()
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+
+  // Get filtered inventory
+  const filteredInventory = React.useMemo(() => {
+    let filtered = searchTerm ? searchInventory(searchTerm) : inventory
+    
+    if (filterType !== 'all') {
+      filtered = filtered.filter(item => item.listingType === filterType)
+    }
+    
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus)
+    }
+    
+    return filtered
+  }, [inventory, searchTerm, filterType, filterStatus, searchInventory])
+
+  const stats = getInventoryStats()
+
+  const handleAddItem = async (data: any) => {
+    try {
+      await addInventoryItem(data)
+      setShowAddModal(false)
+    } catch (error) {
+      console.error('Failed to add inventory item:', error)
+    }
+  }
+
+  const handleEditItem = async (data: any) => {
+    try {
+      if (editingItem) {
+        await updateInventoryItem(editingItem.id, data)
+        setEditingItem(null)
+      }
+    } catch (error) {
+      console.error('Failed to update inventory item:', error)
+    }
+  }
+
+  const handleDeleteItem = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      try {
+        await deleteInventoryItem(id)
+      } catch (error) {
+        console.error('Failed to delete inventory item:', error)
+      }
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="ri-page-header">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="ri-page-title">Inventory Management</h1>
+              <p className="ri-page-description">
+                Manage your RV and manufactured home inventory
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <Routes>
       <Route path="/" element={<InventoryList />} />
+      <Route path="/manufactured-homes" element={
+        <div className="space-y-8">
+          <div className="ri-page-header">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="ri-page-title">Manufactured Homes</h1>
+                <p className="ri-page-description">
+                  Manage your manufactured home inventory
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowAddModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Home
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {filteredInventory.filter(item => item.listingType === 'manufactured_home').length === 0 ? (
+            <EmptyState
+              title="No manufactured homes found"
+              description="Add manufactured homes to your inventory"
+              icon={<Home className="h-12 w-12" />}
+              action={{
+                label: "Add Manufactured Home",
+                onClick: () => setShowAddModal(true)
+              }}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInventory
+                .filter(item => item.listingType === 'manufactured_home')
+                .map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="aspect-video bg-gray-100 relative">
+                      {item.media?.primaryPhoto ? (
+                        <img 
+                          src={item.media.primaryPhoto} 
+                          alt={`${item.make} ${item.model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Home className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge 
+                        className="absolute top-2 right-2"
+                        variant={item.status === 'available' ? 'default' : 'secondary'}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">
+                        {item.year} {item.make} {item.model}
+                      </CardTitle>
+                      <CardDescription>
+                        {item.inventoryId} • {item.bedrooms || 0}BR / {item.bathrooms || 0}BA
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sale Price</span>
+                          <span className="font-semibold">${item.salePrice?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        {item.rentPrice && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Rent Price</span>
+                            <span className="font-semibold">${item.rentPrice.toLocaleString()}/mo</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Square Feet</span>
+                          <span>{item.dimensions?.squareFeet || 'N/A'} sq ft</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingItem(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
+
+          <AddEditHomeModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onSubmit={handleAddItem}
+          />
+          
+          {editingItem && (
+            <AddEditHomeModal
+              isOpen={true}
+              onClose={() => setEditingItem(null)}
+              onSubmit={handleEditItem}
+              initialData={editingItem}
+            />
+          )}
+        </div>
+      } />
+      <Route path="/rvs" element={
+        <div className="space-y-8">
+          <div className="ri-page-header">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="ri-page-title">RVs</h1>
+                <p className="ri-page-description">
+                  Manage your RV inventory
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowAddModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add RV
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {filteredInventory.filter(item => item.listingType === 'rv').length === 0 ? (
+            <EmptyState
+              title="No RVs found"
+              description="Add RVs to your inventory"
+              icon={<Truck className="h-12 w-12" />}
+              action={{
+                label: "Add RV",
+                onClick: () => setShowAddModal(true)
+              }}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInventory
+                .filter(item => item.listingType === 'rv')
+                .map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="aspect-video bg-gray-100 relative">
+                      {item.media?.primaryPhoto ? (
+                        <img 
+                          src={item.media.primaryPhoto} 
+                          alt={`${item.make} ${item.model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Truck className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge 
+                        className="absolute top-2 right-2"
+                        variant={item.status === 'available' ? 'default' : 'secondary'}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">
+                        {item.year} {item.make} {item.model}
+                      </CardTitle>
+                      <CardDescription>
+                        {item.inventoryId} • Sleeps {item.sleeps || 0}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sale Price</span>
+                          <span className="font-semibold">${item.salePrice?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        {item.rentPrice && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Rent Price</span>
+                            <span className="font-semibold">${item.rentPrice.toLocaleString()}/mo</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Length</span>
+                          <span>{item.length || 'N/A'} ft</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingItem(item)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
+
+          <AddEditHomeModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onSubmit={handleAddItem}
+          />
+          
+          {editingItem && (
+            <AddEditHomeModal
+              isOpen={true}
+              onClose={() => setEditingItem(null)}
+              onSubmit={handleEditItem}
+              initialData={editingItem}
+            />
+          )}
+        </div>
+      } />
       <Route path="/*" element={<InventoryList />} />
     </Routes>
   )
