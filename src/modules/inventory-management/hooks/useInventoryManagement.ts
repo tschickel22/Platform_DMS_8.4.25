@@ -2,20 +2,47 @@ import { useState, useEffect } from 'react'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 
-export interface Vehicle {
+export interface InventoryItem {
   id: string
-  listingType: 'rv' | 'manufactured_home'
+  listingType: 'manufactured_home' | 'rv'
   inventoryId: string
   year: number
   make: string
   model: string
-  condition: 'new' | 'used' | 'refurbished'
-  status: 'available' | 'pending' | 'sold' | 'service'
-  offerType: 'for_sale' | 'for_rent' | 'both'
+  condition: string
   salePrice?: number
   rentPrice?: number
+  cost?: number
+  offerType: string
+  status: string
+  description?: string
+  searchResultsText?: string
+  media: {
+    primaryPhoto?: string
+    photos: string[]
+  }
+  location: {
+    city: string
+    state: string
+    postalCode?: string
+    communityName?: string
+  }
+  features: Record<string, boolean>
+  customFields?: Record<string, any>
+  createdAt: string
+  updatedAt: string
   
-  // RV specific
+  // MH specific fields
+  bedrooms?: number
+  bathrooms?: number
+  dimensions?: {
+    width_ft?: number
+    length_ft?: number
+    sections?: number
+  }
+  serialNumber?: string
+  
+  // RV specific fields
   sleeps?: number
   slides?: number
   length?: number
@@ -23,198 +50,243 @@ export interface Vehicle {
   engine?: string
   transmission?: string
   odometerMiles?: number
-  
-  // MH specific
-  bedrooms?: number
-  bathrooms?: number
-  dimensions?: {
-    width_ft?: number
-    length_ft?: number
-    sections?: number
-    squareFeet?: number
-  }
-  serialNumber?: string
-  roofType?: string
-  sidingType?: string
-  foundationType?: string
-  heatingType?: string
-  coolingType?: string
-  
-  // Common
-  description?: string
-  searchResultsText?: string
-  location?: {
-    city?: string
-    state?: string
-    postalCode?: string
-    communityName?: string
-  }
-  features?: any
-  media?: {
-    primaryPhoto?: string
-    photos?: string[]
-  }
-  keyFeatures?: string[]
-  createdAt: string
-  updatedAt: string
+  vin?: string
 }
 
+const STORAGE_KEY = 'renter-insight-inventory'
+
 export function useInventoryManagement() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
   const { toast } = useToast()
 
-  // Load vehicles from localStorage on mount
+  // Load inventory from localStorage on mount
   useEffect(() => {
     try {
-      const savedVehicles = loadFromLocalStorage<Vehicle[]>('inventory-vehicles', [])
-      setVehicles(savedVehicles)
+      const savedInventory = loadFromLocalStorage<InventoryItem[]>(STORAGE_KEY, [])
+      setInventory(savedInventory)
     } catch (err) {
+      console.error('Failed to load inventory:', err)
       setError('Failed to load inventory data')
-      console.error('Error loading vehicles:', err)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Save vehicles to localStorage whenever vehicles change
+  // Save inventory to localStorage whenever it changes
   useEffect(() => {
     if (!loading) {
-      saveToLocalStorage('inventory-vehicles', vehicles)
+      saveToLocalStorage(STORAGE_KEY, inventory)
     }
-  }, [vehicles, loading])
+  }, [inventory, loading])
 
-  const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
+  // Add new inventory item
+  const addInventoryItem = async (itemData: Partial<InventoryItem>): Promise<InventoryItem> => {
     try {
-      const newVehicle: Vehicle = {
-        ...vehicleData,
-        id: `vehicle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      const newItem: InventoryItem = {
+        id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        listingType: itemData.listingType || 'manufactured_home',
+        inventoryId: itemData.inventoryId || '',
+        year: itemData.year || new Date().getFullYear(),
+        make: itemData.make || '',
+        model: itemData.model || '',
+        condition: itemData.condition || 'new',
+        salePrice: itemData.salePrice,
+        rentPrice: itemData.rentPrice,
+        cost: itemData.cost,
+        offerType: itemData.offerType || 'for_sale',
+        status: itemData.status || 'available',
+        description: itemData.description || '',
+        searchResultsText: itemData.searchResultsText || '',
+        media: {
+          primaryPhoto: itemData.media?.primaryPhoto || '',
+          photos: itemData.media?.photos || []
+        },
+        location: {
+          city: itemData.location?.city || '',
+          state: itemData.location?.state || '',
+          postalCode: itemData.location?.postalCode || '',
+          communityName: itemData.location?.communityName || ''
+        },
+        features: itemData.features || {},
+        customFields: itemData.customFields || {},
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        
+        // MH specific fields
+        bedrooms: itemData.bedrooms,
+        bathrooms: itemData.bathrooms,
+        dimensions: itemData.dimensions,
+        serialNumber: itemData.serialNumber,
+        
+        // RV specific fields
+        sleeps: itemData.sleeps,
+        slides: itemData.slides,
+        length: itemData.length,
+        fuelType: itemData.fuelType,
+        engine: itemData.engine,
+        transmission: itemData.transmission,
+        odometerMiles: itemData.odometerMiles,
+        vin: itemData.vin
+      }
+
+      setInventory(prev => [newItem, ...prev])
+      
+      toast({
+        title: 'Success',
+        description: `${itemData.listingType === 'rv' ? 'RV' : 'Manufactured Home'} added successfully`
+      })
+
+      return newItem
+    } catch (err) {
+      console.error('Failed to add inventory item:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to add inventory item',
+        variant: 'destructive'
+      })
+      throw err
+    }
+  }
+
+  // Update existing inventory item
+  const updateInventoryItem = async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem | null> => {
+    try {
+      const existingItem = inventory.find(item => item.id === id)
+      if (!existingItem) {
+        throw new Error('Inventory item not found')
+      }
+
+      const updatedItem: InventoryItem = {
+        ...existingItem,
+        ...updates,
+        // Ensure nested objects are properly merged
+        media: {
+          ...existingItem.media,
+          ...(updates.media || {})
+        },
+        location: {
+          ...existingItem.location,
+          ...(updates.location || {})
+        },
+        features: {
+          ...existingItem.features,
+          ...(updates.features || {})
+        },
+        dimensions: {
+          ...existingItem.dimensions,
+          ...(updates.dimensions || {})
+        },
+        customFields: {
+          ...existingItem.customFields,
+          ...(updates.customFields || {})
+        },
         updatedAt: new Date().toISOString()
       }
 
-      setVehicles(prev => [newVehicle, ...prev])
+      setInventory(prev => prev.map(item => item.id === id ? updatedItem : item))
       
       toast({
         title: 'Success',
-        description: `${vehicleData.listingType === 'rv' ? 'RV' : 'Manufactured Home'} added successfully`
+        description: `${updatedItem.listingType === 'rv' ? 'RV' : 'Manufactured Home'} updated successfully`
       })
 
-      return newVehicle
+      return updatedItem
     } catch (err) {
-      const errorMessage = 'Failed to add vehicle'
-      setError(errorMessage)
+      console.error('Failed to update inventory item:', err)
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: 'Failed to update inventory item',
         variant: 'destructive'
       })
       throw err
     }
   }
 
-  const updateVehicle = async (id: string, updates: Partial<Vehicle>) => {
+  // Delete inventory item
+  const deleteInventoryItem = async (id: string): Promise<void> => {
     try {
-      setVehicles(prev => prev.map(vehicle => 
-        vehicle.id === id 
-          ? { ...vehicle, ...updates, updatedAt: new Date().toISOString() }
-          : vehicle
-      ))
+      const item = inventory.find(item => item.id === id)
+      if (!item) {
+        throw new Error('Inventory item not found')
+      }
 
-      toast({
-        title: 'Success',
-        description: 'Vehicle updated successfully'
-      })
-    } catch (err) {
-      const errorMessage = 'Failed to update vehicle'
-      setError(errorMessage)
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive'
-      })
-      throw err
-    }
-  }
-
-  const deleteVehicle = async (id: string) => {
-    try {
-      setVehicles(prev => prev.filter(vehicle => vehicle.id !== id))
+      setInventory(prev => prev.filter(item => item.id !== id))
       
       toast({
         title: 'Success',
-        description: 'Vehicle deleted successfully'
+        description: `${item.listingType === 'rv' ? 'RV' : 'Manufactured Home'} deleted successfully`
       })
     } catch (err) {
-      const errorMessage = 'Failed to delete vehicle'
-      setError(errorMessage)
+      console.error('Failed to delete inventory item:', err)
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: 'Failed to delete inventory item',
         variant: 'destructive'
       })
       throw err
     }
   }
 
-  const getVehiclesByType = (type: 'rv' | 'manufactured_home') => {
-    return vehicles.filter(vehicle => vehicle.listingType === type)
+  // Get inventory by type
+  const getInventoryByType = (type: 'manufactured_home' | 'rv') => {
+    return inventory.filter(item => item.listingType === type)
   }
 
-  const getVehiclesByStatus = (status: string) => {
-    return vehicles.filter(vehicle => vehicle.status === status)
+  // Get inventory by status
+  const getInventoryByStatus = (status: string) => {
+    return inventory.filter(item => item.status === status)
   }
 
-  const searchVehicles = (term: string) => {
-    if (!term) return vehicles
+  // Search inventory
+  const searchInventory = (searchTerm: string) => {
+    if (!searchTerm.trim()) return inventory
     
-    const searchLower = term.toLowerCase()
-    return vehicles.filter(vehicle => 
-      vehicle.make?.toLowerCase().includes(searchLower) ||
-      vehicle.model?.toLowerCase().includes(searchLower) ||
-      vehicle.inventoryId?.toLowerCase().includes(searchLower) ||
-      vehicle.year?.toString().includes(term)
+    const term = searchTerm.toLowerCase()
+    return inventory.filter(item => 
+      item.inventoryId.toLowerCase().includes(term) ||
+      item.make.toLowerCase().includes(term) ||
+      item.model.toLowerCase().includes(term) ||
+      item.location.city.toLowerCase().includes(term) ||
+      item.location.state.toLowerCase().includes(term) ||
+      (item.description && item.description.toLowerCase().includes(term))
     )
   }
 
+  // Get inventory statistics
   const getInventoryStats = () => {
-    const total = vehicles.length
-    const available = vehicles.filter(v => v.status === 'available').length
-    const pending = vehicles.filter(v => v.status === 'pending').length
-    const sold = vehicles.filter(v => v.status === 'sold').length
-    const rvCount = vehicles.filter(v => v.listingType === 'rv').length
-    const mhCount = vehicles.filter(v => v.listingType === 'manufactured_home').length
+    const total = inventory.length
+    const available = inventory.filter(item => item.status === 'available').length
+    const sold = inventory.filter(item => item.status === 'sold').length
+    const reserved = inventory.filter(item => item.status === 'reserved').length
+    
+    const totalValue = inventory
+      .filter(item => item.salePrice)
+      .reduce((sum, item) => sum + (item.salePrice || 0), 0)
+    
+    const averagePrice = total > 0 ? totalValue / total : 0
 
     return {
       total,
       available,
-      pending,
       sold,
-      rvCount,
-      mhCount
+      reserved,
+      totalValue,
+      averagePrice
     }
   }
 
   return {
-    vehicles,
+    inventory,
     loading,
     error,
-    searchTerm,
-    setSearchTerm,
-    statusFilter,
-    setStatusFilter,
-    typeFilter,
-    setTypeFilter,
-    addVehicle,
-    updateVehicle,
-    deleteVehicle,
-    getVehiclesByType,
-    getVehiclesByStatus,
-    searchVehicles,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    getInventoryByType,
+    getInventoryByStatus,
+    searchInventory,
     getInventoryStats
   }
 }
