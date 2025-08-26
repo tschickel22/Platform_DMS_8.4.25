@@ -350,14 +350,14 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
   </div>
 )
 
-const VehicleDetail: React.FC<VehicleDetailProps> = ({
-  vehicle,
-  const isManufacturedHome = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
     .includes(vehicle.type.toLowerCase())
 
   open,
   onOpenChange
 }) => {
+  const isManufacturedHome = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
+    .includes(vehicle.type.toLowerCase())
+
                 {vehicle.customFields?.msrp && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">MSRP:</span>
