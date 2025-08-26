@@ -1,9 +1,10 @@
-@import './styles/shared-colors.css';
-@import url('./modules/calendar-scheduling/index.css');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import './styles/shared-colors.css';
+
+/* Import calendar styles */
+@import url('./modules/calendar-scheduling/index.css');
 
 @layer base {
   :root {
