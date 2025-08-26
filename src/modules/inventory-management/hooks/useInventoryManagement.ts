@@ -1,22 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Vehicle, RVVehicle, MHVehicle, InventoryStats } from '../state/types'
-import { normalizeVehicleData } from '../utils/adapters'
+// src/modules/inventory-management/hooks/useInventoryManagement.ts
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import type { Vehicle, RVVehicle, MHVehicle, InventoryStats } from '../state/types'
 
-/* ----------------------------- utils & storage ----------------------------- */
+/* =============================================================================
+   Local helpers (no external dependencies)
+============================================================================= */
 
 const STORAGE_KEY = 'renter-insight-vehicles'
 
 const genId = (): string => {
   try {
-    // @ts-ignore - crypto may not exist in some environments
+    // @ts-ignore crypto might not exist in all environments
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-  } catch { /* ignore */ }
+  } catch {}
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-const readFromLocalStorage = (): Vehicle[] => {
+const readLS = (): Vehicle[] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    if (typeof window === 'undefined') return []
+    const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? (parsed as Vehicle[]) : []
@@ -25,20 +28,22 @@ const readFromLocalStorage = (): Vehicle[] => {
   }
 }
 
-const writeToLocalStorage = (data: Vehicle[]) => {
+const writeLS = (data: Vehicle[]) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   } catch {
-    // non-fatal; storage might be unavailable
+    // Non-fatal: storage may be blocked
   }
 }
 
-/* --------------------------------- mocks ---------------------------------- */
+/* =============================================================================
+   Mock seed (kept small but valid). NOTE: MH uses `zip`, not `zip9`.
+============================================================================= */
 
-// NOTE: changed `zip9` -> `zip` to match current MH field naming.
-const mockInventoryData: Vehicle[] = [
+const SEED: Vehicle[] = [
   {
-    id: '1',
+    id: 'rv-1',
     type: 'RV',
     status: 'Available',
     vehicleIdentificationNumber: '1FDXE45S8HDA12345',
@@ -62,7 +67,7 @@ const mockInventoryData: Vehicle[] = [
     updatedAt: '2024-01-15T10:00:00Z'
   } as RVVehicle,
   {
-    id: '2',
+    id: 'mh-1',
     type: 'MH',
     status: 'Available',
     askingPrice: 85000,
@@ -87,52 +92,90 @@ const mockInventoryData: Vehicle[] = [
   } as MHVehicle
 ]
 
-/* ------------------------------ main hook ---------------------------------- */
+/* =============================================================================
+   Filters/search state
+============================================================================= */
+
+type StatusFilter = 'ALL' | 'Available' | 'Reserved' | 'Sold'
+type TypeFilter = 'ALL' | 'RV' | 'MH'
+
+interface Filters {
+  status: StatusFilter
+  type: TypeFilter
+}
+
+/* =============================================================================
+   Hook
+============================================================================= */
 
 export const useInventoryManagement = () => {
+  // core data
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  // initial load
+  // ui controls
+  const [filters, setFilters] = useState<Filters>({ status: 'ALL', type: 'ALL' })
+  const [search, setSearch] = useState<string>('')
+
+  /* ------------------------------ initialization ----------------------------- */
   useEffect(() => {
-    let mounted = true
-
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        // 1) try local storage
-        let data = readFromLocalStorage()
-
-        // 2) else normalize mocks
-        if (data.length === 0) {
-          data = typeof normalizeVehicleData === 'function'
-            ? normalizeVehicleData(mockInventoryData)
-            : mockInventoryData
-        }
-
-        if (!mounted) return
-        setVehicles(data)
-        setError(null)
-      } catch (err) {
-        if (!mounted) return
-        console.error('Error loading inventory:', err)
-        setError('Failed to load inventory data')
-      } finally {
-        if (mounted) setLoading(false)
-      }
+    // deterministic init: localStorage -> seed
+    try {
+      const fromLS = readLS()
+      setVehicles(fromLS.length ? fromLS : SEED)
+      setError(null)
+    } catch (e) {
+      setError('Failed to load inventory data')
+      // eslint-disable-next-line no-console
+      console.error('Inventory init failed:', e)
+      setVehicles(SEED)
+    } finally {
+      setLoading(false)
     }
-
-    loadData()
-    return () => { mounted = false }
   }, [])
 
-  // persist on change
+  // persist changes
   useEffect(() => {
-    writeToLocalStorage(vehicles)
+    writeLS(vehicles)
   }, [vehicles])
 
-  /* ------------------------------- CRUD ops ------------------------------- */
+  /* --------------------------------- derived -------------------------------- */
+  const filtered = useMemo(() => {
+    let data = vehicles
+
+    if (filters.type !== 'ALL') {
+      data = data.filter(v => v.type === filters.type)
+    }
+    if (filters.status !== 'ALL') {
+      data = data.filter(v => v.status === filters.status)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      data = data.filter(v => {
+        const haystack = [
+          (v as any).vehicleIdentificationNumber,
+          (v as any).serialNumber,
+          (v as any).brand,
+          (v as any).make,
+          v.model,
+          (v as any).homeType,
+          (v as any).description,
+          (v as any).address1,
+          (v as any).city,
+          (v as any).state
+        ]
+          .filter(Boolean)
+          .map(String)
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(q)
+      })
+    }
+    return data
+  }, [vehicles, filters, search])
+
+  /* ---------------------------------- CRUD ---------------------------------- */
 
   const addVehicle = useCallback(
     async (vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -151,9 +194,7 @@ export const useInventoryManagement = () => {
   const updateVehicle = useCallback(
     async (id: string, updates: Partial<Vehicle>) => {
       setVehicles(prev =>
-        prev.map(v =>
-          v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v
-        )
+        prev.map(v => (v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v))
       )
     },
     []
@@ -168,7 +209,7 @@ export const useInventoryManagement = () => {
 
   const importVehicles = useCallback(
     async (incoming: Vehicle[]) => {
-      const withIds: Vehicle[] = incoming.map(v => ({
+      const withIds = incoming.map(v => ({
         ...v,
         id: v.id ?? genId(),
         createdAt: v.createdAt ?? new Date().toISOString(),
@@ -180,7 +221,7 @@ export const useInventoryManagement = () => {
     []
   )
 
-  /* -------------------------------- stats --------------------------------- */
+  /* --------------------------------- stats ---------------------------------- */
 
   const getStats = useCallback((): InventoryStats => {
     const total = vehicles.length
@@ -189,46 +230,96 @@ export const useInventoryManagement = () => {
     const sold = vehicles.filter(v => v.status === 'Sold').length
 
     const totalValue = vehicles.reduce((sum, v) => {
-      const value =
-        // RV
-        (v as any).price ??
-        // MH
-        (v as any).askingPrice ??
-        0
+      const value = (v as any).price ?? (v as any).askingPrice ?? 0
       return sum + (typeof value === 'number' ? value : 0)
     }, 0)
 
     return { total, available, reserved, sold, totalValue }
   }, [vehicles])
 
+  /* ------------------------------- utilities -------------------------------- */
+
   const refreshData = useCallback(async () => {
     setLoading(true)
     try {
-      const current = readFromLocalStorage()
-      if (current.length > 0) {
-        setVehicles(current)
-      } else {
-        const normalized = typeof normalizeVehicleData === 'function'
-          ? normalizeVehicleData(mockInventoryData)
-          : mockInventoryData
-        setVehicles(normalized)
-      }
+      const current = readLS()
+      setVehicles(current.length ? current : SEED)
+      setError(null)
     } catch (e) {
+      setVehicles(SEED)
       setError('Failed to refresh inventory data')
     } finally {
       setLoading(false)
     }
   }, [])
 
+  const clearAll = useCallback(() => {
+    setVehicles([])
+    writeLS([])
+  }, [])
+
+  const exportCSV = useCallback((): string => {
+    // very basic CSV to help with quick exports
+    const headers = [
+      'id',
+      'type',
+      'status',
+      'brand/make',
+      'model',
+      'year/modelDate',
+      'vin/serial',
+      'price/askingPrice',
+      'city',
+      'state'
+    ]
+    const rows = vehicles.map(v => {
+      const brandOrMake = (v as any).brand ?? (v as any).make ?? ''
+      const yearOrModelDate = (v as any).year ?? (v as any).modelDate ?? ''
+      const vinOrSerial = (v as any).vehicleIdentificationNumber ?? (v as any).serialNumber ?? ''
+      const priceOrAsking = (v as any).price ?? (v as any).askingPrice ?? ''
+      const city = (v as any).city ?? ''
+      const state = (v as any).state ?? ''
+      return [
+        v.id,
+        v.type,
+        v.status,
+        brandOrMake,
+        v.model ?? '',
+        yearOrModelDate,
+        vinOrSerial,
+        priceOrAsking,
+        city,
+        state
+      ]
+        .map(x => `"${String(x).replace(/"/g, '""')}"`)
+        .join(',')
+    })
+    return [headers.join(','), ...rows].join('\n')
+  }, [vehicles])
+
+  /* --------------------------------- return --------------------------------- */
+
   return {
+    // data
     vehicles,
+    filtered,
     loading,
     error,
+
+    // controls
+    filters,
+    setFilters,
+    search,
+    setSearch,
+
+    // actions
     addVehicle,
     updateVehicle,
     deleteVehicle,
     importVehicles,
     getStats,
     refreshData,
+    clearAll,
+    exportCSV
   }
 }
