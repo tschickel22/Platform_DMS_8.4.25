@@ -2,7 +2,40 @@ import { useState, useEffect, useCallback } from 'react'
 import { Vehicle, RVVehicle, MHVehicle, InventoryStats } from '../state/types'
 import { normalizeVehicleData } from '../utils/adapters'
 
-// Mock data - in production this would come from an API
+/* ----------------------------- utils & storage ----------------------------- */
+
+const STORAGE_KEY = 'renter-insight-vehicles'
+
+const genId = (): string => {
+  try {
+    // @ts-ignore - crypto may not exist in some environments
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  } catch { /* ignore */ }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+const readFromLocalStorage = (): Vehicle[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as Vehicle[]) : []
+  } catch {
+    return []
+  }
+}
+
+const writeToLocalStorage = (data: Vehicle[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // non-fatal; storage might be unavailable
+  }
+}
+
+/* --------------------------------- mocks ---------------------------------- */
+
+// NOTE: changed `zip9` -> `zip` to match current MH field naming.
 const mockInventoryData: Vehicle[] = [
   {
     id: '1',
@@ -42,185 +75,150 @@ const mockInventoryData: Vehicle[] = [
     address1: '123 Mobile Home Park Dr',
     city: 'Austin',
     state: 'TX',
-    zip9: '78701',
+    zip: '78701',
     serialNumber: 'CLT123456789',
     width1: 16,
     length1: 80,
     color: 'Beige',
     description: 'Modern manufactured home in excellent condition',
+    images: [],
     createdAt: '2024-01-16T10:00:00Z',
     updatedAt: '2024-01-16T10:00:00Z'
   } as MHVehicle
 ]
 
+/* ------------------------------ main hook ---------------------------------- */
+
 export const useInventoryManagement = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize data
+  // initial load
   useEffect(() => {
+    let mounted = true
+
     const loadData = async () => {
+      setLoading(true)
       try {
-      
-      // Add sample data if no vehicles exist
-      if (savedVehicles.length === 0) {
-        const sampleVehicles: Vehicle[] = [
-          {
-            id: generateId(),
-            vin: 'MH123456789',
-            make: 'Clayton',
-            model: 'The Edge',
-            year: 2023,
-            type: VehicleType.DOUBLE_WIDE,
-            status: VehicleStatus.AVAILABLE,
-            price: 95000,
-            cost: 75000,
-            location: 'Lot A-12',
-            features: ['Central Air', 'Fireplace', 'Deck'],
-            images: ['https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400'],
-            customFields: {
-              bedrooms: '3',
-              bathrooms: '2',
-              squareFootage: '1450',
-              homeType: 'Double Wide'
-            },
-            createdAt: new Date(),
-            updatedAt: new Date()
-          },
-          {
-            id: generateId(),
-            vin: 'RV987654321',
-            make: 'Forest River',
-            model: 'Cherokee',
-            year: 2022,
-            type: VehicleType.TRAVEL_TRAILER,
-            status: VehicleStatus.AVAILABLE,
-            price: 45000,
-            cost: 35000,
-            location: 'Lot B-5',
-            features: ['Slide Out', 'Awning', 'Generator Ready'],
-            images: ['https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400'],
-            customFields: {
-              sleeps: '6',
-              length: '28',
-              slideOuts: '1',
-              rvType: 'Travel Trailer'
-            },
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-        ]
-        
-        setVehicles(sampleVehicles)
-        saveToLocalStorage('renter-insight-vehicles', sampleVehicles)
-      } else {
-        setVehicles(savedVehicles)
-      }
-      
-        setLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // In production, this would be an API call
-        const normalizedData = normalizeVehicleData(mockInventoryData)
-        setVehicles(normalizedData)
+        // 1) try local storage
+        let data = readFromLocalStorage()
+
+        // 2) else normalize mocks
+        if (data.length === 0) {
+          data = typeof normalizeVehicleData === 'function'
+            ? normalizeVehicleData(mockInventoryData)
+            : mockInventoryData
+        }
+
+        if (!mounted) return
+        setVehicles(data)
         setError(null)
       } catch (err) {
-        setError('Failed to load inventory data')
+        if (!mounted) return
         console.error('Error loading inventory:', err)
+        setError('Failed to load inventory data')
       } finally {
-        setLoading(false)
+        if (mounted) setLoading(false)
       }
     }
 
     loadData()
+    return () => { mounted = false }
   }, [])
 
-  // Add vehicle
-  const addVehicle = useCallback(async (vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
+  // persist on change
+  useEffect(() => {
+    writeToLocalStorage(vehicles)
+  }, [vehicles])
+
+  /* ------------------------------- CRUD ops ------------------------------- */
+
+  const addVehicle = useCallback(
+    async (vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>) => {
       const newVehicle: Vehicle = {
         ...vehicle,
-        id: Date.now().toString(),
+        id: genId(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
-      
       setVehicles(prev => [...prev, newVehicle])
       return newVehicle
-    } catch (err) {
-      setError('Failed to add vehicle')
-      throw err
-    }
-  }, [])
+    },
+    []
+  )
 
-  // Update vehicle
-  const updateVehicle = useCallback(async (id: string, updates: Partial<Vehicle>) => {
-    try {
-      setVehicles(prev => prev.map(vehicle => 
-        vehicle.id === id 
-          ? { ...vehicle, ...updates, updatedAt: new Date().toISOString() }
-          : vehicle
-      ))
-    } catch (err) {
-      setError('Failed to update vehicle')
-      throw err
-    }
-  }, [])
+  const updateVehicle = useCallback(
+    async (id: string, updates: Partial<Vehicle>) => {
+      setVehicles(prev =>
+        prev.map(v =>
+          v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v
+        )
+      )
+    },
+    []
+  )
 
-  // Delete vehicle
-  const deleteVehicle = useCallback(async (id: string) => {
-    try {
-      setVehicles(prev => prev.filter(vehicle => vehicle.id !== id))
-    } catch (err) {
-      setError('Failed to delete vehicle')
-      throw err
-    }
-  }, [])
+  const deleteVehicle = useCallback(
+    async (id: string) => {
+      setVehicles(prev => prev.filter(v => v.id !== id))
+    },
+    []
+  )
 
-  // Bulk import vehicles
-  const importVehicles = useCallback(async (newVehicles: Vehicle[]) => {
-    try {
-      const vehiclesWithIds = newVehicles.map(vehicle => ({
-        ...vehicle,
-        id: vehicle.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        createdAt: vehicle.createdAt || new Date().toISOString(),
+  const importVehicles = useCallback(
+    async (incoming: Vehicle[]) => {
+      const withIds: Vehicle[] = incoming.map(v => ({
+        ...v,
+        id: v.id ?? genId(),
+        createdAt: v.createdAt ?? new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }))
-      
-      setVehicles(prev => [...prev, ...vehiclesWithIds])
-      return vehiclesWithIds
-    } catch (err) {
-      setError('Failed to import vehicles')
-      throw err
-    }
-  }, [])
+      setVehicles(prev => [...prev, ...withIds])
+      return withIds
+    },
+    []
+  )
 
-  // Calculate stats
+  /* -------------------------------- stats --------------------------------- */
+
   const getStats = useCallback((): InventoryStats => {
     const total = vehicles.length
     const available = vehicles.filter(v => v.status === 'Available').length
     const reserved = vehicles.filter(v => v.status === 'Reserved').length
     const sold = vehicles.filter(v => v.status === 'Sold').length
-    
-    const totalValue = vehicles.reduce((sum, vehicle) => {
-      if (vehicle.type === 'RV') {
-        return sum + (vehicle.price || 0)
-      } else if (vehicle.type === 'MH') {
-        return sum + (vehicle.askingPrice || 0)
-      }
-      return sum
+
+    const totalValue = vehicles.reduce((sum, v) => {
+      const value =
+        // RV
+        (v as any).price ??
+        // MH
+        (v as any).askingPrice ??
+        0
+      return sum + (typeof value === 'number' ? value : 0)
     }, 0)
 
-    return {
-      total,
-      available,
-      reserved,
-      sold,
-      totalValue
-    }
+    return { total, available, reserved, sold, totalValue }
   }, [vehicles])
+
+  const refreshData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const current = readFromLocalStorage()
+      if (current.length > 0) {
+        setVehicles(current)
+      } else {
+        const normalized = typeof normalizeVehicleData === 'function'
+          ? normalizeVehicleData(mockInventoryData)
+          : mockInventoryData
+        setVehicles(normalized)
+      }
+    } catch (e) {
+      setError('Failed to refresh inventory data')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   return {
     vehicles,
@@ -231,10 +229,6 @@ export const useInventoryManagement = () => {
     deleteVehicle,
     importVehicles,
     getStats,
-    refreshData: () => {
-      // Trigger data reload if needed
-      setLoading(true)
-      setTimeout(() => setLoading(false), 500)
-    }
+    refreshData,
   }
 }
