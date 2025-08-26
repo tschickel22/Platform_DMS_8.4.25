@@ -1,115 +1,170 @@
 import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Vehicle, VehicleStatus } from '@/types'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Home, Truck } from 'lucide-react'
+import { Vehicle } from '@/types'
+import { MHInventoryForm } from './MHInventoryForm'
+import { RVInventoryForm } from './RVInventoryForm'
 
-export interface VehicleFormProps {
+interface VehicleFormProps {
   vehicle?: Vehicle
-  onSave: (data: Partial<Vehicle>) => void
+  onSave: (vehicleData: Partial<Vehicle>) => void
   onCancel: () => void
 }
 
-// Named export to match: import { VehicleForm } from './forms/VehicleForm'
 export function VehicleForm({ vehicle, onSave, onCancel }: VehicleFormProps) {
-  // Use safe defaults; keep this lightweight and self-contained
-  const [vin, setVin] = useState<string>(vehicle?.vin || '')
-  const [make, setMake] = useState<string>(vehicle?.make || '')
-  const [model, setModel] = useState<string>(vehicle?.model || '')
-  const [year, setYear] = useState<number>(vehicle?.year ?? new Date().getFullYear())
-  const [price, setPrice] = useState<number>(vehicle?.price ?? 0)
-  const [location, setLocation] = useState<string>(vehicle?.location || '')
-  const [status, setStatus] = useState<VehicleStatus>(
-    (vehicle?.status as VehicleStatus) ?? (Object.values(VehicleStatus)[0] as VehicleStatus)
+  const [selectedType, setSelectedType] = useState<'manufactured_home' | 'rv' | null>(
+    vehicle ? (isManufacturedHome(vehicle) ? 'manufactured_home' : 'rv') : null
   )
 
-  const handleSave = () => {
-    onSave({
-      id: vehicle?.id, // preserve if editing
-      vin,
-      make,
-      model,
-      year,
-      price,
-      location,
-      status,
-    })
+  // Helper function to determine if vehicle is a manufactured home
+  function isManufacturedHome(vehicle: Vehicle): boolean {
+    const mhTypes = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
+    return mhTypes.includes(vehicle.type.toLowerCase())
   }
 
-  // Derive status options from enum to avoid drift across branches
-  const statusOptions = (Object.values(VehicleStatus) as string[])
+  const handleTypeSelection = (type: 'manufactured_home' | 'rv') => {
+    setSelectedType(type)
+  }
+
+  const handleFormSubmit = (formData: any) => {
+    // Transform form data to Vehicle format
+    const vehicleData: Partial<Vehicle> = {
+      vin: formData.vin,
+      make: formData.make,
+      model: formData.model,
+      year: formData.year,
+      type: selectedType === 'manufactured_home' ? 'single_wide' : 'rv', // Default types
+      status: 'available',
+      price: parseFloat(formData.salePrice) || 0,
+      cost: parseFloat(formData.cost) || 0,
+      location: formData.location || 'On Lot',
+      features: formData.features || [],
+      images: formData.images?.map((img: any) => img.url) || [],
+      customFields: {
+        ...formData,
+        type: selectedType
+      }
+    }
+
+    onSave(vehicleData)
+  }
+
+  // If editing existing vehicle, skip type selection
+  if (vehicle) {
+    const vehicleType = isManufacturedHome(vehicle) ? 'manufactured_home' : 'rv'
+    
+    return (
+      <Dialog open={true} onOpenChange={() => onCancel()}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Vehicle</DialogTitle>
+          </DialogHeader>
+          {vehicleType === 'manufactured_home' ? (
+            <MHInventoryForm
+              onSubmit={handleFormSubmit}
+              onCancel={onCancel}
+              initialData={vehicle.customFields || vehicle}
+            />
+          ) : (
+            <RVInventoryForm
+              onSubmit={handleFormSubmit}
+              onCancel={onCancel}
+              initialData={vehicle.customFields || vehicle}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle>{vehicle ? 'Edit Vehicle' : 'Add Vehicle'}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vin">VIN</Label>
-              <Input id="vin" value={vin} onChange={(e) => setVin(e.target.value)} />
+    <Dialog open={true} onOpenChange={() => onCancel()}>
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Vehicle</DialogTitle>
+        </DialogHeader>
+        
+        {!selectedType ? (
+          <div className="space-y-6 p-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">What type of vehicle are you adding?</h2>
+              <p className="text-muted-foreground">
+                Select the type to show the appropriate form fields
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value) || new Date().getFullYear())}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="make">Make</Label>
-              <Input id="make" value={make} onChange={(e) => setMake(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Input id="model" value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={String(status)}
-                onValueChange={(v) => setStatus(v as VehicleStatus)}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-primary/50"
+                onClick={() => handleTypeSelection('manufactured_home')}
               >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s.toString()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <CardHeader className="text-center">
+                  <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                    <Home className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <CardTitle className="text-xl">Manufactured Home</CardTitle>
+                  <CardDescription>
+                    Single-wide, double-wide, triple-wide, modular homes, and park models
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>• Bedrooms & bathrooms</p>
+                    <p>• Square footage & dimensions</p>
+                    <p>• Construction materials</p>
+                    <p>• Home features & appliances</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-primary/50"
+                onClick={() => handleTypeSelection('rv')}
+              >
+                <CardHeader className="text-center">
+                  <div className="mx-auto w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-4">
+                    <Truck className="h-8 w-8 text-cyan-600" />
+                  </div>
+                  <CardTitle className="text-xl">RV / Recreational Vehicle</CardTitle>
+                  <CardDescription>
+                    Motorhomes, travel trailers, fifth wheels, and toy haulers
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>• Sleeping capacity & slide-outs</p>
+                    <p>• Length & vehicle specs</p>
+                    <p>• Engine & transmission</p>
+                    <p>• RV features & amenities</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
             </div>
           </div>
-
-          <div className="flex gap-2 justify-end pt-2">
-            <Button onClick={handleSave}>Save</Button>
-            <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <>
+            {selectedType === 'manufactured_home' ? (
+              <MHInventoryForm
+                onSubmit={handleFormSubmit}
+                onCancel={onCancel}
+              />
+            ) : (
+              <RVInventoryForm
+                onSubmit={handleFormSubmit}
+                onCancel={onCancel}
+              />
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

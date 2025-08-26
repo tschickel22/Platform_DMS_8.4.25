@@ -1,168 +1,233 @@
-import React from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { 
+  Search, 
+  Edit, 
+  Eye, 
+  Trash2, 
+  MoreHorizontal,
+  Package,
+  Home,
+  Truck,
+  Calendar
+} from 'lucide-react'
+import { Vehicle, VehicleStatus } from '@/types'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
 
 interface InventoryTableProps {
-  vehicles: any[]
-  onEdit: (vehicle: any) => void
-  onDelete: (vehicleId: string) => void
-  onView: (vehicle: any) => void
+  vehicles: Vehicle[]
+  onEdit: (vehicle: Vehicle) => void
+  onView: (vehicle: Vehicle) => void
+  onStatusChange: (vehicleId: string, status: VehicleStatus) => void
+  onCreateTask: (vehicle: Vehicle) => void
+  onDelete?: (vehicleId: string) => void
 }
 
-export function InventoryTable({
-  vehicles,
-  onEdit,
-  onDelete,
-  onView,
+export function InventoryTable({ 
+  vehicles, 
+  onEdit, 
+  onView, 
+  onStatusChange, 
+  onCreateTask,
+  onDelete
 }: InventoryTableProps) {
-  const getStatusColor = (raw: string) => {
-    const status = (raw || '').toLowerCase()
-    switch (status) {
-      case 'available':
-      case 'instock':
-        return 'bg-green-100 text-green-800'
-      case 'sold':
-      case 'soldout':
-        return 'bg-blue-100 text-blue-800'
-      case 'reserved':
-      case 'preorder':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'service':
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<keyof Vehicle>('year')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  const filteredVehicles = vehicles.filter(vehicle =>
+    vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.year.toString().includes(searchTerm)
+  )
+
+  const sortedVehicles = [...filteredVehicles].sort((a, b) => {
+    const aValue = a[sortField]
+    const bValue = b[sortField]
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue)
+    }
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+    }
+    
+    return 0
+  })
+
+  const handleSort = (field: keyof Vehicle) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
     }
   }
 
-  if (!vehicles?.length) {
+  const getVehicleTypeIcon = (vehicle: Vehicle) => {
+    const mhTypes = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
+    return mhTypes.includes(vehicle.type.toLowerCase()) ? 
+      <Home className="h-4 w-4 text-emerald-600" /> : 
+      <Truck className="h-4 w-4 text-cyan-600" />
+  }
+
+  const getVehicleTypeLabel = (vehicle: Vehicle) => {
+    const mhTypes = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
+    return mhTypes.includes(vehicle.type.toLowerCase()) ? 'MH' : 'RV'
+  }
+
+  const getStatusBadge = (status: VehicleStatus) => {
+    const variants = {
+      available: 'default',
+      reserved: 'secondary',
+      sold: 'outline',
+      service: 'destructive',
+      delivered: 'outline'
+    } as const
+    
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No inventory items found</p>
-      </div>
+      <Badge variant={variants[status] || 'outline'}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    )
+  }
+
+  if (vehicles.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No vehicles in inventory</h3>
+          <p className="text-muted-foreground text-center mb-6">
+            Get started by adding your first vehicle to the inventory
+          </p>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {vehicles.map((vehicle: any) => {
-            const typeLabel =
-              vehicle?.listingType?.toLowerCase() === 'rv' || vehicle?.type === 'RV'
-                ? 'RV'
-                : vehicle?.listingType?.toLowerCase() === 'mh' || vehicle?.type === 'MH'
-                ? 'MH'
-                : (vehicle?.listingType || vehicle?.type || 'N/A')
-
-            const statusText =
-              vehicle?.status ||
-              vehicle?.availability ||
-              'Unknown'
-
-            return (
-              <TableRow key={vehicle.id}>
-                <TableCell>
-                  <div className="flex items-center space-x-3">
-                    {vehicle?.media?.primaryPhoto && (
-                      <img
-                        src={vehicle.media.primaryPhoto}
-                        alt={`${vehicle?.make || ''} ${vehicle?.model || ''}`}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium">
-                        {vehicle?.year ? `${vehicle.year} ` : ''}
-                        {vehicle?.make || ''} {vehicle?.model || ''}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {vehicle?.vin || vehicle?.serialNumber || 'No VIN/Serial'}
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <Badge variant="outline">{typeLabel}</Badge>
-                </TableCell>
-
-                <TableCell>
-                  <div className="space-y-1">
-                    {vehicle?.salePrice != null && (
-                      <div className="text-sm">Sale: {formatCurrency(vehicle.salePrice)}</div>
-                    )}
-                    {vehicle?.rentPrice != null && (
-                      <div className="text-sm text-muted-foreground">
-                        Rent: {formatCurrency(vehicle.rentPrice)}/mo
-                      </div>
-                    )}
-                    {vehicle?.price != null && vehicle?.salePrice == null && (
-                      <div className="text-sm">Price: {formatCurrency(vehicle.price)}</div>
-                    )}
-                    {vehicle?.askingPrice != null && vehicle?.salePrice == null && (
-                      <div className="text-sm">Asking: {formatCurrency(vehicle.askingPrice)}</div>
-                    )}
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <Badge className={getStatusColor(statusText)}>{statusText}</Badge>
-                </TableCell>
-
-                <TableCell>
-                  <div className="text-sm">
-                    {vehicle?.location?.city && vehicle?.location?.state
-                      ? `${vehicle.location.city}, ${vehicle.location.state}`
-                      : 'Not specified'}
-                  </div>
-                </TableCell>
-
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onView(vehicle)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(vehicle)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete(vehicle.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Inventory ({vehicles.length} vehicles)</CardTitle>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search vehicles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('year')}
+                >
+                  Year {sortField === 'year' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('make')}
+                >
+                  Make {sortField === 'make' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('model')}
+                >
+                  Model {sortField === 'model' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead>VIN</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('status')}
+                >
+                  Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('price')}
+                >
+                  Price {sortField === 'price' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
+            </TableHeader>
+            <TableBody>
+              {sortedVehicles.map((vehicle) => (
+                <TableRow key={vehicle.id} className="hover:bg-muted/50">
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getVehicleTypeIcon(vehicle)}
+                      <span className="text-xs font-medium">{getVehicleTypeLabel(vehicle)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{vehicle.year}</TableCell>
+                  <TableCell>{vehicle.make}</TableCell>
+                  <TableCell>{vehicle.model}</TableCell>
+                  <TableCell className="font-mono text-sm">{vehicle.vin}</TableCell>
+                  <TableCell>{getStatusBadge(vehicle.status)}</TableCell>
+                  <TableCell>{formatCurrency(vehicle.price || 0)}</TableCell>
+                  <TableCell>{vehicle.location}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onView(vehicle)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(vehicle)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Vehicle
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onCreateTask(vehicle)}>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Create Task
+                        </DropdownMenuItem>
+                        {onDelete && (
+                          <DropdownMenuItem 
+                            onClick={() => onDelete(vehicle.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Vehicle
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
+
+export default InventoryTable

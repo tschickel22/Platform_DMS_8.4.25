@@ -62,6 +62,62 @@ export const useInventoryManagement = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+      
+      // Add sample data if no vehicles exist
+      if (savedVehicles.length === 0) {
+        const sampleVehicles: Vehicle[] = [
+          {
+            id: generateId(),
+            vin: 'MH123456789',
+            make: 'Clayton',
+            model: 'The Edge',
+            year: 2023,
+            type: VehicleType.DOUBLE_WIDE,
+            status: VehicleStatus.AVAILABLE,
+            price: 95000,
+            cost: 75000,
+            location: 'Lot A-12',
+            features: ['Central Air', 'Fireplace', 'Deck'],
+            images: ['https://images.pexels.com/photos/1546168/pexels-photo-1546168.jpeg?auto=compress&cs=tinysrgb&w=400'],
+            customFields: {
+              bedrooms: '3',
+              bathrooms: '2',
+              squareFootage: '1450',
+              homeType: 'Double Wide'
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
+          {
+            id: generateId(),
+            vin: 'RV987654321',
+            make: 'Forest River',
+            model: 'Cherokee',
+            year: 2022,
+            type: VehicleType.TRAVEL_TRAILER,
+            status: VehicleStatus.AVAILABLE,
+            price: 45000,
+            cost: 35000,
+            location: 'Lot B-5',
+            features: ['Slide Out', 'Awning', 'Generator Ready'],
+            images: ['https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400'],
+            customFields: {
+              sleeps: '6',
+              length: '28',
+              slideOuts: '1',
+              rvType: 'Travel Trailer'
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ]
+        
+        setVehicles(sampleVehicles)
+        saveToLocalStorage('renter-insight-vehicles', sampleVehicles)
+      } else {
+        setVehicles(savedVehicles)
+      }
+      
         setLoading(true)
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 500))

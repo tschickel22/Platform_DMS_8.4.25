@@ -3,7 +3,7 @@ import { Vehicle, RVVehicle, MHVehicle } from '../state/types'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Edit, Calendar, Package, MapPin, DollarSign, Home, Truck, Star } from 'lucide-react'
 import { 
   Car, 
   Home, 
@@ -296,6 +296,53 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
     {/* Description */}
     {mh.description && (
       <Card>
+                
+                {/* Type-specific fields */}
+                {isManufacturedHome && vehicle.customFields && (
+                  <>
+                    {vehicle.customFields.bedrooms && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bedrooms:</span>
+                        <span className="font-medium">{vehicle.customFields.bedrooms}</span>
+                      </div>
+                    )}
+                    {vehicle.customFields.bathrooms && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bathrooms:</span>
+                        <span className="font-medium">{vehicle.customFields.bathrooms}</span>
+                      </div>
+                    )}
+                    {vehicle.customFields.squareFootage && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Square Footage:</span>
+                        <span className="font-medium">{vehicle.customFields.squareFootage} sq ft</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {!isManufacturedHome && vehicle.customFields && (
+                  <>
+                    {vehicle.customFields.sleeps && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sleeps:</span>
+                        <span className="font-medium">{vehicle.customFields.sleeps}</span>
+                      </div>
+                    )}
+                    {vehicle.customFields.length && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Length:</span>
+                        <span className="font-medium">{vehicle.customFields.length} ft</span>
+                      </div>
+                    )}
+                    {vehicle.customFields.slideOuts && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Slide Outs:</span>
+                        <span className="font-medium">{vehicle.customFields.slideOuts}</span>
+                      </div>
+                    )}
+                  </>
+                )}
         <CardHeader>
           <CardTitle>Description</CardTitle>
         </CardHeader>
@@ -309,9 +356,18 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
 
 const VehicleDetail: React.FC<VehicleDetailProps> = ({
   vehicle,
+  const isManufacturedHome = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
+    .includes(vehicle.type.toLowerCase())
+
   open,
   onOpenChange
 }) => {
+                {vehicle.customFields?.msrp && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">MSRP:</span>
+                    <span className="font-medium">{formatCurrency(parseFloat(vehicle.customFields.msrp) || 0)}</span>
+                  </div>
+                )}
   if (!vehicle) return null
 
   const getVehicleTitle = (): string => {
@@ -327,11 +383,19 @@ const VehicleDetail: React.FC<VehicleDetailProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{getVehicleTitle()}</DialogTitle>
+            {isManufacturedHome ? (
+              <Home className="h-5 w-5 text-emerald-600" />
+            ) : (
+              <Truck className="h-5 w-5 text-cyan-600" />
+            )}
           <DialogDescription>
             {vehicle.type === 'RV' ? 'Recreational Vehicle' : 'Manufactured Home'} Details
+                <Badge variant="outline">
+                  {isManufacturedHome ? 'Manufactured Home' : 'RV'}
+                </Badge>
           </DialogDescription>
         </DialogHeader>
         
@@ -341,10 +405,65 @@ const VehicleDetail: React.FC<VehicleDetailProps> = ({
           ) : (
             <MHDetails mh={vehicle as MHVehicle} />
           )}
+          {/* Custom Fields */}
+          {vehicle.customFields && Object.keys(vehicle.customFields).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(vehicle.customFields).map(([key, value]) => {
+                    if (!value || key === 'type') return null
+                    
+                    return (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-muted-foreground capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}:
+                        </span>
+                        <span className="font-medium">
+                          {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   )
 }
 
+          {/* Images */}
+          {vehicle.images && vehicle.images.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Images</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {vehicle.images.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image}
+                        alt={`${vehicle.make} ${vehicle.model} - Image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border"
+                      />
+                      {index === 0 && (
+                        <div className="absolute top-2 left-2">
+                          <Badge className="bg-primary text-primary-foreground">
+                            <Star className="h-3 w-3 mr-1" />
+                            Primary
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 export default VehicleDetail
