@@ -292,53 +292,6 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
     {/* Description */}
     {mh.description && (
       <Card>
-                
-                {/* Type-specific fields */}
-                {isManufacturedHome && vehicle.customFields && (
-                  <>
-                    {vehicle.customFields.bedrooms && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bedrooms:</span>
-                        <span className="font-medium">{vehicle.customFields.bedrooms}</span>
-                      </div>
-                    )}
-                    {vehicle.customFields.bathrooms && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bathrooms:</span>
-                        <span className="font-medium">{vehicle.customFields.bathrooms}</span>
-                      </div>
-                    )}
-                    {vehicle.customFields.squareFootage && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Square Footage:</span>
-                        <span className="font-medium">{vehicle.customFields.squareFootage} sq ft</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                
-                {!isManufacturedHome && vehicle.customFields && (
-                  <>
-                    {vehicle.customFields.sleeps && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Sleeps:</span>
-                        <span className="font-medium">{vehicle.customFields.sleeps}</span>
-                      </div>
-                    )}
-                    {vehicle.customFields.length && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Length:</span>
-                        <span className="font-medium">{vehicle.customFields.length} ft</span>
-                      </div>
-                    )}
-                    {vehicle.customFields.slideOuts && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Slide Outs:</span>
-                        <span className="font-medium">{vehicle.customFields.slideOuts}</span>
-                      </div>
-                    )}
-                  </>
-                )}
         <CardHeader>
           <CardTitle>Description</CardTitle>
         </CardHeader>
@@ -350,20 +303,14 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
   </div>
 )
 
-    .includes(vehicle.type.toLowerCase())
-
+const VehicleDetail: React.FC<VehicleDetailProps> = ({
+  vehicle,
   open,
   onOpenChange
 }) => {
   const isManufacturedHome = ['single_wide', 'double_wide', 'triple_wide', 'modular_home', 'park_model']
-    .includes(vehicle.type.toLowerCase())
+    .includes(vehicle?.type?.toLowerCase() || '')
 
-                {vehicle.customFields?.msrp && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">MSRP:</span>
-                    <span className="font-medium">{formatCurrency(parseFloat(vehicle.customFields.msrp) || 0)}</span>
-                  </div>
-                )}
   if (!vehicle) return null
 
   const getVehicleTitle = (): string => {
@@ -381,17 +328,19 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{getVehicleTitle()}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
             {isManufacturedHome ? (
               <Home className="h-5 w-5 text-emerald-600" />
             ) : (
               <Truck className="h-5 w-5 text-cyan-600" />
             )}
-          <DialogDescription>
+            {getVehicleTitle()}
+          </DialogTitle>
+          <DialogDescription className="flex items-center gap-2">
             {vehicle.type === 'RV' ? 'Recreational Vehicle' : 'Manufactured Home'} Details
-                <Badge variant="outline">
-                  {isManufacturedHome ? 'Manufactured Home' : 'RV'}
-                </Badge>
+            <Badge variant="outline">
+              {isManufacturedHome ? 'Manufactured Home' : 'RV'}
+            </Badge>
           </DialogDescription>
         </DialogHeader>
         
@@ -401,6 +350,7 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
           ) : (
             <MHDetails mh={vehicle as MHVehicle} />
           )}
+          
           {/* Custom Fields */}
           {vehicle.customFields && Object.keys(vehicle.customFields).length > 0 && (
             <Card>
@@ -427,11 +377,6 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
               </CardContent>
             </Card>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
           {/* Images */}
           {vehicle.images && vehicle.images.length > 0 && (
@@ -462,4 +407,10 @@ const MHDetails: React.FC<{ mh: MHVehicle }> = ({ mh }) => (
               </CardContent>
             </Card>
           )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default VehicleDetail
