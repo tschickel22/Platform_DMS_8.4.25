@@ -6,9 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Edit, Calendar, Package, MapPin, DollarSign, Home, Truck, Star } from 'lucide-react'
 import { 
   Car, 
-  MapPin, 
-  DollarSign, 
-  Calendar, 
   Palette, 
   Fuel, 
   Settings, 
