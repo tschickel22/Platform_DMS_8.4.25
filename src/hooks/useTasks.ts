@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Task, TaskStatus, TaskModule, TaskPriority, Lead, ServiceTicket } from '@/types'
+import { Task, TaskStatus, TaskModule, TaskPriority, Lead, ServiceTicket, Contact } from '@/types'
 import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManagement'
 import { useServiceManagement } from '@/modules/service-ops/hooks/useServiceManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
 export function useTasks() {
@@ -13,6 +14,7 @@ export function useTasks() {
   // Import data from modules
   const { leads, salesReps } = useLeadManagement()
   const { tickets } = useServiceManagement()
+  const { contacts } = useContactManagement()
 
   // Load user-created tasks from localStorage on mount
   useEffect(() => {
@@ -187,11 +189,48 @@ export function useTasks() {
       })
   }, [tickets])
 
+  // Transform contacts into tasks
+  const transformContactsToTasks = useMemo((): Task[] => {
+    return contacts
+      .filter(contact => !contact.accountId) // Create tasks for standalone contacts
+      .map(contact => {
+        const daysSinceCreated = Math.floor((Date.now() - new Date(contact.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        const dueDate = new Date(contact.createdAt)
+        dueDate.setDate(dueDate.getDate() + 7) // Due 7 days after creation
+        const isOverdue = dueDate < new Date()
+        
+        return {
+          id: `contact-${contact.id}`,
+          title: `Assign account for ${contact.firstName} ${contact.lastName}`,
+          description: `Contact ${contact.firstName} ${contact.lastName} needs to be assigned to an account or converted to a lead.`,
+          dueDate,
+          status: TaskStatus.PENDING,
+          priority: daysSinceCreated > 7 ? TaskPriority.HIGH : TaskPriority.MEDIUM,
+          module: TaskModule.CRM,
+          sourceId: contact.id,
+          sourceType: 'contact',
+          assignedTo: undefined,
+          assignedToName: 'Unassigned',
+          link: `/crm/contacts/${contact.id}`,
+          tags: contact.tags || [],
+          isOverdue,
+          customFields: {
+            contactEmail: contact.email,
+            contactPhone: contact.phone,
+            contactSource: contact.source
+          },
+          createdAt: contact.createdAt,
+          updatedAt: contact.updatedAt,
+          contactId: contact.id
+        }
+      })
+  }, [contacts])
   // Combine all tasks
   const allTasks = useMemo(() => {
     const combined = [
       ...transformLeadsToTasks,
       ...transformServiceTicketsToTasks,
+      ...transformContactsToTasks,
       ...userCreatedTasks
     ]
     
@@ -201,7 +240,7 @@ export function useTasks() {
       if (!a.isOverdue && b.isOverdue) return 1
       return a.dueDate.getTime() - b.dueDate.getTime()
     })
-  }, [transformLeadsToTasks, transformServiceTicketsToTasks, userCreatedTasks])
+  }, [transformLeadsToTasks, transformServiceTicketsToTasks, transformContactsToTasks, userCreatedTasks])
 
   // Update tasks when data changes
   useEffect(() => {
