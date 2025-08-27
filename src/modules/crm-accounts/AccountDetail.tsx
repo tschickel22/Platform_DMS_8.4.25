@@ -12,6 +12,7 @@ import { NotesSection } from '@/components/common/NotesSection'
 import { NotesSection } from '@/components/common/NotesSection'
 import { TasksSection } from '@/components/common/TasksSection'
 import { useContactManagement } from '../crm-contacts/hooks/useContactManagement'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>()
@@ -284,6 +285,35 @@ export default function AccountDetail() {
           </TabsContent>
 
           <TabsContent value="service">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Wrench className="mr-2 h-5 w-5" />
+                  Service Tickets
+                </CardTitle>
+                <CardDescription>Service requests and tickets for this account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No service tickets for this account yet.</p>
+                  <p className="text-sm">Service tickets will appear here when created.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TasksSection
+              entityType="account"
+              entityId={account.id}
+              title="Account Tasks"
+              description="Tasks related to this account"
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+
       {/* Notes Section */}
       <NotesSection
         notes={account.notes}
