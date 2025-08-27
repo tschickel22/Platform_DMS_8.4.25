@@ -5,12 +5,13 @@ import { cn } from '@/lib/utils'
 
 /** 
  * Safely render children content for Select components.
- * This function handles display text without affecting the underlying value.
+ * This function extracts display text without affecting the underlying value.
  */
 function safeRenderChildren(children: React.ReactNode): React.ReactNode {
   if (children == null) return null
   if (typeof children === 'string' || typeof children === 'number') return children
   if (React.isValidElement(children)) return children
+  
   if (Array.isArray(children)) {
     return children
       .map((c) =>
@@ -21,7 +22,7 @@ function safeRenderChildren(children: React.ReactNode): React.ReactNode {
       .filter(Boolean)
   }
   
-  // For objects, try to extract display text but don't modify the value
+  // For objects, extract display text but preserve the original structure
   if (typeof children === 'object') {
     const obj = children as any
     
@@ -31,14 +32,20 @@ function safeRenderChildren(children: React.ReactNode): React.ReactNode {
       obj?.name ??
       obj?.title ??
       obj?.displayName ??
-      obj?.text
+      obj?.text ??
+      obj?.value
     
     if (typeof displayText === 'string' || typeof displayText === 'number') {
       return String(displayText)
     }
     
-    // Fallback to value or id, but don't stringify the whole object
-    return String(obj?.value ?? obj?.id ?? '')
+    // If it's a simple object with just value, return the value
+    if (obj?.value !== undefined) {
+      return String(obj.value)
+    }
+    
+    // Last resort: return empty string instead of JSON
+    return ''
   }
   
   return String(children)
@@ -46,7 +53,6 @@ function safeRenderChildren(children: React.ReactNode): React.ReactNode {
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
-// NOTE: do NOT alias SelectValue here; we export a wrapped version below.
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -147,27 +153,34 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
-    )}
-    {...props}
-  >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-    <SelectPrimitive.ItemText>{safeRenderChildren(children)}</SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
-))
+>(({ className, children, value, ...props }, ref) => {
+  // Debug logging for SelectItem
+  React.useEffect(() => {
+    console.log('SelectItem rendered:', { value, children })
+  }, [value, children])
+
+  return (
+    <SelectPrimitive.Item
+      ref={ref}
+      className={cn(
+        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        className
+      )}
+      value={value}
+      {...props}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="h-4 w-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{safeRenderChildren(children)}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  )
+})
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
-/** Wrap Value to guard placeholder/children text after selection. */
-const RawSelectValue = SelectPrimitive.Value
+/** Enhanced SelectValue with better debugging and value handling */
 const SelectValue = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Value>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value> & {
@@ -175,15 +188,19 @@ const SelectValue = React.forwardRef<
     placeholder?: React.ReactNode
   }
 >(({ children, placeholder, ...props }, ref) => {
+  // Debug logging for SelectValue
+  React.useEffect(() => {
+    console.log('SelectValue rendered:', { children, placeholder, props })
+  }, [children, placeholder, props])
+
   return (
-    <RawSelectValue
+    <SelectPrimitive.Value
       ref={ref}
       {...props}
-      // Radix expects renderable text; coerce objects safely.
-      placeholder={normalizeChildren(placeholder as any) as any}
+      placeholder={safeRenderChildren(placeholder)}
     >
-      {normalizeChildren(children)}
-    </RawSelectValue>
+      {safeRenderChildren(children)}
+    </SelectPrimitive.Value>
   )
 })
 SelectValue.displayName = SelectPrimitive.Value.displayName
@@ -203,7 +220,7 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 export {
   Select,
   SelectGroup,
-  SelectValue,          // our safe wrapper
+  SelectValue,
   SelectTrigger,
   SelectContent,
   SelectLabel,
@@ -213,8 +230,7 @@ export {
   SelectScrollDownButton,
 }
 
-// --- TEMP: compatibility re-exports so legacy imports keep working ---
-// Remove these after you've updated imports to '@/components/ui/dropdown-menu'.
+// Re-export dropdown menu components for compatibility
 export {
   DropdownMenu,
   DropdownMenuTrigger,

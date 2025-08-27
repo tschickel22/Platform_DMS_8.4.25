@@ -25,10 +25,31 @@ export function ManagedSelect({
 }: ManagedSelectProps) {
   const { isOpen, toggleMenu, closeMenu } = useManagedMenu(menuId)
 
+  // Debug logging for ManagedSelect
+  React.useEffect(() => {
+    console.log(`ManagedSelect[${name || menuId}] state:`, { 
+      value, 
+      isOpen, 
+      placeholder,
+      disabled 
+    })
+  }, [value, isOpen, placeholder, disabled, name, menuId])
+
   const handleValueChange = (newValue: string) => {
     console.log(`ManagedSelect[${name || menuId}]: Value changing from "${value}" to "${newValue}"`)
-    onValueChange?.(newValue)
-    closeMenu() // Close menu after selection
+    
+    // Ensure we call the callback with the exact value
+    if (onValueChange) {
+      onValueChange(newValue)
+    }
+    
+    // Close menu after selection
+    closeMenu()
+    
+    // Additional debug log after state change
+    setTimeout(() => {
+      console.log(`ManagedSelect[${name || menuId}]: Value change completed, current value:`, newValue)
+    }, 0)
   }
 
   const handleOpenChange = (open: boolean) => {
