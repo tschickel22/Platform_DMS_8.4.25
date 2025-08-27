@@ -29,7 +29,8 @@ import {
   HardHat,
   MapPin,
   Tag,
-  Home
+  Home,
+  Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import MarketingMenuItems from '@/components/menu/MarketingMenuItems'
@@ -44,6 +45,8 @@ const ROUTES = {
   CRM: '/crm',
   DEALS: '/deals',
   QUOTES: '/quotes',
+  CONTACTS: '/crm/contacts',
+  ACCOUNTS: '/crm/accounts',
 
   INVENTORY: '/inventory',
   LAND: '/land',
@@ -106,6 +109,8 @@ export default function Layout({ children }: LayoutProps) {
       icon: Users,
       children: [
         { name: 'Prospecting', path: ROUTES.CRM, icon: Users },
+        { name: 'Contacts', path: ROUTES.CONTACTS, icon: User },
+        { name: 'Accounts', path: ROUTES.ACCOUNTS, icon: Building2 },
         { name: 'Sales Deals', path: ROUTES.DEALS, icon: DollarSign },
         { name: 'Quotes', path: ROUTES.QUOTES, icon: FileText }
       ]

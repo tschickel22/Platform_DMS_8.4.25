@@ -17,6 +17,8 @@ import Dashboard from '@/pages/Dashboard'
 
 import CRMProspecting from '@/modules/crm-prospecting/CRMProspecting'
 import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
+import Contacts from '@/modules/crm-contacts/Contacts'
+import Accounts from '@/modules/crm-accounts/Accounts'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
 import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
@@ -116,6 +118,18 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/crm/contacts/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<Contacts />} />
+                                      <Route path="/:contactId" element={<div>Contact Detail (Coming in Phase 3)</div>} />
+                                    </Routes>
+                                  } />
+                                  <Route path="/crm/accounts/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<Accounts />} />
+                                      <Route path="/:accountId" element={<div>Account Detail (Coming in Phase 4)</div>} />
+                                    </Routes>
+                                  } />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
