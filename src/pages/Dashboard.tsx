@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Package, FileText, DollarSign, TrendingUp, Calendar, Plus } from 'lucide-react'
+import { Users, Package, FileText, DollarSign, TrendingUp, Calendar, Plus, Building2, User } from 'lucide-react'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 import { Lead } from '@/types'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
+import { useNavigate } from 'react-router-dom'
 
 const stats = [
   {
@@ -68,16 +71,32 @@ const recentActivity = [
 
 export default function Dashboard() {
   const [showNewLeadForm, setShowNewLeadForm] = useState(false)
+  const { accounts } = useAccountManagement()
+  const { contacts } = useContactManagement()
+  const navigate = useNavigate()
 
   const handleNewLeadSuccess = (newLead: Lead) => {
     console.log('New lead created from dashboard:', newLead)
     // Optionally show a success message or redirect
   }
 
+  const handleAccountsClick = () => {
+    navigate('/crm/accounts')
+  }
+
+  const handleContactsClick = () => {
+    navigate('/crm/contacts')
+  }
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'add-lead':
         setShowNewLeadForm(true)
+        break
+      case 'add-account':
+        navigate('/crm/accounts/new')
+        break
+      case 'add-contact':
+        navigate('/crm/contacts/new')
         break
       case 'add-inventory':
         window.location.href = '/inventory'
@@ -130,6 +149,37 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ))}
+        
+        {/* New Account and Contact Stats */}
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleAccountsClick}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Accounts
+            </CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold stat-primary">{accounts.length}</div>
+            <p className="text-xs text-green-600">
+              Click to view all accounts
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsClick}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Contacts
+            </CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold stat-success">{contacts.length}</div>
+            <p className="text-xs text-green-600">
+              Click to view all contacts
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -182,6 +232,26 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-3">
                   <Users className="h-5 w-5 text-primary" />
                   <span className="font-medium">Add New Lead</span>
+                </div>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button 
+                onClick={() => handleQuickAction('add-account')}
+                className="flex items-center justify-between p-3 text-left border rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Add New Account</span>
+                </div>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button 
+                onClick={() => handleQuickAction('add-contact')}
+                className="flex items-center justify-between p-3 text-left border rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <User className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Add New Contact</span>
                 </div>
                 <Plus className="h-4 w-4 text-muted-foreground" />
               </button>

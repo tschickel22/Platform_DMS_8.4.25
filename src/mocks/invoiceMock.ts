@@ -8,6 +8,8 @@ export const mockInvoice = {
       totalAmount: 1250,
       recurrence: 'Monthly',
       paymentMethod: 'ACH',
+      accountId: 'acc-001',
+      contactId: 'con-001',
       lineItems: [
         { description: 'Base Rent', quantity: 1, unitPrice: 1000 },
         { description: 'Utilities', quantity: 1, unitPrice: 250 }
@@ -21,6 +23,8 @@ export const mockInvoice = {
       totalAmount: 1450,
       recurrence: 'One-Time',
       paymentMethod: 'Credit Card',
+      accountId: 'acc-002',
+      contactId: 'con-002',
       lineItems: [
         { description: 'Home Sale Commission', quantity: 1, unitPrice: 1200 },
         { description: 'Document Fees', quantity: 1, unitPrice: 250 }

@@ -4,14 +4,15 @@ import { useContactManagement } from './hooks/useContactManagement'
 import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Loader2, Edit, Trash2, PlusCircle, Mail, Phone, Building2 } from 'lucide-react'
+import { Loader2, Edit, Trash2, Mail, Phone, Building2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import { NotesSection } from '@/components/common/NotesSection'
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getContactById, loading, error, deleteContact } = useContactManagement()
+  const { getContactById, loading, error, deleteContact, addNoteToContact, updateNoteInContact, deleteNoteFromContact } = useContactManagement()
   const { getAccountById } = useAccountManagement()
   const contact = getContactById(id || '')
 
@@ -118,31 +119,14 @@ export default function ContactDetail() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
-            <CardDescription>Internal notes about this contact.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {contact.notes.length === 0 ? (
-              <p className="text-muted-foreground">No notes yet. Add one below.</p>
-            ) : (
-              <div className="space-y-3">
-                {contact.notes.map((note) => (
-                  <div key={note.id} className="border-b pb-3 last:border-b-0">
-                    <p className="text-sm">{note.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Added by {note.createdBy} on {formatDateTime(note.createdAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Button variant="outline" size="sm" className="mt-4">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Note
-            </Button>
-          </CardContent>
-        </Card>
+        <NotesSection
+          notes={contact.notes}
+          onAddNote={(content) => addNoteToContact(contact.id, content)}
+          onUpdateNote={(noteId, content) => updateNoteInContact(contact.id, noteId, content)}
+          onDeleteNote={(noteId) => deleteNoteFromContact(contact.id, noteId)}
+          title="Contact Notes"
+          description="Internal notes about this contact"
+        />
       </div>
     </div>
   )
