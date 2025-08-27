@@ -3,12 +3,32 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, FileText, Calendar, User, DollarSign, Filter, Settings, Eye, Download, Send } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  FileText, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Send, 
+  Eye,
+  Edit,
+  Trash2,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  FileSignature
+} from 'lucide-react'
+import { formatDateTime, formatCurrency } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import mockAgreements from '@/mocks/agreementsMock'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
+import { Link } from 'react-router-dom'
 import { Agreement, AgreementType, AgreementStatus } from '@/types'
-import { mockAgreements } from '@/mocks/agreementsMock'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { TemplateSelectorModal } from './components/TemplateSelectorModal'
 import TemplateList from './templates/TemplateList'
 import TemplateBuilder from './templates/TemplateBuilder'
@@ -18,8 +38,16 @@ import { useToast } from '@/hooks/use-toast'
 function AgreementVaultPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState('agreements')
   const [searchTerm, setSearchTerm] = useState('')
-  const [agreements] = useState<Agreement[]>(mockAgreements.sampleAgreements)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
+  
+  // Use mock data for now
+  const agreements = mockAgreements.sampleAgreements
   const [selectedType, setSelectedType] = useState<string>('all')
   const [showTemplateSelectorModal, setShowTemplateSelectorModal] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
@@ -194,7 +222,17 @@ function AgreementVaultPage() {
               {filteredAgreements.map((agreement) => (
                 <TableRow key={agreement.id}>
                   <TableCell className="font-medium">
-                    {agreement.id}
+                    <div>
+                      <p className="font-semibold">{agreement.type}</p>
+                      <p className="text-sm text-muted-foreground">{agreement.customerName}</p>
+                      {agreement.accountId && (
+                        <p className="text-xs text-muted-foreground">
+                          Account: <Link to={`/crm/accounts/${agreement.accountId}`} className="text-primary hover:underline">
+                            {getAccountById(agreement.accountId)?.name || 'Unknown'}
+                          </Link>
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div>

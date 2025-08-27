@@ -5,11 +5,31 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Wrench, Plus, Search, Filter, Calendar, Clock, User, TrendingUp, DollarSign, ListTodo } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  Wrench, 
+  Plus, 
+  Search, 
+  Filter, 
+  Calendar, 
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  User,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  TrendingUp, 
+  DollarSign, 
+  ListTodo 
+} from 'lucide-react'
 import { ServiceTicket, ServiceStatus, Priority } from '@/types'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useServiceManagement } from './hooks/useServiceManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { useToast } from '@/hooks/use-toast'
 import { ServiceTicketForm } from './components/ServiceTicketForm'
 import { ServiceTicketDetail } from './components/ServiceTicketDetail'
@@ -18,6 +38,9 @@ import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
+import { formatDateTime } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Link } from 'react-router-dom'
 
 function ServiceTicketsList() {
   const { tickets, createTicket, updateTicket, deleteTicket, updateTicketStatus } = useServiceManagement()
@@ -539,6 +562,17 @@ const filteredTickets = tickets.filter(ticket =>
 }
 
 export default function ServiceOps() {
+  const [activeTab, setActiveTab] = useState('tickets')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [priorityFilter, setPriorityFilter] = useState('all')
+  const [showNewTicketForm, setShowNewTicketForm] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  
+  const { tickets, loading, error, deleteTicket } = useServiceManagement()
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
+
   return (
     <Routes>
       <Route path="/*" element={<ServiceTicketsList />} />

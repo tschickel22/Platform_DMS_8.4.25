@@ -13,6 +13,8 @@ import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useLeadManagement } from './hooks/useLeadManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { PipelineDashboard } from './components/PipelineDashboard'
 import { LeadScoring } from './components/LeadScoring'
 import { ActivityTimeline } from './components/ActivityTimeline'
@@ -27,6 +29,7 @@ import { TagType } from '@/modules/tagging-engine/types'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority } from '@/types'
 import { toast } from '@/hooks/use-toast'
+import { Link } from 'react-router-dom'
 
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
   return (
@@ -74,6 +77,9 @@ function LeadsList() {
     getRemindersByUser,
     getLeadScore
   } = useLeadManagement()
+
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
 
   const { createTask } = useTasks()
 
@@ -557,6 +563,13 @@ function LeadsList() {
                             {formatDate(lead.createdAt)}
                           </span>
                         </div>
+                        {lead.accountId && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Account: <Link to={`/crm/accounts/${lead.accountId}`} className="text-primary hover:underline">
+                              {getAccountById(lead.accountId)?.name || 'Unknown'}
+                            </Link>
+                          </p>
+                        )}
                         {lead.notes && (
                           <p className="text-sm text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md">
                             {lead.notes}
