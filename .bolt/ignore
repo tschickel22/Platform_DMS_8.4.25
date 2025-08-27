@@ -76,6 +76,8 @@ src/modules/
 !src/modules/quote-builder/
 !src/modules/quote-builder/**
 !src/modules/website-builder/
+!src/modules/finance/
+!src/modules/finance/**
 
 # Ensure core src/ directories are not ignored
 !src/App.tsx
