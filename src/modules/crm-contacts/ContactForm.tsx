@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { TagInput } from '@/components/common/TagInput'
 
 export default function ContactForm() {
   const { id } = useParams<{ id: string }>()
@@ -22,6 +23,7 @@ export default function ContactForm() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [accountId, setAccountId] = useState<string | undefined>(undefined)
+  const [tags, setTags] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export default function ContactForm() {
         setEmail(contact.email || '')
         setPhone(contact.phone || '')
         setAccountId(contact.accountId || undefined)
+        setTags(contact.tags || [])
       } else if (!loading) {
         toast({
           title: 'Contact Not Found',
@@ -53,7 +56,8 @@ export default function ContactForm() {
       lastName, 
       email, 
       phone, 
-      accountId: accountId === '' ? undefined : accountId 
+      accountId: accountId === '' ? undefined : accountId,
+      tags
     }
 
     try {
@@ -162,6 +166,14 @@ export default function ContactForm() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tags">Tags</Label>
+              <TagInput
+                tags={tags}
+                onTagsChange={setTags}
+                placeholder="Add tags (press Enter or comma to add)"
+              />
             </div>
             <div className="flex space-x-2">
               <Button type="submit" disabled={isSubmitting}>

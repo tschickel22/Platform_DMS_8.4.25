@@ -9,6 +9,7 @@ const sampleContacts: Contact[] = [
     email: 'alice.smith@rvworld.com',
     phone: '(555) 111-2223',
     accountId: 'acc-001', // Linked to RV World Inc.
+    tags: ['Primary Contact', 'Decision Maker'],
     notes: [
       { 
         id: generateId(), 
@@ -27,6 +28,7 @@ const sampleContacts: Contact[] = [
     email: 'bob.j@mhsolutions.com',
     phone: '(555) 333-4445',
     accountId: 'acc-002', // Linked to Mobile Home Solutions
+    tags: ['Sales Contact'],
     notes: [],
     createdAt: '2024-06-20T09:10:00Z',
     updatedAt: '2024-06-20T09:10:00Z'
@@ -38,6 +40,7 @@ const sampleContacts: Contact[] = [
     email: 'charlie.b@example.com',
     phone: '(555) 777-8888',
     accountId: undefined, // No associated account
+    tags: ['Trade Show Lead', 'Follow-up Needed'],
     notes: [
       { 
         id: generateId(), 
@@ -56,6 +59,7 @@ const sampleContacts: Contact[] = [
     email: 'sarah@example.com',
     phone: '(555) 987-6543',
     accountId: undefined, // No associated account
+    tags: [],
     notes: [],
     createdAt: '2024-01-12T11:15:00Z',
     updatedAt: '2024-01-18T16:45:00Z'

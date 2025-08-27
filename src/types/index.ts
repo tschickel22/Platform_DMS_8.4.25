@@ -349,10 +349,32 @@ export interface Contact {
   phone?: string
   accountId?: string
   notes: Note[]
+  tags?: string[]
   createdAt: string
   updatedAt: string
 }
 
+export interface SavedFilter {
+  id: string
+  name: string
+  module: 'accounts' | 'contacts'
+  filters: Record<string, any>
+  isDefault?: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CommunicationTemplate {
+  id: string
+  name: string
+  type: 'email' | 'sms'
+  subject?: string
+  content: string
+  variables: string[]
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 export interface Loan {
   id: string
   customerId: string
@@ -770,6 +792,8 @@ export interface Task {
   tags?: string[]
   customFields?: Record<string, any>
   isOverdue?: boolean
+  accountId?: string
+  contactId?: string
 }
 
 export interface Contractor {

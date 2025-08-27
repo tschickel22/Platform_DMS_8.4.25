@@ -317,6 +317,8 @@ export function useTasks() {
       tags: taskData.tags || [],
       isOverdue: false,
       customFields: taskData.customFields || {},
+      accountId: taskData.accountId,
+      contactId: taskData.contactId,
       createdAt: new Date(),
       updatedAt: new Date()
     }

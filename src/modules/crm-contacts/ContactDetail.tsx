@@ -4,10 +4,13 @@ import { useContactManagement } from './hooks/useContactManagement'
 import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Loader2, Edit, Trash2, Mail, Phone, Building2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NotesSection } from '@/components/common/NotesSection'
+import { TasksSection } from '@/components/common/TasksSection'
+import { CommunicationActions } from '@/components/common/CommunicationActions'
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>()
@@ -61,6 +64,7 @@ export default function ContactDetail() {
           <p className="ri-page-description">Details for this contact.</p>
         </div>
         <div className="flex space-x-2">
+          <CommunicationActions contact={contact} />
           <Button variant="outline" asChild>
             <Link to={`/crm/contacts/${contact.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
@@ -116,16 +120,36 @@ export default function ContactDetail() {
               <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
               <p className="text-base">{formatDateTime(contact.updatedAt)}</p>
             </div>
+            {contact.tags && contact.tags.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Tags</p>
+                <div className="flex flex-wrap gap-2">
+                  {contact.tags.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Notes Section */}
         <NotesSection
           notes={contact.notes}
           onAddNote={(content) => addNoteToContact(contact.id, content)}
           onUpdateNote={(noteId, content) => updateNoteInContact(contact.id, noteId, content)}
           onDeleteNote={(noteId) => deleteNoteFromContact(contact.id, noteId)}
-          title="Contact Notes"
+          title="Notes"
           description="Internal notes about this contact"
+        />
+
+        {/* Tasks Section */}
+        <TasksSection
+          contactId={contact.id}
+          title="Tasks"
+          description="Tasks and follow-ups for this contact"
         />
       </div>
     </div>
