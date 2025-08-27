@@ -17,6 +17,12 @@ import Dashboard from '@/pages/Dashboard'
 
 import CRMProspecting from '@/modules/crm-prospecting/CRMProspecting'
 import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
+import AccountList from '@/modules/crm-accounts/AccountList'
+import AccountForm from '@/modules/crm-accounts/AccountForm'
+import AccountDetail from '@/modules/crm-accounts/AccountDetail'
+import ContactList from '@/modules/crm-contacts/ContactList'
+import ContactForm from '@/modules/crm-contacts/ContactForm'
+import ContactDetail from '@/modules/crm-contacts/ContactDetail'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
 import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
@@ -116,6 +122,14 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/crm/accounts" element={<AccountList />} />
+                                  <Route path="/crm/accounts/new" element={<AccountForm />} />
+                                  <Route path="/crm/accounts/:id" element={<AccountDetail />} />
+                                  <Route path="/crm/accounts/:id/edit" element={<AccountForm />} />
+                                  <Route path="/crm/contacts" element={<ContactList />} />
+                                  <Route path="/crm/contacts/new" element={<ContactForm />} />
+                                  <Route path="/crm/contacts/:id" element={<ContactDetail />} />
+                                  <Route path="/crm/contacts/:id/edit" element={<ContactForm />} />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 

@@ -43,10 +43,10 @@ import MarketingMenuItems from '@/components/menu/MarketingMenuItems'
 const ROUTES = {
   DASHBOARD: '/',
   CRM: '/crm',
+  ACCOUNTS: '/crm/accounts',
+  CONTACTS: '/crm/contacts',
   DEALS: '/deals',
   QUOTES: '/quotes',
-  CONTACTS: '/crm/contacts',
-  ACCOUNTS: '/crm/accounts',
 
   INVENTORY: '/inventory',
   LAND: '/land',
@@ -109,8 +109,8 @@ export default function Layout({ children }: LayoutProps) {
       icon: Users,
       children: [
         { name: 'Prospecting', path: ROUTES.CRM, icon: Users },
-        { name: 'Contacts', path: ROUTES.CONTACTS, icon: User },
         { name: 'Accounts', path: ROUTES.ACCOUNTS, icon: Building2 },
+        { name: 'Contacts', path: ROUTES.CONTACTS, icon: User },
         { name: 'Sales Deals', path: ROUTES.DEALS, icon: DollarSign },
         { name: 'Quotes', path: ROUTES.QUOTES, icon: FileText }
       ]

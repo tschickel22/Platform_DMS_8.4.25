@@ -309,6 +309,38 @@ export interface Payment {
   updatedAt: Date
 }
 
+export interface Note {
+  id: string
+  content: string
+  createdAt: string
+  createdBy: string
+}
+
+export interface Account {
+  id: string
+  name: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
+  industry?: string
+  notes: Note[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Contact {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  accountId?: string
+  notes: Note[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Loan {
   id: string
   customerId: string
