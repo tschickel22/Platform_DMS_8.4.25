@@ -4,10 +4,10 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /** 
- * Normalize any non-renderable content passed to Select components.
- * This function extracts display text while preserving the original value structure.
+ * Safely render children content for Select components.
+ * This function handles display text without affecting the underlying value.
  */
-function normalizeChildren(children: React.ReactNode): React.ReactNode {
+function safeRenderChildren(children: React.ReactNode): React.ReactNode {
   if (children == null) return null
   if (typeof children === 'string' || typeof children === 'number') return children
   if (React.isValidElement(children)) return children
@@ -21,26 +21,24 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
       .filter(Boolean)
   }
   
-  // Handle objects more carefully - extract display text but don't stringify the whole object
+  // For objects, try to extract display text but don't modify the value
   if (typeof children === 'object') {
-    const any = children as any
+    const obj = children as any
     
-    // Try common display field patterns first
-    const candidate =
-      any?.label ??
-      any?.name ??
-      any?.title ??
-      any?.displayName ??
-      any?.templateName ??
-      any?.text ??
-      any?.value
+    // Try common display field patterns
+    const displayText =
+      obj?.label ??
+      obj?.name ??
+      obj?.title ??
+      obj?.displayName ??
+      obj?.text
     
-    if (typeof candidate === 'string' || typeof candidate === 'number') {
-      return String(candidate)
+    if (typeof displayText === 'string' || typeof displayText === 'number') {
+      return String(displayText)
     }
     
-    // If no display field found, use the id or return empty string
-    return String(any?.id || '')
+    // Fallback to value or id, but don't stringify the whole object
+    return String(obj?.value ?? obj?.id ?? '')
   }
   
   return String(children)
@@ -163,7 +161,7 @@ const SelectItem = React.forwardRef<
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{normalizeChildren(children)}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText>{safeRenderChildren(children)}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
