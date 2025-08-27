@@ -10,6 +10,36 @@ export interface User {
   updatedAt: Date
 }
 
+export interface Account {
+  id: string
+  name: string
+  type: 'Customer' | 'Vendor' | 'Partner' | 'Other'
+  industry?: string
+  address?: Address
+  phone?: string
+  email?: string
+  website?: string
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Contact {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  accountId?: string // Optional: Link to an Account
+  accountName?: string // Denormalized for easier display
+  title?: string // Job title
+  source?: string // e.g., 'Website', 'Referral', 'Event'
+  notes?: string
+  tags?: string[] // For integration with tagging engine
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Tenant {
   id: string
   name: string
@@ -107,6 +137,8 @@ export interface Lead {
   score?: number
   lastActivity?: Date
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -141,6 +173,8 @@ export interface Quote {
   validUntil: Date
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -156,6 +190,7 @@ export interface QuoteItem {
 export interface Agreement {
   id: string
   type: AgreementType
+  status: AgreementStatus
   customerId: string
   customerName?: string
   customerEmail?: string
@@ -164,7 +199,6 @@ export interface Agreement {
   vehicleInfo?: string
   quoteId?: string
   terms: string
-  customerId: string
   signedDate?: Date
   effectiveDate: Date | string
   expirationDate?: Date
@@ -174,6 +208,8 @@ export interface Agreement {
   signatureData?: string
   documents: Document[]
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
   createdBy?: string
@@ -210,6 +246,8 @@ export interface ServiceTicket {
   labor: ServiceLabor[]
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -242,6 +280,8 @@ export interface Delivery {
   driver?: string
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -265,6 +305,8 @@ export interface Commission {
   paidDate?: Date
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -283,6 +325,8 @@ export interface Invoice {
   paymentMethod?: string
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -305,6 +349,8 @@ export interface Payment {
   processedDate: Date
   notes: string
   customFields: Record<string, any>
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: Date
   updatedAt: Date
 }
@@ -331,6 +377,8 @@ export interface Loan {
   history: LoanHistoryEntry[]
   isPortalVisible: boolean
   portalNotes?: string
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
   createdAt: string
   updatedAt: string
 }
@@ -726,6 +774,8 @@ export interface Task {
   tags?: string[]
   customFields?: Record<string, any>
   isOverdue?: boolean
+  accountId?: string // Added for linking to an Account
+  contactId?: string // Added for linking to a Contact
 }
 
 export interface Contractor {

@@ -1,3 +1,6 @@
+import { mockAccounts } from './accountsMock'
+import { mockContacts } from './contactsMock'
+
 export const mockAgreements = {
   agreementTypes: [
     { value: 'PURCHASE', label: 'Purchase Agreement' },
@@ -21,6 +24,8 @@ export const mockAgreements = {
       type: 'PURCHASE',
       status: 'SIGNED',
       customerId: 'cust-001',
+      accountId: mockAccounts[3].id, // Smith Family Trust
+      contactId: mockContacts[4].id, // John Smith
       customerName: 'John Smith',
       customerEmail: 'john.smith@email.com',
       vehicleId: 'veh-001',
@@ -63,6 +68,8 @@ export const mockAgreements = {
       type: 'LEASE',
       status: 'PENDING',
       customerId: 'cust-002',
+      accountId: mockAccounts[1].id, // Mobile Home Solutions
+      contactId: mockContacts[1].id, // Bob Johnson
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
       vehicleId: 'veh-002',
@@ -97,6 +104,8 @@ export const mockAgreements = {
       type: 'SERVICE',
       status: 'ACTIVE',
       customerId: 'cust-003',
+      accountId: undefined, // No account for this agreement
+      contactId: mockContacts[2].id, // Charlie Brown
       customerName: 'David Johnson',
       customerEmail: 'david.johnson@email.com',
       vehicleId: 'veh-003',

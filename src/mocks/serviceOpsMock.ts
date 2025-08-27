@@ -1,3 +1,6 @@
+import { mockAccounts } from './accountsMock'
+import { mockContacts } from './contactsMock'
+
 export const mockServiceOps = {
   defaultStatuses: [
     'Open',
@@ -54,6 +57,8 @@ export const mockServiceOps = {
       priority: 'High',
       status: 'In Progress',
       customerId: 'cust-001',
+      accountId: mockAccounts[3].id, // Smith Family Trust
+      contactId: mockContacts[4].id, // John Smith
       customerName: 'John Smith',
       customerPhone: '(555) 123-4567',
       customerEmail: 'john.smith@email.com',
@@ -116,6 +121,8 @@ export const mockServiceOps = {
       priority: 'Medium',
       status: 'Completed',
       customerId: 'cust-002',
+      accountId: mockAccounts[1].id, // Mobile Home Solutions
+      contactId: mockContacts[1].id, // Bob Johnson
       customerName: 'Maria Rodriguez',
       customerPhone: '(555) 987-6543',
       customerEmail: 'maria.rodriguez@email.com',

@@ -1,4 +1,6 @@
 // ✅ Step 1: Declare mockCheckoutAccounts FIRST
+import { mockAccounts } from './accountsMock'
+import { mockContacts } from './contactsMock'
 
 export const mockCheckoutAccounts = {
   loans: [
@@ -82,6 +84,8 @@ export const mockFinance = {
     {
       id: 'loan-001',
       customerId: 'cust-001',
+      accountId: mockAccounts[3].id, // Smith Family Trust
+      contactId: mockContacts[4].id, // John Smith
       customerName: 'John Smith',
       customerEmail: 'john.smith@email.com',
       customerPhone: '(555) 123-4567',
@@ -104,6 +108,8 @@ export const mockFinance = {
     {
       id: 'loan-002',
       customerId: 'cust-002',
+      accountId: mockAccounts[1].id, // Mobile Home Solutions
+      contactId: mockContacts[1].id, // Bob Johnson
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
       customerPhone: '(555) 987-6543',

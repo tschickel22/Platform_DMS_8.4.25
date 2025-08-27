@@ -1,3 +1,6 @@
+import { mockAccounts } from './accountsMock'
+import { mockContacts } from './contactsMock'
+
 export const mockCrmSalesDeal = {
   dealStages: ['New', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Closed Lost'],
   dealSources: ['Walk-in', 'Online', 'Referral', 'Trade Show', 'Phone Call', 'Email Campaign'],
@@ -18,6 +21,8 @@ export const mockCrmSalesDeal = {
     {
       id: 'deal-001',
       customerId: 'cust-001',
+      accountId: mockAccounts[3].id, // Smith Family Trust
+      contactId: mockContacts[4].id, // John Smith
       customerName: 'John Smith',
       customerEmail: 'john.smith@email.com',
       customerPhone: '(555) 123-4567',
@@ -55,6 +60,8 @@ export const mockCrmSalesDeal = {
     {
       id: 'deal-002',
       customerId: 'cust-002',
+      accountId: mockAccounts[1].id, // Mobile Home Solutions
+      contactId: mockContacts[1].id, // Bob Johnson
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
       customerPhone: '(555) 987-6543',
@@ -85,6 +92,8 @@ export const mockCrmSalesDeal = {
     {
       id: 'deal-003',
       customerId: 'cust-003',
+      accountId: undefined, // No account for this deal
+      contactId: mockContacts[2].id, // Charlie Brown
       customerName: 'David Johnson',
       customerEmail: 'david.johnson@email.com',
       customerPhone: '(555) 456-7890',
