@@ -45,8 +45,6 @@ function AgreementVaultPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   
-  const { getAccountById } = useAccountManagement()
-  const { getContactById } = useContactManagement()
   
   // Use mock data for now
   const agreements = mockAgreements.sampleAgreements
