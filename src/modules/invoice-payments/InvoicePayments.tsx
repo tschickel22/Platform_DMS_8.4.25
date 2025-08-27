@@ -54,8 +54,6 @@ function InvoicesList() {
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('')
-  const { getAccountById } = useAccountManagement()
-  const { getContactById } = useContactManagement()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices')
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
