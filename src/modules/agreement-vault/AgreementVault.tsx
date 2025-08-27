@@ -22,7 +22,6 @@ import {
   FileSignature
 } from 'lucide-react'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import mockAgreements from '@/mocks/agreementsMock'
