@@ -9,7 +9,6 @@ import { Loader2, Edit, Trash2, Globe, Mail, Phone, Users, DollarSign, FileText,
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NotesSection } from '@/components/common/NotesSection'
-import { NotesSection } from '@/components/common/NotesSection'
 import { TasksSection } from '@/components/common/TasksSection'
 import { useContactManagement } from '../crm-contacts/hooks/useContactManagement'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
