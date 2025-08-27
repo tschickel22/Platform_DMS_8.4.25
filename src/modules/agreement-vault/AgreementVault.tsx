@@ -25,7 +25,6 @@ import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountMan
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import mockAgreements from '@/mocks/agreementsMock'
-import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { Link } from 'react-router-dom'
 import { Agreement, AgreementType, AgreementStatus } from '@/types'
