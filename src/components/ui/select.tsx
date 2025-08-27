@@ -3,7 +3,10 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/** Normalize any non-renderable content passed to Select components. */
+/** 
+ * Normalize any non-renderable content passed to Select components.
+ * This function extracts display text while preserving the original value structure.
+ */
 function normalizeChildren(children: React.ReactNode): React.ReactNode {
   if (children == null) return null
   if (typeof children === 'string' || typeof children === 'number') return children
@@ -17,24 +20,29 @@ function normalizeChildren(children: React.ReactNode): React.ReactNode {
       )
       .filter(Boolean)
   }
+  
+  // Handle objects more carefully - extract display text but don't stringify the whole object
   if (typeof children === 'object') {
     const any = children as any
+    
+    // Try common display field patterns first
     const candidate =
       any?.label ??
       any?.name ??
       any?.title ??
       any?.displayName ??
       any?.templateName ??
-      any?.id
+      any?.text ??
+      any?.value
+    
     if (typeof candidate === 'string' || typeof candidate === 'number') {
       return String(candidate)
     }
-    try {
-      return JSON.stringify(any)
-    } catch {
-      return ''
-    }
+    
+    // If no display field found, use the id or return empty string
+    return String(any?.id || '')
   }
+  
   return String(children)
 }
 

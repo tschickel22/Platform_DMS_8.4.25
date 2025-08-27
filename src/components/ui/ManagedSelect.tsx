@@ -10,6 +10,7 @@ interface ManagedSelectProps {
   children: React.ReactNode
   disabled?: boolean
   className?: string
+  name?: string
 }
 
 export function ManagedSelect({
@@ -19,13 +20,24 @@ export function ManagedSelect({
   placeholder,
   children,
   disabled,
-  className
+  className,
+  name
 }: ManagedSelectProps) {
   const { isOpen, toggleMenu, closeMenu } = useManagedMenu(menuId)
 
   const handleValueChange = (newValue: string) => {
+    console.log(`ManagedSelect[${name || menuId}]: Value changing from "${value}" to "${newValue}"`)
     onValueChange?.(newValue)
     closeMenu() // Close menu after selection
+  }
+
+  const handleOpenChange = (open: boolean) => {
+    console.log(`ManagedSelect[${name || menuId}]: Open state changing to ${open}`)
+    if (open) {
+      toggleMenu()
+    } else {
+      closeMenu()
+    }
   }
 
   return (
@@ -33,13 +45,7 @@ export function ManagedSelect({
       value={value}
       onValueChange={handleValueChange}
       open={isOpen}
-      onOpenChange={(open) => {
-        if (open) {
-          toggleMenu()
-        } else {
-          closeMenu()
-        }
-      }}
+      onOpenChange={handleOpenChange}
       disabled={disabled}
     >
       <SelectTrigger className={className}>

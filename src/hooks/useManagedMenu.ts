@@ -7,16 +7,19 @@ export function useManagedMenu(menuId: string) {
   const isOpen = activeMenuId === menuId
   
   const openMenu = () => {
+    console.log(`useManagedMenu[${menuId}]: Opening menu`)
     setActiveMenu(menuId)
   }
   
   const closeMenu = () => {
+    console.log(`useManagedMenu[${menuId}]: Closing menu`)
     if (activeMenuId === menuId) {
       clearActiveMenu()
     }
   }
   
   const toggleMenu = () => {
+    console.log(`useManagedMenu[${menuId}]: Toggling menu (currently ${isOpen ? 'open' : 'closed'})`)
     if (isOpen) {
       closeMenu()
     } else {

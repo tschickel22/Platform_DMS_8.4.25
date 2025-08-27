@@ -52,7 +52,9 @@ export function debounce<T extends (...args: any[]) => any>(
 // Local storage utilities for data persistence
 export function saveToLocalStorage<T>(key: string, data: T): void {
   try {
+    console.log(`Saving to localStorage[${key}]:`, data)
     localStorage.setItem(key, JSON.stringify(data))
+    console.log(`Successfully saved to localStorage[${key}]`)
   } catch (error) {
     console.error('Failed to save to localStorage:', error)
   }
@@ -61,7 +63,9 @@ export function saveToLocalStorage<T>(key: string, data: T): void {
 export function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    const result = item ? JSON.parse(item) : defaultValue
+    console.log(`Loaded from localStorage[${key}]:`, result)
+    return result
   } catch (error) {
     console.error('Failed to load from localStorage:', error)
     return defaultValue
@@ -70,6 +74,7 @@ export function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
 
 export function removeFromLocalStorage(key: string): void {
   try {
+    console.log(`Removing from localStorage[${key}]`)
     localStorage.removeItem(key)
   } catch (error) {
     console.error('Failed to remove from localStorage:', error)

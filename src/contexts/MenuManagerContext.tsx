@@ -25,15 +25,23 @@ export function MenuManagerProvider({ children }: MenuManagerProviderProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
   const setActiveMenu = (menuId: string) => {
+    console.log(`MenuManager: Setting active menu to "${menuId}" (was "${activeMenuId}")`)
+    // Close any other active menu first
+    if (activeMenuId && activeMenuId !== menuId) {
+      console.log(`MenuManager: Closing previous menu "${activeMenuId}"`)
+    }
     setActiveMenuId(menuId)
   }
 
   const clearActiveMenu = () => {
+    console.log(`MenuManager: Clearing active menu (was "${activeMenuId}")`)
     setActiveMenuId(null)
   }
 
   const isMenuActive = (menuId: string): boolean => {
-    return activeMenuId === menuId
+    const isActive = activeMenuId === menuId
+    console.log(`MenuManager: Checking if menu "${menuId}" is active: ${isActive}`)
+    return isActive
   }
 
   const value = {
