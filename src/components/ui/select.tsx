@@ -125,8 +125,3 @@ export {
   SelectSeparator,
 }
 
-// Keep a default export for ergonomic imports:
-export default Select
-
-// Compatibility alias for accidental `{ select }` imports:
-export { Select as select }
