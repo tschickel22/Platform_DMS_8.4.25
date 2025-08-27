@@ -26,7 +26,6 @@ export function NotesSection({
   const [isAddingNote, setIsAddingNote] = useState(false)
   const [newNoteContent, setNewNoteContent] = useState('')
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
-  const [editingContent, setEditingContent] = useState('')
 
   const handleAddNote = () => {
     if (newNoteContent.trim()) {
