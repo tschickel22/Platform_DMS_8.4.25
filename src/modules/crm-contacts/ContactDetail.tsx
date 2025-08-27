@@ -9,7 +9,6 @@ import { Loader2, Edit, Trash2, Mail, Phone, Building2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NotesSection } from '@/components/common/NotesSection'
-import { NotesSection } from '@/components/common/NotesSection'
 import { TasksSection } from '@/components/common/TasksSection'
 import { CommunicationActions } from '@/components/common/CommunicationActions'
 
