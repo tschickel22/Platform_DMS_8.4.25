@@ -87,6 +87,21 @@ export default function Dashboard() {
   const handleContactsClick = () => {
     navigate('/crm/contacts')
   }
+
+  // Calculate account metrics
+  const recentAccounts = accounts.filter(account => {
+    const createdDate = new Date(account.createdAt)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    return createdDate > thirtyDaysAgo
+  }).length
+
+  // Calculate contact metrics
+  const recentContacts = contacts.filter(contact => {
+    const createdDate = new Date(contact.createdAt)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    return createdDate > thirtyDaysAgo
+  }).length
+
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'add-lead':
@@ -150,7 +165,7 @@ export default function Dashboard() {
           </Card>
         ))}
         
-        {/* New Account and Contact Stats */}
+        {/* Account Stats Tile */}
         <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleAccountsClick}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -160,12 +175,13 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-primary">{accounts.length}</div>
-            <p className="text-xs text-green-600">
-              Click to view all accounts
+            <p className="text-xs stat-success">
+              +{recentAccounts} new this month
             </p>
           </CardContent>
         </Card>
         
+        {/* Contact Stats Tile */}
         <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsClick}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -175,8 +191,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-success">{contacts.length}</div>
-            <p className="text-xs text-green-600">
-              Click to view all contacts
+            <p className="text-xs stat-info">
+              +{recentContacts} new this month
             </p>
           </CardContent>
         </Card>

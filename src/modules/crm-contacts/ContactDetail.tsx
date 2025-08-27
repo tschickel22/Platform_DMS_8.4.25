@@ -4,10 +4,11 @@ import { useContactManagement } from './hooks/useContactManagement'
 import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Loader2, Edit, Trash2 } from 'lucide-react'
 import { Loader2, Edit, Trash2, Mail, Phone, Building2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import { NotesSection } from '@/components/common/NotesSection'
 import { NotesSection } from '@/components/common/NotesSection'
 import { TasksSection } from '@/components/common/TasksSection'
 import { CommunicationActions } from '@/components/common/CommunicationActions'
@@ -30,6 +31,23 @@ export default function ContactDetail() {
     }
   }
 
+  const handleAddNote = (content: string) => {
+    if (id) {
+      addNoteToContact(id, content)
+    }
+  }
+
+  const handleUpdateNote = (noteId: string, content: string) => {
+    if (id) {
+      updateNoteInContact(id, noteId, content)
+    }
+  }
+
+  const handleDeleteNote = (noteId: string) => {
+    if (id) {
+      deleteNoteFromContact(id, noteId)
+    }
+  }
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -125,33 +143,15 @@ export default function ContactDetail() {
                 <p className="text-sm font-medium text-muted-foreground mb-2">Tags</p>
                 <div className="flex flex-wrap gap-2">
                   {contact.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notes Section */}
-        <NotesSection
-          notes={contact.notes}
-          onAddNote={(content) => addNoteToContact(contact.id, content)}
-          onUpdateNote={(noteId, content) => updateNoteInContact(contact.id, noteId, content)}
-          onDeleteNote={(noteId) => deleteNoteFromContact(contact.id, noteId)}
-          title="Notes"
-          description="Internal notes about this contact"
-        />
-
-        {/* Tasks Section */}
-        <TasksSection
-          contactId={contact.id}
-          title="Tasks"
-          description="Tasks and follow-ups for this contact"
-        />
-      </div>
+      {/* Notes Section */}
+      <NotesSection
+        notes={contact.notes}
+        onAddNote={handleAddNote}
+        onUpdateNote={handleUpdateNote}
+        onDeleteNote={handleDeleteNote}
+        title="Contact Notes"
+        description="Internal notes and comments about this contact"
+      />
     </div>
   )
 }

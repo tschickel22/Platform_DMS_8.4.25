@@ -25,6 +25,8 @@ export const mockInvoice = {
       paymentMethod: 'Credit Card',
       accountId: 'acc-002',
       contactId: 'con-002',
+      accountId: 'acc-002',
+      contactId: 'con-002',
       lineItems: [
         { description: 'Home Sale Commission', quantity: 1, unitPrice: 1200 },
         { description: 'Document Fees', quantity: 1, unitPrice: 250 }

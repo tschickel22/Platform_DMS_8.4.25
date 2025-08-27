@@ -3,11 +3,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAccountManagement } from './hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Loader2, Edit, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Edit, Trash2, Globe, Mail, Phone, Users, DollarSign, FileText, Wrench, PlusCircle } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import { NotesSection } from '@/components/common/NotesSection'
 import { NotesSection } from '@/components/common/NotesSection'
 import { TasksSection } from '@/components/common/TasksSection'
 import { useContactManagement } from '../crm-contacts/hooks/useContactManagement'
@@ -31,6 +32,23 @@ export default function AccountDetail() {
     }
   }
 
+  const handleAddNote = (content: string) => {
+    if (id) {
+      addNoteToAccount(id, content)
+    }
+  }
+
+  const handleUpdateNote = (noteId: string, content: string) => {
+    if (id) {
+      updateNoteInAccount(id, noteId, content)
+    }
+  }
+
+  const handleDeleteNote = (noteId: string) => {
+    if (id) {
+      deleteNoteFromAccount(id, noteId)
+    }
+  }
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -266,33 +284,15 @@ export default function AccountDetail() {
           </TabsContent>
 
           <TabsContent value="service">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Wrench className="mr-2 h-5 w-5" />
-                  Service Tickets
-                </CardTitle>
-                <CardDescription>Service requests for this account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No service tickets for this account yet.</p>
-                  <p className="text-sm">Service tickets will appear here when created.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <TasksSection
-              accountId={account.id}
-              title="Account Tasks"
-              description="Tasks and follow-ups for this account"
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+      {/* Notes Section */}
+      <NotesSection
+        notes={account.notes}
+        onAddNote={handleAddNote}
+        onUpdateNote={handleUpdateNote}
+        onDeleteNote={handleDeleteNote}
+        title="Account Notes"
+        description="Internal notes and comments about this account"
+      />
     </div>
   )
 }

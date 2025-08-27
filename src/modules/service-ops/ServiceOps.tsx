@@ -24,6 +24,8 @@ import {
   DollarSign, 
   ListTodo 
 } from 'lucide-react'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { ServiceTicket, ServiceStatus, Priority } from '@/types'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -34,6 +36,8 @@ import { useToast } from '@/hooks/use-toast'
 import { ServiceTicketForm } from './components/ServiceTicketForm'
 import { ServiceTicketDetail } from './components/ServiceTicketDetail'
 import { CustomerPortalView } from './components/CustomerPortalView'
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
@@ -487,6 +491,7 @@ const filteredTickets = tickets.filter(ticket =>
                       <span className="bg-green-50 text-green-700 px-2 py-1 rounded-md">
                         <span className="font-medium">Labor:</span> {formatCurrency(ticket.labor.reduce((sum, l) => sum + l.total, 0))}
                       </span>
+                    <TableHead>Account</TableHead>
                       <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-md font-semibold">
                         <span className="font-medium">Total:</span> {formatCurrency(
                           ticket.parts.reduce((sum, p) => sum + p.total, 0) + 
@@ -496,10 +501,19 @@ const filteredTickets = tickets.filter(ticket =>
                     </div>
                   </div>
                 </div>
+                    const account = ticket.accountId ? getAccountById(ticket.accountId) : null
+                    const contact = ticket.contactId ? getContactById(ticket.contactId) : null
                 <div className="ri-action-buttons">
                   <Button 
                     variant="outline" 
                     size="sm" 
+                        <TableCell>
+                          {account ? (
+                            <span className="text-sm text-muted-foreground">{account.name}</span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
                     className="shadow-sm"
                     onClick={() => handleViewTicket(ticket)}
                   >

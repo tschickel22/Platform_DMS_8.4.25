@@ -72,6 +72,8 @@ export const mockAgreements = {
       quoteId: 'quote-002',
       accountId: 'acc-002',
       contactId: 'con-002',
+      accountId: 'acc-002',
+      contactId: 'con-002',
       terms: 'Lease agreement for 24 months with option to purchase. Monthly payment includes maintenance.',
       effectiveDate: '2024-02-01T00:00:00Z',
       expirationDate: '2026-02-01T00:00:00Z',

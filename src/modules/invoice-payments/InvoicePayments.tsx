@@ -19,6 +19,8 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { Invoice, InvoiceStatus, Payment } from '@/types'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -54,6 +56,8 @@ function InvoicesList() {
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('')
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices')
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
@@ -325,6 +329,7 @@ function InvoicesList() {
             </CardContent>
           </Card>
         </div>
+                    <TableHead>Account</TableHead>
 
       </div>
 
@@ -334,6 +339,8 @@ function InvoicesList() {
           <TabsTrigger value="invoices" className="flex items-center">
             <Receipt className="h-4 w-4 mr-2" />
             Invoices
+                    const account = invoice.accountId ? getAccountById(invoice.accountId) : null
+                    const contact = invoice.contactId ? getContactById(invoice.contactId) : null
           </TabsTrigger>
           <TabsTrigger value="payments" className="flex items-center">
             <CreditCard className="h-4 w-4 mr-2" />
@@ -394,6 +401,13 @@ function InvoicesList() {
                 {filteredInvoices.map((invoice) => (
                   <div key={invoice.id} className="ri-table-row">
                     <div className="flex items-center space-x-4 flex-1">
+                        <TableCell>
+                          {account ? (
+                            <span className="text-sm text-muted-foreground">{account.name}</span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="font-semibold text-foreground">{invoice.number}</h3>

@@ -21,6 +21,8 @@ import {
   AlertCircle,
   FileSignature
 } from 'lucide-react'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import mockAgreements from '@/mocks/agreementsMock'
@@ -40,6 +42,8 @@ function AgreementVaultPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('agreements')
   const [searchTerm, setSearchTerm] = useState('')
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   
@@ -189,6 +193,7 @@ function AgreementVaultPage() {
                   <option key={status.value} value={status.value}>
                     {status.label}
                   </option>
+                    <TableHead>Account</TableHead>
                 ))}
               </select>
             </div>
@@ -197,10 +202,19 @@ function AgreementVaultPage() {
       </Card>
 
       {/* Agreements Table */}
+                    const account = agreement.accountId ? getAccountById(agreement.accountId) : null
+                    const contact = agreement.contactId ? getContactById(agreement.contactId) : null
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Agreements</CardTitle>
           <CardDescription>
+                        <TableCell>
+                          {account ? (
+                            <span className="text-sm text-muted-foreground">{account.name}</span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
             {filteredAgreements.length} agreement{filteredAgreements.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>

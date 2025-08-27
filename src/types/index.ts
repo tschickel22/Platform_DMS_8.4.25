@@ -111,6 +111,8 @@ export interface Lead {
   updatedAt: Date
   accountId?: string
   contactId?: string
+  accountId?: string
+  contactId?: string
 }
 
 export interface Vehicle {
@@ -145,6 +147,8 @@ export interface Quote {
   customFields: Record<string, any>
   createdAt: Date
   updatedAt: Date
+  accountId?: string
+  contactId?: string
   accountId?: string
   contactId?: string
 }
@@ -190,6 +194,8 @@ export interface Agreement {
   coverageLevel?: string
   accountId?: string
   contactId?: string
+  accountId?: string
+  contactId?: string
 }
 
 export interface Document {
@@ -218,6 +224,8 @@ export interface ServiceTicket {
   customFields: Record<string, any>
   createdAt: Date
   updatedAt: Date
+  accountId?: string
+  contactId?: string
   accountId?: string
   contactId?: string
 }
@@ -252,6 +260,8 @@ export interface Delivery {
   customFields: Record<string, any>
   createdAt: Date
   updatedAt: Date
+  accountId?: string
+  contactId?: string
   accountId?: string
   contactId?: string
 }
@@ -295,6 +305,8 @@ export interface Invoice {
   customFields: Record<string, any>
   createdAt: Date
   updatedAt: Date
+  accountId?: string
+  contactId?: string
   accountId?: string
   contactId?: string
 }

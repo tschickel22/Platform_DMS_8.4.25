@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils'
 import { useLeadManagement } from './hooks/useLeadManagement'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { PipelineDashboard } from './components/PipelineDashboard'
 import { LeadScoring } from './components/LeadScoring'
 import { ActivityTimeline } from './components/ActivityTimeline'
@@ -33,6 +35,8 @@ import { Link } from 'react-router-dom'
 
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
   return (
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -589,6 +593,7 @@ function LeadsList() {
                     <div className="ri-action-buttons">
                       <Button
                         variant="outline"
+                    <TableHead>Account</TableHead>
                         size="sm"
                         className="shadow-sm"
                         onClick={(e) => {
@@ -599,11 +604,20 @@ function LeadsList() {
                       >
                         <ListTodo className="h-3 w-3 mr-1" />
                         Task
+                    const account = lead.accountId ? getAccountById(lead.accountId) : null
+                    const contact = lead.contactId ? getContactById(lead.contactId) : null
                       </Button>
                       <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => {
                         e.stopPropagation()
                         setSelectedLeadId(lead.id)
                         setShowContactModal(true)
+                        <TableCell>
+                          {account ? (
+                            <span className="text-sm text-muted-foreground">{account.name}</span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
                       }}>
                         <MessageSquare className="h-3 w-3 mr-1" />
                         Contact

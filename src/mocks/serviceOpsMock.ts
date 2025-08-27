@@ -125,6 +125,8 @@ export const mockServiceOps = {
       vehicleInfo: '2019 Keystone Montana 3761FL',
       accountId: 'acc-002',
       contactId: 'con-002',
+      accountId: 'acc-002',
+      contactId: 'con-002',
       assignedTo: 'tech-003',
       assignedTechName: 'Tom Wilson',
       scheduledDate: '2024-01-10T08:00:00Z',
