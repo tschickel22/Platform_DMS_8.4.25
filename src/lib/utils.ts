@@ -38,6 +38,25 @@ export function generateId(): string {
   return Math.random().toString(36).substr(2, 9)
 }
 
+/**
+ * Determines if a color is light or dark based on its luminance
+ */
+export function isColorLight(color: string): boolean {
+  // Remove # if present
+  const hex = color.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Calculate luminance using the standard formula
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return true if light (luminance > 0.5)
+  return luminance > 0.5;
+}
+
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
