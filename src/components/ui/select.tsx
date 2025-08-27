@@ -1,250 +1,385 @@
-import * as React from 'react'
-import * as SelectPrimitive from '@radix-ui/react-select'
-import { Check, ChevronDown, ChevronUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
+import FormSelect from '@/components/form/FormSelect'
+import { mockFinance } from '@/mocks/financeMock'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
-/** 
- * Safely render children content for Select components.
- * This function extracts display text without affecting the underlying value.
- */
-function safeRenderChildren(children: React.ReactNode): React.ReactNode {
-  if (children == null) return null
-  if (typeof children === 'string' || typeof children === 'number') return children
-  if (React.isValidElement(children)) return children
+interface NewLoanFormProps {
+  onClose: () => void
+  onSuccess?: (loan: any) => void
+}
+
+interface LoanFormData {
+  customerId: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  vehicleId: string
+  vehicleInfo: string
+  loanAmount: number
+  downPayment: number
+  interestRate: number
+  termMonths: number
+  startDate: string
+  status: string
+  isPortalVisible: boolean
+  notes: string
+}
+
+export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
+  const { toast } = useToast()
   
-  if (Array.isArray(children)) {
-    return children
-      .map((c) =>
-        typeof c === 'string' || typeof c === 'number' || React.isValidElement(c)
-          ? c
-          : null
-      )
-      .filter(Boolean)
+  const [formData, setFormData] = useState<LoanFormData>({
+    customerId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    vehicleId: '',
+    vehicleInfo: '',
+    loanAmount: mockFinance.defaultLoan.amount,
+    downPayment: mockFinance.defaultLoan.downPayment,
+    interestRate: mockFinance.defaultLoan.rate,
+    termMonths: mockFinance.defaultLoan.termMonths,
+    startDate: mockFinance.defaultLoan.startDate,
+    status: 'Current',
+    isPortalVisible: true,
+    notes: ''
+  })
+
+  // Define options for FormSelect components
+  const statusOptions = [
+    { value: 'Current', label: 'Current' },
+    { value: 'Late', label: 'Late' },
+    { value: 'Default', label: 'Default' },
+    { value: 'Paid Off', label: 'Paid Off' }
+  ]
+
+  const termOptions = mockFinance.termOptions.map(term => ({
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Debug logging for form data changes
+  React.useEffect(() => {
+    console.log('NewLoanForm: Form data updated:', formData)
+  }, [formData])
+
+  const handleInputChange = (field: keyof LoanFormData, value: any) => {
+    console.log(`NewLoanForm: Updating field "${field}" with value:`, value)
+    
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value }
+      console.log(`NewLoanForm: Form data after ${field} update:`, updated)
+      return updated
+    })
   }
-  
-  // For objects, extract display text but preserve the original structure
-  if (typeof children === 'object') {
-    const obj = children as any
+
+  const calculateMonthlyPayment = () => {
+    const principal = formData.loanAmount - formData.downPayment
+    const monthlyRate = formData.interestRate / 100 / 12
+    const numPayments = formData.termMonths
     
-    // Try common display field patterns
-    const displayText =
-      obj?.label ??
-      obj?.name ??
-      obj?.title ??
-      obj?.displayName ??
-      obj?.text ??
-      obj?.value
-    
-    if (typeof displayText === 'string' || typeof displayText === 'number') {
-      return String(displayText)
+    if (principal <= 0 || monthlyRate <= 0 || numPayments <= 0) {
+      return 0
     }
     
-    // If it's a simple object with just value, return the value
-    if (obj?.value !== undefined) {
-      return String(obj.value)
-    }
+    const monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+                          (Math.pow(1 + monthlyRate, numPayments) - 1)
     
-    // Last resort: return empty string instead of JSON
-    return ''
+    return Math.round(monthlyPayment * 100) / 100
   }
-  
-  return String(children)
-}
 
-const Select = SelectPrimitive.Root
-const SelectGroup = SelectPrimitive.Group
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    console.log('NewLoanForm: Submitting form with data:', formData)
+    
+    setIsSubmitting(true)
+    
+    try {
+      // Validate required fields
+      if (!formData.customerName || !formData.loanAmount || !formData.status) {
+        throw new Error('Please fill in all required fields')
+      }
 
-const SelectTrigger = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-      className
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+      // Calculate monthly payment
+      const monthlyPayment = calculateMonthlyPayment()
+      
+      // Create new loan object
+      const newLoan = {
+        id: `loan-${Date.now()}`,
+        customerId: formData.customerId || `cust-${Date.now()}`,
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone,
+        vehicleId: formData.vehicleId || `vh-${Date.now()}`,
+        vehicleInfo: formData.vehicleInfo,
+        loanAmount: formData.loanAmount,
+        downPayment: formData.downPayment,
+        interestRate: formData.interestRate,
+        termMonths: formData.termMonths,
+        monthlyPayment,
+        startDate: formData.startDate,
+        status: formData.status,
+        remainingBalance: formData.loanAmount - formData.downPayment,
+        nextPaymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        totalPaid: 0,
+        paymentsRemaining: formData.termMonths,
+        isPortalVisible: formData.isPortalVisible,
+        notes: formData.notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
 
-const SelectScrollUpButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
-))
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+      console.log('NewLoanForm: Created loan object:', newLoan)
 
-const SelectScrollDownButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
-))
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+      // Save to localStorage (simulating database save)
+      const existingLoans = loadFromLocalStorage('loans', [])
+      const updatedLoans = [newLoan, ...existingLoans]
+      saveToLocalStorage('loans', updatedLoans)
 
-type SelectContentProps = React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
-  position?: 'item-aligned' | 'popper'
-}
+      console.log('NewLoanForm: Saved loan to localStorage')
 
-const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  SelectContentProps
->(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'relative z-[100] max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-        className
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
-        className={cn(
-          'p-1',
-          position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
-        )}
-      >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
-SelectContent.displayName = SelectPrimitive.Content.displayName
+      toast({
+        title: 'Success',
+        description: 'Loan created successfully'
+      })
 
-const SelectLabel = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Label>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label
-    ref={ref}
-    className={cn('py-1.5 pl-8 pr-2 text-sm font-semibold', className)}
-    {...props}
-  />
-))
-SelectLabel.displayName = SelectPrimitive.Label.displayName
+      if (onSuccess) {
+        onSuccess(newLoan)
+      }
 
-const SelectItem = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, value, ...props }, ref) => {
-  // Debug logging for SelectItem
-  React.useEffect(() => {
-    console.log('SelectItem rendered:', { value, children })
-  }, [value, children])
+      onClose()
+    } catch (error) {
+      console.error('NewLoanForm: Error creating loan:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create loan',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
-    <SelectPrimitive.Item
-      ref={ref}
-      className={cn(
-        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        className
-      )}
-      value={value}
-      {...props}
-    >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-      <SelectPrimitive.ItemText>{safeRenderChildren(children)}</SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Loan</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Customer Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Customer Information</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customerName">Customer Name *</Label>
+                <Input
+                  id="customerName"
+                  value={formData.customerName}
+                  onChange={(e) => handleInputChange('customerName', e.target.value)}
+                  placeholder="Enter customer name"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="customerEmail">Email</Label>
+                <Input
+                  id="customerEmail"
+                  type="email"
+                  value={formData.customerEmail}
+                  onChange={(e) => handleInputChange('customerEmail', e.target.value)}
+                  placeholder="customer@email.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customerPhone">Phone</Label>
+                <Input
+                  id="customerPhone"
+                  value={formData.customerPhone}
+                  onChange={(e) => handleInputChange('customerPhone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="vehicleInfo">Vehicle/Property</Label>
+                <Input
+                  id="vehicleInfo"
+                  value={formData.vehicleInfo}
+                  onChange={(e) => handleInputChange('vehicleInfo', e.target.value)}
+                  placeholder="2023 Forest River Cherokee"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Loan Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Loan Details</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="loanAmount">Loan Amount *</Label>
+                <Input
+                  id="loanAmount"
+                  type="number"
+                  value={formData.loanAmount}
+                  onChange={(e) => handleInputChange('loanAmount', parseFloat(e.target.value) || 0)}
+                  placeholder="25000"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="downPayment">Down Payment</Label>
+                <Input
+                  id="downPayment"
+                  type="number"
+                  value={formData.downPayment}
+                  onChange={(e) => handleInputChange('downPayment', parseFloat(e.target.value) || 0)}
+                  placeholder="3000"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                <Select
+                  value={formData.interestRate.toString()}
+                  onValueChange={(value) => {
+                    console.log('Interest Rate dropdown changed to:', value)
+                    handleInputChange('interestRate', parseFloat(value))
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select rate">
+                      {formData.interestRate ? `${formData.interestRate}%` : 'Select rate'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockFinance.interestRates.map((rate) => (
+                      <SelectItem key={rate} value={rate.toString()}>
+                        {rate}%
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="termMonths">Term (Months)</Label>
+                <Select
+                  value={formData.termMonths.toString()}
+                  onValueChange={(value) => {
+                    console.log('Term dropdown changed to:', value)
+                    handleInputChange('termMonths', parseInt(value))
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockFinance.termOptions.map((term) => (
+                      <SelectItem key={term} value={term.toString()}>
+                        {term} months
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => {
+                    console.log('Status dropdown changed to:', value)
+                    handleInputChange('status', value)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status">
+                      {formData.status || 'Select status'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockFinance.statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => handleInputChange('startDate', e.target.value)}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2 pt-6">
+                <Checkbox
+                  id="isPortalVisible"
+                  checked={formData.isPortalVisible}
+                  onCheckedChange={(checked) => handleInputChange('isPortalVisible', checked)}
+                />
+                <Label htmlFor="isPortalVisible">Make this loan visible in customer portal</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Calculated Payment */}
+          <div className="bg-muted p-4 rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Calculated Monthly Payment:</span>
+              <span className="text-2xl font-bold text-primary">
+                ${calculateMonthlyPayment().toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <textarea
+              id="notes"
+              className="w-full min-h-[100px] p-3 border border-input rounded-md resize-none"
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Additional notes about this loan..."
+            />
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Loan'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
-})
-SelectItem.displayName = SelectPrimitive.Item.displayName
-
-/** Enhanced SelectValue with better debugging and value handling */
-const SelectValue = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Value>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value> & {
-    children?: React.ReactNode
-    placeholder?: React.ReactNode
-  }
->(({ children, placeholder, ...props }, ref) => {
-  // Debug logging for SelectValue
-  React.useEffect(() => {
-    console.log('SelectValue rendered:', { children, placeholder, props })
-  }, [children, placeholder, props])
-
-  return (
-    <SelectPrimitive.Value
-      ref={ref}
-      {...props}
-      placeholder={safeRenderChildren(placeholder)}
-    >
-      {safeRenderChildren(children)}
-    </SelectPrimitive.Value>
-  )
-})
-SelectValue.displayName = SelectPrimitive.Value.displayName
-
-const SelectSeparator = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator
-    ref={ref}
-    className={cn('-mx-1 my-1 h-px bg-muted', className)}
-    {...props}
-  />
-))
-SelectSeparator.displayName = SelectPrimitive.Separator.displayName
-
-export {
-  Select,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
-  SelectContent,
-  SelectLabel,
-  SelectItem,
-  SelectSeparator,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
 }
-
-// Re-export dropdown menu components for compatibility
-export {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuGroup,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuShortcut,
-} from './dropdown-menu'
