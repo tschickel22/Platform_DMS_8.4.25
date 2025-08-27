@@ -591,3 +591,5 @@ export default function ServiceOps() {
     </Routes>
   )
 }
+
+export default ServiceOps
