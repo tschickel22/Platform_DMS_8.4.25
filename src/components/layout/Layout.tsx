@@ -184,10 +184,27 @@ export default function Layout({ children }: LayoutProps) {
 
   // ---------- Helpers ----------
   const normalize = (p: string) => p.replace(/\/+$/, '')
+  
   const isActive = (path: string) => {
     const current = normalize(location.pathname)
     const target = normalize(path)
-    return current === target || current.startsWith(target + '/')
+    
+    // Exact match for root dashboard
+    if (target === '') return current === ''
+    
+    // For nested routes, we need more precise matching
+    if (target === '/crm') {
+      // Only highlight "Prospecting" if we're exactly on /crm or /crm/ (not /crm/contacts or /crm/accounts)
+      return current === '/crm' || current === '/crm/'
+    }
+    
+    // For other routes, check exact match or direct child paths
+    return current === target || (current.startsWith(target + '/') && !current.substring(target.length + 1).includes('/'))
+  }
+  
+  // Helper to check if a parent menu should be highlighted (has active children)
+  const hasActiveChild = (children: Array<{ path: string }>) => {
+    return children.some(child => isActive(child.path))
   }
 
   // Auto-expand the group that contains the current route
@@ -235,7 +252,7 @@ export default function Layout({ children }: LayoutProps) {
         {navigationItems.map((item) => {
           if (item.children) {
             const isExpanded = expandedMenus.includes(item.name)
-            const hasActiveChild = item.children.some(child => isActive(child.path!))
+            const menuHasActiveChild = hasActiveChild(item.children)
 
             return (
               <div key={item.name}>
@@ -243,7 +260,7 @@ export default function Layout({ children }: LayoutProps) {
                   onClick={() => toggleMenu(item.name)}
                   className={cn(
                     'w-full group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                    hasActiveChild
+                    menuHasActiveChild
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
@@ -252,7 +269,7 @@ export default function Layout({ children }: LayoutProps) {
                     <item.icon
                       className={cn(
                         'mr-3 flex-shrink-0 h-5 w-5',
-                        hasActiveChild ? 'text-primary' : 'text-muted-foreground'
+                        menuHasActiveChild ? 'text-primary' : 'text-muted-foreground'
                       )}
                     />
                     {item.name}
@@ -261,7 +278,7 @@ export default function Layout({ children }: LayoutProps) {
                     className={cn(
                       'h-4 w-4 transition-transform',
                       isExpanded ? 'transform rotate-180' : '',
-                      hasActiveChild ? 'text-primary' : 'text-muted-foreground'
+                      menuHasActiveChild ? 'text-primary' : 'text-muted-foreground'
                     )}
                   />
                 </button>
@@ -269,11 +286,11 @@ export default function Layout({ children }: LayoutProps) {
                 {isExpanded && (
                   <div className="mt-1 space-y-1">
                     {item.children.map((child) => {
-                      const childActive = isActive(child.path!)
+                      const childActive = isActive(child.path)
                       return (
                         <Link
                           key={child.path}
-                          to={child.path!}
+                          to={child.path}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={cn(
                             'group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md transition-colors',
@@ -298,11 +315,11 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             )
           } else {
-            const active = isActive(item.path!)
+            const active = isActive(item.path)
             return (
               <Link
                 key={item.path}
-                to={item.path!}
+                to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
