@@ -23,10 +23,13 @@ import { Invoice, InvoiceStatus, Payment } from '@/types'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { useInvoiceManagement } from './hooks/useInvoiceManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { InvoiceForm } from './components/InvoiceForm'
 import { InvoiceDetail } from './components/InvoiceDetail'
 import { PaymentHistory } from './components/PaymentHistory'
 import { Tabs as TabsComponent, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Link } from 'react-router-dom'
 
 function InvoicesList() {
   const {
@@ -46,6 +49,8 @@ function InvoicesList() {
   const payments = useMemo<Payment[]>(() => paymentsRaw ?? [], [paymentsRaw])
 
   const { toast } = useToast()
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('')
@@ -424,6 +429,13 @@ function InvoicesList() {
                           {invoice.paymentMethod && (
                             <p className="text-sm text-muted-foreground">
                               <span className="font-medium">Payment Method:</span> {invoice.paymentMethod}
+                            </p>
+                          )}
+                          {(invoice as any).accountId && (
+                            <p className="text-xs text-muted-foreground">
+                              Account: <Link to={`/crm/accounts/${(invoice as any).accountId}`} className="text-primary hover:underline">
+                                {getAccountById((invoice as any).accountId)?.name || 'Unknown'}
+                              </Link>
                             </p>
                           )}
                         </div>
