@@ -189,7 +189,6 @@ function AgreementVaultPage() {
                   <option key={status.value} value={status.value}>
                     {status.label}
                   </option>
-                    <TableHead>Account</TableHead>
                 ))}
               </select>
             </div>

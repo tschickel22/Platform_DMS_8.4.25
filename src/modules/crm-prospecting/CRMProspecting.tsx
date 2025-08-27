@@ -32,9 +32,10 @@ import { toast } from '@/hooks/use-toast'
 import { Link } from 'react-router-dom'
 
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
-  return (
   const { getAccountById } = useAccountManagement()
   const { getContactById } = useContactManagement()
+  
+  return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
