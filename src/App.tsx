@@ -20,6 +20,7 @@ import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
 import Contacts from '@/modules/crm-contacts/Contacts'
 import ContactDetail from '@/modules/crm-contacts/components/ContactDetail'
 import Accounts from '@/modules/crm-accounts/Accounts'
+import AccountDetail from '@/modules/crm-accounts/components/AccountDetail'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
 import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
@@ -122,7 +123,7 @@ function App() {
                                   <Route path="/crm/contacts" element={<Contacts />} />
                                   <Route path="/crm/contacts/:contactId" element={<ContactDetail />} />
                                   <Route path="/crm/accounts" element={<Accounts />} />
-                                  <Route path="/crm/accounts/:accountId" element={<div>Account Detail (Coming in Phase 4)</div>} />
+                                  <Route path="/crm/accounts/:accountId" element={<AccountDetail />} />
                                   <Route path="/crm/contacts/*" element={
                                     <Routes>
                                       <Route path="/" element={<Contacts />} />
@@ -132,7 +133,7 @@ function App() {
                                   <Route path="/crm/accounts/*" element={
                                     <Routes>
                                       <Route path="/" element={<Accounts />} />
-                                      <Route path="/:accountId" element={<div>Account Detail (Coming in Phase 4)</div>} />
+                                      <Route path="/:accountId" element={<AccountDetail />} />
                                     </Routes>
                                   } />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
