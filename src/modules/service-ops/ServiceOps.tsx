@@ -505,7 +505,11 @@ const filteredTickets = tickets.filter(ticket =>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                        <TableCell>
+                  >
+                    View Details
+                  </Button>
+                </TableCell>
+                <TableCell>
                           {account ? (
                             <span className="text-sm text-muted-foreground">{account.name}</span>
                           ) : (
