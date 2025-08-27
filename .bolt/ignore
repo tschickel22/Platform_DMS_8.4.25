@@ -67,6 +67,8 @@ src/modules/
 # These lines will re-include the necessary directories
 !src/modules/brochures/
 !src/modules/brochures/**
+!src/modules/finance/
+!src/modules/finance/**
 !src/modules/inventory-management/
 !src/modules/inventory-management/**
 !src/modules/land-management/
