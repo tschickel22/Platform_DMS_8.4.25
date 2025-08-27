@@ -325,11 +325,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   value={formData.startDate}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
                 />
-                    <SelectValue placeholder="Select frequency">
-                    <SelectValue placeholder="Select term">
-                      {formData.termMonths ? `${formData.termMonths} months` : 'Select term'}
-                    </SelectValue>
-                    </SelectValue>
+              </div>
               
               <div className="flex items-center space-x-2 pt-6">
                 <Checkbox
