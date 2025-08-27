@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import FormSelect from '@/components/form/FormSelect'
 import { useToast } from '@/hooks/use-toast'
 import { mockFinance } from '@/mocks/financeMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
@@ -34,22 +34,46 @@ interface LoanFormData {
 export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
   const { toast } = useToast()
   
-  const [formData, setFormData] = useState<LoanFormData>({
+  const [formData, setFormData] = useState({
     customerId: '',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     vehicleId: '',
     vehicleInfo: '',
-    loanAmount: mockFinance.defaultLoan.amount,
-    downPayment: mockFinance.defaultLoan.downPayment,
-    interestRate: mockFinance.defaultLoan.rate,
-    termMonths: mockFinance.defaultLoan.termMonths,
-    startDate: mockFinance.defaultLoan.startDate,
+    loanAmount: 25000,
+    downPayment: 3000,
+    interestRate: 7.25,
+    termMonths: 60,
+    paymentFrequency: 'Monthly',
+    startDate: '',
     status: 'Current',
-    isPortalVisible: true,
-    notes: ''
+    notes: '',
+    makeVisibleInPortal: false
   })
+
+  // Define options for dropdowns
+  const statusOptions = [
+    { value: 'Current', label: 'Current' },
+    { value: 'Late', label: 'Late' },
+    { value: 'Default', label: 'Default' },
+    { value: 'Paid Off', label: 'Paid Off' }
+  ]
+
+  const termOptions = mockFinance.termOptions.map(term => ({
+    value: term.toString(),
+    label: `${term} months`
+  }))
+
+  const rateOptions = mockFinance.interestRates.map(rate => ({
+    value: rate.toString(),
+    label: `${rate}%`
+  }))
+
+  const frequencyOptions = mockFinance.paymentFrequencies.map(freq => ({
+    value: freq,
+    label: freq
+  }))
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -58,9 +82,8 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
     console.log('NewLoanForm: Form data updated:', formData)
   }, [formData])
 
-  const handleInputChange = (field: keyof LoanFormData, value: any) => {
+  const updateField = (field: string, value: any) => {
     console.log(`NewLoanForm: Updating field "${field}" with value:`, value)
-    
     setFormData(prev => {
       const updated = { ...prev, [field]: value }
       console.log(`NewLoanForm: Form data after ${field} update:`, updated)
@@ -174,7 +197,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                 <Input
                   id="customerName"
                   value={formData.customerName}
-                  onChange={(e) => handleInputChange('customerName', e.target.value)}
+                  onChange={(e) => updateField('customerName', e.target.value)}
                   placeholder="Enter customer name"
                   required
                 />
@@ -186,7 +209,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   id="customerEmail"
                   type="email"
                   value={formData.customerEmail}
-                  onChange={(e) => handleInputChange('customerEmail', e.target.value)}
+                  onChange={(e) => updateField('customerEmail', e.target.value)}
                   placeholder="customer@email.com"
                 />
               </div>
@@ -198,7 +221,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                 <Input
                   id="customerPhone"
                   value={formData.customerPhone}
-                  onChange={(e) => handleInputChange('customerPhone', e.target.value)}
+                  onChange={(e) => updateField('customerPhone', e.target.value)}
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -208,7 +231,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                 <Input
                   id="vehicleInfo"
                   value={formData.vehicleInfo}
-                  onChange={(e) => handleInputChange('vehicleInfo', e.target.value)}
+                  onChange={(e) => updateField('vehicleInfo', e.target.value)}
                   placeholder="2023 Forest River Cherokee"
                 />
               </div>
@@ -226,7 +249,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   id="loanAmount"
                   type="number"
                   value={formData.loanAmount}
-                  onChange={(e) => handleInputChange('loanAmount', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => updateField('loanAmount', parseFloat(e.target.value) || 0)}
                   placeholder="25000"
                   required
                 />
@@ -238,81 +261,57 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   id="downPayment"
                   type="number"
                   value={formData.downPayment}
-                  onChange={(e) => handleInputChange('downPayment', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => updateField('downPayment', parseFloat(e.target.value) || 0)}
                   placeholder="3000"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="interestRate">Interest Rate (%)</Label>
-                <Select
-                  value={formData.interestRate.toString()}
-                  onValueChange={(value) => {
-                    console.log('Interest Rate dropdown changed to:', value)
-                    handleInputChange('interestRate', parseFloat(value))
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select rate">
-                      {formData.interestRate ? `${formData.interestRate}%` : 'Select rate'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockFinance.interestRates.map((rate) => (
-                      <SelectItem key={rate} value={rate.toString()}>
-                        {rate}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="status">Status *</Label>
+                <FormSelect
+                  options={statusOptions}
+                  value={formData.status}
+                  onChange={(value) => updateField('status', value)}
+                  placeholder="Select status"
+                  name="status"
+                />
               </div>
               
               <div>
-                <Label htmlFor="termMonths">Term (Months)</Label>
-                <Select
+                <Label htmlFor="termMonths">Term (Months) *</Label>
+                <FormSelect
+                  options={termOptions}
                   value={formData.termMonths.toString()}
-                  onValueChange={(value) => {
-                    console.log('Term dropdown changed to:', value)
-                    handleInputChange('termMonths', parseInt(value))
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select term" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockFinance.termOptions.map((term) => (
-                      <SelectItem key={term} value={term.toString()}>
-                        {term} months
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => updateField('termMonths', parseInt(value))}
+                  placeholder="Select term"
+                  name="termMonths"
+                />
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => {
-                    console.log('Status dropdown changed to:', value)
-                    handleInputChange('status', value)
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status">
-                      {formData.status || 'Select status'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockFinance.statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="interestRate">Interest Rate (%) *</Label>
+                <FormSelect
+                  options={rateOptions}
+                  value={formData.interestRate.toString()}
+                  onChange={(value) => updateField('interestRate', parseFloat(value))}
+                  placeholder="Select rate"
+                  name="interestRate"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="paymentFrequency">Payment Frequency *</Label>
+                <FormSelect
+                  options={frequencyOptions}
+                  value={formData.paymentFrequency}
+                  onChange={(value) => updateField('paymentFrequency', value)}
+                  placeholder="Select frequency"
+                  name="paymentFrequency"
+                />
               </div>
             </div>
 
@@ -323,7 +322,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   id="startDate"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => handleInputChange('startDate', e.target.value)}
+                  onChange={(e) => updateField('startDate', e.target.value)}
                 />
               </div>
               
@@ -331,7 +330,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                 <Checkbox
                   id="isPortalVisible"
                   checked={formData.isPortalVisible}
-                  onCheckedChange={(checked) => handleInputChange('isPortalVisible', checked)}
+                  onCheckedChange={(checked) => updateField('isPortalVisible', checked)}
                 />
                 <Label htmlFor="isPortalVisible">Make this loan visible in customer portal</Label>
               </div>
@@ -355,7 +354,7 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
               id="notes"
               className="w-full min-h-[100px] p-3 border border-input rounded-md resize-none"
               value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
+              onChange={(e) => updateField('notes', e.target.value)}
               placeholder="Additional notes about this loan..."
             />
           </div>
