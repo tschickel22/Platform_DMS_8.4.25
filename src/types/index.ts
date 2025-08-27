@@ -34,10 +34,21 @@ export interface Contact {
   accountName?: string // Denormalized for easier display
   title?: string // Job title
   source?: string // e.g., 'Website', 'Referral', 'Event'
-  notes?: string
+  notes?: ContactNote[]
   tags?: string[] // For integration with tagging engine
   createdAt: Date
   updatedAt: Date
+}
+
+export interface ContactNote {
+  id: string
+  content: string
+  createdAt: Date
+  createdBy: string
+  createdByName: string
+  updatedAt?: Date
+  updatedBy?: string
+  updatedByName?: string
 }
 
 export interface Tenant {
