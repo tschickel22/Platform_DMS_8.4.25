@@ -255,7 +255,9 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select rate" />
+                    <SelectValue placeholder="Select rate">
+                      {formData.interestRate ? `${formData.interestRate}%` : 'Select rate'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {mockFinance.interestRates.map((rate) => (
@@ -299,7 +301,9 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Select status">
+                      {formData.status || 'Select status'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {mockFinance.statusOptions.map((status) => (
@@ -321,7 +325,11 @@ export function NewLoanForm({ onClose, onSuccess }: NewLoanFormProps) {
                   value={formData.startDate}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
                 />
-              </div>
+                    <SelectValue placeholder="Select frequency">
+                    <SelectValue placeholder="Select term">
+                      {formData.termMonths ? `${formData.termMonths} months` : 'Select term'}
+                    </SelectValue>
+                    </SelectValue>
               
               <div className="flex items-center space-x-2 pt-6">
                 <Checkbox
