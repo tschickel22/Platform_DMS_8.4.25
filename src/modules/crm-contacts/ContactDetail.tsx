@@ -143,6 +143,17 @@ export default function ContactDetail() {
                 <p className="text-sm font-medium text-muted-foreground mb-2">Tags</p>
                 <div className="flex flex-wrap gap-2">
                   {contact.tags.map((tag) => (
+                    <span key={tag} className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Notes Section */}
       <NotesSection
         notes={contact.notes}
