@@ -4,18 +4,25 @@ import { Contact } from '@/types/index'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
-import { 
-  User, 
-  Users, 
-  Plus, 
-  Search, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
+import {
+  User,
+  Users,
+  Plus,
+  Search,
   Filter,
   UserPlus,
   UserCheck,
@@ -53,7 +60,7 @@ export default function ContactList() {
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase()
-        const matchesSearch = 
+        const matchesSearch =
           fullName.includes(term) ||
           contact.email?.toLowerCase().includes(term) ||
           contact.phone?.includes(term) ||
@@ -157,9 +164,7 @@ export default function ContactList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-success">{filteredMetrics.assigned}</div>
-            <p className="text-xs text-muted-foreground">
-              Linked to accounts
-            </p>
+            <p className="text-xs text-muted-foreground">Linked to accounts</p>
           </CardContent>
         </Card>
 
@@ -170,9 +175,7 @@ export default function ContactList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-warning">{filteredMetrics.unassigned}</div>
-            <p className="text-xs text-muted-foreground">
-              Need account assignment
-            </p>
+            <p className="text-xs text-muted-foreground">Need account assignment</p>
           </CardContent>
         </Card>
 
@@ -182,7 +185,9 @@ export default function ContactList() {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold stat-info">{filteredMetrics.withEmail + filteredMetrics.withPhone}</div>
+            <div className="text-2xl font-bold stat-info">
+              {filteredMetrics.withEmail + filteredMetrics.withPhone}
+            </div>
             <p className="text-xs text-muted-foreground">
               {filteredMetrics.withEmail} email, {filteredMetrics.withPhone} phone
             </p>
@@ -259,9 +264,7 @@ export default function ContactList() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>All Contacts ({filteredContacts.length})</CardTitle>
-              <CardDescription>
-                Individual contacts and their details
-              </CardDescription>
+              <CardDescription>Individual contacts and their details</CardDescription>
             </div>
             <Button variant="outline" size="sm">
               <Filter className="h-4 w-4 mr-2" />
@@ -273,7 +276,7 @@ export default function ContactList() {
           <div className="space-y-4">
             {filteredContacts.map((contact) => {
               const accountName = getAccountName(contact.accountId)
-              
+
               return (
                 <Link key={contact.id} to={`/contacts/${contact.id}`}>
                   <div className="ri-table-row">
@@ -343,8 +346,7 @@ export default function ContactList() {
                 <p className="text-sm text-muted-foreground mb-4">
                   {searchTerm || accountFilter !== 'all' || departmentFilter !== 'all' || tagFilter !== 'all'
                     ? 'Try adjusting your filters or search terms.'
-                    : 'Get started by creating your first contact.'
-                  }
+                    : 'Get started by creating your first contact.'}
                 </p>
                 <Button asChild>
                   <Link to="/contacts/new">
