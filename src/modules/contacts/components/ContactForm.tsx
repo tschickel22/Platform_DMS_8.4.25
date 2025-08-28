@@ -1,3 +1,4 @@
+// src/modules/contacts/components/ContactForm.tsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -11,15 +12,36 @@ import { useContactManagement } from '@/modules/contacts/hooks/useContactManagem
 import { mockContacts } from '@/mocks/contactsMock'
 import { mockAccounts } from '@/mocks/accountsMock'
 
+type Params = { contactId?: string }
+
+type ContactFormState = {
+  accountId: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  title: string
+  department: string
+  notes: string
+  tags: string[]
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  customFields: Record<string, any>
+}
+
 export default function ContactForm() {
   const navigate = useNavigate()
-  const { contactId } = useParams()
+  const { contactId } = useParams<Params>()
   const { toast } = useToast()
-  const { createContact, updateContact, getContactById } = useContactManagement()
-  
-  const isEditing = !!contactId
-  
-  const [formData, setFormData] = useState({
+
+  const {
+    createContact,
+    updateContact,
+    getContactById,
+  } = useContactManagement()
+
+  const isEditing = Boolean(contactId)
+
+  const [formData, setFormData] = useState<ContactFormState>({
     accountId: '',
     firstName: '',
     lastName: '',
@@ -28,95 +50,101 @@ export default function ContactForm() {
     title: '',
     department: '',
     notes: '',
-    tags: [] as string[],
-    customFields: {}
+    tags: [],
+    customFields: {},
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(isEditing)
 
-  // Load existing contact data if editing
+  // Load existing contact data (edit mode)
   useEffect(() => {
-    if (isEditing && contactId) {
-      const loadContact = async () => {
-        try {
-          const contact = await getContactById(contactId)
-          if (contact) {
-            setFormData({
-              accountId: contact.accountId || '',
-              firstName: contact.firstName,
-              lastName: contact.lastName,
-              email: contact.email || '',
-              phone: contact.phone || '',
-              title: contact.title || '',
-              department: contact.department || '',
-              notes: contact.notes || '',
-              tags: contact.tags || [],
-              customFields: contact.customFields || {}
-            })
-          }
-        } catch (error) {
-          console.error('Failed to load contact:', error)
-          toast({
-            title: 'Error',
-            description: 'Failed to load contact data',
-            variant: 'destructive'
-          })
-        } finally {
-          setInitialLoading(false)
-        }
-      }
-      loadContact()
+    if (!isEditing || !contactId) {
+      setInitialLoading(false)
+      return
     }
-  }, [contactId, isEditing, getContactById, toast])
+
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        const contact = await getContactById(contactId)
+        if (cancelled || !contact) return
+
+        setFormData({
+          accountId: contact.accountId || '',
+          firstName: contact.firstName || '',
+          lastName: contact.lastName || '',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          title: contact.title || '',
+          department: contact.department || '',
+          notes: contact.notes || '',
+          tags: contact.tags || [],
+          customFields: contact.customFields || {},
+        })
+      } catch (err) {
+        console.error('Failed to load contact', err)
+        toast({
+          title: 'Error',
+          description: 'Failed to load contact data.',
+          variant: 'destructive',
+        })
+      } finally {
+        if (!cancelled) setInitialLoading(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+    // NOTE: intentionally *not* depending on getContactById to avoid identity churn re-running the effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, contactId, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
     try {
       if (isEditing && contactId) {
         await updateContact(contactId, formData)
-        toast({
-          title: 'Success',
-          description: 'Contact updated successfully'
-        })
+        toast({ title: 'Success', description: 'Contact updated successfully.' })
       } else {
         await createContact(formData)
-        toast({
-          title: 'Success',
-          description: 'Contact created successfully'
-        })
+        toast({ title: 'Success', description: 'Contact created successfully.' })
       }
       navigate('/contacts')
-    } catch (error) {
+    } catch (err) {
+      console.error('Failed to save contact', err)
       toast({
         title: 'Error',
         description: 'Failed to save contact. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const handleInputChange = (field: keyof ContactFormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading contact...</p>
         </div>
       </div>
     )
   }
+
+  const titleOptions = (mockContacts?.titleOptions ?? []) as string[]
+  const departmentOptions = (mockContacts?.departmentOptions ?? []) as string[]
+  const accounts = (mockAccounts?.sampleAccounts ?? []) as { id: string; name: string }[]
 
   return (
     <div className="space-y-6">
@@ -138,25 +166,28 @@ export default function ContactForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account Selection */}
+            {/* Account */}
             <div className="space-y-2">
               <Label htmlFor="accountId">Account (Optional)</Label>
-              <Select value={formData.accountId} onValueChange={(value) => handleInputChange('accountId', value)}>
+              <Select
+                value={formData.accountId}
+                onValueChange={(value) => handleInputChange('accountId', value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select an account" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No Account</SelectItem>
-                  {mockAccounts.sampleAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
+                  {accounts.map((acct) => (
+                    <SelectItem key={acct.id} value={acct.id}>
+                      {acct.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Name Fields */}
+            {/* Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name *</Label>
@@ -178,7 +209,7 @@ export default function ContactForm() {
               </div>
             </div>
 
-            {/* Contact Information */}
+            {/* Contact Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -199,16 +230,19 @@ export default function ContactForm() {
               </div>
             </div>
 
-            {/* Job Information */}
+            {/* Job Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
-                <Select value={formData.title} onValueChange={(value) => handleInputChange('title', value)}>
+                <Select
+                  value={formData.title}
+                  onValueChange={(value) => handleInputChange('title', value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select title" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockContacts.titleOptions.map((title) => (
+                    {titleOptions.map((title) => (
                       <SelectItem key={title} value={title}>
                         {title}
                       </SelectItem>
@@ -218,12 +252,15 @@ export default function ContactForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
+                <Select
+                  value={formData.department}
+                  onValueChange={(value) => handleInputChange('department', value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockContacts.departmentOptions.map((dept) => (
+                    {departmentOptions.map((dept) => (
                       <SelectItem key={dept} value={dept}>
                         {dept}
                       </SelectItem>
@@ -244,7 +281,7 @@ export default function ContactForm() {
               />
             </div>
 
-            {/* Form Actions */}
+            {/* Actions */}
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
