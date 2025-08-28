@@ -18,23 +18,22 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 
-type ServiceTicketFormProps = {
+type Props = {
   ticket?: ServiceTicket
   onSave: (ticketData: Partial<ServiceTicket>) => Promise<void>
   onCancel?: () => void
 }
 
-export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFormProps) {
+export function ServiceTicketForm({ ticket, onSave, onCancel }: Props) {
   const { toast } = useToast()
   const { vehicles } = useInventoryManagement()
   const { leads } = useLeadManagement()
-  const { getAccounts } = useAccountManagement()
-  const { getContacts } = useContactManagement()
+  // ✅ use arrays from hooks (no function calls)
+  const { accounts } = useAccountManagement()
+  const { contacts } = useContactManagement()
 
   const [loading, setLoading] = useState(false)
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false)
-  const [accounts, setAccounts] = useState<any[]>([])
-  const [contacts, setContacts] = useState<any[]>([])
   const [filteredContacts, setFilteredContacts] = useState<any[]>([])
 
   const [formData, setFormData] = useState<Partial<ServiceTicket>>({
@@ -78,121 +77,83 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
     total: 85,
   })
 
-  // Load accounts/contacts and seed form for edit
+  // Seed form when editing
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [accs, cons] = await Promise.all([getAccounts(), getContacts()])
-        setAccounts(accs)
-        setContacts(cons)
+    if (!ticket) return
+    setFormData({
+      ...ticket,
+      accountId: ticket.accountId || '',
+      contactId: ticket.contactId || '',
+      customFields: {
+        warrantyStatus: ticket.customFields?.warrantyStatus ?? 'not_covered',
+        estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate ?? '',
+        customerAuthorization: ticket.customFields?.customerAuthorization ?? false,
+        technicianNotes: ticket.customFields?.technicianNotes ?? '',
+        customerPortalAccess: ticket.customFields?.customerPortalAccess !== false,
+      },
+    })
+  }, [ticket])
 
-        if (ticket) {
-          setFormData({
-            ...ticket,
-            accountId: ticket.accountId || '',
-            contactId: ticket.contactId || '',
-            customFields: {
-              warrantyStatus: ticket.customFields?.warrantyStatus ?? 'not_covered',
-              estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate ?? '',
-              customerAuthorization: ticket.customFields?.customerAuthorization ?? false,
-              technicianNotes: ticket.customFields?.technicianNotes ?? '',
-              customerPortalAccess: ticket.customFields?.customerPortalAccess !== false,
-            },
-          })
-        }
-      } catch (e) {
-        console.error(e)
-        toast({ title: 'Error', description: 'Failed to load form data', variant: 'destructive' })
-      }
-    }
-    load()
-  }, [ticket, getAccounts, getContacts, toast])
-
-  // Filter contacts for chosen account
+  // Filter contacts for selected account
   useEffect(() => {
     if (formData.accountId) {
-      const list = contacts.filter((c) => c.accountId === formData.accountId)
+      const list = contacts.filter(c => c.accountId === formData.accountId)
       setFilteredContacts(list)
-      if (formData.contactId && !list.find((c) => c.id === formData.contactId)) {
-        setFormData((p) => ({ ...p, contactId: '' }))
+      if (formData.contactId && !list.find(c => c.id === formData.contactId)) {
+        setFormData(p => ({ ...p, contactId: '' }))
       }
     } else {
       setFilteredContacts(contacts)
     }
   }, [formData.accountId, formData.contactId, contacts])
 
-  // Keep part / labor totals in sync
+  // Keep part totals synced
   useEffect(() => {
-    setNewPart((p) => ({
-      ...p,
-      total: (p.quantity || 1) * (p.unitCost || 0),
-    }))
+    setNewPart(p => ({ ...p, total: (p.quantity || 1) * (p.unitCost || 0) }))
   }, [newPart.quantity, newPart.unitCost])
 
+  // Keep labor totals synced
   useEffect(() => {
-    setNewLabor((l) => ({
-      ...l,
-      total: (l.hours || 1) * (l.rate || 85),
-    }))
+    setNewLabor(l => ({ ...l, total: (l.hours || 1) * (l.rate || 85) }))
   }, [newLabor.hours, newLabor.rate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!formData.customerId || !formData.title || !formData.description) {
       toast({
-        title: 'Validation Error',
+        title: 'Validation error',
         description: 'Customer, title, and description are required.',
         variant: 'destructive',
       })
       return
     }
-
     setLoading(true)
     try {
       await onSave(formData)
-      toast({
-        title: 'Success',
-        description: `Service ticket ${ticket ? 'updated' : 'created'} successfully`,
-      })
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${ticket ? 'update' : 'create'} service ticket`,
-        variant: 'destructive',
-      })
+      toast({ title: 'Success', description: `Service ticket ${ticket ? 'updated' : 'created'} successfully` })
+    } catch {
+      toast({ title: 'Error', description: `Failed to ${ticket ? 'update' : 'create'} service ticket`, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
   const handleCustomerSelect = (value: string) => {
-    if (value === 'add-new') {
-      setShowNewCustomerForm(true)
-    } else {
-      setFormData((p) => ({ ...p, customerId: value }))
-    }
+    if (value === 'add-new') setShowNewCustomerForm(true)
+    else setFormData(p => ({ ...p, customerId: value }))
   }
 
   const handleNewCustomerSuccess = (newCustomer: any) => {
-    setFormData((p) => ({ ...p, customerId: newCustomer.id }))
+    setFormData(p => ({ ...p, customerId: newCustomer.id }))
     setShowNewCustomerForm(false)
-    toast({
-      title: 'Customer Added',
-      description: `${newCustomer.firstName} ${newCustomer.lastName} has been added as a customer.`,
-    })
+    toast({ title: 'Customer added', description: `${newCustomer.firstName} ${newCustomer.lastName} added.` })
   }
 
   const addPart = () => {
     if (!newPart.partNumber || !newPart.description) {
-      toast({
-        title: 'Validation Error',
-        description: 'Part number and description are required',
-        variant: 'destructive',
-      })
+      toast({ title: 'Validation error', description: 'Part number and description are required', variant: 'destructive' })
       return
     }
-
     const part: ServicePart = {
       id: Math.random().toString(36).slice(2, 11),
       partNumber: newPart.partNumber!,
@@ -201,26 +162,20 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
       unitCost: newPart.unitCost || 0,
       total: newPart.total || 0,
     }
-
-    setFormData((p) => ({ ...p, parts: [...(p.parts || []), part] }))
+    setFormData(p => ({ ...p, parts: [...(p.parts || []), part] }))
     setNewPart({ partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
     setShowAddPart(false)
   }
 
   const removePart = (id: string) => {
-    setFormData((p) => ({ ...p, parts: (p.parts || []).filter((x) => x.id !== id) }))
+    setFormData(p => ({ ...p, parts: (p.parts || []).filter(x => x.id !== id) }))
   }
 
   const addLabor = () => {
     if (!newLabor.description) {
-      toast({
-        title: 'Validation Error',
-        description: 'Labor description is required',
-        variant: 'destructive',
-      })
+      toast({ title: 'Validation error', description: 'Labor description is required', variant: 'destructive' })
       return
     }
-
     const labor: ServiceLabor = {
       id: Math.random().toString(36).slice(2, 11),
       description: newLabor.description!,
@@ -228,14 +183,13 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
       rate: newLabor.rate || 85,
       total: newLabor.total || 85,
     }
-
-    setFormData((p) => ({ ...p, labor: [...(p.labor || []), labor] }))
+    setFormData(p => ({ ...p, labor: [...(p.labor || []), labor] }))
     setNewLabor({ description: '', hours: 1, rate: 85, total: 85 })
     setShowAddLabor(false)
   }
 
   const removeLabor = (id: string) => {
-    setFormData((p) => ({ ...p, labor: (p.labor || []).filter((x) => x.id !== id) }))
+    setFormData(p => ({ ...p, labor: (p.labor || []).filter(x => x.id !== id) }))
   }
 
   const totals = {
@@ -244,14 +198,13 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
   }
   const grandTotal = totals.parts + totals.labor
 
-  // Simple mock list of technicians
+  // simple mock techs (replace with real lookup as needed)
   const technicians = [
     { id: 'Tech-001', name: 'John Smith' },
     { id: 'Tech-002', name: 'Sarah Johnson' },
     { id: 'Tech-003', name: 'Mike Davis' },
   ]
 
-  // Treat presence of onCancel as "rendered inside a modal"
   const isModal = !!onCancel
 
   return (
@@ -261,7 +214,6 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
       )}
 
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{ticket ? 'Edit Service Ticket' : 'Create Service Ticket'}</h1>
@@ -277,7 +229,6 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Ticket Information */}
           <Card>
             <CardHeader>
               <CardTitle>Ticket Information</CardTitle>
@@ -288,16 +239,13 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 {/* Account */}
                 <div className="space-y-2">
                   <Label htmlFor="accountId">Account</Label>
-                  <Select
-                    value={formData.accountId || ''}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, accountId: v }))}
-                  >
+                  <Select value={formData.accountId || ''} onValueChange={(v) => setFormData(p => ({ ...p, accountId: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Account</SelectItem>
-                      {accounts.map((a) => (
+                      {accounts.map((a: any) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
                         </SelectItem>
@@ -311,7 +259,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   <Label htmlFor="contactId">Contact</Label>
                   <Select
                     value={formData.contactId || ''}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, contactId: v }))}
+                    onValueChange={(v) => setFormData(p => ({ ...p, contactId: v }))}
                     disabled={!formData.accountId && filteredContacts.length === 0}
                   >
                     <SelectTrigger>
@@ -319,7 +267,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Contact</SelectItem>
-                      {filteredContacts.map((c) => (
+                      {filteredContacts.map((c: any) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.firstName} {c.lastName}
                           {c.title ? ` - ${c.title}` : ''}
@@ -329,7 +277,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   </Select>
                 </div>
 
-                {/* Customer (Lead) */}
+                {/* Customer (lead) */}
                 <div className="space-y-2">
                   <Label htmlFor="customerId">Customer *</Label>
                   <Select value={formData.customerId || ''} onValueChange={handleCustomerSelect}>
@@ -350,7 +298,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         </Button>
                       </div>
                       <div className="px-2 py-1 border-t" />
-                      {leads.map((lead) => (
+                      {leads.map((lead: any) => (
                         <SelectItem key={lead.id} value={lead.id}>
                           {lead.firstName} {lead.lastName}
                         </SelectItem>
@@ -362,16 +310,13 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 {/* Vehicle */}
                 <div className="space-y-2">
                   <Label htmlFor="vehicleId">Vehicle</Label>
-                  <Select
-                    value={formData.vehicleId || ''}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, vehicleId: v }))}
-                  >
+                  <Select value={formData.vehicleId || ''} onValueChange={(v) => setFormData(p => ({ ...p, vehicleId: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select vehicle (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Vehicle</SelectItem>
-                      {vehicles.map((v) => (
+                      {vehicles.map((v: any) => (
                         <SelectItem key={v.id} value={v.id}>
                           {v.year} {v.make} {v.model}
                         </SelectItem>
@@ -386,7 +331,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Input
                   id="title"
                   value={formData.title || ''}
-                  onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
+                  onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
                   placeholder="e.g., Annual Maintenance Service"
                 />
               </div>
@@ -396,7 +341,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Textarea
                   id="description"
                   value={formData.description || ''}
-                  onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                  onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                   placeholder="Describe the service needed"
                   rows={3}
                 />
@@ -407,7 +352,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   <Label htmlFor="priority">Priority</Label>
                   <Select
                     value={(formData.priority as string) || Priority.MEDIUM}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, priority: v as any }))}
+                    onValueChange={(v) => setFormData(p => ({ ...p, priority: v as any }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -425,7 +370,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={(formData.status as string) || ServiceStatus.OPEN}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, status: v as any }))}
+                    onValueChange={(v) => setFormData(p => ({ ...p, status: v as any }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -442,16 +387,17 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
 
                 <div>
                   <Label htmlFor="assignedTo">Assigned Technician</Label>
-                  <Select
-                    value={formData.assignedTo || ''}
-                    onValueChange={(v) => setFormData((p) => ({ ...p, assignedTo: v }))}
-                  >
+                  <Select value={formData.assignedTo || ''} onValueChange={(v) => setFormData(p => ({ ...p, assignedTo: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select technician" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Unassigned</SelectItem>
-                      {technicians.map((t) => (
+                      {[
+                        { id: 'Tech-001', name: 'John Smith' },
+                        { id: 'Tech-002', name: 'Sarah Johnson' },
+                        { id: 'Tech-003', name: 'Mike Davis' },
+                      ].map(t => (
                         <SelectItem key={t.id} value={t.id}>
                           {t.name}
                         </SelectItem>
@@ -467,16 +413,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   <Input
                     id="scheduledDate"
                     type="date"
-                    value={
-                      formData.scheduledDate
-                        ? new Date(formData.scheduledDate).toISOString().split('T')[0]
-                        : ''
-                    }
+                    value={formData.scheduledDate ? new Date(formData.scheduledDate).toISOString().split('T')[0] : ''}
                     onChange={(e) =>
-                      setFormData((p) => ({
-                        ...p,
-                        scheduledDate: e.target.value ? new Date(e.target.value) : undefined,
-                      }))
+                      setFormData(p => ({ ...p, scheduledDate: e.target.value ? new Date(e.target.value) : undefined }))
                     }
                   />
                 </div>
@@ -488,7 +427,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     type="date"
                     value={formData.customFields?.estimatedCompletionDate || ''}
                     onChange={(e) =>
-                      setFormData((p) => ({
+                      setFormData(p => ({
                         ...p,
                         customFields: { ...(p.customFields || {}), estimatedCompletionDate: e.target.value },
                       }))
@@ -499,7 +438,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
             </CardContent>
           </Card>
 
-          {/* Warranty */}
+          {/* Warranty & Authorization */}
           <Card>
             <CardHeader>
               <CardTitle>Warranty & Authorization</CardTitle>
@@ -511,10 +450,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   <Select
                     value={formData.customFields?.warrantyStatus || 'not_covered'}
                     onValueChange={(v) =>
-                      setFormData((p) => ({
-                        ...p,
-                        customFields: { ...(p.customFields || {}), warrantyStatus: v },
-                      }))
+                      setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), warrantyStatus: v } }))
                     }
                   >
                     <SelectTrigger>
@@ -535,10 +471,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     id="customerAuthorization"
                     checked={!!formData.customFields?.customerAuthorization}
                     onCheckedChange={(checked) =>
-                      setFormData((p) => ({
-                        ...p,
-                        customFields: { ...(p.customFields || {}), customerAuthorization: !!checked },
-                      }))
+                      setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), customerAuthorization: !!checked } }))
                     }
                   />
                   <Label htmlFor="customerAuthorization">Customer has authorized work</Label>
@@ -569,7 +502,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Input
                           id="partNumber"
                           value={newPart.partNumber || ''}
-                          onChange={(e) => setNewPart((p) => ({ ...p, partNumber: e.target.value }))}
+                          onChange={(e) => setNewPart(p => ({ ...p, partNumber: e.target.value }))}
                           placeholder="e.g., AC-COMP-001"
                         />
                       </div>
@@ -578,7 +511,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Input
                           id="partDescription"
                           value={newPart.description || ''}
-                          onChange={(e) => setNewPart((p) => ({ ...p, description: e.target.value }))}
+                          onChange={(e) => setNewPart(p => ({ ...p, description: e.target.value }))}
                           placeholder="e.g., AC Compressor"
                         />
                       </div>
@@ -589,9 +522,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           type="number"
                           min={1}
                           value={newPart.quantity || 1}
-                          onChange={(e) =>
-                            setNewPart((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))
-                          }
+                          onChange={(e) => setNewPart(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
                         />
                       </div>
                       <div>
@@ -602,9 +533,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           min={0}
                           step="0.01"
                           value={newPart.unitCost || 0}
-                          onChange={(e) =>
-                            setNewPart((p) => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))
-                          }
+                          onChange={(e) => setNewPart(p => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))}
                         />
                       </div>
                     </div>
@@ -681,7 +610,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Input
                           id="laborDescription"
                           value={newLabor.description || ''}
-                          onChange={(e) => setNewLabor((p) => ({ ...p, description: e.target.value }))}
+                          onChange={(e) => setNewLabor(p => ({ ...p, description: e.target.value }))}
                           placeholder="e.g., Diagnostic and Repair"
                         />
                       </div>
@@ -693,9 +622,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           step="0.5"
                           min={0.5}
                           value={newLabor.hours || 1}
-                          onChange={(e) =>
-                            setNewLabor((p) => ({ ...p, hours: parseFloat(e.target.value) || 1 }))
-                          }
+                          onChange={(e) => setNewLabor(p => ({ ...p, hours: parseFloat(e.target.value) || 1 }))}
                         />
                       </div>
                       <div>
@@ -706,9 +633,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           step="0.01"
                           min={0}
                           value={newLabor.rate || 85}
-                          onChange={(e) =>
-                            setNewLabor((p) => ({ ...p, rate: parseFloat(e.target.value) || 85 }))
-                          }
+                          onChange={(e) => setNewLabor(p => ({ ...p, rate: parseFloat(e.target.value) || 85 }))}
                         />
                       </div>
                       <div>
@@ -781,7 +706,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
             </Card>
           )}
 
-          {/* Extra notes / portal toggle */}
+          {/* Additional info */}
           <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
@@ -793,34 +718,30 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                   id="technicianNotes"
                   value={formData.customFields?.technicianNotes || ''}
                   onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      customFields: { ...(p.customFields || {}), technicianNotes: e.target.value },
-                    }))
+                    setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), technicianNotes: e.target.value } }))
                   }
                   placeholder="Notes for technicians only (not visible to customer)"
                   rows={3}
                 />
               </div>
+
               <div>
                 <Label htmlFor="notes">Customer Notes</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes || ''}
-                  onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                  onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
                   placeholder="Notes visible to the customer"
                   rows={3}
                 />
               </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="customerPortalAccess"
                   checked={formData.customFields?.customerPortalAccess !== false}
                   onCheckedChange={(checked) =>
-                    setFormData((p) => ({
-                      ...p,
-                      customFields: { ...(p.customFields || {}), customerPortalAccess: !!checked },
-                    }))
+                    setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), customerPortalAccess: !!checked } }))
                   }
                 />
                 <Label htmlFor="customerPortalAccess">Allow customer to view this ticket in portal</Label>
@@ -828,7 +749,6 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
             </CardContent>
           </Card>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
@@ -855,5 +775,5 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
   )
 }
 
-// IMPORTANT: provide a default export to fix "does not provide an export named 'default'"
+// Provide default export too (some places import default)
 export default ServiceTicketForm
