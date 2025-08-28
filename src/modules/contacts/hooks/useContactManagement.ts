@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Contact } from '@/types/index'
+import { Contact, Account } from '@/types'
+import { mockAccounts } from '@/mocks/accountsMock'
 import { mockContacts } from '@/mocks/contactsMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
@@ -135,6 +136,10 @@ export function useContactManagement() {
     return contacts.filter(contact => contact.accountId === accountId)
   }
 
+  const getAccountForContact = (contact: Contact): Account | undefined => {
+    return mockAccounts.sampleAccounts.find(account => account.id === contact.accountId)
+  }
+
   // Filter functions
   const filterContacts = (filters: {
     accountId?: string
@@ -199,6 +204,7 @@ export function useContactManagement() {
     getContactsByAccount,
     createContact,
     updateContact,
+    getAccountForContact
     deleteContact,
     getContact,
     getContactsByAccount,
@@ -207,4 +213,5 @@ export function useContactManagement() {
     getAllDepartments,
     getAllTitles
   }
+  getAccountForContact: (contact: Contact) => Account | undefined
 }

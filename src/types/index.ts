@@ -37,6 +37,9 @@ export interface TenantSettings {
   smsApiKey?: string
   smsFromNumber?: string
   webhooks?: Array<{id: string, event: string, url: string, active: boolean}>
+  allowPhone?: boolean
+  allowSMS?: boolean
+  allowEmail?: boolean
   apiEnabled?: boolean
   apiKey?: string
   allowedOrigins?: string[]

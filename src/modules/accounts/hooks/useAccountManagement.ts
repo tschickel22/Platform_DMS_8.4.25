@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Account, AccountType } from '@/types/index'
+import { Account, AccountType, Contact } from '@/types'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
@@ -176,6 +176,11 @@ export function useAccountManagement() {
     return [...new Set(allIndustries)].sort()
   }
 
+  const getContactsForAccount = (accountId: string): Contact[] => {
+    // This would typically come from a contacts hook or API call
+    return [] // Placeholder, will be implemented in contacts hook
+  }
+
   return {
     accounts,
     loading,
@@ -185,9 +190,11 @@ export function useAccountManagement() {
     updateAccount,
     deleteAccount,
     getAccount,
+    getContactsForAccount
     filterAccounts,
     getAccountsByType,
     getAllTags,
     getAllIndustries
   }
+  getContactsForAccount: (accountId: string) => Contact[]
 }
