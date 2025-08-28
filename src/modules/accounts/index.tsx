@@ -4,20 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Building2, Phone, Mail, Globe, MapPin, Edit, Plus, User } from 'lucide-react'
-  ArrowLeft, 
-  Edit, 
-  Building, 
-  Globe, 
-  Mail, 
-  Phone, 
-  User,
-  Plus
+import { useState, useEffect } from 'react'
+import { Label } from '@/components/ui/label'
+import { mockAccounts } from '@/mocks/accountsMock'
+
+export default function AccountDetail() {
+  const { id: accountId } = useParams()
+  const navigate = useNavigate()
+  const [account, setAccount] = useState<any>(null)
   const [accountContacts, setAccountContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-import { useAccountManagement } from '../hooks/useAccountManagement'
-import { mockContacts } from '@/mocks/contactsMock'
+  
+  const { accounts, loading: accountsLoading } = useAccountManagement()
+  
+  useEffect(() => {
     if (accountId && !accountsLoading) {
-import { EmptyState } from '@/components/ui/empty-state'
+      const foundAccount = accounts.find(acc => acc.id === accountId)
+      
       if (foundAccount) {
         setAccount(foundAccount)
         
@@ -29,6 +32,27 @@ import { EmptyState } from '@/components/ui/empty-state'
       } else {
         setAccount(null)
         setAccountContacts([])
+      }
+      
+      setLoading(false)
+    }
+  }, [accountId, accounts, accountsLoading])
+
+  if (loading || accountsLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-muted rounded w-1/4"></div>
+            <div className="h-32 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!account) {
+    return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center space-x-4">
@@ -56,6 +80,8 @@ import { EmptyState } from '@/components/ui/empty-state'
   const typeConfig = mockAccounts.accountTypes.find(t => t.value === account.type)
 
   return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="ri-page-header">
         <div className="flex items-center justify-between">
@@ -93,7 +119,7 @@ import { EmptyState } from '@/components/ui/empty-state'
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+                <Building2 className="h-5 w-5" />
                 Account Information
               </CardTitle>
             </CardHeader>
@@ -292,6 +318,9 @@ import { EmptyState } from '@/components/ui/empty-state'
           </Card>
         </div>
       </div>
+      </div>
     </div>
   )
 }
+
+export default loading
