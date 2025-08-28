@@ -1,83 +1,252 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import { RouteGuard } from '@/components/ui/route-guard'
+import { DetailViewSkeleton } from '@/components/ui/loading-states'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import Layout from '@/components/layout/Layout'
-import Dashboard from '@/pages/Dashboard'
-import Login from '@/pages/Login'
-import ProtectedRoute from '@/components/auth/ProtectedRoute'
-import PlatformSettings from '@/modules/platform-admin/settings'
+import { MenuManagerProvider } from '@/contexts/MenuManagerContext'
+import { logger } from '@/utils/logger'
 
-// Module imports
+import Layout from '@/components/layout/Layout'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
+
+// Pages & Modules
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+
 import CRMProspecting from '@/modules/crm-prospecting/CRMProspecting'
+import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
+import AccountList from '@/modules/crm-accounts/AccountList'
+import AccountForm from '@/modules/crm-accounts/AccountForm'
+import AccountDetail from '@/modules/crm-accounts/AccountDetail'
+import ContactList from '@/modules/crm-contacts/ContactList'
+import ContactForm from '@/modules/crm-contacts/ContactForm'
+import ContactDetail from '@/modules/crm-contacts/ContactDetail'
 import InventoryManagement from '@/modules/inventory-management/InventoryManagement'
+import LandManagement from '@/modules/land-management/LandManagement'
 import QuoteBuilder from '@/modules/quote-builder/QuoteBuilder'
 import { FinanceModule } from '@/modules/finance/FinanceModule'
-import CRMSalesDeal from '@/modules/crm-sales-deal/CRMSalesDeal'
 import AgreementVault from '@/modules/agreement-vault/AgreementVault'
 import ServiceOps from '@/modules/service-ops/ServiceOps'
-import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import PDIChecklist from '@/modules/pdi-checklist/PDIChecklist'
+import DeliveryTracker from '@/modules/delivery-tracker/DeliveryTracker'
 import CommissionEngine from '@/modules/commission-engine/CommissionEngine'
 import ClientPortalAdmin from '@/modules/client-portal/ClientPortalAdmin'
 import ClientPortal from '@/modules/client-portal/ClientPortal'
 import InvoicePayments from '@/modules/invoice-payments/InvoicePayments'
 import CompanySettings from '@/modules/company-settings/CompanySettings'
 import PlatformAdmin from '@/modules/platform-admin/PlatformAdmin'
+import PlatformSettings from '@/modules/platform-admin/settings'
 import ReportingSuite from '@/modules/reporting-suite/ReportingSuite'
 import FinanceApplication from '@/modules/finance-application/FinanceApplication'
+import { BrochureList, BrochureTemplateEditor, PublicBrochureView } from '@/modules/brochures'
+import TaggingEngine from '@/modules/tagging-engine'
+import TaskCenter from '@/modules/task-center/TaskCenter'
+import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling'
+import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
+import WarrantyMgmt from '@/modules/warranty-mgmt/index'
+import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-builder'
+
+// Property Listings (Admin + Public)
+import PropertyListings from '@/modules/property-listings/PropertyListings'
+import ListingDetail from '@/modules/property-listings/components/ListingDetail'
+import { PublicCatalogView } from '@/modules/property-listings/components/PublicCatalogView'
+import { PublicListingView } from '@/modules/property-listings/components/PublicListingView'
+import PublicSitePreview from '@/components/PublicSitePreview'
+
+// Add console logging to debug routing issues
+console.log('App.tsx: Routes being configured')
+
+logger.info('Application initializing', {
+  userAgent: navigator.userAgent,
+  url: window.location.href,
+  timestamp: Date.now()
+})
 
 function App() {
+  // simple pageview logger on navigation
+  React.useEffect(() => {
+    const handle = () => logger.pageView(window.location.pathname + window.location.search)
+    window.addEventListener('popstate', handle)
+    return () => window.removeEventListener('popstate', handle)
+  }, [])
+
   return (
-    <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
-      <AuthProvider>
-        <Router>
-          <TenantProvider>
-            <div className="min-h-screen bg-background">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                {/* Client Portal Routes - these will render ClientPortal directly */}
-                <Route path="/portalclient/*" element={
-                  <ProtectedRoute>
-                    <ClientPortal />
-                  </ProtectedRoute>
-                } />
-                {/* Main Application Routes - these will render the Layout */}
-                <Route path="/*" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/crm/*" element={<CRMProspecting />} />
-                        <Route path="/inventory/*" element={<InventoryManagement />} />
-                        <Route path="/deals/*" element={<CRMSalesDeal />} />
-                        <Route path="/finance/*" element={<FinanceModule />} />
-                        <Route path="/quotes/*" element={<QuoteBuilder />} />
-                        <Route path="/agreements/*" element={<AgreementVault />} />
-                        <Route path="/service/*" element={<ServiceOps />} />
-                        <Route path="/pdi/*" element={<PDIChecklist />} />
-                        <Route path="/delivery/*" element={<DeliveryTracker />} />
-                        <Route path="/commissions/*" element={<CommissionEngine />} />
-                        <Route path="/portal/*" element={<ClientPortalAdmin />} />
-                        <Route path="/invoices/*" element={<InvoicePayments />} />
-                        <Route path="/settings/*" element={<CompanySettings />} />
-                        <Route path="/admin/*" element={<PlatformAdmin />} />
-                        <Route path="/admin/settings/*" element={<PlatformSettings />} />
-                        <Route path="/reports/*" element={<ReportingSuite />} />
-                        <Route path="/client-applications/*" element={<FinanceApplication />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-              <Toaster />
-            </div>
-          </TenantProvider>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary showErrorDetails={import.meta.env.DEV} onError={(e, info) => logger.error('Global error boundary', e, info)}>
+      <ThemeProvider defaultTheme="light" storageKey="renter-insight-theme">
+        <AuthProvider>
+          <MenuManagerProvider>
+            <Router>
+              <TenantProvider>
+                <div className="min-h-screen bg-background">
+                  <ErrorBoundary>
+                    <Routes>
+                      {/* -------- PUBLIC SITE PREVIEW -------- */}
+                      <Route path="/s/:siteSlug/*" element={<PublicSitePreview />} />
+                      
+                      {/* -------- PUBLIC (namespaced) -------- */}
+                      <Route path="/public/:companySlug/listings" element={<PublicCatalogView />} />
+                      <Route path="/public/:companySlug/l/:token" element={<PublicCatalogView />} />
+                      <Route path="/public/:companySlug/listing/:listingId" element={<PublicListingView />} />
+
+                      {/* -------- LOGIN -------- */}
+                      <Route path="/login" element={<Login />} />
+
+                      {/* -------- CLIENT PORTAL (separate app shell) -------- */}
+                      <Route
+                        path="/portalclient/*"
+                        element={
+                          <ProtectedRoute>
+                            <ErrorBoundary>
+                              <ClientPortal />
+                            </ErrorBoundary>
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      {/* -------- MAIN APP (protected, uses Layout) -------- */}
+                      <Route
+                        path="/*"
+                        element={
+                          <ProtectedRoute>
+                            <Layout>
+                              <ErrorBoundary>
+                                <Routes>
+                                  {/* Home */}
+                                  <Route path="/" element={<Dashboard />} />
+
+                                  {/* Website Builder Routes */}
+                                  <Route path="/platform/website-builder/*" element={<WebsiteBuilderRoutes />} />
+                                  <Route path="/company/settings/website/*" element={<CompanyWebsiteRoutes />} />
+
+                                  {/* CRM & Sales */}
+                                  <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/crm/accounts" element={
+                                    <RouteGuard moduleName="Accounts">
+                                      <AccountList />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/accounts/new" element={
+                                    <RouteGuard moduleName="Accounts">
+                                      <AccountForm />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/accounts/:id" element={
+                                    <RouteGuard moduleName="Accounts" fallback={<DetailViewSkeleton />}>
+                                      <AccountDetail />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/accounts/:id/edit" element={
+                                    <RouteGuard moduleName="Accounts">
+                                      <AccountForm />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/contacts" element={
+                                    <RouteGuard moduleName="Contacts">
+                                      <ContactList />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/contacts/new" element={
+                                    <RouteGuard moduleName="Contacts">
+                                      <ContactForm />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/contacts/:id" element={
+                                    <RouteGuard moduleName="Contacts" fallback={<DetailViewSkeleton />}>
+                                      <ContactDetail />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/crm/contacts/:id/edit" element={
+                                    <RouteGuard moduleName="Contacts">
+                                      <ContactForm />
+                                    </RouteGuard>
+                                  } />
+                                  <Route path="/deals/*" element={<CRMSalesDeal />} />
+                                  <Route path="/quotes/*" element={<QuoteBuilder />} />
+
+                                  {/* Inventory & Ops - Order matters: specific routes before wildcards */}
+                                  <Route path="/pdi/*" element={
+                                    <ErrorBoundary>
+                                      <PDIChecklist />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/inventory/warranty/*" element={
+                                    <ErrorBoundary>
+                                      <WarrantyMgmt />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/inventory/*" element={<InventoryManagement />} />
+                                  <Route path="/land/*" element={<LandManagement />} />
+                                  <Route path="/delivery/*" element={<DeliveryTracker />} />
+
+                                  {/* Marketing → Property Listings (ADMIN) */}
+                                  <Route path="/property/listings" element={<PropertyListings />} />
+                                  <Route path="/property/listings/:listingId" element={<ListingDetail />} />
+                                  <Route path="/brochures/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<BrochureList />} />
+                                      <Route path="/templates/new" element={<BrochureTemplateEditor />} />
+                                      <Route path="/templates/:id/edit" element={<BrochureTemplateEditor />} />
+                                    </Routes>
+                                  } />
+
+                                  {/* Finance & Agreements */}
+                                  <Route path="/finance/*" element={<FinanceModule />} />
+                                  <Route path="/agreements/*" element={<AgreementVault />} />
+                                  <Route path="/invoices/*" element={<InvoicePayments />} />
+                                  <Route path="/client-applications/*" element={<FinanceApplication />} />
+
+                                  {/* Service & Support */}
+                                  <Route path="/service/*" element={<ServiceOps />} />
+                                  <Route path="/portal/*" element={<ClientPortalAdmin />} />
+
+                                  {/* Management */}
+                                  <Route path="/reports/*" element={<ReportingSuite />} />
+                                  <Route path="/commissions/*" element={<CommissionEngine />} />
+                                  <Route path="/tags/*" element={<TaggingEngine />} />
+                                  <Route path="/tasks/*" element={<TaskCenter />} />
+                                  <Route path="/calendar/*" element={<CalendarScheduling />} />
+                                  <Route path="/contractors/*" element={<ContractorManagement />} />
+                                  <Route path="/brochures/*" element={
+                                    <Routes>
+                                      <Route path="/" element={<BrochureList />} />
+                                      <Route path="/templates/new" element={<BrochureTemplateEditor />} />
+                                      <Route path="/templates/:id/edit" element={<BrochureTemplateEditor />} />
+                                    </Routes>
+                                  } />
+
+                                  {/* Admin / Settings */}
+                                  <Route path="/settings/*" element={<CompanySettings />} />
+                                  <Route path="/admin/*" element={<PlatformAdmin />} />
+                                  <Route path="/admin/settings/*" element={<PlatformSettings />} />
+
+                                  {/* Fallback inside app */}
+                                  <Route path="*" element={<Navigate to="/" replace />} />
+                                </Routes>
+                              </ErrorBoundary>
+                            </Layout>
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      {/* Public Brochure Routes - outside main layout */}
+                      <Route path="/b/:publicId" element={<PublicBrochureView />} />
+
+                      {/* -------- GLOBAL FALLBACK -------- */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </ErrorBoundary>
+                  <Toaster />
+                </div>
+              </TenantProvider>
+            </Router>
+          </MenuManagerProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 
