@@ -1,20 +1,20 @@
 import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  Edit, 
-  Trash2, 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
+  Eye,
+  Edit,
+  Trash2,
   DollarSign,
   Calendar,
   Receipt,
@@ -23,26 +23,39 @@ import {
 import { useInvoiceManagement } from './hooks/useInvoiceManagement'
 import InvoiceForm from './components/InvoiceForm'
 import InvoiceDetail from './components/InvoiceDetail'
-import PaymentHistory from './components/PaymentHistory'
 import RecordPaymentForm from './components/RecordPaymentForm'
 
+type Invoice = {
+  id: string
+  customerName: string
+  totalAmount: number
+  status: string
+  dueDate: string | Date
+  paymentMethod?: string
+}
+
 function InvoicesList() {
-  const { invoices, loading, createInvoice, updateInvoice, deleteInvoice } = useInvoiceManagement()
+  const { invoices: rawInvoices, loading, createInvoice, deleteInvoice } = useInvoiceManagement()
+  const invoices: Invoice[] = Array.isArray(rawInvoices) ? (rawInvoices as Invoice[]) : []
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false)
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         invoice.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || invoice.status.toLowerCase() === statusFilter.toLowerCase()
+  const filteredInvoices = invoices.filter((invoice) => {
+    const id = String(invoice.id ?? '')
+    const name = String(invoice.customerName ?? '')
+    const status = String(invoice.status ?? '')
+    const matchesSearch =
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      id.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || status.toLowerCase() === statusFilter.toLowerCase()
     return matchesSearch && matchesStatus
   })
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (String(status ?? '').toLowerCase()) {
       case 'paid':
         return 'bg-green-100 text-green-800'
       case 'unpaid':
@@ -54,6 +67,11 @@ function InvoicesList() {
       default:
         return 'bg-blue-100 text-blue-800'
     }
+  }
+
+  const safeCurrency = (n: unknown) => {
+    const num = typeof n === 'number' ? n : Number(n ?? 0)
+    return num.toLocaleString()
   }
 
   const handleNewInvoice = async (invoiceData: any) => {
@@ -98,9 +116,7 @@ function InvoicesList() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices & Payments</h1>
-          <p className="text-muted-foreground">
-            Manage customer invoices and track payments
-          </p>
+          <p className="text-muted-foreground">Manage customer invoices and track payments</p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => setShowNewInvoiceForm(true)}>
@@ -119,12 +135,10 @@ function InvoicesList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{invoices.length}</div>
-            <p className="text-xs text-muted-foreground">
-              All time
-            </p>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
@@ -132,17 +146,18 @@ function InvoicesList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${invoices
-                .filter(inv => ['Unpaid', 'Overdue'].includes(inv.status))
-                .reduce((sum, inv) => sum + inv.totalAmount, 0)
+              $
+              {invoices
+                .filter((inv) => ['Unpaid', 'Overdue'].includes(String(inv.status)))
+                .reduce((sum, inv) => sum + (typeof inv.totalAmount === 'number' ? inv.totalAmount : Number(inv.totalAmount ?? 0)), 0)
                 .toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              {invoices.filter(inv => ['Unpaid', 'Overdue'].includes(inv.status)).length} invoices
+              {invoices.filter((inv) => ['Unpaid', 'Overdue'].includes(String(inv.status))).length} invoices
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Overdue</CardTitle>
@@ -150,14 +165,12 @@ function InvoicesList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {invoices.filter(inv => inv.status === 'Overdue').length}
+              {invoices.filter((inv) => String(inv.status) === 'Overdue').length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Require attention
-            </p>
+            <p className="text-xs text-muted-foreground">Require attention</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Month</CardTitle>
@@ -165,19 +178,20 @@ function InvoicesList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${invoices
-                .filter(inv => {
-                  const invoiceDate = new Date(inv.dueDate)
+              $
+              {invoices
+                .filter((inv) => {
+                  const invoiceDate = new Date(inv.dueDate as any)
                   const now = new Date()
-                  return invoiceDate.getMonth() === now.getMonth() && 
-                         invoiceDate.getFullYear() === now.getFullYear()
+                  return (
+                    invoiceDate.getMonth() === now.getMonth() &&
+                    invoiceDate.getFullYear() === now.getFullYear()
+                  )
                 })
-                .reduce((sum, inv) => sum + inv.totalAmount, 0)
+                .reduce((sum, inv) => sum + (typeof inv.totalAmount === 'number' ? inv.totalAmount : Number(inv.totalAmount ?? 0)), 0)
                 .toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Revenue this month
-            </p>
+            <p className="text-xs text-muted-foreground">Revenue this month</p>
           </CardContent>
         </Card>
       </div>
@@ -185,7 +199,7 @@ function InvoicesList() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search invoices..."
             value={searchTerm}
@@ -220,9 +234,7 @@ function InvoicesList() {
       <Card>
         <CardHeader>
           <CardTitle>Invoices</CardTitle>
-          <CardDescription>
-            A list of all invoices and their current status
-          </CardDescription>
+          <CardDescription>A list of all invoices and their current status</CardDescription>
         </CardHeader>
         <CardContent>
           {filteredInvoices.length === 0 ? (
@@ -230,12 +242,11 @@ function InvoicesList() {
               <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No invoices found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== 'all' 
+                {searchTerm || statusFilter !== 'all'
                   ? 'No invoices match your current filters.'
-                  : 'Get started by creating your first invoice.'
-                }
+                  : 'Get started by creating your first invoice.'}
               </p>
-              {(!searchTerm && statusFilter === 'all') && (
+              {!searchTerm && statusFilter === 'all' && (
                 <Button onClick={() => setShowNewInvoiceForm(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Invoice
@@ -260,26 +271,29 @@ function InvoicesList() {
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.id}</TableCell>
                     <TableCell>{invoice.customerName}</TableCell>
-                    <TableCell>${invoice.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell>${safeCurrency(invoice.totalAmount)}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(invoice.status)}>
-                        {invoice.status}
-                      </Badge>
+                      <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
                     </TableCell>
-                    <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{invoice.paymentMethod}</TableCell>
+                    <TableCell>
+                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell>{invoice.paymentMethod ?? '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
+                        <Button asChild variant="ghost" size="sm" title="View">
+                          <Link to={`${invoice.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" title="Edit">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {invoice.status === 'Unpaid' && (
-                          <Button 
-                            variant="ghost" 
+                        {String(invoice.status).toLowerCase() === 'unpaid' && (
+                          <Button
+                            variant="ghost"
                             size="sm"
+                            title="Record payment"
                             onClick={() => {
                               setSelectedInvoice(invoice)
                               setShowPaymentForm(true)
@@ -288,7 +302,16 @@ function InvoicesList() {
                             <CreditCard className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Delete"
+                          onClick={() => {
+                            if (confirm('Delete this invoice?')) {
+                              void deleteInvoice(invoice.id)
+                            }
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -308,10 +331,7 @@ function InvoicesList() {
             <DialogHeader>
               <DialogTitle>Create New Invoice</DialogTitle>
             </DialogHeader>
-            <InvoiceForm
-              onSubmit={handleNewInvoice}
-              onCancel={() => setShowNewInvoiceForm(false)}
-            />
+            <InvoiceForm onSubmit={handleNewInvoice} onCancel={() => setShowNewInvoiceForm(false)} />
           </DialogContent>
         </Dialog>
       )}
@@ -338,15 +358,12 @@ function InvoicesList() {
   )
 }
 
-
 function PaymentHistoryView() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Payment History</h1>
-        <p className="text-muted-foreground">
-          View all payment transactions
-        </p>
+        <p className="text-muted-foreground">View all payment transactions</p>
       </div>
       <Card>
         <CardContent className="pt-6">
