@@ -19,8 +19,8 @@ import { ImportModal } from '@/components/common/ImportModal'
 export default function AccountList() {
   const navigate = useNavigate()
 
-  const { accounts, getAccountTypeLabel, deleteAccount } = useAccountManagement()
-
+  const { accounts, getAccountTypeLabel, deleteAccount, createAccount } = useAccountManagement()
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all') // Assuming accounts can have a status
