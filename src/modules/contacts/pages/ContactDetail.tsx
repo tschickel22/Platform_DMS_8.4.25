@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,11 @@ import {
   Building2, 
   Edit, 
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Briefcase,
+  Users,
+  Building
+} from 'lucide-react'
 import { Contact } from '@/types/index'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
