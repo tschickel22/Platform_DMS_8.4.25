@@ -30,7 +30,6 @@ export default function ContactForm() {
   const isEditing = !!contactId
   const existingContact = isEditing ? getContactById(contactId) : null
   
-  const existingContact = isEditing ? getContact(contactId!) : null
 
   const [formData, setFormData] = useState<Partial<Contact>>({
     ...mockContacts.defaultContact,
