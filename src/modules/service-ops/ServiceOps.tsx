@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Wrench, 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar, 
+import {
+  Wrench,
+  Plus,
+  Search,
+  Filter,
+  Calendar,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -20,27 +20,23 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
-  TrendingUp, 
-  DollarSign, 
-  ListTodo 
+  TrendingUp,
+  DollarSign,
+  ListTodo
 } from 'lucide-react'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
-import { ServiceTicket, ServiceStatus, Priority } from '@/types'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { ServiceTicket, ServiceStatus, Priority, Task, TaskModule, TaskPriority } from '@/types'
+import { formatDate, formatCurrency, formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useServiceManagement } from './hooks/useServiceManagement'
 import { useToast } from '@/hooks/use-toast'
 import { ServiceTicketForm } from './components/ServiceTicketForm'
 import { ServiceTicketDetail } from './components/ServiceTicketDetail'
 import { CustomerPortalView } from './components/CustomerPortalView'
-  const { getAccountById } = useAccountManagement()
-  const { getContactById } = useContactManagement()
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
-import { Task, TaskModule, TaskPriority } from '@/types'
-import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Link } from 'react-router-dom'
 
@@ -48,6 +44,9 @@ function ServiceTicketsList() {
   const { tickets, createTicket, updateTicket, deleteTicket, updateTicketStatus } = useServiceManagement()
   const { toast } = useToast()
   const { createTask } = useTasks()
+  const { getAccountById } = useAccountManagement()
+  const { getContactById } = useContactManagement()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setpriorityFilter] = useState<string>('all')
@@ -91,14 +90,16 @@ function ServiceTicketsList() {
     }
   }
 
-const filteredTickets = tickets.filter(ticket =>
-  ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  ticket.customerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  ticket.id?.toLowerCase().includes(searchTerm.toLowerCase())
-)
-.filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
-.filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter)
+  const filteredTickets = tickets
+    .filter(
+      (ticket) =>
+        ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.customerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.id?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((ticket) => statusFilter === 'all' || ticket.status === statusFilter)
+    .filter((ticket) => priorityFilter === 'all' || ticket.priority === priorityFilter)
 
   const handleCreateTicket = () => {
     setSelectedTicket(null)
@@ -124,19 +125,11 @@ const filteredTickets = tickets.filter(ticket =>
   const handleSaveTicket = async (ticketData: Partial<ServiceTicket>) => {
     try {
       if (selectedTicket) {
-        // Update existing ticket
         await updateTicket(selectedTicket.id, ticketData)
-        toast({
-          title: 'Success',
-          description: 'Service ticket updated successfully',
-        })
+        toast({ title: 'Success', description: 'Service ticket updated successfully' })
       } else {
-        // Create new ticket
         await createTicket(ticketData)
-        toast({
-          title: 'Success',
-          description: 'Service ticket created successfully',
-        })
+        toast({ title: 'Success', description: 'Service ticket created successfully' })
       }
       setShowTicketForm(false)
       setSelectedTicket(null)
@@ -153,16 +146,9 @@ const filteredTickets = tickets.filter(ticket =>
     if (window.confirm('Are you sure you want to delete this service ticket?')) {
       try {
         await deleteTicket(ticketId)
-        toast({
-          title: 'Success',
-          description: 'Service ticket deleted successfully',
-        })
+        toast({ title: 'Success', description: 'Service ticket deleted successfully' })
       } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete service ticket',
-          variant: 'destructive'
-        })
+        toast({ title: 'Error', description: 'Failed to delete service ticket', variant: 'destructive' })
       }
     }
   }
@@ -170,25 +156,17 @@ const filteredTickets = tickets.filter(ticket =>
   const handleStatusChange = async (ticketId: string, status: ServiceStatus) => {
     try {
       await updateTicketStatus(ticketId, status)
-      toast({
-        title: 'Status Updated',
-        description: `Ticket status changed to ${status.replace('_', ' ')}`,
-      })
+      toast({ title: 'Status Updated', description: `Ticket status changed to ${status.replace('_', ' ')}` })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update ticket status',
-        variant: 'destructive'
-      })
+      toast({ title: 'Error', description: 'Failed to update ticket status', variant: 'destructive' })
     }
   }
 
   const handleNewCustomerSuccess = (newCustomer: any) => {
     toast({
       title: 'Customer Added',
-      description: `${newCustomer.firstName} ${newCustomer.lastName} has been added.`,
+      description: `${newCustomer.firstName} ${newCustomer.lastName} has been added.`
     })
-    // Open the service ticket form with the new customer selected
     setSelectedTicket(null)
     setShowLeadModal(false)
     setShowTicketForm(true)
@@ -199,34 +177,30 @@ const filteredTickets = tickets.filter(ticket =>
       await createTask(taskData)
       setShowTaskForm(false)
       setInitialTaskData(undefined)
-      toast({
-        title: 'Task Created',
-        description: 'Task has been created successfully',
-      })
+      toast({ title: 'Task Created', description: 'Task has been created successfully' })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
-      })
+      toast({ title: 'Error', description: 'Failed to create task', variant: 'destructive' })
     }
   }
 
   const handleCreateTaskForServiceTicket = (ticket: ServiceTicket) => {
-    // Determine priority based on ticket priority and status
-    const priority = ticket.priority === Priority.URGENT ? TaskPriority.URGENT :
-                    ticket.priority === Priority.HIGH ? TaskPriority.HIGH :
-                    ticket.priority === Priority.MEDIUM ? TaskPriority.MEDIUM :
-                    TaskPriority.LOW
+    const priority =
+      ticket.priority === Priority.URGENT
+        ? TaskPriority.URGENT
+        : ticket.priority === Priority.HIGH
+        ? TaskPriority.HIGH
+        : ticket.priority === Priority.MEDIUM
+        ? TaskPriority.MEDIUM
+        : TaskPriority.LOW
 
-    // Set due date based on priority and scheduled date
-    const dueDate = ticket.scheduledDate || 
-                   (ticket.priority === Priority.URGENT 
-                     ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for urgent
-                     : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) // 3 days for others
+    const dueDate =
+      ticket.scheduledDate ||
+      (ticket.priority === Priority.URGENT
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000))
 
-    const totalCost = ticket.parts.reduce((sum, p) => sum + p.total, 0) + 
-                     ticket.labor.reduce((sum, l) => sum + l.total, 0)
+    const totalCost =
+      ticket.parts.reduce((sum, p) => sum + p.total, 0) + ticket.labor.reduce((sum, l) => sum + l.total, 0)
 
     setInitialTaskData({
       sourceId: ticket.id,
@@ -249,9 +223,9 @@ const filteredTickets = tickets.filter(ticket =>
     })
     setShowTaskForm(true)
   }
+
   return (
     <div className="space-y-8">
-      {/* Task Form Modal */}
       {showTaskForm && (
         <TaskForm
           initialData={initialTaskData}
@@ -262,16 +236,9 @@ const filteredTickets = tickets.filter(ticket =>
           }}
         />
       )}
-      
-      {/* New Customer Form Modal */}
-      {showLeadModal && (
-        <NewLeadForm
-          onClose={() => setShowLeadModal(false)}
-          onSuccess={handleNewCustomerSuccess}
-        />
-      )}
-      
-      {/* Service Ticket Form Modal */}
+
+      {showLeadModal && <NewLeadForm onClose={() => setShowLeadModal(false)} onSuccess={handleNewCustomerSuccess} />}
+
       {showTicketForm && (
         <ServiceTicketForm
           ticket={selectedTicket || undefined}
@@ -282,8 +249,7 @@ const filteredTickets = tickets.filter(ticket =>
           }}
         />
       )}
-      
-      {/* Service Ticket Detail Modal */}
+
       {showTicketDetail && selectedTicket && (
         <ServiceTicketDetail
           ticket={selectedTicket}
@@ -292,13 +258,9 @@ const filteredTickets = tickets.filter(ticket =>
           onCreateTask={handleCreateTaskForServiceTicket}
         />
       )}
-      
-      {/* Customer Portal View Modal */}
+
       {showCustomerPortal && selectedTicket && (
-        <CustomerPortalView
-          ticket={selectedTicket}
-          onClose={() => setShowCustomerPortal(false)}
-        />
+        <CustomerPortalView ticket={selectedTicket} onClose={() => setShowCustomerPortal(false)} />
       )}
 
       {/* Page Header */}
@@ -306,9 +268,7 @@ const filteredTickets = tickets.filter(ticket =>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="ri-page-title">Service Operations</h1>
-            <p className="ri-page-description">
-              Manage service tickets and maintenance schedules
-            </p>
+            <p className="ri-page-description">Manage service tickets and maintenance schedules</p>
           </div>
           <Button className="shadow-sm" onClick={handleCreateTicket}>
             <Plus className="h-4 w-4 mr-2" />
@@ -339,7 +299,7 @@ const filteredTickets = tickets.filter(ticket =>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">
-              {tickets.filter(t => t.status === ServiceStatus.IN_PROGRESS).length}
+              {tickets.filter((t) => t.status === ServiceStatus.IN_PROGRESS).length}
             </div>
             <p className="text-xs text-yellow-600 flex items-center mt-1">
               <Clock className="h-3 w-3 mr-1" />
@@ -354,7 +314,7 @@ const filteredTickets = tickets.filter(ticket =>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-900">
-              {tickets.filter(t => t.status === ServiceStatus.WAITING_PARTS).length}
+              {tickets.filter((t) => t.status === ServiceStatus.WAITING_PARTS).length}
             </div>
             <p className="text-xs text-orange-600 flex items-center mt-1">
               <Clock className="h-3 w-3 mr-1" />
@@ -369,9 +329,15 @@ const filteredTickets = tickets.filter(ticket =>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">
-              {formatCurrency(tickets.reduce((sum, t) => 
-                sum + t.parts.reduce((pSum, p) => pSum + p.total, 0) + 
-                t.labor.reduce((lSum, l) => lSum + l.total, 0), 0))}
+              {formatCurrency(
+                tickets.reduce(
+                  (sum, t) =>
+                    sum +
+                    t.parts.reduce((pSum, p) => pSum + p.total, 0) +
+                    t.labor.reduce((lSum, l) => lSum + l.total, 0),
+                  0
+                )
+              )}
             </div>
             <p className="text-xs text-green-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
@@ -406,7 +372,7 @@ const filteredTickets = tickets.filter(ticket =>
               <SelectItem value={ServiceStatus.CANCELLED}>Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select value={priorityFilter} onValueChange={setpriorityFilter}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Priority" />
@@ -419,7 +385,7 @@ const filteredTickets = tickets.filter(ticket =>
               <SelectItem value={Priority.URGENT}>Urgent</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Button variant="outline" className="shadow-sm">
             <Filter className="h-4 w-4 mr-2" />
             More Filters
@@ -427,142 +393,145 @@ const filteredTickets = tickets.filter(ticket =>
         </div>
       </div>
 
-      {/* Service Tickets Table */}
+      {/* Service Tickets List */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl">Service Tickets</CardTitle>
-          <CardDescription>
-            Manage service requests and maintenance schedules
-          </CardDescription>
+          <CardDescription>Manage service requests and maintenance schedules</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredTickets.map((ticket) => (
-              <div key={ticket.id} className="ri-table-row">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-foreground">{ticket.title}</h3>
-                      <Badge className={cn("ri-badge-status", getPriorityColor(ticket.priority))}>
-                        {ticket.priority.toUpperCase()}
-                      </Badge>
-                      <Badge className={cn("ri-badge-status", getStatusColor(ticket.status))}>
-                        {ticket.status.replace('_', ' ').toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <User className="h-3 w-3 mr-2 text-blue-500" />
-                        <span className="font-medium">Customer:</span> 
-                        <span className="ml-1">{ticket.customerId}</span>
+            {filteredTickets.map((ticket) => {
+              const account = ticket.accountId ? getAccountById(ticket.accountId) : null
+              const contact = ticket.contactId ? getContactById(ticket.contactId) : null
+
+              return (
+                <div key={ticket.id} className="ri-table-row">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="font-semibold text-foreground">{ticket.title}</h3>
+                        <Badge className={cn('ri-badge-status', getPriorityColor(ticket.priority))}>
+                          {ticket.priority.toUpperCase()}
+                        </Badge>
+                        <Badge className={cn('ri-badge-status', getStatusColor(ticket.status))}>
+                          {ticket.status.replace('_', ' ').toUpperCase()}
+                        </Badge>
                       </div>
-                      <div className="flex items-center">
-                        <User className="h-3 w-3 mr-2 text-green-500" />
-                        <span className="font-medium">Assigned:</span> 
-                        <span className="ml-1">{ticket.assignedTo || 'Unassigned'}</span>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <User className="h-3 w-3 mr-2 text-blue-500" />
+                          <span className="font-medium">Customer:</span>
+                          <span className="ml-1">{ticket.customerId}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <User className="h-3 w-3 mr-2 text-green-500" />
+                          <span className="font-medium">Assigned:</span>
+                          <span className="ml-1">{ticket.assignedTo || 'Unassigned'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-2 text-purple-500" />
+                          <span className="font-medium">Scheduled:</span>
+                          <span className="ml-1">
+                            {ticket.scheduledDate ? formatDate(ticket.scheduledDate) : 'Not scheduled'}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 mr-2 text-orange-500" />
+                          <span className="font-medium">Created:</span>
+                          <span className="ml-1">{formatDate(ticket.createdAt)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-2 text-purple-500" />
-                        <span className="font-medium">Scheduled:</span> 
-                        <span className="ml-1">{ticket.scheduledDate ? formatDate(ticket.scheduledDate) : 'Not scheduled'}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-3 w-3 mr-2 text-orange-500" />
-                        <span className="font-medium">Created:</span> 
-                        <span className="ml-1">{formatDate(ticket.createdAt)}</span>
-                      </div>
-                    </div>
-                    <div className="mt-2 bg-muted/30 p-2 rounded-md">
-                      <p className="text-sm text-muted-foreground">
-                        {ticket.description}
-                      </p>
-                      {ticket.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          <span className="font-medium">Notes:</span> {ticket.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-4 mt-3 text-sm">
-                      <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
-                        <span className="font-medium">Parts:</span> {formatCurrency(ticket.parts.reduce((sum, p) => sum + p.total, 0))}
-                      </span>
-                      <span className="bg-green-50 text-green-700 px-2 py-1 rounded-md">
-                        <span className="font-medium">Labor:</span> {formatCurrency(ticket.labor.reduce((sum, l) => sum + l.total, 0))}
-                      </span>
-                    <TableHead>Account</TableHead>
-                      <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-md font-semibold">
-                        <span className="font-medium">Total:</span> {formatCurrency(
-                          ticket.parts.reduce((sum, p) => sum + p.total, 0) + 
-                          ticket.labor.reduce((sum, l) => sum + l.total, 0)
+                      <div className="mt-2 bg-muted/30 p-2 rounded-md">
+                        <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                        {ticket.notes && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            <span className="font-medium">Notes:</span> {ticket.notes}
+                          </p>
                         )}
-                      </span>
+                      </div>
+                      <div className="flex items-center space-x-4 mt-3 text-sm">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
+                          <span className="font-medium">Parts:</span>{' '}
+                          {formatCurrency(ticket.parts.reduce((sum, p) => sum + p.total, 0))}
+                        </span>
+                        <span className="bg-green-50 text-green-700 px-2 py-1 rounded-md">
+                          <span className="font-medium">Labor:</span>{' '}
+                          {formatCurrency(ticket.labor.reduce((sum, l) => sum + l.total, 0))}
+                        </span>
+                        <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-md font-semibold">
+                          <span className="font-medium">Total:</span>{' '}
+                          {formatCurrency(
+                            ticket.parts.reduce((sum, p) => sum + p.total, 0) +
+                              ticket.labor.reduce((sum, l) => sum + l.total, 0)
+                          )}
+                        </span>
+                        <span className="bg-slate-50 text-slate-700 px-2 py-1 rounded-md">
+                          <span className="font-medium">Account:</span> {account ? account.name : 'N/A'}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  <div className="ri-action-buttons">
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shadow-sm"
+                      onClick={() => handleViewTicket(ticket)}
+                    >
+                      View
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shadow-sm"
+                      onClick={() => handleEditTicket(ticket)}
+                    >
+                      Edit
+                    </Button>
+
+                    {ticket.customFields?.customerPortalAccess !== false && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shadow-sm"
+                          onClick={() => handleViewCustomerPortal(ticket)}
+                        >
+                          Customer View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shadow-sm"
+                          onClick={() => handleCreateTaskForServiceTicket(ticket)}
+                        >
+                          <ListTodo className="h-3 w-3 mr-1" />
+                          Task
+                        </Button>
+                      </>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shadow-sm"
+                      onClick={() => handleCreateTaskForServiceTicket(ticket)}
+                    >
+                      <ListTodo className="h-3 w-3 mr-1" />
+                      Task
+                    </Button>
+                  </div>
                 </div>
-                    const account = ticket.accountId ? getAccountById(ticket.accountId) : null
-                    const contact = ticket.contactId ? getContactById(ticket.contactId) : null
-                <div className="ri-action-buttons">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                  >
-                    View Details
-                  </Button>
-                </TableCell>
-                <TableCell>
-                          {account ? (
-                            <span className="text-sm text-muted-foreground">{account.name}</span>
-                          ) : (
-                            'N/A'
-                          )}
-                        </TableCell>
-                    className="shadow-sm"
-                    onClick={() => handleViewTicket(ticket)}
-                  >
-                    View
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleEditTicket(ticket)}
-                  >
-                    Edit
-                  </Button>
-                  {ticket.customFields?.customerPortalAccess !== false && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="shadow-sm"
-                        onClick={() => handleViewCustomerPortal(ticket)}
-                      >
-                        Customer View
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="shadow-sm"
-                        onClick={() => handleCreateTaskForServiceTicket(ticket)}
-                      >
-                        <ListTodo className="h-3 w-3 mr-1" />
-                        Task
-                      </Button>
-                    </>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="shadow-sm"
-                    onClick={() => handleCreateTaskForServiceTicket(ticket)}
-                  >
-                    <ListTodo className="h-3 w-3 mr-1" />
-                    Task
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
+              )
+            })}
+
             {filteredTickets.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <Wrench className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -584,10 +553,11 @@ export default function ServiceOps() {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [showNewTicketForm, setShowNewTicketForm] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
-  
-  const { tickets, loading, error, deleteTicket } = useServiceManagement()
-  const { getAccountById } = useAccountManagement()
-  const { getContactById } = useContactManagement()
+
+  // Keep hooks here if/when you expand tabs/views
+  useServiceManagement()
+  useAccountManagement()
+  useContactManagement()
 
   return (
     <Routes>
@@ -595,5 +565,3 @@ export default function ServiceOps() {
     </Routes>
   )
 }
-
-export default ServiceOps
