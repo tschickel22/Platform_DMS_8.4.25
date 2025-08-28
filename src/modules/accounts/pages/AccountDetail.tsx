@@ -10,6 +10,11 @@ import { useToast } from '@/hooks/use-toast'
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
 import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+
+// If your service ticket form lives under a different path,
+// adjust this import accordingly.
+import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
+
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import {
   ArrowLeft,
@@ -30,8 +35,9 @@ import { AccountDealsSection } from '../components/AccountDealsSection'
 import { AccountQuotesSection } from '../components/AccountQuotesSection'
 import { AccountServiceTicketsSection } from '../components/AccountServiceTicketsSection'
 import { AccountNotesSection } from '../components/AccountNotesSection'
+import type { Account } from '@/types'
 
-interface AccountSectionDef {
+interface AccountSection {
   id: string
   type: string
   title: string
@@ -39,42 +45,12 @@ interface AccountSectionDef {
   description: string
 }
 
-const AVAILABLE_SECTIONS: AccountSectionDef[] = [
-  {
-    id: 'contacts',
-    type: 'contacts',
-    title: 'Associated Contacts',
-    component: AccountContactsSection,
-    description: 'Contacts linked to this account',
-  },
-  {
-    id: 'deals',
-    type: 'deals',
-    title: 'Sales Deals',
-    component: AccountDealsSection,
-    description: 'Active and historical deals',
-  },
-  {
-    id: 'quotes',
-    type: 'quotes',
-    title: 'Quotes',
-    component: AccountQuotesSection,
-    description: 'Quotes and proposals',
-  },
-  {
-    id: 'service',
-    type: 'service',
-    title: 'Service Tickets',
-    component: AccountServiceTicketsSection,
-    description: 'Service requests and maintenance',
-  },
-  {
-    id: 'notes',
-    type: 'notes',
-    title: 'Notes & Comments',
-    component: AccountNotesSection,
-    description: 'Internal notes and comments',
-  },
+const AVAILABLE_SECTIONS: AccountSection[] = [
+  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
+  { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
+  { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
+  { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
+  { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
 ]
 
 const DEFAULT_LAYOUT = ['contacts', 'deals', 'quotes', 'service', 'notes']
@@ -84,101 +60,99 @@ export default function AccountDetail() {
   const { getAccount } = useAccountManagement()
   const { toast } = useToast()
 
-  const [account, setAccount] = useState<any | null>(null)
+  const [account, setAccount] = useState<Account | null>(null)
   const [sections, setSections] = useState<string[]>(DEFAULT_LAYOUT)
 
-  // Modal states
+  // Dialog states
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
+  const [openService, setOpenService] = useState(false)
+
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const storageKey = `account-detail-layout-${accountId}`
 
-  // Load account data
+  // Load account
   useEffect(() => {
-    if (accountId) {
-      const accountData = getAccount(accountId)
-      setAccount(accountData || null)
-    }
+    if (!accountId) return
+    const data = getAccount(accountId)
+    setAccount(data ?? null)
   }, [accountId, getAccount])
 
   // Load saved layout
   useEffect(() => {
-    if (accountId) {
-      const savedLayout = loadFromLocalStorage<string[]>(storageKey, DEFAULT_LAYOUT)
-      setSections(savedLayout)
-    }
+    if (!accountId) return
+    const saved = loadFromLocalStorage<string[]>(storageKey, DEFAULT_LAYOUT)
+    setSections(saved)
   }, [accountId, storageKey])
 
   const saveLayout = () => {
     if (!accountId) return
     saveToLocalStorage(storageKey, sections)
     setHasUnsavedChanges(false)
-    toast({ title: 'Layout Saved', description: 'Your customized view has been saved.' })
+    toast({ title: 'Layout Saved', description: 'Your customized view has been saved successfully.' })
   }
 
   const resetLayout = () => {
     setSections(DEFAULT_LAYOUT)
     setHasUnsavedChanges(true)
-    toast({
-      title: 'Layout Reset',
-      description: 'Layout has been reset to default. Click Save to persist changes.',
-    })
+    toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
   }
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
     const next = Array.from(sections)
-    const [moved] = next.splice(result.source.index, 1)
-    next.splice(result.destination.index, 0, moved)
+    const [removed] = next.splice(result.source.index, 1)
+    next.splice(result.destination.index, 0, removed)
     setSections(next)
     setHasUnsavedChanges(true)
   }
 
   const addSection = (type: string) => {
-    if (!sections.includes(type)) {
-      setSections([...sections, type])
-      setHasUnsavedChanges(true)
-      setIsAddSectionOpen(false)
-      toast({ title: 'Section Added', description: 'Section added to this view.' })
-    }
+    if (sections.includes(type)) return
+    setSections(prev => [...prev, type])
+    setHasUnsavedChanges(true)
+    setIsAddSectionOpen(false)
+    toast({ title: 'Section Added', description: 'New section has been added to your view.' })
   }
 
   const removeSection = (type: string) => {
-    setSections(sections.filter((s) => s !== type))
+    setSections(prev => prev.filter(s => s !== type))
     setHasUnsavedChanges(true)
-    toast({ title: 'Section Removed', description: 'Section removed from this view.' })
+    toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
   }
 
-  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type))
+  // No-op for now; keep for future refresh logic
+  const refreshSection = (_type: string) => {}
 
-  const refreshSection = (_type: string) => {
-    // noop placeholder; kept for future hook-based refreshes
-  }
-
-  const handleContactSaved = (contact: any) => {
+  const handleContactSaved = (entity: any) => {
     setOpenContact(false)
-    if (contact) {
+    if (entity) {
       refreshSection('contacts')
-      toast({ title: 'Success', description: 'Contact created successfully.' })
+      toast({ title: 'Success', description: 'Contact created successfully' })
     }
   }
-
-  const handleDealSaved = (deal: any) => {
+  const handleDealSaved = (entity: any) => {
     setOpenDeal(false)
-    if (deal) {
+    if (entity) {
       refreshSection('deals')
-      toast({ title: 'Success', description: 'Deal created successfully.' })
+      toast({ title: 'Success', description: 'Deal created successfully' })
     }
   }
-
-  const handleQuoteSaved = (quote: any) => {
+  const handleQuoteSaved = (entity: any) => {
     setOpenQuote(false)
-    if (quote) {
+    if (entity) {
       refreshSection('quotes')
-      toast({ title: 'Success', description: 'Quote created successfully.' })
+      toast({ title: 'Success', description: 'Quote created successfully' })
+    }
+  }
+  const handleServiceSaved = (entity: any) => {
+    setOpenService(false)
+    if (entity) {
+      refreshSection('service')
+      toast({ title: 'Success', description: 'Service ticket created successfully' })
     }
   }
 
@@ -186,7 +160,7 @@ export default function AccountDetail() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading account...</p>
         </div>
       </div>
@@ -203,6 +177,8 @@ export default function AccountDetail() {
     }
     return colors[type] || 'bg-gray-100 text-gray-800'
   }
+
+  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter(s => !sections.includes(s.type))
 
   return (
     <>
@@ -228,17 +204,6 @@ export default function AccountDetail() {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Quick actions open modals */}
-            <Button size="sm" variant="outline" onClick={() => setOpenContact(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Add Contact
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setOpenDeal(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Create Deal
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setOpenQuote(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Create Quote
-            </Button>
-
             {hasUnsavedChanges && (
               <Button variant="outline" size="sm" onClick={saveLayout}>
                 <Save className="h-4 w-4 mr-2" />
@@ -250,6 +215,7 @@ export default function AccountDetail() {
               Reset Layout
             </Button>
 
+            {/* Add Section */}
             <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -257,12 +223,17 @@ export default function AccountDetail() {
                   Add Section
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[95vw] max-w-xl">
                 <DialogHeader>
                   <DialogTitle>Add Section</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-2">
-                  {availableSectionsToAdd.map((section) => (
+                  {availableSectionsToAdd.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      All available sections are already added to this view.
+                    </p>
+                  )}
+                  {availableSectionsToAdd.map(section => (
                     <Button
                       key={section.id}
                       variant="outline"
@@ -275,11 +246,6 @@ export default function AccountDetail() {
                       </div>
                     </Button>
                   ))}
-                  {availableSectionsToAdd.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      All available sections are already added.
-                    </p>
-                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -304,7 +270,7 @@ export default function AccountDetail() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                {!!account.website && (
+                {account.website && (
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -312,7 +278,7 @@ export default function AccountDetail() {
                     </a>
                   </div>
                 )}
-                {!!account.email && (
+                {account.email && (
                   <div className="flex items-center space-x-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <a href={`mailto:${account.email}`} className="text-primary hover:underline">
@@ -320,7 +286,7 @@ export default function AccountDetail() {
                     </a>
                   </div>
                 )}
-                {!!account.phone && (
+                {account.phone && (
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <a href={`tel:${account.phone}`} className="text-primary hover:underline">
@@ -343,11 +309,11 @@ export default function AccountDetail() {
                     </div>
                   </div>
                 )}
-                {account.tags?.length > 0 && (
+                {!!(account.tags && account.tags.length) && (
                   <div>
                     <p className="text-sm font-medium mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
-                      {account.tags.map((tag: string) => (
+                      {account.tags.map(tag => (
                         <Badge key={tag} variant="outline">
                           {tag}
                         </Badge>
@@ -367,25 +333,25 @@ export default function AccountDetail() {
           </CardContent>
         </Card>
 
-        {/* Sections (Draggable) */}
+        {/* Sections */}
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="account-sections">
-            {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-6">
+            {provided => (
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
                 {sections.map((type, index) => {
-                  const def = AVAILABLE_SECTIONS.find((s) => s.type === type)
-                  if (!def) return null
-                  const Section = def.component
+                  const cfg = AVAILABLE_SECTIONS.find(s => s.type === type)
+                  if (!cfg) return null
+                  const Section = cfg.component
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
-                      {(drag) => (
-                        <div ref={drag.innerRef} {...drag.draggableProps} {...drag.dragHandleProps}>
+                      {(prov, snapshot) => (
+                        <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
                           <Section
-                            accountId={accountId!}
+                            accountId={accountId}
                             onRemove={() => removeSection(type)}
-                            onAddContact={type === 'contacts' ? () => setOpenContact(true) : undefined}
-                            onAddDeal={type === 'deals' ? () => setOpenDeal(true) : undefined}
-                            onAddQuote={type === 'quotes' ? () => setOpenQuote(true) : undefined}
+                            isDragging={snapshot.isDragging}
+                            // allow service section to open a modal instead of routing
+                            onAddTicket={() => setOpenService(true)}
                           />
                         </div>
                       )}
@@ -398,13 +364,28 @@ export default function AccountDetail() {
           </Droppable>
         </DragDropContext>
 
-        {/* Unsaved changes toast-like card */}
+        {/* Empty state when all sections removed */}
+        {sections.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No sections configured</h3>
+              <p className="text-muted-foreground mb-4">Add sections to customize your account view</p>
+              <Button onClick={() => setIsAddSectionOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Section
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Unsaved banner */}
         {hasUnsavedChanges && (
           <div className="fixed bottom-4 right-4 z-50">
             <Card className="shadow-lg border-orange-200 bg-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse"></div>
                   <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
                   <Button size="sm" onClick={saveLayout}>
                     Save Now
@@ -418,31 +399,29 @@ export default function AccountDetail() {
 
       {/* Contact Modal */}
       <Dialog open={openContact} onOpenChange={setOpenContact}>
-        <DialogContent className="max-w-2xl p-0">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle>Add Contact</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
           <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
         </DialogContent>
       </Dialog>
 
       {/* Deal Modal */}
       <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="max-w-3xl p-0">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle>Create Deal</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
         </DialogContent>
       </Dialog>
 
       {/* Quote Modal */}
       <Dialog open={openQuote} onOpenChange={setOpenQuote}>
-        <DialogContent className="max-w-3xl p-0">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle>Create Quote</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
           <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Ticket Modal */}
+      <Dialog open={openService} onOpenChange={setOpenService}>
+        <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
         </DialogContent>
       </Dialog>
     </>
