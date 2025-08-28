@@ -1,19 +1,17 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
 import { mockInventory } from '@/mocks/inventoryMock'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { mockContacts } from '@/mocks/contactsMock'
 import { formatCurrency, generateId, saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-import { Plus, Trash2, Calculator } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 
 interface QuoteFormData {
   accountId: string
@@ -56,10 +54,9 @@ type Props = ReturnToBehavior & {
 }
 
 export default function NewQuoteForm(props: Props) {
-  const navigate = useNavigate()
   const { toast } = useToast()
   const { accountId, afterSave } = useReturnTargets(props)
-  const isEditing = !!props.quoteId
+  const isModal = !!props.onSaved
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<QuoteFormData>({
@@ -67,93 +64,67 @@ export default function NewQuoteForm(props: Props) {
     contactId: '',
     vehicleId: '',
     items: [
-      {
-        id: generateId(),
-        description: '',
-        quantity: 1,
-        unitPrice: 0,
-        total: 0
-      }
+      { id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 },
     ],
     notes: '',
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-    terms: 'Standard terms and conditions apply. Quote valid for 30 days.'
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    terms: 'Standard terms and conditions apply. Quote valid for 30 days.',
   })
 
-  // Get account and contact data for dropdowns
+  // Select options
   const accounts = mockAccounts.sampleAccounts
-  const contacts = mockContacts.sampleContacts.filter(c => 
-    !formData.accountId || c.accountId === formData.accountId
+  const contacts = mockContacts.sampleContacts.filter(
+    c => !formData.accountId || c.accountId === formData.accountId
   )
   const vehicles = mockInventory.sampleVehicles
 
-  // Get selected account for auto-fill
-  const selectedAccount = accounts.find(a => a.id === formData.accountId)
-
-  const updateFormData = (field: keyof QuoteFormData, value: any) => {
+  const updateFormData = (field: keyof QuoteFormData, value: any) =>
     setFormData(prev => ({ ...prev, [field]: value }))
-  }
 
   const addItem = () => {
-    const newItem: QuoteItem = {
-      id: generateId(),
-      description: '',
-      quantity: 1,
-      unitPrice: 0,
-      total: 0
-    }
+    const newItem: QuoteItem = { id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 }
     updateFormData('items', [...formData.items, newItem])
   }
 
   const updateItem = (itemId: string, field: keyof QuoteItem, value: any) => {
-    const updatedItems = formData.items.map(item => {
-      if (item.id === itemId) {
-        const updatedItem = { ...item, [field]: value }
-        // Recalculate total when quantity or unit price changes
-        if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice
-        }
-        return updatedItem
+    const updated = formData.items.map(item => {
+      if (item.id !== itemId) return item
+      const next = { ...item, [field]: value }
+      if (field === 'quantity' || field === 'unitPrice') {
+        next.total = Number(next.quantity) * Number(next.unitPrice)
       }
-      return item
+      return next
     })
-    updateFormData('items', updatedItems)
+    updateFormData('items', updated)
   }
 
   const removeItem = (itemId: string) => {
-    if (formData.items.length > 1) {
-      updateFormData('items', formData.items.filter(item => item.id !== itemId))
-    }
+    if (formData.items.length <= 1) return
+    updateFormData('items', formData.items.filter(i => i.id !== itemId))
   }
 
-  // Calculate totals
-  const subtotal = formData.items.reduce((sum, item) => sum + item.total, 0)
-  const taxRate = 0.08 // 8% tax
+  // Totals
+  const subtotal = formData.items.reduce((sum, i) => sum + Number(i.total || 0), 0)
+  const taxRate = 0.08
   const tax = subtotal * taxRate
   const total = subtotal + tax
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
     try {
-      // Validation
-      if (!formData.accountId) {
-        throw new Error('Account is required')
-      }
-
-      if (formData.items.length === 0 || formData.items.every(item => !item.description.trim())) {
+      if (!formData.accountId) throw new Error('Account is required')
+      if (formData.items.length === 0 || formData.items.every(i => !i.description.trim())) {
         throw new Error('At least one quote item is required')
       }
 
-      // Create quote object
       const newQuote: Quote = {
         id: generateId(),
         number: `Q-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
         accountId: formData.accountId,
         contactId: formData.contactId,
         vehicleId: formData.vehicleId,
-        items: formData.items.filter(item => item.description.trim()),
+        items: formData.items.filter(i => i.description.trim()),
         subtotal,
         tax,
         total,
@@ -162,38 +133,25 @@ export default function NewQuoteForm(props: Props) {
         terms: formData.terms,
         notes: formData.notes,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
 
-      // Save to localStorage (in real app, this would be an API call)
-      const existingQuotes = loadFromLocalStorage<Quote[]>('quotes', [])
-      const updatedQuotes = [newQuote, ...existingQuotes]
-      saveToLocalStorage('quotes', updatedQuotes)
+      const existing = loadFromLocalStorage<Quote[]>('quotes', [])
+      saveToLocalStorage('quotes', [newQuote, ...existing])
 
-      toast({
-        title: 'Success',
-        description: `Quote ${newQuote.number} created successfully`,
-      })
-
-      // Use afterSave for navigation/modal handling
+      toast({ title: 'Success', description: `Quote ${newQuote.number} created successfully` })
       afterSave(newQuote, '/quotes')
-
-    } catch (error) {
-      console.error('Error creating quote:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create quote',
-        variant: 'destructive'
-      })
+    } catch (err) {
+      console.error(err)
+      const msg = err instanceof Error ? err.message : 'Failed to create quote'
+      toast({ title: 'Error', description: msg, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
-  const isModal = !!props.onSaved
-
   return (
-    <div className={isModal ? 'p-6' : ''}>
+    <div className={isModal ? 'p-6 max-h-[80vh] overflow-y-auto' : ''}>
       {!isModal && (
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Create New Quote</h1>
@@ -221,19 +179,19 @@ export default function NewQuoteForm(props: Props) {
                 <Label htmlFor="accountId">Account *</Label>
                 <Select
                   value={formData.accountId}
-                  onValueChange={(value) => {
+                  onValueChange={value => {
                     updateFormData('accountId', value)
-                    updateFormData('contactId', '') // Reset contact when account changes
+                    updateFormData('contactId', '')
                   }}
-                  disabled={!!accountId} // Auto-filled from account
+                  disabled={!!accountId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name}
+                    {accounts.map(acc => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -244,16 +202,16 @@ export default function NewQuoteForm(props: Props) {
                 <Label htmlFor="contactId">Contact</Label>
                 <Select
                   value={formData.contactId}
-                  onValueChange={(value) => updateFormData('contactId', value)}
+                  onValueChange={value => updateFormData('contactId', value)}
                   disabled={!formData.accountId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    {contacts.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.firstName} {contact.lastName}
+                    {contacts.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -262,17 +220,14 @@ export default function NewQuoteForm(props: Props) {
 
               <div>
                 <Label htmlFor="vehicleId">Vehicle/Product</Label>
-                <Select
-                  value={formData.vehicleId}
-                  onValueChange={(value) => updateFormData('vehicleId', value)}
-                >
+                <Select value={formData.vehicleId} onValueChange={v => updateFormData('vehicleId', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicles.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.year} {vehicle.make} {vehicle.model}
+                    {vehicles.map(v => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -285,7 +240,7 @@ export default function NewQuoteForm(props: Props) {
                   id="validUntil"
                   type="date"
                   value={formData.validUntil}
-                  onChange={(e) => updateFormData('validUntil', e.target.value)}
+                  onChange={e => updateFormData('validUntil', e.target.value)}
                   required
                 />
               </div>
@@ -309,14 +264,14 @@ export default function NewQuoteForm(props: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {formData.items.map((item, index) => (
+              {formData.items.map(item => (
                 <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 border rounded-lg">
                   <div className="md:col-span-5">
                     <Label htmlFor={`description-${item.id}`}>Description *</Label>
                     <Input
                       id={`description-${item.id}`}
                       value={item.description}
-                      onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                      onChange={e => updateItem(item.id, 'description', e.target.value)}
                       placeholder="Item description"
                       required
                     />
@@ -326,9 +281,9 @@ export default function NewQuoteForm(props: Props) {
                     <Input
                       id={`quantity-${item.id}`}
                       type="number"
-                      min="1"
+                      min={1}
                       value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                       required
                     />
                   </div>
@@ -337,10 +292,10 @@ export default function NewQuoteForm(props: Props) {
                     <Input
                       id={`unitPrice-${item.id}`}
                       type="number"
-                      min="0"
+                      min={0}
                       step="0.01"
                       value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                       required
                     />
                   </div>
@@ -365,7 +320,7 @@ export default function NewQuoteForm(props: Props) {
               ))}
             </div>
 
-            {/* Quote Totals */}
+            {/* Totals */}
             <div className="mt-6 space-y-2 border-t pt-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
@@ -395,7 +350,7 @@ export default function NewQuoteForm(props: Props) {
               <Textarea
                 id="terms"
                 value={formData.terms}
-                onChange={(e) => updateFormData('terms', e.target.value)}
+                onChange={e => updateFormData('terms', e.target.value)}
                 placeholder="Enter terms and conditions"
                 rows={3}
               />
@@ -405,7 +360,7 @@ export default function NewQuoteForm(props: Props) {
               <Textarea
                 id="notes"
                 value={formData.notes}
-                onChange={(e) => updateFormData('notes', e.target.value)}
+                onChange={e => updateFormData('notes', e.target.value)}
                 placeholder="Internal notes (not visible to customer)"
                 rows={3}
               />
@@ -413,14 +368,9 @@ export default function NewQuoteForm(props: Props) {
           </CardContent>
         </Card>
 
-        {/* Form Actions */}
+        {/* Actions */}
         <div className="flex items-center justify-end space-x-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => afterSave(null, '/quotes')}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={() => afterSave(null, '/quotes')} disabled={loading}>
             Cancel
           </Button>
           <Button type="submit" disabled={loading}>
