@@ -24,7 +24,6 @@ import {
   Handshake
 } from 'lucide-react'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { AccountType } from '@/types'
 import { mockAccounts } from '@/mocks/accountsMock'
 
 export default function AccountList() {
