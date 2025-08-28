@@ -1,6 +1,6 @@
 // src/modules/contacts/components/ContactForm.tsx
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom' // ✅ useSearchParams
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { mockContacts } from '@/mocks/contactsMock'
 import { mockAccounts } from '@/mocks/accountsMock'
+import { TagInput } from '@/components/common/TagInput' // ✅ FIX: import TagInput
 
 type Params = { contactId?: string }
 
@@ -31,13 +32,10 @@ type ContactFormState = {
 export default function ContactForm() {
   const navigate = useNavigate()
   const { contactId } = useParams<Params>()
+  const [searchParams] = useSearchParams() // ✅ to read ?accountId=
   const { toast } = useToast()
 
-  const {
-    createContact,
-    updateContact,
-    getContactById,
-  } = useContactManagement()
+  const { createContact, updateContact, getContactById } = useContactManagement()
 
   const isEditing = Boolean(contactId)
 
@@ -56,6 +54,15 @@ export default function ContactForm() {
 
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(isEditing)
+
+  // Prefill accountId when coming from AccountDetail ("Add Contact")
+  useEffect(() => {
+    if (isEditing) return
+    const fromAccount = searchParams.get('accountId')
+    if (fromAccount) {
+      setFormData(prev => ({ ...prev, accountId: fromAccount }))
+    }
+  }, [searchParams, isEditing])
 
   // Load existing contact data (edit mode)
   useEffect(() => {
@@ -99,7 +106,6 @@ export default function ContactForm() {
     return () => {
       cancelled = true
     }
-    // NOTE: intentionally *not* depending on getContactById to avoid identity churn re-running the effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, contactId, toast])
 
@@ -288,7 +294,7 @@ export default function ContactForm() {
                   'Quick Response',
                   'Morning Calls',
                   'Email Preferred',
-                  'Text Preferred'
+                  'Text Preferred',
                 ]}
               />
             </div>
