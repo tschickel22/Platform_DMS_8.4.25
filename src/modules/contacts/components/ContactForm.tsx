@@ -23,7 +23,6 @@ import { useToast } from '@/hooks/use-toast'
 export default function ContactForm() {
   const { contactId } = useParams<{ contactId: string }>()
   const navigate = useNavigate()
-  const { contactId } = useParams()
   const { toast } = useToast()
   const { createContact, updateContact, getContactById } = useContactManagement()
   const { accounts } = useAccountManagement()
