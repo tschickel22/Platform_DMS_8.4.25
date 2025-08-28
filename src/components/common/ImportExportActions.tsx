@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Upload, Download, FileText, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import Papa from 'papaparse'
 
 interface ImportExportActionsProps {
   module: 'accounts' | 'contacts'
@@ -38,12 +37,12 @@ export function ImportExportActions({
           ['Jane', 'Doe', 'jane.doe@email.com', '(555) 987-6543', '']
         ]
 
-    const csv = Papa.unparse({
-      fields: sampleFields,
-      data: sampleData
-    })
+    const csvContent = [
+      sampleFields.join(','),
+      ...sampleData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -65,54 +64,51 @@ export function ImportExportActions({
       return
     }
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const errors: string[] = []
-        const validData: any[] = []
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const lines = text.split('\n').filter(line => line.trim())
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+      
+      const errors: string[] = []
+      const validData: any[] = []
 
-        results.data.forEach((row: any, index) => {
-          // Basic validation
-          if (module === 'accounts') {
-            if (!row.name || row.name.trim() === '') {
-              errors.push(`Row ${index + 1}: Account name is required`)
-            } else {
-              validData.push({
-                name: row.name?.trim(),
-                email: row.email?.trim() || '',
-                phone: row.phone?.trim() || '',
-                address: row.address?.trim() || '',
-                website: row.website?.trim() || '',
-                industry: row.industry?.trim() || ''
-              })
-            }
+      lines.slice(1).forEach((line, index) => {
+        const values = line.split(',').map(v => v.replace(/"/g, '').trim())
+        
+        if (module === 'accounts') {
+          if (!values[0]) {
+            errors.push(`Row ${index + 1}: Account name is required`)
           } else {
-            if (!row.firstName || row.firstName.trim() === '' || !row.lastName || row.lastName.trim() === '') {
-              errors.push(`Row ${index + 1}: First name and last name are required`)
-            } else {
-              validData.push({
-                firstName: row.firstName?.trim(),
-                lastName: row.lastName?.trim(),
-                email: row.email?.trim() || '',
-                phone: row.phone?.trim() || '',
-                accountId: row.accountId?.trim() || undefined
-              })
-            }
+            validData.push({
+              name: values[0],
+              email: values[1] || '',
+              phone: values[2] || '',
+              address: values[3] || '',
+              website: values[4] || '',
+              industry: values[5] || ''
+            })
           }
-        })
+        } else {
+          if (!values[0] || !values[1]) {
+            errors.push(`Row ${index + 1}: First name and last name are required`)
+          } else {
+            validData.push({
+              firstName: values[0],
+              lastName: values[1],
+              email: values[2] || '',
+              phone: values[3] || '',
+              accountId: values[4] || undefined
+            })
+          }
+        }
+      })
 
-        setImportData(validData)
-        setImportErrors(errors)
-      },
-      error: (error) => {
-        toast({
-          title: 'Import Error',
-          description: `Failed to parse CSV file: ${error.message}`,
-          variant: 'destructive'
-        })
-      }
-    })
+      setImportData(validData)
+      setImportErrors(errors)
+    }
+    
+    reader.readAsText(file)
   }
 
   const handleImport = () => {
@@ -138,18 +134,22 @@ export function ImportExportActions({
       return
     }
 
-    const csv = Papa.unparse({
-      fields: sampleFields,
-      data: data.map(item => {
+    const csvContent = [
+      sampleFields.join(','),
+      ...data.map(item => {
         if (module === 'accounts') {
           return [item.name, item.email, item.phone, item.address, item.website, item.industry]
+            .map(cell => `"${cell || ''}"`)
+            .join(',')
         } else {
           return [item.firstName, item.lastName, item.email, item.phone, item.accountId || '']
+            .map(cell => `"${cell || ''}"`)
+            .join(',')
         }
       })
-    })
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
