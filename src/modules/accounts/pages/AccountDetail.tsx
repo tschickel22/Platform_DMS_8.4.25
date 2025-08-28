@@ -579,19 +579,16 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Delivery Modal */}
-      <Dialog open={openDelivery} onOpenChange={setOpenDelivery}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Schedule Delivery</DialogTitle>
-          <DialogDescription className="sr-only">Schedule a new delivery for this account.</DialogDescription>
-          <DeliveryForm
-            customers={contacts}
-            vehicles={vehicles}
-            onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
-            onCancel={() => setOpenDelivery(false)}
-          />
-        </DialogContent>
-      </Dialog>
+{/* Delivery Modal (DeliveryForm has its own overlay) */}
+{openDelivery && (
+  <DeliveryForm
+    customers={contacts}
+    vehicles={vehicles}
+    onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
+    onCancel={() => setOpenDelivery(false)}
+  />
+)}
+
     </>
   )
 }
