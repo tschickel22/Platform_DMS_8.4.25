@@ -70,6 +70,10 @@ export function useContactManagement() {
     }
   }, [contacts])
 
+  const getContactById = (id: string) => {
+    return contacts.find(contact => contact.id === id) || null
+  }
+
   // Create a new contact
   const createContact = async (contactData: Partial<Contact>): Promise<Contact> => {
     setLoading(true)
@@ -99,19 +103,20 @@ export function useContactManagement() {
     }
   }
 
-  // Update an existing contact
-  const updateContact = async (contactId: string, updates: Partial<Contact>): Promise<Contact | null> => {
-    const existingContact = contacts.find(contact => contact.id === contactId)
-    if (!existingContact) return null
+  const updateContact = async (id: string, updates: Partial<Contact>): Promise<Contact | null> => {
+    const contactIndex = contacts.findIndex(contact => contact.id === id)
+    if (contactIndex === -1) return null
 
     const updatedContact = {
-      ...existingContact,
+      ...contacts[contactIndex],
       ...updates,
-      updatedAt: new Date(),
-      updatedBy: 'current-user' // TODO: Get from auth context
+      updatedAt: new Date()
     }
 
-    setContacts(prev => prev.map(contact => contact.id === contactId ? updatedContact : contact))
+    const newContacts = [...contacts]
+    newContacts[contactIndex] = updatedContact
+    setContacts(newContacts)
+
     return updatedContact
   }
 
@@ -190,6 +195,7 @@ export function useContactManagement() {
     loading,
     error,
     metrics,
+    getContactById,
     createContact,
     updateContact,
     deleteContact,
