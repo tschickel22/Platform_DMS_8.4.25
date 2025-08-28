@@ -1,71 +1,119 @@
-import React, { useState, useEffect } from 'react'
+// src/modules/contacts/pages/ContactDetail.tsx
+import React, { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Trash2, User, Mail, Phone, MapPin, Building2 } from 'lucide-react'
-import { useContactManagement } from '../hooks/useContactManagement'
-import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { Contact } from '@/types'
-import { NotesSection } from '@/components/common/NotesSection'
+import {
+  ArrowLeft,
+  Edit,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Building2,
+  MessageSquare,
+  Briefcase,
+  Users,
+  Building
+} from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { NotesSection } from '@/components/common/NotesSection'
+import type { Contact } from '@/types/index' // keep your local typing
 
 export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>()
   const navigate = useNavigate()
-  const { getContactById, deleteContact } = useContactManagement()
-  const { getAccountById } = useAccountManagement()
   const { toast } = useToast()
+
+  const { getContactById, deleteContact } = useContactManagement()
+  const { getAccount } = useAccountManagement() // hook exposes getAccount in this project
+
   const [contact, setContact] = useState<Contact | null>(null)
   const [account, setAccount] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadContact = async () => {
+    let cancelled = false
+
+    const load = async () => {
       if (!contactId) return
-      
       try {
-        const contactData = await getContactById(contactId)
-        setContact(contactData)
-        
-        // Load associated account if exists
-        if (contactData?.accountId) {
-          const accountData = await getAccountById(contactData.accountId)
-          setAccount(accountData)
+        const c = await getContactById(contactId)
+        if (cancelled) return
+        setContact(c ?? null)
+
+        if (c?.accountId) {
+          const a = getAccount(c.accountId) // sync getter from accounts hook
+          if (!cancelled) setAccount(a ?? null)
+        } else {
+          setAccount(null)
         }
-      } catch (error) {
-        console.error('Error loading contact:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load contact details',
-          variant: 'destructive'
-        })
+      } catch (err) {
+        console.error('Error loading contact:', err)
+        if (!cancelled) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load contact details.',
+            variant: 'destructive'
+          })
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    loadContact()
-  }, [contactId, getContactById, getAccountById, toast])
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [contactId, getContactById, getAccount, toast])
 
   const handleCommunication = (type: 'phone' | 'email' | 'sms') => {
+    if (!contact) return
     switch (type) {
       case 'phone':
-        if (contact.phone) {
-          window.location.href = `tel:${contact.phone}`
-        }
+        if (contact.phone) window.location.href = `tel:${contact.phone}`
         break
       case 'email':
-        if (contact.email) {
-          window.location.href = `mailto:${contact.email}`
-        }
+        if (contact.email) window.location.href = `mailto:${contact.email}`
         break
       case 'sms':
-        if (contact.phone) {
-          window.location.href = `sms:${contact.phone}`
-        }
+        if (contact.phone) window.location.href = `sms:${contact.phone}`
         break
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading contact…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!contact) {
+    return (
+      <div className="space-y-6">
+        <div className="ri-page-header">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/contacts')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Contacts
+            </Button>
+            <div>
+              <h1 className="ri-page-title">Contact Not Found</h1>
+              <p className="ri-page-description">The requested contact could not be found.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -84,14 +132,14 @@ export default function ContactDetail() {
               </h1>
               <p className="ri-page-description">
                 {contact.title && `${contact.title}`}
-                {contact.title && contact.department && ` • `}
-                {contact.department && contact.department}
-                {associatedAccount && ` • ${associatedAccount.name}`}
+                {contact.title && contact.department && ' • '}
+                {contact.department}
+                {account && ` • ${account.name}`}
               </p>
             </div>
           </div>
           <Button asChild>
-            <Link to={`/contacts/${contactId}/edit`}>
+            <Link to={`/contacts/${contact.id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Contact
             </Link>
@@ -100,9 +148,9 @@ export default function ContactDetail() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Contact Information */}
+        {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Basic Info */}
+          {/* Contact Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -114,7 +162,9 @@ export default function ContactDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium mb-1 block">Full Name</Label>
-                  <p className="text-sm">{contact.firstName} {contact.lastName}</p>
+                  <p className="text-sm">
+                    {contact.firstName} {contact.lastName}
+                  </p>
                 </div>
 
                 {contact.title && (
@@ -131,21 +181,21 @@ export default function ContactDetail() {
                   </div>
                 )}
 
-                {associatedAccount && (
+                {account && (
                   <div>
                     <Label className="text-sm font-medium mb-1 block">Account</Label>
-                    <Link 
-                      to={`/accounts/${associatedAccount.id}`}
+                    <Link
+                      to={`/accounts/${account.id}`}
                       className="text-sm text-primary hover:underline flex items-center gap-1"
                     >
                       <Building className="h-3 w-3" />
-                      {associatedAccount.name}
+                      {account.name}
                     </Link>
                   </div>
                 )}
               </div>
 
-              {contact.tags.length > 0 && (
+              {contact.tags?.length > 0 && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Tags</Label>
                   <div className="flex flex-wrap gap-2">
@@ -192,11 +242,7 @@ export default function ContactDetail() {
                       <p className="text-sm text-muted-foreground">{account.industry}</p>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/accounts/${account.id}`)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/accounts/${account.id}`)}>
                     View Account
                   </Button>
                 </div>
@@ -204,37 +250,14 @@ export default function ContactDetail() {
             </Card>
           )}
 
-          {/* Tags Display */}
-          {contact.tags && contact.tags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Tags</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {contact.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Notes on contact */}
+          <NotesSection entityId={contact.id} entityType="contact" />
 
-          {/* Notes Section */}
-          <NotesSection
-            entityId={contact.id}
-            entityType="contact"
-          />
-
-          {/* Communication History Placeholder */}
+          {/* Communication History placeholder */}
           <Card>
             <CardHeader>
               <CardTitle>Communication History</CardTitle>
-              <CardDescription>
-                Recent interactions and communications
-              </CardDescription>
+              <CardDescription>Recent interactions and communications</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
@@ -250,43 +273,28 @@ export default function ContactDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Communication Actions */}
+          {/* Communication actions */}
           <Card>
             <CardHeader>
               <CardTitle>Communication</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {contact.phone && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => handleCommunication('phone')}
-                >
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCommunication('phone')}>
                   <Phone className="h-4 w-4 mr-2" />
                   Call {contact.phone}
                 </Button>
               )}
 
               {contact.email && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => handleCommunication('email')}
-                >
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCommunication('email')}>
                   <Mail className="h-4 w-4 mr-2" />
                   Email {contact.email}
                 </Button>
               )}
 
               {contact.phone && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => handleCommunication('sms')}
-                >
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCommunication('sms')}>
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Text Message
                 </Button>
@@ -294,15 +302,13 @@ export default function ContactDetail() {
 
               {!contact.phone && !contact.email && (
                 <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">
-                    No contact methods available
-                  </p>
+                  <p className="text-sm text-muted-foreground">No contact methods available</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
+          {/* Quick actions */}
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
@@ -323,7 +329,7 @@ export default function ContactDetail() {
             </CardContent>
           </Card>
 
-          {/* Contact Stats */}
+          {/* Contact stats */}
           <Card>
             <CardHeader>
               <CardTitle>Contact Activity</CardTitle>
@@ -342,9 +348,9 @@ export default function ContactDetail() {
                 <span className="font-medium">0</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Last Contact</span>
+                <span className="text-sm text-muted-foreground">Last Updated</span>
                 <span className="font-medium text-xs">
-                  {new Date(contact.updatedAt).toLocaleDateString()}
+                  {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : '—'}
                 </span>
               </div>
             </CardContent>
@@ -355,7 +361,11 @@ export default function ContactDetail() {
   )
 }
 
-function Label({ children, className, ...props }: { children: React.ReactNode; className?: string; [key: string]: any }) {
+function Label({
+  children,
+  className,
+  ...props
+}: { children: React.ReactNode; className?: string; [key: string]: any }) {
   return (
     <label className={`text-sm font-medium ${className || ''}`} {...props}>
       {children}
