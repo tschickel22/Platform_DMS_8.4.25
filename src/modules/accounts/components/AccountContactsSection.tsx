@@ -111,7 +111,10 @@ export function AccountContactsSection({
                       </TableCell>
                       <TableCell>
                         {contact.email && (
-                          <a href={`mailto:${contact.email}`} className="text-primary hover:underline flex items-center">
+                          <a
+                            href={`mailto:${contact.email}`}
+                            className="text-primary hover:underline flex items-center"
+                          >
                             <Mail className="h-3 w-3 mr-1" />
                             {contact.email}
                           </a>
@@ -119,6 +122,30 @@ export function AccountContactsSection({
                       </TableCell>
                       <TableCell>
                         {contact.phone && (
-                          <a href={`tel:${contact.phone}`} className="text-primary hover:underline flex items-center">
+                          <a
+                            href={`tel:${contact.phone}`}
+                            className="text-primary hover:underline flex items-center"
+                          >
                             <Phone className="h-3 w-3 mr-1" />
                             {contact.phone}
+                          </a>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/contacts/${contact.id}`}>
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
