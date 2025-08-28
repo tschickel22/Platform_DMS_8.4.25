@@ -1,341 +1,424 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { 
+  ModernForm, 
+  FormSection, 
+  FormGrid, 
+  TextField, 
+  SelectField, 
+  TagField 
+} from '@/components/ui/modern-form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { TagInput } from '@/components/common/TagInput'
-import { ArrowLeft, Save, Building2 } from 'lucide-react'
-import { useContactManagement } from './hooks/useContactManagement'
-import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { Label } from '@/components/ui/label'
+import { ArrowLeft, Save, X } from 'lucide-react'
 import { Contact } from '@/types'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 import { useToast } from '@/hooks/use-toast'
-import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
+
+interface ContactFormData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  accountId: string
+  title: string
+  department: string
+  isPrimary: boolean
+  preferredContactMethod: 'email' | 'phone' | 'sms' | ''
+  tags: string[]
+  socialProfiles: {
+    linkedin: string
+    facebook: string
+    twitter: string
+  }
+  preferences: {
+    bestTimeToContact: string
+    timezone: string
+  }
+  nextFollowUpDate: string
+}
 
 export default function ContactForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { getContactById, createContact, updateContact } = useContactManagement()
-  const { accounts } = useAccountManagement()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const { contacts, createContact, updateContact, getContact } = useContactManagement()
+  const { accounts } = useAccountManagement()
 
   const isEditing = !!id
-  const preselectedAccountId = searchParams.get('accountId')
-
-  // Form state
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState<ContactFormData>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
+    accountId: '',
     title: '',
     department: '',
-    accountId: preselectedAccountId || '',
     isPrimary: false,
-    preferredContactMethod: 'email' as 'email' | 'phone' | 'sms',
-    tags: [] as string[]
+    preferredContactMethod: '',
+    tags: [],
+    socialProfiles: {
+      linkedin: '',
+      facebook: '',
+      twitter: ''
+    },
+    preferences: {
+      bestTimeToContact: '',
+      timezone: 'America/New_York'
+    },
+    nextFollowUpDate: ''
   })
 
-  // Form validation
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [originalData, setOriginalData] = useState<ContactFormData | null>(null)
+  const hasUnsavedChanges = originalData && JSON.stringify(formData) !== JSON.stringify(originalData)
 
   // Load contact data for editing
   useEffect(() => {
     if (isEditing && id) {
-      const contact = getContactById(id)
-      if (contact) {
-        setFormData({
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          email: contact.email || '',
-          phone: contact.phone || '',
-          title: contact.title || '',
-          department: contact.department || '',
-          accountId: contact.accountId || '',
-          isPrimary: !!contact.isPrimary,
-          preferredContactMethod: contact.preferredContactMethod || 'email',
-          tags: contact.tags || []
-        })
-      } else {
+      setLoading(true)
+      try {
+        const contact = getContact(id)
+        if (contact) {
+          const contactFormData: ContactFormData = {
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            email: contact.email || '',
+            phone: contact.phone || '',
+            accountId: contact.accountId || '',
+            title: contact.title || '',
+            department: contact.department || '',
+            isPrimary: contact.isPrimary || false,
+            preferredContactMethod: contact.preferredContactMethod || '',
+            tags: contact.tags || [],
+            socialProfiles: {
+              linkedin: contact.socialProfiles?.linkedin || '',
+              facebook: contact.socialProfiles?.facebook || '',
+              twitter: contact.socialProfiles?.twitter || ''
+            },
+            preferences: {
+              bestTimeToContact: contact.preferences?.bestTimeToContact || '',
+              timezone: contact.preferences?.timezone || 'America/New_York'
+            },
+            nextFollowUpDate: contact.nextFollowUpDate || ''
+          }
+          setFormData(contactFormData)
+          setOriginalData(contactFormData)
+        } else {
+          toast({
+            title: 'Contact Not Found',
+            description: 'The contact you are looking for could not be found.',
+            variant: 'destructive'
+          })
+          navigate('/crm/contacts')
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Contact not found',
+          description: 'Failed to load contact data.',
           variant: 'destructive'
         })
         navigate('/crm/contacts')
+      } finally {
+        setLoading(false)
       }
+    } else {
+      setOriginalData(formData)
     }
-  }, [id, isEditing, getContactById, navigate, toast])
+  }, [id, isEditing, getContact, navigate, toast])
 
-  // Track unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault()
-        e.returnValue = ''
-      }
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [hasUnsavedChanges])
-
-  const handleInputChange = (field: string, value: string | string[] | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    setHasUnsavedChanges(true)
-    
-    // Clear field error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required'
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required'
-    }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
-    }
-
-    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-\(\)\.]/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number'
-    }
-
-    if (!formData.email && !formData.phone) {
-      newErrors.email = 'Either email or phone is required'
-      newErrors.phone = 'Either email or phone is required'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  const { navigateWithConfirm } = useUnsavedChanges({
+    hasUnsavedChanges: !!hasUnsavedChanges,
+    message: 'You have unsaved changes. Are you sure you want to leave?'
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
+    setSaving(true)
 
-    setLoading(true)
     try {
-      if (isEditing && id) {
-        const result = await updateContact(id, formData)
-        if (result) {
-          setHasUnsavedChanges(false)
-          navigate(`/crm/contacts/${id}`)
-        }
-      } else {
-        const result = await createContact(formData)
-        if (result) {
-          setHasUnsavedChanges(false)
-          navigate(`/crm/contacts/${result.id}`)
-        }
+      const contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt' | 'notes'> = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        accountId: formData.accountId || undefined,
+        title: formData.title || undefined,
+        department: formData.department || undefined,
+        isPrimary: formData.isPrimary,
+        ownerId: 'user-1', // TODO: Get from auth context
+        preferredContactMethod: formData.preferredContactMethod || undefined,
+        tags: formData.tags,
+        socialProfiles: {
+          linkedin: formData.socialProfiles.linkedin || undefined,
+          facebook: formData.socialProfiles.facebook || undefined,
+          twitter: formData.socialProfiles.twitter || undefined
+        },
+        preferences: {
+          preferredContactMethod: formData.preferredContactMethod || undefined,
+          bestTimeToContact: formData.preferences.bestTimeToContact || undefined,
+          timezone: formData.preferences.timezone
+        },
+        nextFollowUpDate: formData.nextFollowUpDate || undefined
       }
+
+      if (isEditing && id) {
+        await updateContact(id, contactData)
+        toast({
+          title: 'Contact Updated',
+          description: `${formData.firstName} ${formData.lastName} has been updated.`
+        })
+      } else {
+        const newContact = await createContact(contactData)
+        toast({
+          title: 'Contact Created',
+          description: `${formData.firstName} ${formData.lastName} has been created.`
+        })
+        navigate(`/crm/contacts/${newContact.id}`)
+        return
+      }
+
+      navigate(`/crm/contacts/${id}`)
     } catch (error) {
-      console.error('Error saving contact:', error)
+      toast({
+        title: 'Error',
+        description: `Failed to ${isEditing ? 'update' : 'create'} contact.`,
+        variant: 'destructive'
+      })
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleCancel = () => {
     if (hasUnsavedChanges) {
-      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
-        navigate(isEditing ? `/crm/contacts/${id}` : '/crm/contacts')
-      }
+      navigateWithConfirm('/crm/contacts')
     } else {
-      navigate(isEditing ? `/crm/contacts/${id}` : '/crm/contacts')
+      navigate('/crm/contacts')
     }
   }
 
-  return (
-    <ModuleErrorBoundary moduleName="Contact Form">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={handleCancel}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {isEditing ? 'Edit Contact' : 'New Contact'}
-            </h1>
-            <p className="text-muted-foreground">
-              {isEditing ? 'Update contact information' : 'Create a new contact'}
-            </p>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading contact...</p>
         </div>
-
-        {/* Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    placeholder="Enter first name"
-                    className={errors.firstName ? 'border-destructive' : ''}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-destructive">{errors.firstName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    placeholder="Enter last name"
-                    className={errors.lastName ? 'border-destructive' : ''}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-destructive">{errors.lastName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="Enter email address"
-                    className={errors.email ? 'border-destructive' : ''}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="Enter phone number"
-                    className={errors.phone ? 'border-destructive' : ''}
-                  />
-                  {errors.phone && (
-                    <p className="text-sm text-destructive">{errors.phone}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Enter job title"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    value={formData.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    placeholder="Enter department"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accountId">Account</Label>
-                  <Select value={formData.accountId} onValueChange={(value) => handleInputChange('accountId', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No account</SelectItem>
-                      {(accounts || []).map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="h-3 w-3" />
-                            <span>{account.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="preferredContactMethod">Preferred Contact Method</Label>
-                  <Select 
-                    value={formData.preferredContactMethod} 
-                    onValueChange={(value) => handleInputChange('preferredContactMethod', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <TagInput
-                  tags={formData.tags}
-                  onTagsChange={(tags) => handleInputChange('tags', tags)}
-                  placeholder="Add tags..."
-                  maxTags={10}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isPrimary"
-                  checked={formData.isPrimary}
-                  onCheckedChange={(checked) => handleInputChange('isPrimary', !!checked)}
-                />
-                <Label htmlFor="isPrimary">Primary contact for account</Label>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : isEditing ? 'Update Contact' : 'Create Contact'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
       </div>
-    </ModuleErrorBoundary>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" onClick={handleCancel}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Contacts
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {isEditing ? 'Edit Contact' : 'New Contact'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEditing ? 'Update contact information' : 'Add a new contact to your database'}
+          </p>
+        </div>
+      </div>
+
+      <ModernForm
+        title={isEditing ? `Edit ${formData.firstName} ${formData.lastName}` : 'Create New Contact'}
+        description={isEditing ? 'Update contact information and preferences' : 'Enter contact details and preferences'}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        submitLabel={isEditing ? 'Update Contact' : 'Create Contact'}
+        isSubmitting={saving}
+        hasUnsavedChanges={!!hasUnsavedChanges}
+      >
+        {/* Basic Information */}
+        <FormSection
+          title="Basic Information"
+          description="Essential contact details"
+        >
+          <FormGrid>
+            <TextField
+              label="First Name"
+              value={formData.firstName}
+              onChange={(value) => setFormData(prev => ({ ...prev, firstName: value }))}
+              placeholder="Enter first name"
+              required
+            />
+            <TextField
+              label="Last Name"
+              value={formData.lastName}
+              onChange={(value) => setFormData(prev => ({ ...prev, lastName: value }))}
+              placeholder="Enter last name"
+              required
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
+              placeholder="Enter email address"
+            />
+            <TextField
+              label="Phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+              placeholder="Enter phone number"
+            />
+          </FormGrid>
+        </FormSection>
+
+        {/* Account & Role Information */}
+        <FormSection
+          title="Account & Role"
+          description="Link to account and define role"
+        >
+          <FormGrid>
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select 
+                value={formData.accountId} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, accountId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an account (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Account</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <TextField
+              label="Job Title"
+              value={formData.title}
+              onChange={(value) => setFormData(prev => ({ ...prev, title: value }))}
+              placeholder="Enter job title"
+            />
+            <TextField
+              label="Department"
+              value={formData.department}
+              onChange={(value) => setFormData(prev => ({ ...prev, department: value }))}
+              placeholder="Enter department"
+            />
+            <SelectField
+              label="Preferred Contact Method"
+              value={formData.preferredContactMethod}
+              onChange={(value) => setFormData(prev => ({ ...prev, preferredContactMethod: value as any }))}
+              options={[
+                { value: '', label: 'No preference' },
+                { value: 'email', label: 'Email' },
+                { value: 'phone', label: 'Phone' },
+                { value: 'sms', label: 'SMS' }
+              ]}
+              placeholder="Select preferred method"
+            />
+          </FormGrid>
+        </FormSection>
+
+        {/* Tags & Preferences */}
+        <FormSection
+          title="Tags & Preferences"
+          description="Categorization and communication preferences"
+        >
+          <FormGrid>
+            <div className="md:col-span-2">
+              <TagField
+                label="Tags"
+                tags={formData.tags}
+                onChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
+                placeholder="Add tags to categorize this contact..."
+                maxTags={10}
+              />
+            </div>
+            <TextField
+              label="Best Time to Contact"
+              value={formData.preferences.bestTimeToContact}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                preferences: { ...prev.preferences, bestTimeToContact: value }
+              }))}
+              placeholder="e.g., Weekdays 9am-5pm"
+            />
+            <SelectField
+              label="Timezone"
+              value={formData.preferences.timezone}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                preferences: { ...prev.preferences, timezone: value }
+              }))}
+              options={[
+                { value: 'America/New_York', label: 'Eastern Time' },
+                { value: 'America/Chicago', label: 'Central Time' },
+                { value: 'America/Denver', label: 'Mountain Time' },
+                { value: 'America/Los_Angeles', label: 'Pacific Time' }
+              ]}
+            />
+          </FormGrid>
+        </FormSection>
+
+        {/* Social Profiles */}
+        <FormSection
+          title="Social Profiles"
+          description="Social media and professional profiles"
+        >
+          <FormGrid>
+            <TextField
+              label="LinkedIn"
+              type="url"
+              value={formData.socialProfiles.linkedin}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                socialProfiles: { ...prev.socialProfiles, linkedin: value }
+              }))}
+              placeholder="LinkedIn profile URL"
+            />
+            <TextField
+              label="Facebook"
+              type="url"
+              value={formData.socialProfiles.facebook}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                socialProfiles: { ...prev.socialProfiles, facebook: value }
+              }))}
+              placeholder="Facebook profile URL"
+            />
+            <TextField
+              label="Twitter"
+              type="url"
+              value={formData.socialProfiles.twitter}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                socialProfiles: { ...prev.socialProfiles, twitter: value }
+              }))}
+              placeholder="Twitter profile URL"
+            />
+            <div className="space-y-2">
+              <Label>Next Follow-up Date</Label>
+              <input
+                type="date"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.nextFollowUpDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, nextFollowUpDate: e.target.value }))}
+              />
+            </div>
+          </FormGrid>
+        </FormSection>
+      </ModernForm>
+    </div>
   )
 }

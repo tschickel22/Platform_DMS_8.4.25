@@ -1,357 +1,505 @@
 import React, { useState, useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/loading-skeleton'
-import { EmptyState } from '@/components/ui/empty-state'
+import { ModernTable, ModernTableColumn, ModernTableAction } from '@/components/ui/modern-table'
+import { FilterBar } from '@/components/ui/filter-bar'
+import { PageHeader, StatsGrid, StatCard } from '@/components/ui/page-header'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
+import { ImportExportActions } from '@/components/common/ImportExportActions'
+import { AdvancedSearch } from '@/components/common/AdvancedSearch'
+import { FilterPanel } from '@/components/common/FilterPanel'
 import { 
-  User, 
   Plus, 
-  Search, 
-  Filter,
-  Building2,
-  Users,
+  Eye, 
+  Edit, 
+  Trash2, 
+  Users, 
+  Building2, 
   Calendar,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye,
+  TrendingUp,
   Mail,
   Phone
 } from 'lucide-react'
-import { useContactManagement } from './hooks/useContactManagement'
+import { Contact } from '@/types'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useSavedFilters } from '@/hooks/useSavedFilters'
+import { useActivityTracking } from '@/hooks/useActivityTracking'
 import { formatDate } from '@/lib/utils'
-import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
+import { useToast } from '@/hooks/use-toast'
+
+interface ContactFilters {
+  search: string
+  hasAccount: string
+  createdDateFrom: string
+  createdDateTo: string
+  assignee: string
+  tags: string
+  preferredContactMethod: string
+}
 
 export default function ContactList() {
-  const { contacts, loading, deleteContact } = useContactManagement()
-  const { getAccountById } = useAccountManagement()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const { contacts, loading, deleteContact, createContact } = useContactManagement()
+  const { accounts } = useAccountManagement()
+  const { getActivitiesForEntity } = useActivityTracking()
+  const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('contacts')
 
-  // Apply URL filters
-  const filteredContacts = useMemo(() => {
-    let filtered = contacts || []
+  // State management
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showFilters, setShowFilters] = useState(false)
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
+  const [filters, setFilters] = useState<ContactFilters>({
+    search: '',
+    hasAccount: '',
+    createdDateFrom: '',
+    createdDateTo: '',
+    assignee: '',
+    tags: '',
+    preferredContactMethod: ''
+  })
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(contact => 
-        `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(term) ||
-        (contact.email && contact.email.toLowerCase().includes(term)) ||
-        (contact.phone && contact.phone.includes(term)) ||
-        (contact.title && contact.title.toLowerCase().includes(term))
-      )
-    }
+  // Helper function to get account by ID
+  const getAccountById = (accountId: string) => {
+    return accounts.find(account => account.id === accountId) || null
+  }
 
-    return filtered
-  }, [contacts, searchTerm])
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalContacts = contacts.length
+    const withAccounts = contacts.filter(contact => contact.accountId).length
+    const recentContacts = contacts.filter(contact => {
+      const createdDate = new Date(contact.createdAt)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      return createdDate > thirtyDaysAgo
+    }).length
 
-  // Calculate header metrics
-  const metrics = useMemo(() => {
-    const totalContacts = contacts?.length || 0
-    const contactsWithAccounts = contacts?.filter(contact => contact.accountId).length || 0
-    const primaryContacts = contacts?.filter(contact => contact.isPrimary).length || 0
-    
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const recentContacts = contacts?.filter(contact => 
-      new Date(contact.createdAt) > thirtyDaysAgo
-    ).length || 0
+    // Get recent activity count
+    const recentActivity = contacts.reduce((count, contact) => {
+      const activities = getActivitiesForEntity('contact', contact.id)
+      const recentActivities = activities.filter(activity => {
+        const activityDate = new Date(activity.timestamp)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        return activityDate > sevenDaysAgo
+      })
+      return count + recentActivities.length
+    }, 0)
 
     return {
       totalContacts,
-      contactsWithAccounts,
-      primaryContacts,
-      recentContacts
+      withAccounts,
+      recentContacts,
+      recentActivity
     }
-  }, [contacts])
+  }, [contacts, getActivitiesForEntity])
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    const newParams = new URLSearchParams(searchParams)
-    if (value) {
-      newParams.set('search', value)
-    } else {
-      newParams.delete('search')
-    }
-    setSearchParams(newParams)
-  }
-
-  const handleDeleteContact = async (contactId: string, contactName: string) => {
-    if (window.confirm(`Are you sure you want to delete "${contactName}"? This action cannot be undone.`)) {
-      await deleteContact(contactId)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="ri-page-header">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </div>
+  // Filter contacts based on current filters
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(contact => {
+      // Search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase()
+        const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase()
+        const email = contact.email?.toLowerCase() || ''
+        const phone = contact.phone?.toLowerCase() || ''
         
-        <div className="ri-stats-grid">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-20" />
-              </CardContent>
-            </Card>
+        if (!fullName.includes(searchTerm) && 
+            !email.includes(searchTerm) && 
+            !phone.includes(searchTerm)) {
+          return false
+        }
+      }
+
+      // Has Account filter
+      if (filters.hasAccount === 'yes' && !contact.accountId) return false
+      if (filters.hasAccount === 'no' && contact.accountId) return false
+
+      // Created date filters
+      if (filters.createdDateFrom) {
+        const createdDate = new Date(contact.createdAt)
+        const fromDate = new Date(filters.createdDateFrom)
+        if (createdDate < fromDate) return false
+      }
+      if (filters.createdDateTo) {
+        const createdDate = new Date(contact.createdAt)
+        const toDate = new Date(filters.createdDateTo)
+        if (createdDate > toDate) return false
+      }
+
+      // Assignee filter
+      if (filters.assignee && contact.ownerId !== filters.assignee) return false
+
+      // Tags filter
+      if (filters.tags) {
+        const tagFilter = filters.tags.toLowerCase()
+        const contactTags = contact.tags?.map(tag => tag.toLowerCase()) || []
+        if (!contactTags.some(tag => tag.includes(tagFilter))) return false
+      }
+
+      // Preferred contact method filter
+      if (filters.preferredContactMethod && 
+          contact.preferredContactMethod !== filters.preferredContactMethod) return false
+
+      return true
+    })
+  }, [contacts, filters])
+
+  // Table columns configuration
+  const columns: ModernTableColumn<Contact>[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (_, contact) => (
+        <div className="font-medium">
+          {contact.firstName} {contact.lastName}
+          {contact.title && (
+            <div className="text-xs text-muted-foreground">{contact.title}</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, contact) => {
+        if (!contact.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        
+        const account = getAccountById(contact.accountId)
+        if (!account) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+
+        return (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        )
+      }
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      render: (email) => email ? (
+        <a href={`mailto:${email}`} className="text-blue-600 hover:underline">
+          {email}
+        </a>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      render: (phone) => phone ? (
+        <a href={`tel:${phone}`} className="text-blue-600 hover:underline">
+          {phone}
+        </a>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      render: (_, contact) => (
+        <div className="flex flex-wrap gap-1">
+          {contact.tags?.slice(0, 2).map(tag => (
+            <Badge key={tag} variant="secondary" className="text-xs">
+              {tag}
+            </Badge>
           ))}
+          {contact.tags && contact.tags.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{contact.tags.length - 2}
+            </Badge>
+          )}
         </div>
-        
-        <Card>
-          <CardContent className="pt-6">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border-b last:border-b-0">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-48" />
-                </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    )
+      )
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      sortable: true,
+      render: (date) => formatDate(date)
+    }
+  ]
+
+  // Table actions
+  const actions: ModernTableAction<Contact>[] = [
+    {
+      label: 'View Details',
+      icon: Eye,
+      onClick: (contact) => navigate(`/crm/contacts/${contact.id}`)
+    },
+    {
+      label: 'Edit',
+      icon: Edit,
+      onClick: (contact) => navigate(`/crm/contacts/${contact.id}/edit`)
+    },
+    {
+      label: 'Delete',
+      icon: Trash2,
+      variant: 'destructive',
+      onClick: (contact) => handleDelete(contact)
+    }
+  ]
+
+  // Filter fields for the filter panel
+  const filterFields = [
+    {
+      key: 'hasAccount',
+      label: 'Has Account',
+      type: 'select' as const,
+      options: [
+        { value: '', label: 'All' },
+        { value: 'yes', label: 'Has Account' },
+        { value: 'no', label: 'No Account' }
+      ]
+    },
+    {
+      key: 'createdDateFrom',
+      label: 'Created From',
+      type: 'date' as const
+    },
+    {
+      key: 'createdDateTo',
+      label: 'Created To',
+      type: 'date' as const
+    },
+    {
+      key: 'assignee',
+      label: 'Assignee',
+      type: 'select' as const,
+      options: [
+        { value: '', label: 'All' },
+        { value: 'user-1', label: 'Admin User' },
+        { value: 'user-2', label: 'Sales Rep' }
+      ]
+    },
+    {
+      key: 'preferredContactMethod',
+      label: 'Preferred Contact Method',
+      type: 'select' as const,
+      options: [
+        { value: '', label: 'All' },
+        { value: 'email', label: 'Email' },
+        { value: 'phone', label: 'Phone' },
+        { value: 'sms', label: 'SMS' }
+      ]
+    }
+  ]
+
+  // Generate filter chips for active filters
+  const filterChips = Object.entries(filters)
+    .filter(([_, value]) => value !== '')
+    .map(([key, value]) => {
+      const field = filterFields.find(f => f.key === key)
+      let displayValue = value
+      
+      if (field?.options) {
+        const option = field.options.find(opt => opt.value === value)
+        displayValue = option?.label || value
+      }
+      
+      return {
+        key,
+        label: field?.label || key,
+        value: displayValue
+      }
+    })
+
+  const handleDelete = async (contact: Contact) => {
+    if (window.confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)) {
+      try {
+        await deleteContact(contact.id)
+        toast({
+          title: 'Contact Deleted',
+          description: `${contact.firstName} ${contact.lastName} has been deleted.`
+        })
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete contact.',
+          variant: 'destructive'
+        })
+      }
+    }
+  }
+
+  const handleBulkImport = (importedData: any[]) => {
+    importedData.forEach(async (data) => {
+      try {
+        await createContact(data)
+      } catch (error) {
+        console.error('Failed to import contact:', error)
+      }
+    })
+    toast({
+      title: 'Import Complete',
+      description: `Imported ${importedData.length} contacts.`
+    })
+  }
+
+  const handleAdvancedSearch = (criteria: any[]) => {
+    // Convert advanced search criteria to filters
+    const newFilters = { ...filters }
+    criteria.forEach(criterion => {
+      if (criterion.field && criterion.value) {
+        newFilters[criterion.field as keyof ContactFilters] = criterion.value
+      }
+    })
+    setFilters(newFilters)
+  }
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      hasAccount: '',
+      createdDateFrom: '',
+      createdDateTo: '',
+      assignee: '',
+      tags: '',
+      preferredContactMethod: ''
+    })
+  }
+
+  const removeFilter = (key: string) => {
+    setFilters(prev => ({ ...prev, [key]: '' }))
   }
 
   return (
-    <ModuleErrorBoundary moduleName="Contacts">
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="ri-page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="ri-page-title">Contacts</h1>
-              <p className="ri-page-description">
-                Manage individual contacts and their relationships
-              </p>
-            </div>
-            <Button asChild>
-              <Link to="/crm/contacts/new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Contact
-              </Link>
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Contacts"
+        description="Manage your contact database and relationships"
+      >
+        <div className="flex items-center gap-3">
+          <ImportExportActions
+            module="contacts"
+            data={filteredContacts}
+            onImport={handleBulkImport}
+            sampleFields={['First Name', 'Last Name', 'Email', 'Phone', 'Account ID']}
+          />
+          <Button onClick={() => navigate('/crm/contacts/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Contact
+          </Button>
         </div>
+      </PageHeader>
 
-        {/* Header Stats */}
-        <div className="ri-stats-grid">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-primary">{metrics.totalContacts}</div>
-              <p className="text-xs text-muted-foreground">
-                Individual contacts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With Accounts</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-success">{metrics.contactsWithAccounts}</div>
-              <p className="text-xs text-muted-foreground">
-                Linked to accounts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Primary Contacts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-info">{metrics.primaryContacts}</div>
-              <p className="text-xs text-muted-foreground">
-                Primary for accounts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-warning">{metrics.recentContacts}</div>
-              <p className="text-xs text-muted-foreground">
-                New this month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Statistics Grid */}
+      <StatsGrid>
+        <StatCard
+          title="Total Contacts"
+          value={stats.totalContacts}
+          icon={Users}
+          onClick={() => navigate('/crm/contacts')}
+        />
+        <StatCard
+          title="With Accounts"
+          value={stats.withAccounts}
+          change={`${Math.round((stats.withAccounts / stats.totalContacts) * 100)}% linked`}
+          changeType="neutral"
+          icon={Building2}
+        />
+        <StatCard
+          title="New This Month"
+          value={stats.recentContacts}
+          change="+12% from last month"
+          changeType="positive"
+          icon={Calendar}
+        />
+        <StatCard
+          title="Recent Activity"
+          value={stats.recentActivity}
+          change="Last 7 days"
+          changeType="neutral"
+          icon={TrendingUp}
+        />
+      </StatsGrid>
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>All Contacts</CardTitle>
-                <CardDescription>
-                  {filteredContacts.length} of {contacts?.length || 0} contacts
-                </CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="ri-search-bar">
-                  <Search className="ri-search-icon" />
-                  <Input
-                    placeholder="Search contacts..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="ri-search-input"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredContacts.length === 0 ? (
-              searchTerm ? (
-                <EmptyState
-                  title="No contacts found"
-                  description={`No contacts match "${searchTerm}". Try adjusting your search terms.`}
-                  icon={<Search className="h-12 w-12" />}
-                  action={{
-                    label: 'Clear Search',
-                    onClick: () => handleSearch('')
-                  }}
-                />
-              ) : (
-                <EmptyState
-                  title="No contacts yet"
-                  description="Get started by creating your first contact."
-                  icon={<User className="h-12 w-12" />}
-                  action={{
-                    label: 'Create Contact',
-                    onClick: () => window.location.href = '/crm/contacts/new'
-                  }}
-                />
-              )
-            ) : (
-              <div className="space-y-2">
-                {filteredContacts.map((contact) => {
-                  const linkedAccount = contact.accountId ? getAccountById(contact.accountId) : null
-                  
-                  return (
-                    <div key={contact.id} className="ri-table-row">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <h3 className="font-medium">
-                              {contact.firstName} {contact.lastName}
-                              {contact.isPrimary && (
-                                <Badge variant="outline" className="ml-2 text-xs">Primary</Badge>
-                              )}
-                            </h3>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              {linkedAccount ? (
-                                <Link 
-                                  to={`/crm/accounts/${linkedAccount.id}`}
-                                  className="flex items-center space-x-1 hover:text-primary"
-                                >
-                                  <Building2 className="h-3 w-3" />
-                                  <span>{linkedAccount.name}</span>
-                                </Link>
-                              ) : (
-                                <span className="text-muted-foreground">No account</span>
-                              )}
-                              {contact.email && (
-                                <div className="flex items-center space-x-1">
-                                  <Mail className="h-3 w-3" />
-                                  <span>{contact.email}</span>
-                                </div>
-                              )}
-                              {contact.phone && (
-                                <div className="flex items-center space-x-1">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{contact.phone}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
-                          {contact.title && <span>{contact.title}</span>}
-                          <span>Created {formatDate(contact.createdAt)}</span>
-                          {contact.tags && contact.tags.length > 0 && (
-                            <div className="flex space-x-1">
-                              {contact.tags.slice(0, 2).map(tag => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {contact.tags.length > 2 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{contact.tags.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="ri-action-buttons">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/crm/contacts/${contact.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/crm/contacts/${contact.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteContact(contact.id, `${contact.firstName} ${contact.lastName}`)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Contact
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </ModuleErrorBoundary>
+      {/* Filter Bar */}
+      <FilterBar
+        searchValue={filters.search}
+        onSearchChange={(value) => setFilters(prev => ({ ...prev, search: value }))}
+        searchPlaceholder="Search contacts by name, email, or phone..."
+        onFiltersClick={() => setShowFilters(true)}
+        onAdvancedSearchClick={() => setShowAdvancedSearch(true)}
+        filterChips={filterChips}
+        onRemoveFilter={removeFilter}
+        onClearAllFilters={clearFilters}
+      >
+        <FilterPanel
+          filters={filters}
+          onFiltersChange={setFilters}
+          savedFilters={savedFilters}
+          onSaveFilter={saveFilter}
+          onLoadFilter={(filter) => setFilters(filter.filters as ContactFilters)}
+          onDeleteFilter={deleteFilter}
+          onSetDefaultFilter={setDefaultFilter}
+          filterFields={filterFields}
+          module="contacts"
+        />
+      </FilterBar>
+
+      {/* Advanced Search Dialog */}
+      {showAdvancedSearch && (
+        <AdvancedSearch
+          onSearch={handleAdvancedSearch}
+          onClear={clearFilters}
+          entityType="contacts"
+        />
+      )}
+
+      {/* Contacts Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Contacts ({filteredContacts.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ModernTable
+            data={filteredContacts}
+            columns={columns}
+            loading={loading}
+            selectable={true}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            actions={actions}
+            onRowClick={(contact) => navigate(`/crm/contacts/${contact.id}`)}
+            emptyState={{
+              title: 'No contacts found',
+              description: 'Get started by creating your first contact.',
+              icon: Users,
+              action: {
+                label: 'Create Contact',
+                onClick: () => navigate('/crm/contacts/new')
+              }
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Bulk Operations Panel */}
+      <BulkOperationsPanel
+        selectedIds={selectedIds}
+        entityType="contacts"
+        onClearSelection={() => setSelectedIds([])}
+        onRefresh={() => window.location.reload()}
+      />
+    </div>
   )
 }

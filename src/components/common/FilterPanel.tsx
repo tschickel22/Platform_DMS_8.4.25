@@ -14,6 +14,13 @@ interface FilterConfig {
   [key: string]: any
 }
 
+interface FilterField {
+  key: string
+  label: string
+  type: 'text' | 'select' | 'date'
+  options?: Array<{ value: string; label: string }>
+}
+
 interface FilterPanelProps {
   filters: FilterConfig
   onFiltersChange: (filters: FilterConfig) => void
@@ -22,12 +29,7 @@ interface FilterPanelProps {
   onLoadFilter: (filter: SavedFilter) => void
   onDeleteFilter: (filterId: string) => void
   onSetDefaultFilter: (filterId: string) => void
-  filterFields: Array<{
-    key: string
-    label: string
-    type: 'text' | 'select' | 'date'
-    options?: Array<{ value: string; label: string }>
-  }>
+  filterFields: FilterField[]
   module: 'accounts' | 'contacts'
 }
 
@@ -66,7 +68,7 @@ export function FilterPanel({
     }
   }
 
-  const renderFilterField = (field: any) => {
+  const renderFilterField = (field: FilterField) => {
     const value = filters[field.key] || ''
 
     switch (field.type) {
@@ -148,14 +150,16 @@ export function FilterPanel({
                         )}
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onSetDefaultFilter(savedFilter.id)}
-                          title={savedFilter.isDefault ? "Remove as default" : "Set as default"}
-                        >
-                          {savedFilter.isDefault ? <StarOff className="h-3 w-3" /> : <Star className="h-3 w-3" />}
-                        </Button>
+                        {module === 'accounts' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onSetDefaultFilter(savedFilter.id)}
+                            title={savedFilter.isDefault ? "Remove as default" : "Set as default"}
+                          >
+                            {savedFilter.isDefault ? <StarOff className="h-3 w-3" /> : <Star className="h-3 w-3" />}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

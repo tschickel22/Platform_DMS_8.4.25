@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Mail, MessageSquare, Phone, Send, ChevronDown } from 'lucide-react'
+import { Mail, MessageSquare, Phone, Send, ChevronDown, AlertCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 import { Contact } from '@/types'
@@ -28,9 +29,13 @@ export function CommunicationActions({ contact, className = "" }: CommunicationA
   const [smsTemplate, setSmsTemplate] = useState('')
 
   // Check what communication methods are enabled
-  const emailEnabled = tenant?.settings?.features?.email !== false
-  const smsEnabled = tenant?.settings?.features?.sms !== false
+  const emailEnabled = tenant?.settings?.emailProvider && tenant?.settings?.emailApiKey
+  const smsEnabled = tenant?.settings?.smsProvider && tenant?.settings?.smsApiKey
   const phoneEnabled = true // Phone is always available
+
+  // Check if contact has required information
+  const hasEmail = !!contact.email
+  const hasPhone = !!contact.phone
 
   const emailTemplates = [
     { id: 'welcome', name: 'Welcome Message', subject: 'Welcome!', body: 'Hi {{firstName}},\n\nWelcome to our dealership!' },
@@ -111,35 +116,98 @@ export function CommunicationActions({ contact, className = "" }: CommunicationA
     }
   }
 
-  const availableActions = [
-    emailEnabled && contact.email && { id: 'email', label: 'Send Email', icon: Mail, action: () => setShowEmailDialog(true) },
-    smsEnabled && contact.phone && { id: 'sms', label: 'Send SMS', icon: MessageSquare, action: () => setShowSmsDialog(true) },
-    phoneEnabled && contact.phone && { id: 'call', label: 'Call', icon: Phone, action: makeCall }
-  ].filter(Boolean)
-
-  if (availableActions.length === 0) {
-    return null
+  // Helper function to get tooltip message for disabled actions
+  const getTooltipMessage = (type: 'email' | 'sms' | 'phone') => {
+    switch (type) {
+      case 'email':
+        if (!hasEmail) return 'No email address available'
+        if (!emailEnabled) return 'Email provider not configured in settings'
+        return ''
+      case 'sms':
+        if (!hasPhone) return 'No phone number available'
+        if (!smsEnabled) return 'SMS provider not configured in settings'
+        return ''
+      case 'phone':
+        if (!hasPhone) return 'No phone number available'
+        return ''
+      default:
+        return ''
+    }
   }
 
+  const ActionButton = ({ 
+    type, 
+    icon: Icon, 
+    label, 
+    onClick, 
+    disabled 
+  }: { 
+    type: 'email' | 'sms' | 'phone'
+    icon: React.ComponentType<any>
+    label: string
+    onClick: () => void
+    disabled: boolean
+  }) => {
+    const tooltipMessage = getTooltipMessage(type)
+    
+    if (disabled && tooltipMessage) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button variant="outline" size="sm" disabled className="w-full justify-start">
+                  <Icon className="h-4 w-4 mr-2" />
+                  {label}
+                  <AlertCircle className="h-3 w-3 ml-auto text-muted-foreground" />
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{tooltipMessage}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    }
+
+    return (
+      <Button variant="outline" size="sm" onClick={onClick} disabled={disabled} className="w-full justify-start">
+        <Icon className="h-4 w-4 mr-2" />
+        {label}
+      </Button>
+    )
+  }
+
+  const emailDisabled = !hasEmail || !emailEnabled
+  const smsDisabled = !hasPhone || !smsEnabled
+  const phoneDisabled = !hasPhone
+
   return (
-    <div className={className}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Mail className="mr-2 h-4 w-4" />
-            Contact
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {availableActions.map((action: any) => (
-            <DropdownMenuItem key={action.id} onClick={action.action}>
-              <action.icon className="mr-2 h-4 w-4" />
-              {action.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className={`space-y-2 ${className}`}>
+      <ActionButton
+        type="email"
+        icon={Mail}
+        label="Send Email"
+        onClick={() => setShowEmailDialog(true)}
+        disabled={emailDisabled}
+      />
+      
+      <ActionButton
+        type="sms"
+        icon={MessageSquare}
+        label="Send SMS"
+        onClick={() => setShowSmsDialog(true)}
+        disabled={smsDisabled}
+      />
+      
+      <ActionButton
+        type="phone"
+        icon={Phone}
+        label="Call Contact"
+        onClick={makeCall}
+        disabled={phoneDisabled}
+      />
 
       {/* Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
