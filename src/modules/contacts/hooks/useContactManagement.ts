@@ -204,7 +204,7 @@ export function useContactManagement() {
     getContactsByAccount,
     createContact,
     updateContact,
-    getAccountForContact
+    getAccountForContact,
     deleteContact,
     getContact,
     getContactsByAccount,
