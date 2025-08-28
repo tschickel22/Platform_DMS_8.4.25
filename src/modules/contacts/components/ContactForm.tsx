@@ -23,9 +23,13 @@ import { useToast } from '@/hooks/use-toast'
 export default function ContactForm() {
   const { contactId } = useParams<{ contactId: string }>()
   const navigate = useNavigate()
+  const { contactId } = useParams()
   const { toast } = useToast()
-  const { getContact, createContact, updateContact } = useContactManagement()
+  const { createContact, updateContact, getContactById } = useContactManagement()
   const { accounts } = useAccountManagement()
+  
+  const isEditing = !!contactId
+  const existingContact = isEditing ? getContactById(contactId) : null
   
   const isEditing = contactId !== 'new'
   const existingContact = isEditing ? getContact(contactId!) : null
@@ -35,6 +39,24 @@ export default function ContactForm() {
     ...(existingContact || {})
   })
   const [saving, setSaving] = useState(false)
+  // Load existing contact data when editing
+  useEffect(() => {
+    if (isEditing && existingContact) {
+      setFormData({
+        accountId: existingContact.accountId || '',
+        firstName: existingContact.firstName,
+        lastName: existingContact.lastName,
+        email: existingContact.email || '',
+        phone: existingContact.phone || '',
+        title: existingContact.title || '',
+        department: existingContact.department || '',
+        notes: existingContact.notes || '',
+        tags: existingContact.tags || [],
+        customFields: existingContact.customFields || {}
+      })
+    }
+  }, [isEditing, existingContact])
+
   const [tagInput, setTagInput] = useState('')
 
   useEffect(() => {
@@ -47,7 +69,19 @@ export default function ContactForm() {
     e.preventDefault()
     setSaving(true)
 
-    try {
+      if (isEditing && contactId) {
+        await updateContact(contactId, formData)
+        toast({
+          title: 'Success',
+          description: 'Contact updated successfully'
+        })
+      } else {
+        await createContact(formData)
+        toast({
+          title: 'Success',
+          description: 'Contact created successfully'
+        })
+      }
       if (isEditing && contactId) {
         await updateContact(contactId, formData)
         toast({
@@ -56,11 +90,6 @@ export default function ContactForm() {
         })
       } else {
         await createContact(formData)
-        toast({
-          title: 'Contact Created',
-          description: 'New contact has been successfully created.'
-        })
-      }
       navigate('/contacts')
     } catch (error) {
       toast({
@@ -266,9 +295,9 @@ export default function ContactForm() {
         {/* Tags */}
         <Card>
           <CardHeader>
-            <CardTitle>Tags</CardTitle>
+            <CardTitle>{isEditing ? 'Edit Contact' : 'Add New Contact'}</CardTitle>
             <CardDescription>
-              Add tags to categorize and organize contacts
+              {isEditing ? 'Update contact information' : 'Create a new contact record'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

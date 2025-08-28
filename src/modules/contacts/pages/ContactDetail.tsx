@@ -92,7 +92,7 @@ export default function ContactDetail() {
             </div>
           </div>
           <Button asChild>
-            <Link to={`/contacts/${contact.id}/edit`}>
+            <Link to={`/contacts/${contactId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Contact
             </Link>
