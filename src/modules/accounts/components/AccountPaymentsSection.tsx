@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { GripVertical, CreditCard, DollarSign, ExternalLink, CalendarHash as Calendar } from 'lucide-react'
+import { GripVertical, CreditCard, DollarSign, ExternalLink, Calendar } from 'lucide-react'
 import { loadFromLocalStorage, formatDate, formatCurrency } from '@/lib/utils'
 
 type Payment = {
