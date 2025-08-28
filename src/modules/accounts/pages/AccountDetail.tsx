@@ -11,6 +11,8 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
+
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
