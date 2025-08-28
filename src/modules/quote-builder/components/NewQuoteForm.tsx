@@ -13,6 +13,13 @@ import { mockContacts } from '@/mocks/contactsMock'
 import { formatCurrency, generateId, saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { Plus, Trash2 } from 'lucide-react'
 
+interface QuoteItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
 interface QuoteFormData {
   accountId: string
   contactId: string
@@ -22,15 +29,6 @@ interface QuoteFormData {
   validUntil: string
   terms: string
 }
-
-interface QuoteItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
-  total: number
-}
-
 interface Quote {
   id: string
   number: string
@@ -48,10 +46,7 @@ interface Quote {
   createdAt: string
   updatedAt: string
 }
-
-type Props = ReturnToBehavior & {
-  quoteId?: string
-}
+type Props = ReturnToBehavior & { quoteId?: string }
 
 export default function NewQuoteForm(props: Props) {
   const { toast } = useToast()
@@ -63,60 +58,44 @@ export default function NewQuoteForm(props: Props) {
     accountId: accountId || '',
     contactId: '',
     vehicleId: '',
-    items: [
-      { id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 },
-    ],
+    items: [{ id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 }],
     notes: '',
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     terms: 'Standard terms and conditions apply. Quote valid for 30 days.',
   })
 
-  // Select options
   const accounts = mockAccounts.sampleAccounts
-  const contacts = mockContacts.sampleContacts.filter(
-    c => !formData.accountId || c.accountId === formData.accountId
-  )
+  const contacts = mockContacts.sampleContacts.filter((c) => !formData.accountId || c.accountId === formData.accountId)
   const vehicles = mockInventory.sampleVehicles
 
-  const updateFormData = (field: keyof QuoteFormData, value: any) =>
-    setFormData(prev => ({ ...prev, [field]: value }))
-
-  const addItem = () => {
-    const newItem: QuoteItem = { id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 }
-    updateFormData('items', [...formData.items, newItem])
+  const updateFormData = (field: keyof QuoteFormData, value: any) => setFormData((p) => ({ ...p, [field]: value }))
+  const addItem = () =>
+    updateFormData('items', [...formData.items, { id: generateId(), description: '', quantity: 1, unitPrice: 0, total: 0 }])
+  const updateItem = (id: string, field: keyof QuoteItem, value: any) => {
+    updateFormData(
+      'items',
+      formData.items.map((it) => {
+        if (it.id !== id) return it
+        const next = { ...it, [field]: value }
+        if (field === 'quantity' || field === 'unitPrice') next.total = (next.quantity || 0) * (next.unitPrice || 0)
+        return next
+      }),
+    )
+  }
+  const removeItem = (id: string) => {
+    if (formData.items.length > 1) updateFormData('items', formData.items.filter((it) => it.id !== id))
   }
 
-  const updateItem = (itemId: string, field: keyof QuoteItem, value: any) => {
-    const updated = formData.items.map(item => {
-      if (item.id !== itemId) return item
-      const next = { ...item, [field]: value }
-      if (field === 'quantity' || field === 'unitPrice') {
-        next.total = Number(next.quantity) * Number(next.unitPrice)
-      }
-      return next
-    })
-    updateFormData('items', updated)
-  }
-
-  const removeItem = (itemId: string) => {
-    if (formData.items.length <= 1) return
-    updateFormData('items', formData.items.filter(i => i.id !== itemId))
-  }
-
-  // Totals
-  const subtotal = formData.items.reduce((sum, i) => sum + Number(i.total || 0), 0)
-  const taxRate = 0.08
-  const tax = subtotal * taxRate
+  const subtotal = formData.items.reduce((s, i) => s + i.total, 0)
+  const tax = subtotal * 0.08
   const total = subtotal + tax
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
       if (!formData.accountId) throw new Error('Account is required')
-      if (formData.items.length === 0 || formData.items.every(i => !i.description.trim())) {
-        throw new Error('At least one quote item is required')
-      }
+      if (formData.items.every((i) => !i.description.trim())) throw new Error('At least one quote item is required')
 
       const newQuote: Quote = {
         id: generateId(),
@@ -124,7 +103,7 @@ export default function NewQuoteForm(props: Props) {
         accountId: formData.accountId,
         contactId: formData.contactId,
         vehicleId: formData.vehicleId,
-        items: formData.items.filter(i => i.description.trim()),
+        items: formData.items.filter((i) => i.description.trim()),
         subtotal,
         tax,
         total,
@@ -138,20 +117,17 @@ export default function NewQuoteForm(props: Props) {
 
       const existing = loadFromLocalStorage<Quote[]>('quotes', [])
       saveToLocalStorage('quotes', [newQuote, ...existing])
-
       toast({ title: 'Success', description: `Quote ${newQuote.number} created successfully` })
       afterSave(newQuote, '/quotes')
-    } catch (err) {
-      console.error(err)
-      const msg = err instanceof Error ? err.message : 'Failed to create quote'
-      toast({ title: 'Error', description: msg, variant: 'destructive' })
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to create quote', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className={isModal ? 'p-6 max-h-[80vh] overflow-y-auto' : ''}>
+    <div className={isModal ? 'p-6' : ''}>
       {!isModal && (
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Create New Quote</h1>
@@ -160,14 +136,6 @@ export default function NewQuoteForm(props: Props) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {isModal && (
-          <div className="border-b pb-4 mb-6">
-            <h2 className="text-xl font-semibold">Create New Quote</h2>
-            <p className="text-sm text-muted-foreground">Generate a quote for products or services</p>
-          </div>
-        )}
-
-        {/* Quote Information */}
         <Card>
           <CardHeader>
             <CardTitle>Quote Information</CardTitle>
@@ -179,8 +147,8 @@ export default function NewQuoteForm(props: Props) {
                 <Label htmlFor="accountId">Account *</Label>
                 <Select
                   value={formData.accountId}
-                  onValueChange={value => {
-                    updateFormData('accountId', value)
+                  onValueChange={(v) => {
+                    updateFormData('accountId', v)
                     updateFormData('contactId', '')
                   }}
                   disabled={!!accountId}
@@ -189,9 +157,9 @@ export default function NewQuoteForm(props: Props) {
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map(acc => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.name}
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -200,16 +168,12 @@ export default function NewQuoteForm(props: Props) {
 
               <div>
                 <Label htmlFor="contactId">Contact</Label>
-                <Select
-                  value={formData.contactId}
-                  onValueChange={value => updateFormData('contactId', value)}
-                  disabled={!formData.accountId}
-                >
+                <Select value={formData.contactId} onValueChange={(v) => updateFormData('contactId', v)} disabled={!formData.accountId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    {contacts.map(c => (
+                    {contacts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.firstName} {c.lastName}
                       </SelectItem>
@@ -220,12 +184,12 @@ export default function NewQuoteForm(props: Props) {
 
               <div>
                 <Label htmlFor="vehicleId">Vehicle/Product</Label>
-                <Select value={formData.vehicleId} onValueChange={v => updateFormData('vehicleId', v)}>
+                <Select value={formData.vehicleId} onValueChange={(v) => updateFormData('vehicleId', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicles.map(v => (
+                    {mockInventory.sampleVehicles.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.year} {v.make} {v.model}
                       </SelectItem>
@@ -240,7 +204,7 @@ export default function NewQuoteForm(props: Props) {
                   id="validUntil"
                   type="date"
                   value={formData.validUntil}
-                  onChange={e => updateFormData('validUntil', e.target.value)}
+                  onChange={(e) => updateFormData('validUntil', e.target.value)}
                   required
                 />
               </div>
@@ -248,7 +212,6 @@ export default function NewQuoteForm(props: Props) {
           </CardContent>
         </Card>
 
-        {/* Quote Items */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -264,38 +227,35 @@ export default function NewQuoteForm(props: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {formData.items.map(item => (
+              {formData.items.map((item) => (
                 <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 border rounded-lg">
                   <div className="md:col-span-5">
-                    <Label htmlFor={`description-${item.id}`}>Description *</Label>
+                    <Label>Description *</Label>
                     <Input
-                      id={`description-${item.id}`}
                       value={item.description}
-                      onChange={e => updateItem(item.id, 'description', e.target.value)}
+                      onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                       placeholder="Item description"
                       required
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
+                    <Label>Quantity *</Label>
                     <Input
-                      id={`quantity-${item.id}`}
                       type="number"
-                      min={1}
+                      min="1"
                       value={item.quantity}
-                      onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                       required
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor={`unitPrice-${item.id}`}>Unit Price *</Label>
+                    <Label>Unit Price *</Label>
                     <Input
-                      id={`unitPrice-${item.id}`}
                       type="number"
-                      min={0}
+                      min="0"
                       step="0.01"
                       value={item.unitPrice}
-                      onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                       required
                     />
                   </div>
@@ -306,13 +266,7 @@ export default function NewQuoteForm(props: Props) {
                     </div>
                   </div>
                   <div className="md:col-span-1 flex items-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                      disabled={formData.items.length === 1}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)} disabled={formData.items.length === 1}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -320,7 +274,6 @@ export default function NewQuoteForm(props: Props) {
               ))}
             </div>
 
-            {/* Totals */}
             <div className="mt-6 space-y-2 border-t pt-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
@@ -338,7 +291,6 @@ export default function NewQuoteForm(props: Props) {
           </CardContent>
         </Card>
 
-        {/* Terms and Notes */}
         <Card>
           <CardHeader>
             <CardTitle>Terms and Notes</CardTitle>
@@ -347,28 +299,15 @@ export default function NewQuoteForm(props: Props) {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="terms">Terms and Conditions</Label>
-              <Textarea
-                id="terms"
-                value={formData.terms}
-                onChange={e => updateFormData('terms', e.target.value)}
-                placeholder="Enter terms and conditions"
-                rows={3}
-              />
+              <Textarea id="terms" value={formData.terms} onChange={(e) => updateFormData('terms', e.target.value)} rows={3} />
             </div>
             <div>
               <Label htmlFor="notes">Internal Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={e => updateFormData('notes', e.target.value)}
-                placeholder="Internal notes (not visible to customer)"
-                rows={3}
-              />
+              <Textarea id="notes" value={formData.notes} onChange={(e) => updateFormData('notes', e.target.value)} rows={3} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Actions */}
         <div className="flex items-center justify-end space-x-4">
           <Button type="button" variant="outline" onClick={() => afterSave(null, '/quotes')} disabled={loading}>
             Cancel
