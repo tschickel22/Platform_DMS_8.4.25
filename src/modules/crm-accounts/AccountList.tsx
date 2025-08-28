@@ -84,7 +84,8 @@ export default function AccountList() {
     if (def && noFiltersApplied) {
       setFilters(def.filters)
     }
-  }, [getDefaultFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getDefaultFilter])
 
   // Sync URL params when filters change
   React.useEffect(() => {
@@ -184,7 +185,12 @@ export default function AccountList() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <ImportExportActions module="accounts" data={filteredAccounts} onImport={handleImport} sampleFields={sampleFields} />
+          <ImportExportActions
+            module="accounts"
+            data={filteredAccounts}
+            onImport={handleImport}
+            sampleFields={sampleFields}
+          />
           <Button asChild>
             <Link to="/crm/accounts/new">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -213,12 +219,16 @@ export default function AccountList() {
           onLoadFilter={(f) => setFilters(f.filters)}
           onDeleteFilter={deleteFilter}
           onSetDefaultFilter={setDefaultFilter}
-          filterFields={filterFields}   {/* <-- important: provide fields to avoid undefined.map */}
+          filterFields={filterFields}
           module="accounts"
         />
       </div>
 
-      <AdvancedSearch onSearch={setAdvancedSearchCriteria} onClear={() => setAdvancedSearchCriteria([])} entityType="accounts" />
+      <AdvancedSearch
+        onSearch={setAdvancedSearchCriteria}
+        onClear={() => setAdvancedSearchCriteria([])}
+        entityType="accounts"
+      />
 
       {/* Selection Info */}
       {selectedIds.length > 0 && (
@@ -232,7 +242,9 @@ export default function AccountList() {
       <Card>
         <CardHeader>
           <CardTitle>All Accounts</CardTitle>
-          <CardDescription>A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.</CardDescription>
+          <CardDescription>
+            A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
