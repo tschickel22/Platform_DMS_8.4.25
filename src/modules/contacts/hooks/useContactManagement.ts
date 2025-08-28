@@ -1,24 +1,25 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Contact, Account } from '@/types'
+import type { Contact, Account } from '@/types'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { mockContacts } from '@/mocks/contactsMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+
+const LS_KEY = 'renter-insight-contacts'
 
 export function useContactManagement() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load contacts from localStorage on mount
+  // Load contacts on mount
   useEffect(() => {
     try {
-      const savedContacts = loadFromLocalStorage<Contact[]>('renter-insight-contacts', [])
-      if (savedContacts.length > 0) {
-        setContacts(savedContacts)
+      const saved = loadFromLocalStorage<Contact[]>(LS_KEY, [])
+      if (saved && saved.length) {
+        setContacts(saved)
       } else {
-        // Use mock data if no saved data exists
         setContacts(mockContacts.sampleContacts)
-        saveToLocalStorage('renter-insight-contacts', mockContacts.sampleContacts)
+        saveToLocalStorage(LS_KEY, mockContacts.sampleContacts)
       }
     } catch (err) {
       console.error('Error loading contacts:', err)
@@ -29,37 +30,36 @@ export function useContactManagement() {
     }
   }, [])
 
-  // Save contacts to localStorage whenever they change
+  // Persist on change
   useEffect(() => {
-    if (contacts.length > 0) {
-      saveToLocalStorage('renter-insight-contacts', contacts)
+    try {
+      saveToLocalStorage(LS_KEY, contacts)
+    } catch (err) {
+      console.error('Error saving contacts:', err)
     }
   }, [contacts])
 
-  // Calculate contact metrics
+  // Metrics
   const metrics = useMemo(() => {
     const totalContacts = contacts.length
-    const assignedContacts = contacts.filter(contact => contact.accountId).length
-    const unassignedContacts = contacts.filter(contact => !contact.accountId).length
+    const assignedContacts = contacts.filter(c => !!c.accountId).length
+    const unassignedContacts = totalContacts - assignedContacts
 
-    // Calculate new contacts this month
     const thisMonth = new Date()
     thisMonth.setDate(1)
-    const newThisMonth = contacts.filter(contact => new Date(contact.createdAt) >= thisMonth).length
+    const newThisMonth = contacts.filter(c => new Date(c.createdAt) >= thisMonth).length
 
-    // Calculate contacts by department
-    const contactsByDepartment = contacts.reduce((acc, contact) => {
-      const dept = contact.department || 'Unspecified'
-      acc[dept] = (acc[dept] || 0) + 1
+    const contactsByDepartment = contacts.reduce<Record<string, number>>((acc, c) => {
+      const k = c.department || 'Unspecified'
+      acc[k] = (acc[k] || 0) + 1
       return acc
-    }, {} as Record<string, number>)
+    }, {})
 
-    // Calculate contacts by title
-    const contactsByTitle = contacts.reduce((acc, contact) => {
-      const title = contact.title || 'Unspecified'
-      acc[title] = (acc[title] || 0) + 1
+    const contactsByTitle = contacts.reduce<Record<string, number>>((acc, c) => {
+      const k = c.title || 'Unspecified'
+      acc[k] = (acc[k] || 0) + 1
       return acc
-    }, {} as Record<string, number>)
+    }, {})
 
     return {
       totalContacts,
@@ -67,36 +67,43 @@ export function useContactManagement() {
       unassignedContacts,
       newThisMonth,
       contactsByDepartment,
-      contactsByTitle
+      contactsByTitle,
     }
   }, [contacts])
 
-  const getContactById = (id: string) => {
-    return contacts.find(contact => contact.id === id) || null
-  }
+  // Queries
+  const getContactById = (id: string): Contact | null =>
+    contacts.find(c => c.id === id) || null
 
-  // Create a new contact
-  const createContact = async (contactData: Partial<Contact>): Promise<Contact> => {
+  const getContact = (id: string): Contact | null => getContactById(id)
+
+  const getContactsByAccount = (accountId: string): Contact[] =>
+    contacts.filter(c => c.accountId === accountId)
+
+  const getAccountForContact = (contact: Contact): Account | undefined =>
+    mockAccounts.sampleAccounts.find(a => a.id === contact.accountId)
+
+  // Mutations
+  const createContact = async (data: Partial<Contact>): Promise<Contact> => {
     setLoading(true)
     try {
       const newContact: Contact = {
-        id: `cont-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        accountId: contactData.accountId || null,
-        firstName: contactData.firstName || '',
-        lastName: contactData.lastName || '',
-        email: contactData.email || '',
-        phone: contactData.phone || '',
-        title: contactData.title || '',
-        department: contactData.department || '',
-        notes: contactData.notes || '',
-        tags: contactData.tags || [],
-        customFields: contactData.customFields || {},
+        id: `cont-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        accountId: data.accountId ?? null,
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
+        email: data.email ?? '',
+        phone: data.phone ?? '',
+        title: data.title ?? '',
+        department: data.department ?? '',
+        notes: data.notes ?? '',
+        tags: data.tags ?? [],
+        customFields: data.customFields ?? {},
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: 'current-user', // TODO: Get from auth context
-        updatedBy: 'current-user'
+        createdBy: 'current-user',
+        updatedBy: 'current-user',
       }
-
       setContacts(prev => [newContact, ...prev])
       return newContact
     } finally {
@@ -105,42 +112,26 @@ export function useContactManagement() {
   }
 
   const updateContact = async (id: string, updates: Partial<Contact>): Promise<Contact | null> => {
-    const contactIndex = contacts.findIndex(contact => contact.id === id)
-    if (contactIndex === -1) return null
+    const idx = contacts.findIndex(c => c.id === id)
+    if (idx === -1) return null
 
-    const updatedContact = {
-      ...contacts[contactIndex],
+    const updated: Contact = {
+      ...contacts[idx],
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }
 
-    const newContacts = [...contacts]
-    newContacts[contactIndex] = updatedContact
-    setContacts(newContacts)
-
-    return updatedContact
+    const next = [...contacts]
+    next[idx] = updated
+    setContacts(next)
+    return updated
   }
 
-  // Delete a contact
-  const deleteContact = async (contactId: string): Promise<void> => {
-    setContacts(prev => prev.filter(contact => contact.id !== contactId))
+  const deleteContact = async (id: string): Promise<void> => {
+    setContacts(prev => prev.filter(c => c.id !== id))
   }
 
-  // Get contact by ID
-  const getContact = (contactId: string): Contact | null => {
-    return contacts.find(contact => contact.id === contactId) || null
-  }
-
-  // Get contacts by account ID
-  const getContactsByAccount = (accountId: string): Contact[] => {
-    return contacts.filter(contact => contact.accountId === accountId)
-  }
-
-  const getAccountForContact = (contact: Contact): Account | undefined => {
-    return mockAccounts.sampleAccounts.find(account => account.id === contact.accountId)
-  }
-
-  // Filter functions
+  // Filtering helpers
   const filterContacts = (filters: {
     accountId?: string
     department?: string
@@ -148,70 +139,61 @@ export function useContactManagement() {
     tags?: string[]
     searchTerm?: string
     hasAccount?: boolean
-  }) => {
-    return contacts.filter(contact => {
-      if (filters.accountId && contact.accountId !== filters.accountId) return false
-      if (filters.department && contact.department !== filters.department) return false
-      if (filters.title && contact.title !== filters.title) return false
-      if (filters.hasAccount !== undefined) {
-        const hasAccount = !!contact.accountId
-        if (hasAccount !== filters.hasAccount) return false
+  }): Contact[] => {
+    return contacts.filter(c => {
+      if (filters.accountId && c.accountId !== filters.accountId) return false
+      if (filters.department && c.department !== filters.department) return false
+      if (filters.title && c.title !== filters.title) return false
+      if (typeof filters.hasAccount === 'boolean') {
+        if (!!c.accountId !== filters.hasAccount) return false
       }
-      if (filters.tags && filters.tags.length > 0) {
-        const hasMatchingTag = filters.tags.some(tag => contact.tags.includes(tag))
-        if (!hasMatchingTag) return false
+      if (filters.tags?.length) {
+        const has = filters.tags.some(t => c.tags.includes(t))
+        if (!has) return false
       }
       if (filters.searchTerm) {
         const term = filters.searchTerm.toLowerCase()
-        const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase()
-        const matchesSearch = 
+        const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
+        const matches =
           fullName.includes(term) ||
-          contact.email?.toLowerCase().includes(term) ||
-          contact.phone?.includes(term) ||
-          contact.title?.toLowerCase().includes(term) ||
-          contact.department?.toLowerCase().includes(term) ||
-          contact.tags.some(tag => tag.toLowerCase().includes(term))
-        if (!matchesSearch) return false
+          (c.email ?? '').toLowerCase().includes(term) ||
+          (c.phone ?? '').includes(term) ||
+          (c.title ?? '').toLowerCase().includes(term) ||
+          (c.department ?? '').toLowerCase().includes(term) ||
+          c.tags.some(t => t.toLowerCase().includes(term))
+        if (!matches) return false
       }
       return true
     })
   }
 
-  // Get all unique tags
-  const getAllTags = () => {
-    const allTags = contacts.flatMap(contact => contact.tags)
-    return [...new Set(allTags)].sort()
-  }
+  const getAllTags = (): string[] =>
+    [...new Set(contacts.flatMap(c => c.tags))].sort()
 
-  // Get all unique departments
-  const getAllDepartments = () => {
-    const allDepartments = contacts.map(contact => contact.department).filter(Boolean)
-    return [...new Set(allDepartments)].sort()
-  }
+  const getAllDepartments = (): string[] =>
+    [...new Set(contacts.map(c => c.department).filter(Boolean) as string[])].sort()
 
-  // Get all unique titles
-  const getAllTitles = () => {
-    const allTitles = contacts.map(contact => contact.title).filter(Boolean)
-    return [...new Set(allTitles)].sort()
-  }
+  const getAllTitles = (): string[] =>
+    [...new Set(contacts.map(c => c.title).filter(Boolean) as string[])].sort()
 
   return {
     contacts,
     loading,
     error,
     metrics,
+    // queries
     getContactById,
-    getContactsByAccount,
-    createContact,
-    updateContact,
-    getAccountForContact,
-    deleteContact,
     getContact,
     getContactsByAccount,
+    getAccountForContact,
+    // mutations
+    createContact,
+    updateContact,
+    deleteContact,
+    // filters/helpers
     filterContacts,
     getAllTags,
     getAllDepartments,
-    getAllTitles
+    getAllTitles,
   }
-  getAccountForContact: (contact: Contact) => Account | undefined
 }
