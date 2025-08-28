@@ -1,22 +1,21 @@
-// src/modules/contacts/components/ContactForm.tsx
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ArrowLeft, Save, User } from 'lucide-react'
+import { useContactManagement } from '../hooks/useContactManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { Contact } from '@/types'
 import { useToast } from '@/hooks/use-toast'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
-import { mockContacts } from '@/mocks/contactsMock'
-import { mockAccounts } from '@/mocks/accountsMock'
 import { TagInput } from '@/components/common/TagInput'
+import mockCompanySettings from '@/mocks/companySettingsMock'
+import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
 
-type Params = { contactId?: string }
-
-type ContactFormState = {
+interface ContactFormState {
   accountId: string
   firstName: string
   lastName: string
@@ -26,22 +25,34 @@ type ContactFormState = {
   department: string
   notes: string
   tags: string[]
-  // eslint-disable-next-line @typescript-eslint/ban-types
   customFields: Record<string, any>
 }
 
-export default function ContactForm() {
+type Props = ReturnToBehavior & {
+  contactId?: string
+}
+
+export default function ContactForm(props: Props) {
+  const { contactId } = useParams<{ contactId: string }>()
+  const actualContactId = props.contactId || contactId
   const navigate = useNavigate()
-  const { contactId } = useParams<Params>()
-  const [searchParams] = useSearchParams()
+  const { accountId, afterSave } = useReturnTargets(props)
   const { toast } = useToast()
-
-  const { createContact, updateContact, getContactById } = useContactManagement()
-
-  const isEditing = Boolean(contactId)
-
+  
+  const { 
+    contacts, 
+    createContact, 
+    updateContact, 
+    loading: contactsLoading 
+  } = useContactManagement()
+  
+  const { accounts } = useAccountManagement()
+  
+  const [loading, setLoading] = useState(false)
+  const isEditing = !!actualContactId
+  
   const [formData, setFormData] = useState<ContactFormState>({
-    accountId: '',
+    accountId: accountId || '',
     firstName: '',
     lastName: '',
     email: '',
@@ -50,214 +61,187 @@ export default function ContactForm() {
     department: '',
     notes: '',
     tags: [],
-    customFields: {},
+    customFields: {}
   })
 
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(isEditing)
-
-  // Prefill accountId when coming from AccountDetail ("Add Contact")
   useEffect(() => {
-    if (isEditing) return
-    const fromAccount = searchParams.get('accountId')
-    if (fromAccount) {
-      setFormData(prev => ({ ...prev, accountId: fromAccount }))
-    }
-  }, [searchParams, isEditing])
-
-  // Load existing contact data (edit mode)
-  useEffect(() => {
-    if (!isEditing || !contactId) {
-      setInitialLoading(false)
-      return
-    }
-
-    let cancelled = false
-
-    const load = async () => {
-      try {
-        const contact = await getContactById(contactId)
-        if (cancelled || !contact) return
-
+    if (isEditing && actualContactId) {
+      const contact = contacts.find(c => c.id === actualContactId)
+      if (contact) {
         setFormData({
           accountId: contact.accountId || '',
-          firstName: contact.firstName || '',
-          lastName: contact.lastName || '',
+          firstName: contact.firstName,
+          lastName: contact.lastName,
           email: contact.email || '',
           phone: contact.phone || '',
           title: contact.title || '',
           department: contact.department || '',
           notes: contact.notes || '',
           tags: contact.tags || [],
-          customFields: contact.customFields || {},
+          customFields: contact.customFields || {}
         })
-      } catch (err) {
-        console.error('Failed to load contact', err)
-        toast({
-          title: 'Error',
-          description: 'Failed to load contact data.',
-          variant: 'destructive',
-        })
-      } finally {
-        if (!cancelled) setInitialLoading(false)
       }
     }
-
-    load()
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, contactId, toast])
+  }, [isEditing, actualContactId, contacts])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    
     try {
-      if (isEditing && contactId) {
-        await updateContact(contactId, formData)
-        toast({ title: 'Success', description: 'Contact updated successfully.' })
+      let savedContact: Contact | null = null
+      
+      if (isEditing) {
+        savedContact = await updateContact(actualContactId!, formData)
+        toast({
+          title: 'Success',
+          description: 'Contact updated successfully'
+        })
       } else {
-        await createContact(formData)
-        toast({ title: 'Success', description: 'Contact created successfully.' })
+        savedContact = await createContact(formData)
+        toast({
+          title: 'Success',
+          description: 'Contact created successfully'
+        })
       }
-
-      // ✅ Redirect back to the originating account if available
-      const fromAccountId = searchParams.get('accountId')
-      const targetAccountId = formData.accountId || fromAccountId || ''
-      if (targetAccountId) {
-        navigate(`/accounts/${targetAccountId}`)
-      } else {
-        navigate('/contacts')
-      }
-    } catch (err) {
-      console.error('Failed to save contact', err)
+      
+      afterSave(savedContact, '/contacts')
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save contact. Please try again.',
-        variant: 'destructive',
+        description: 'Failed to save contact',
+        variant: 'destructive'
       })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleInputChange = (field: keyof ContactFormState, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  const handleCancel = () => {
+    if (props.onSaved) {
+      props.onSaved(null) // Close modal without saving
+    } else {
+      navigate('/contacts')
+    }
   }
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading contact...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const titleOptions = (mockContacts?.titleOptions ?? []) as string[]
-  const departmentOptions = (mockContacts?.departmentOptions ?? []) as string[]
-  const accounts = (mockAccounts?.sampleAccounts ?? []) as { id: string; name: string }[]
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {isEditing ? 'Edit Contact' : 'New Contact'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEditing ? 'Update contact information' : 'Add a new contact to your CRM'}
-        </p>
-      </div>
-
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>{isEditing ? 'Edit Contact' : 'Contact Information'}</CardTitle>
-          <CardDescription>
-            {isEditing ? 'Update the contact details below' : 'Enter the contact details below'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account */}
-            <div className="space-y-2">
-              <Label htmlFor="accountId">Account (Optional)</Label>
-              <Select
-                value={formData.accountId}
-                onValueChange={(value) => handleInputChange('accountId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No Account</SelectItem>
-                  {accounts.map((acct) => (
-                    <SelectItem key={acct.id} value={acct.id}>
-                      {acct.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="space-y-6 p-6">
+      {!props.onSaved && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="sm" onClick={handleCancel}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Contacts
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {isEditing ? 'Edit Contact' : 'New Contact'}
+              </h1>
+              <p className="text-muted-foreground">
+                {isEditing ? 'Update contact information' : 'Add a new contact to your CRM'}
+              </p>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {props.onSaved && (
+        <div className="border-b pb-4">
+          <h2 className="text-xl font-semibold">
+            {isEditing ? 'Edit Contact' : 'New Contact'}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {isEditing ? 'Update contact information' : 'Add a new contact'}
+          </p>
+        </div>
+      )}
 
-            {/* Name */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  required
-                />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <User className="h-5 w-5 mr-2" />
+              Contact Information
+            </CardTitle>
+            <CardDescription>
+              Basic contact details and information
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="accountId">Account</Label>
+                <Select
+                  value={formData.accountId}
+                  onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                  disabled={!!accountId} // Disable if pre-filled from account context
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Account</SelectItem>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  required
-                />
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
-            </div>
-
-            {/* Contact Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              
+              <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
+              
+              <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
-            </div>
-
-            {/* Job Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              
+              <div>
                 <Label htmlFor="title">Title</Label>
                 <Select
                   value={formData.title}
-                  onValueChange={(value) => handleInputChange('title', value)}
+                  onValueChange={(value) => setFormData({ ...formData, title: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select title" />
                   </SelectTrigger>
                   <SelectContent>
-                    {titleOptions.map((title) => (
+                    {mockCompanySettings.defaults.titleOptions?.map((title) => (
                       <SelectItem key={title} value={title}>
                         {title}
                       </SelectItem>
@@ -265,17 +249,18 @@ export default function ContactForm() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              
+              <div>
                 <Label htmlFor="department">Department</Label>
                 <Select
                   value={formData.department}
-                  onValueChange={(value) => handleInputChange('department', value)}
+                  onValueChange={(value) => setFormData({ ...formData, department: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departmentOptions.map((dept) => (
+                    {mockCompanySettings.defaults.departmentOptions?.map((dept) => (
                       <SelectItem key={dept} value={dept}>
                         {dept}
                       </SelectItem>
@@ -284,58 +269,40 @@ export default function ContactForm() {
                 </Select>
               </div>
             </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
-              <TagInput
-                tags={formData.tags}
-                onTagsChange={(newTags) => setFormData({ ...formData, tags: newTags })}
-                placeholder="Add tags to categorize this contact..."
-                suggestions={[
-                  'Decision Maker',
-                  'VIP',
-                  'Financial Contact',
-                  'Technical Contact',
-                  'Executive',
-                  'Operations',
-                  'Purchasing',
-                  'Quick Response',
-                  'Morning Calls',
-                  'Email Preferred',
-                  'Text Preferred',
-                ]}
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
+            
+            <div>
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
+                placeholder="Additional notes about this contact..."
               />
             </div>
-
-            {/* Actions */}
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => {
-                const fromAccountId = searchParams.get('accountId')
-                const targetAccountId = formData.accountId || fromAccountId || ''
-                if (targetAccountId) navigate(`/accounts/${targetAccountId}`)
-                else navigate('/contacts')
-              }}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : isEditing ? 'Update Contact' : 'Create Contact'}
-              </Button>
+            
+            <div>
+              <Label>Tags</Label>
+              <TagInput
+                tags={formData.tags}
+                onTagsChange={(tags) => setFormData({ ...formData, tags })}
+                placeholder="Add tags..."
+                suggestions={['VIP', 'Decision Maker', 'Technical Contact', 'Financial Contact']}
+              />
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            <Save className="h-4 w-4 mr-2" />
+            {loading ? 'Saving...' : isEditing ? 'Update Contact' : 'Create Contact'}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -8,6 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAccountManagement } from '../hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import ContactForm from '@/modules/contacts/components/ContactForm'
+import DealForm from '@/modules/crm-sales-deal/components/DealForm'
+import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { 
   ArrowLeft, 
@@ -85,6 +89,11 @@ export default function AccountDetail() {
   
   const [account, setAccount] = useState(null)
   const [sections, setSections] = useState<string[]>(DEFAULT_LAYOUT)
+  
+  // Modal states
+  const [openContact, setOpenContact] = useState(false)
+  const [openDeal, setOpenDeal] = useState(false)
+  const [openQuote, setOpenQuote] = useState(false)
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
@@ -162,6 +171,39 @@ export default function AccountDetail() {
       description: 'Section has been removed from your view.'
     })
   }
+  const handleContactSaved = (contact: any) => {
+    setOpenContact(false)
+    if (contact) {
+      refreshSection('contacts')
+      toast({
+        title: 'Success',
+        description: 'Contact created successfully'
+      })
+    }
+  }
+
+  const handleDealSaved = (deal: any) => {
+    setOpenDeal(false)
+    if (deal) {
+      refreshSection('deals')
+      toast({
+        title: 'Success', 
+        description: 'Deal created successfully'
+      })
+    }
+  }
+
+  const handleQuoteSaved = (quote: any) => {
+    setOpenQuote(false)
+    if (quote) {
+      refreshSection('quotes')
+      toast({
+        title: 'Success',
+        description: 'Quote created successfully'
+      })
+    }
+  }
+
 
   // Get available sections to add
   const availableSectionsToAdd = AVAILABLE_SECTIONS.filter(
@@ -191,6 +233,7 @@ export default function AccountDetail() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -392,11 +435,19 @@ export default function AccountDetail() {
             </div>
           )}
         </Droppable>
-      </DragDropContext>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setOpenDeal(true)}
+              >
 
       {/* Empty state when no sections */}
       {sections.length === 0 && (
-        <Card>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setOpenQuote(true)}
+              >
           <CardContent className="py-12 text-center">
             <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No sections configured</h3>
@@ -428,7 +479,45 @@ export default function AccountDetail() {
             </CardContent>
           </Card>
         </div>
-      )}
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setOpenContact(true)}
+              >
     </div>
+
+    {/* Contact Modal */}
+    <Dialog open={openContact} onOpenChange={setOpenContact}>
+      <DialogContent className="max-w-2xl p-0">
+        <ContactForm
+          accountId={account.id}
+          returnTo="account"
+          onSaved={handleContactSaved}
+        />
+      </DialogContent>
+    </Dialog>
+
+    {/* Deal Modal */}
+    <Dialog open={openDeal} onOpenChange={setOpenDeal}>
+      <DialogContent className="max-w-3xl p-0">
+        <DealForm
+          accountId={account.id}
+          returnTo="account"
+          onSaved={handleDealSaved}
+        />
+      </DialogContent>
+    </Dialog>
+
+    {/* Quote Modal */}
+    <Dialog open={openQuote} onOpenChange={setOpenQuote}>
+      <DialogContent className="max-w-3xl p-0">
+        <NewQuoteForm
+          accountId={account.id}
+          returnTo="account"
+          onSaved={handleQuoteSaved}
+        />
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

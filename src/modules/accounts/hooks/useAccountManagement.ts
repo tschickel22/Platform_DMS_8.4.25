@@ -97,6 +97,10 @@ export function useAccountManagement() {
     }
   }
 
+  const getAccountTypeLabel = (type: AccountType): string => {
+    return mockAccounts.accountTypes.find(t => t.value === type)?.label || type
+  }
+
   const updateAccount = async (accountId: string, updates: Partial<Account>): Promise<Account | null> => {
     const current = accounts.find(a => a.id === accountId)
     if (!current) return null
@@ -177,7 +181,8 @@ export function useAccountManagement() {
 
     // CRUD
     createAccount,
-    updateAccount,
+    getAccountStats,
+    getAccountTypeLabel
     deleteAccount,
 
     // getters / filters
