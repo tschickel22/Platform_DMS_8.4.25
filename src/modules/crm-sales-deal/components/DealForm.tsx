@@ -1,3 +1,4 @@
+// src/modules/accounts/pages/AccountDetail.tsx
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
@@ -13,13 +14,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
-
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement' // (kept, even if unused elsewhere)
 import { useToast } from '@/hooks/use-toast'
+
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
 import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+
 import {
   ArrowLeft,
   Edit,
@@ -33,12 +35,12 @@ import {
   Settings,
 } from 'lucide-react'
 
-// Section components
-import { AccountContactsSection } from '../components/AccountContactsSection'
-import { AccountDealsSection } from '../components/AccountDealsSection'
-import { AccountQuotesSection } from '../components/AccountQuotesSection'
-import { AccountServiceTicketsSection } from '../components/AccountServiceTicketsSection'
-import { AccountNotesSection } from '../components/AccountNotesSection'
+// Section components (use absolute paths to avoid fragile relatives)
+import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
+import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
+import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
+import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
+import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 
 interface AccountSection {
   id: string
@@ -56,7 +58,7 @@ const AVAILABLE_SECTIONS: AccountSection[] = [
   { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
 ]
 
-const DEFAULT_LAYOUT = ['contacts', 'deals', 'quotes', 'service', 'notes']
+const DEFAULT_LAYOUT = ['contacts', 'deals', 'quotes', 'service', 'notes'] as const
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -64,29 +66,27 @@ export default function AccountDetail() {
   const { toast } = useToast()
 
   const [account, setAccount] = useState<any>(null)
-  const [sections, setSections] = useState<string[]>(DEFAULT_LAYOUT)
+  const [sections, setSections] = useState<string[]>([...DEFAULT_LAYOUT])
 
-  // Modal state
+  // Modals
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const storageKey = `account-detail-layout-${accountId}`
+  const storageKey = `account-detail-layout-${accountId ?? 'unknown'}`
 
   useEffect(() => {
-    if (accountId) {
-      const data = getAccount(accountId)
-      setAccount(data)
-    }
+    if (!accountId) return
+    const data = getAccount(accountId)
+    setAccount(data ?? null)
   }, [accountId, getAccount])
 
   useEffect(() => {
-    if (accountId) {
-      const saved = loadFromLocalStorage<string[]>(storageKey, DEFAULT_LAYOUT)
-      setSections(saved)
-    }
+    if (!accountId) return
+    const saved = loadFromLocalStorage<string[]>(storageKey, [...DEFAULT_LAYOUT])
+    setSections(saved || [...DEFAULT_LAYOUT])
   }, [accountId, storageKey])
 
   const saveLayout = () => {
@@ -97,7 +97,7 @@ export default function AccountDetail() {
   }
 
   const resetLayout = () => {
-    setSections(DEFAULT_LAYOUT)
+    setSections([...DEFAULT_LAYOUT])
     setHasUnsavedChanges(true)
     toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
   }
@@ -127,7 +127,7 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // no-op placeholder—your section components pull from shared state/localStorage
+    // placeholder — sections read from shared state or localStorage
   }
 
   const handleContactSaved = (contact: any) => {
@@ -158,7 +158,7 @@ export default function AccountDetail() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading account...</p>
         </div>
       </div>
@@ -190,11 +190,12 @@ export default function AccountDetail() {
             </Button>
             <div>
               <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-bold">{account.name}</h1>
-                <Badge className={getAccountTypeColor(account.type)}>{account.type}</Badge>
+                <h1 className="text-2xl font-bold">{account?.name}</h1>
+                {account?.type && <Badge className={getAccountTypeColor(account.type)}>{account.type}</Badge>}
               </div>
               <p className="text-muted-foreground">
-                {account.industry} • Created {new Date(account.createdAt).toLocaleDateString()}
+                {account?.industry ?? '—'} • Created{' '}
+                {account?.createdAt ? new Date(account.createdAt).toLocaleDateString() : '—'}
               </p>
             </div>
           </div>
@@ -266,7 +267,7 @@ export default function AccountDetail() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                {account.website && (
+                {!!account?.website && (
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -274,7 +275,7 @@ export default function AccountDetail() {
                     </a>
                   </div>
                 )}
-                {account.email && (
+                {!!account?.email && (
                   <div className="flex items-center space-x-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <a href={`mailto:${account.email}`} className="text-primary hover:underline">
@@ -282,7 +283,7 @@ export default function AccountDetail() {
                     </a>
                   </div>
                 )}
-                {account.phone && (
+                {!!account?.phone && (
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <a href={`tel:${account.phone}`} className="text-primary hover:underline">
@@ -293,20 +294,20 @@ export default function AccountDetail() {
               </div>
 
               <div className="space-y-4">
-                {account.address && (
+                {!!account?.address && (
                   <div className="flex items-start space-x-2">
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="text-sm">
-                      <div>{account.address.street}</div>
+                      <div>{account.address?.street}</div>
                       <div>
-                        {account.address.city}, {account.address.state} {account.address.zipCode}
+                        {account.address?.city}, {account.address?.state} {account.address?.zipCode}
                       </div>
-                      <div>{account.address.country}</div>
+                      <div>{account.address?.country}</div>
                     </div>
                   </div>
                 )}
 
-                {account.tags && account.tags.length > 0 && (
+                {Array.isArray(account?.tags) && account.tags.length > 0 && (
                   <div>
                     <p className="text-sm font-medium mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
@@ -321,7 +322,7 @@ export default function AccountDetail() {
               </div>
             </div>
 
-            {account.notes && (
+            {!!account?.notes && (
               <div className="mt-6 pt-6 border-t">
                 <p className="text-sm font-medium mb-2">Notes</p>
                 <p className="text-sm text-muted-foreground">{account.notes}</p>
@@ -330,7 +331,7 @@ export default function AccountDetail() {
           </CardContent>
         </Card>
 
-        {/* Sections (dnd) */}
+        {/* Sections (drag & drop) */}
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="account-sections">
             {(provided) => (
@@ -343,7 +344,11 @@ export default function AccountDetail() {
                     <Draggable key={type} draggableId={type} index={index}>
                       {(p, s) => (
                         <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                          <Section accountId={accountId!} onRemove={() => removeSection(type)} isDragging={s.isDragging} />
+                          <Section
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                          />
                         </div>
                       )}
                     </Draggable>
@@ -361,11 +366,9 @@ export default function AccountDetail() {
             <Card className="shadow-lg border-orange-200 bg-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse"></div>
+                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
                   <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
-                  <Button size="sm" onClick={saveLayout}>
-                    Save Now
-                  </Button>
+                  <Button size="sm" onClick={saveLayout}>Save Now</Button>
                 </div>
               </CardContent>
             </Card>
