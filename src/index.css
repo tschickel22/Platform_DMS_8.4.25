@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 @import './styles/shared-colors.css';
+@import './styles/design-tokens.css';
 
 /* Import calendar styles */
 @import url('./modules/calendar-scheduling/index.css');

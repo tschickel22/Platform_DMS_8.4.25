@@ -1,0 +1,329 @@
+/* Design Tokens & Layout Rules */
+/* Modern UI Foundation for Renter Insight CRM/DMS */
+
+@layer base {
+  :root {
+    /* Spacing Scale (4/8px system) */
+    --spacing-xs: 0.25rem;    /* 4px */
+    --spacing-sm: 0.5rem;     /* 8px */
+    --spacing-md: 1rem;       /* 16px */
+    --spacing-lg: 1.5rem;     /* 24px */
+    --spacing-xl: 2rem;       /* 32px */
+    --spacing-2xl: 3rem;      /* 48px */
+    --spacing-3xl: 4rem;      /* 64px */
+
+    /* Typography Scale */
+    --text-xs: 0.75rem;       /* 12px */
+    --text-sm: 0.875rem;      /* 14px */
+    --text-base: 1rem;        /* 16px */
+    --text-lg: 1.125rem;      /* 18px */
+    --text-xl: 1.25rem;       /* 20px */
+    --text-2xl: 1.5rem;       /* 24px */
+    --text-3xl: 1.875rem;     /* 30px */
+    --text-4xl: 2.25rem;      /* 36px */
+
+    /* Line Heights */
+    --leading-tight: 1.2;     /* 120% for headings */
+    --leading-normal: 1.5;    /* 150% for body text */
+    --leading-relaxed: 1.6;   /* 160% for long-form content */
+
+    /* Border Radius */
+    --radius-sm: 0.25rem;     /* 4px */
+    --radius-md: 0.375rem;    /* 6px */
+    --radius-lg: 0.5rem;      /* 8px */
+    --radius-xl: 0.75rem;     /* 12px */
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Card Elevations */
+    --card-elevation-1: var(--shadow-sm);
+    --card-elevation-2: var(--shadow-md);
+    --card-elevation-3: var(--shadow-lg);
+    --card-elevation-hover: var(--shadow-xl);
+
+    /* Z-Index Scale */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+  }
+}
+
+/* Modern UI Patterns */
+@layer components {
+  /* Header Pattern */
+  .ri-page-header {
+    @apply space-y-6 pb-6 border-b;
+  }
+  
+  .ri-page-header-main {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
+  }
+  
+  .ri-page-header-content {
+    @apply space-y-2;
+  }
+  
+  .ri-page-title {
+    @apply text-3xl font-bold tracking-tight text-foreground;
+    line-height: var(--leading-tight);
+  }
+  
+  .ri-page-description {
+    @apply text-muted-foreground text-base;
+    line-height: var(--leading-normal);
+  }
+  
+  .ri-page-actions {
+    @apply flex items-center gap-3;
+  }
+
+  /* Stats Grid Pattern */
+  .ri-stats-grid {
+    @apply grid gap-4 md:grid-cols-2 lg:grid-cols-4;
+  }
+  
+  .ri-stat-card {
+    @apply bg-card border rounded-lg p-6 hover:shadow-md transition-shadow;
+    box-shadow: var(--card-elevation-1);
+  }
+  
+  .ri-stat-card:hover {
+    box-shadow: var(--card-elevation-2);
+  }
+  
+  .ri-stat-header {
+    @apply flex flex-row items-center justify-between space-y-0 pb-2;
+  }
+  
+  .ri-stat-title {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+  
+  .ri-stat-icon {
+    @apply h-4 w-4 text-muted-foreground;
+  }
+  
+  .ri-stat-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+  
+  .ri-stat-change {
+    @apply text-xs font-medium;
+  }
+  
+  .ri-stat-change.positive {
+    @apply text-emerald-600;
+  }
+  
+  .ri-stat-change.negative {
+    @apply text-red-600;
+  }
+  
+  .ri-stat-change.neutral {
+    @apply text-muted-foreground;
+  }
+
+  /* Filter Pattern */
+  .ri-filter-bar {
+    @apply flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between;
+  }
+  
+  .ri-filter-left {
+    @apply flex-1 flex items-center gap-3;
+  }
+  
+  .ri-filter-right {
+    @apply flex items-center gap-2;
+  }
+  
+  .ri-search-container {
+    @apply relative flex-1 max-w-md;
+  }
+  
+  .ri-search-icon {
+    @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground;
+  }
+  
+  .ri-search-input {
+    @apply pl-10 h-10;
+  }
+  
+  .ri-filter-chips {
+    @apply flex flex-wrap gap-2 mt-3;
+  }
+
+  /* Table Pattern */
+  .ri-table-container {
+    @apply border rounded-lg bg-card;
+    box-shadow: var(--card-elevation-1);
+  }
+  
+  .ri-table-header {
+    @apply bg-muted/50 border-b;
+  }
+  
+  .ri-table-header-cell {
+    @apply h-12 px-4 text-left align-middle font-semibold text-muted-foreground text-sm;
+  }
+  
+  .ri-table-row {
+    @apply border-b transition-colors hover:bg-muted/50;
+  }
+  
+  .ri-table-row:last-child {
+    @apply border-b-0;
+  }
+  
+  .ri-table-cell {
+    @apply p-4 align-middle text-sm;
+  }
+  
+  .ri-table-cell-compact {
+    @apply p-3 align-middle text-sm;
+  }
+
+  /* Action Rail Pattern */
+  .ri-action-rail {
+    @apply flex items-center gap-2;
+  }
+  
+  .ri-action-primary {
+    @apply order-1;
+  }
+  
+  .ri-action-secondary {
+    @apply order-2;
+  }
+  
+  .ri-action-destructive {
+    @apply order-3;
+  }
+
+  /* Empty State Pattern */
+  .ri-empty-state {
+    @apply text-center py-12 px-6;
+  }
+  
+  .ri-empty-icon {
+    @apply h-12 w-12 mx-auto mb-4 text-muted-foreground/50;
+  }
+  
+  .ri-empty-title {
+    @apply text-lg font-semibold text-foreground mb-2;
+  }
+  
+  .ri-empty-description {
+    @apply text-muted-foreground mb-6 max-w-md mx-auto;
+    line-height: var(--leading-normal);
+  }
+  
+  .ri-empty-actions {
+    @apply flex flex-col sm:flex-row gap-3 justify-center;
+  }
+
+  /* Card Patterns */
+  .ri-card-elevated {
+    box-shadow: var(--card-elevation-2);
+  }
+  
+  .ri-card-interactive {
+    @apply cursor-pointer transition-all duration-200;
+    box-shadow: var(--card-elevation-1);
+  }
+  
+  .ri-card-interactive:hover {
+    box-shadow: var(--card-elevation-hover);
+    @apply -translate-y-0.5;
+  }
+
+  /* Badge & Chip Patterns */
+  .ri-badge-status {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  
+  .ri-chip {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium;
+  }
+  
+  .ri-chip-interactive {
+    @apply ri-chip hover:bg-muted/80 cursor-pointer transition-colors;
+  }
+  
+  .ri-chip-removable {
+    @apply ri-chip-interactive;
+  }
+
+  /* Form Patterns */
+  .ri-form-section {
+    @apply space-y-6 p-6 border rounded-lg bg-card;
+  }
+  
+  .ri-form-section-title {
+    @apply text-lg font-semibold text-foreground mb-4;
+  }
+  
+  .ri-form-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+  
+  .ri-form-grid-full {
+    @apply md:col-span-2;
+  }
+  
+  .ri-form-actions {
+    @apply flex justify-end gap-3 pt-6 border-t;
+  }
+
+  /* Loading States */
+  .ri-skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+  
+  .ri-skeleton-text {
+    @apply ri-skeleton h-4;
+  }
+  
+  .ri-skeleton-title {
+    @apply ri-skeleton h-6;
+  }
+  
+  .ri-skeleton-avatar {
+    @apply ri-skeleton h-10 w-10 rounded-full;
+  }
+
+  /* Focus & Accessibility */
+  .ri-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+  
+  .ri-interactive {
+    @apply ri-focus-ring transition-colors;
+  }
+}
+
+/* Responsive Breakpoints Documentation */
+/*
+  sm: 640px   - Small tablets
+  md: 768px   - Large tablets  
+  lg: 1024px  - Small desktops
+  xl: 1280px  - Large desktops
+  2xl: 1536px - Extra large screens
+*/
+
+/* Color Role Mappings */
+/*
+  Primary: Brand actions, links, selected states
+  Success: Positive states, completed actions
+  Warning: Caution states, pending actions  
+  Danger: Error states, destructive actions
+  Info: Informational states, neutral actions
+*/

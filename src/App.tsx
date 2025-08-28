@@ -2,6 +2,8 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { RouteGuard } from '@/components/ui/route-guard'
+import { DetailViewSkeleton } from '@/components/ui/loading-states'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -123,44 +125,44 @@ function App() {
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
                                   <Route path="/crm/accounts" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Accounts">
                                       <AccountList />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/accounts/new" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Accounts">
                                       <AccountForm />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/accounts/:id" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Accounts" fallback={<DetailViewSkeleton />}>
                                       <AccountDetail />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/accounts/:id/edit" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Accounts">
                                       <AccountForm />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/contacts" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Contacts">
                                       <ContactList />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/contacts/new" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Contacts">
                                       <ContactForm />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/contacts/:id" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Contacts" fallback={<DetailViewSkeleton />}>
                                       <ContactDetail />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/crm/contacts/:id/edit" element={
-                                    <ErrorBoundary>
+                                    <RouteGuard moduleName="Contacts">
                                       <ContactForm />
-                                    </ErrorBoundary>
+                                    </RouteGuard>
                                   } />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
