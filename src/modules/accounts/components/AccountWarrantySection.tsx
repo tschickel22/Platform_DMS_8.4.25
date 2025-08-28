@@ -24,7 +24,9 @@ interface AccountWarrantySectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** from AccountDetail generic wiring; when present use this to route to a create screen */
+  /** Prefer this to open the New Claim modal from AccountDetail */
+  onAddWarranty?: () => void
+  /** Generic create fallback (kept for compatibility) */
   onCreate?: () => void
 }
 
@@ -32,6 +34,7 @@ export function AccountWarrantySection({
   accountId,
   onRemove,
   isDragging,
+  onAddWarranty,
   onCreate,
 }: AccountWarrantySectionProps) {
   // Demo persistence — align with how Deliveries are handled
@@ -39,12 +42,10 @@ export function AccountWarrantySection({
   const warranties = (all || []).filter(w => w.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) {
-      onCreate()
-    } else {
-      // Fallback: jump to warranty module list with account filter
-      window.location.href = `/inventory/warranty?accountId=${accountId}&returnTo=account`
-    }
+    if (onAddWarranty) return onAddWarranty()
+    if (onCreate) return onCreate()
+    // Last-resort fallback: jump to warranty module list with account filter
+    window.location.href = `/inventory/warranty?accountId=${accountId}&returnTo=account`
   }
 
   const statusTone = (s?: Warranty['status']) => {
