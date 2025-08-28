@@ -56,28 +56,79 @@ coverage/
 # Ignore Bolt-specific internal files (if any, usually handled by Bolt itself)
 .bolt/
 
-# --- STRICT MODULE IGNORING ---
-# Ignore all apps/ directories (assuming they are separate deployments)
+# --- PHASED MODULE APPROACH ---
+# Ignore all apps/ directories (separate deployments)
 apps/
 
 # Ignore all src/modules/ directories by default
 src/modules/
 
-# EXCEPT for the ones needed for Brochure Builder and its direct interactions
-# These lines will re-include the necessary directories
-!src/modules/brochures/
-!src/modules/brochures/**
+# PHASE 1: Core CRM & Business Operations (Currently Active)
+!src/modules/crm-prospecting/
+!src/modules/crm-prospecting/**
+!src/modules/crm-accounts/
+!src/modules/crm-accounts/**
+!src/modules/crm-contacts/
+!src/modules/crm-contacts/**
+!src/modules/crm-sales-deal/
+!src/modules/crm-sales-deal/**
+
+# PHASE 1: Inventory & Operations
 !src/modules/inventory-management/
 !src/modules/inventory-management/**
 !src/modules/land-management/
 !src/modules/land-management/**
-!src/modules/property-listings/
-!src/modules/property-listings/**
 !src/modules/quote-builder/
 !src/modules/quote-builder/**
-!src/modules/website-builder/
 
-# Ensure core src/ directories are not ignored
+# PHASE 1: Finance & Agreements (Currently Fixing)
+!src/modules/finance/
+!src/modules/finance/**
+!src/modules/agreement-vault/
+!src/modules/agreement-vault/**
+!src/modules/invoice-payments/
+!src/modules/invoice-payments/**
+!src/modules/finance-application/
+!src/modules/finance-application/**
+
+# PHASE 1: Service & Support
+!src/modules/service-ops/
+!src/modules/service-ops/**
+!src/modules/client-portal/
+!src/modules/client-portal/**
+!src/modules/pdi-checklist/
+!src/modules/pdi-checklist/**
+!src/modules/delivery-tracker/
+!src/modules/delivery-tracker/**
+
+# PHASE 2: Marketing & Content (Ready for Development)
+!src/modules/brochures/
+!src/modules/brochures/**
+!src/modules/property-listings/
+!src/modules/property-listings/**
+!src/modules/website-builder/
+!src/modules/website-builder/**
+
+# PHASE 2: Management & Analytics
+!src/modules/commission-engine/
+!src/modules/commission-engine/**
+!src/modules/reporting-suite/
+!src/modules/reporting-suite/**
+!src/modules/tagging-engine/
+!src/modules/tagging-engine/**
+!src/modules/task-center/
+!src/modules/task-center/**
+
+# PHASE 3: Advanced Features (Future)
+# !src/modules/calendar-scheduling/
+# !src/modules/contractor-management/
+# !src/modules/warranty-mgmt/
+
+# PHASE 3: Administration (Future)
+# !src/modules/company-settings/
+# !src/modules/platform-admin/
+
+# Ensure core src/ directories are always included
 !src/App.tsx
 !src/main.tsx
 !src/index.css
@@ -95,3 +146,13 @@ src/modules/
 !src/mocks/**
 !src/types/
 !src/types/**
+!src/pages/
+!src/pages/**
+!src/services/
+!src/services/**
+!src/shared/
+!src/shared/**
+!src/styles/
+!src/styles/**
+!src/__tests__/
+!src/__tests__/**
