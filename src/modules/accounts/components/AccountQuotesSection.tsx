@@ -13,28 +13,18 @@ interface AccountQuotesSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** If provided, clicking Create Quote opens a modal instead of routing */
-  onAddQuote?: () => void
 }
 
-export function AccountQuotesSection({
-  accountId,
-  onRemove,
-  isDragging,
-  onAddQuote,
-}: AccountQuotesSectionProps) {
-  const accountQuotes =
-    mockAgreements.sampleQuotes?.filter((quote) => quote.accountId === accountId) || []
+export function AccountQuotesSection({ accountId, onRemove, isDragging }: AccountQuotesSectionProps) {
+  // Filter quotes for this account (using sample quotes from agreements mock)
+  const accountQuotes = mockAgreements.sampleQuotes?.filter(quote => 
+    quote.accountId === accountId
+  ) || []
 
   const totalValue = accountQuotes.reduce((sum, quote) => sum + quote.amount, 0)
-  const pendingQuotes = accountQuotes.filter(
-    (q) => q.status === 'sent' || q.status === 'viewed'
+  const pendingQuotes = accountQuotes.filter(quote => 
+    quote.status === 'sent' || quote.status === 'viewed'
   )
-
-  const handleAdd = () => {
-    if (onAddQuote) return onAddQuote()
-    window.location.href = `/quotes/new?accountId=${accountId}&returnTo=account`
-  }
 
   return (
     <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
@@ -46,7 +36,9 @@ export function AccountQuotesSection({
               <FileText className="h-5 w-5 mr-2" />
               Quotes
             </CardTitle>
-            <CardDescription>Quotes and proposals for this account</CardDescription>
+            <CardDescription>
+              Quotes and proposals for this account
+            </CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -58,14 +50,16 @@ export function AccountQuotesSection({
           )}
         </div>
       </CardHeader>
-
       <CardContent>
         {accountQuotes.length === 0 ? (
           <EmptyState
             title="No quotes found"
             description="Create a quote for this account to track proposals"
             icon={<FileText className="h-12 w-12" />}
-            action={{ label: 'Create Quote', onClick: handleAdd }}
+            action={{
+              label: "Create Quote",
+              onClick: () => window.location.href = `/quotes?accountId=${accountId}`
+            }}
           />
         ) : (
           <div className="space-y-4">
@@ -86,22 +80,17 @@ export function AccountQuotesSection({
             </div>
 
             <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Recent quotes and proposals</p>
-              {onAddQuote ? (
-                <Button size="sm" variant="outline" onClick={handleAdd}>
+              <p className="text-sm text-muted-foreground">
+                Recent quotes and proposals
+              </p>
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/quotes?accountId=${accountId}`}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Quote
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" asChild>
-                  <Link to={`/quotes/new?accountId=${accountId}&returnTo=account`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Quote
-                  </Link>
-                </Button>
-              )}
+                </Link>
+              </Button>
             </div>
-
+            
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -117,7 +106,10 @@ export function AccountQuotesSection({
                   {accountQuotes.slice(0, 5).map((quote) => (
                     <TableRow key={quote.id}>
                       <TableCell>
-                        <Link to={`/quotes/${quote.id}`} className="font-medium text-primary hover:underline">
+                        <Link 
+                          to={`/quotes/${quote.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
                           {quote.number}
                         </Link>
                       </TableCell>
@@ -125,9 +117,13 @@ export function AccountQuotesSection({
                         <span className="font-medium">{formatCurrency(quote.amount)}</span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{quote.status || 'Draft'}</Badge>
+                        <Badge variant="outline">
+                          {quote.status || 'Draft'}
+                        </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(quote.createdAt || new Date())}</TableCell>
+                      <TableCell>
+                        {formatDate(quote.createdAt || new Date())}
+                      </TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" asChild>
                           <Link to={`/quotes/${quote.id}`}>
@@ -144,7 +140,9 @@ export function AccountQuotesSection({
             {accountQuotes.length > 5 && (
               <div className="text-center">
                 <Button variant="outline" size="sm" asChild>
-                  <Link to={`/quotes?accountId=${accountId}`}>View All {accountQuotes.length} Quotes</Link>
+                  <Link to={`/quotes?accountId=${accountId}`}>
+                    View All {accountQuotes.length} Quotes
+                  </Link>
                 </Button>
               </div>
             )}
