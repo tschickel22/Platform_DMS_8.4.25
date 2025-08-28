@@ -13,7 +13,6 @@ export interface AccountDealsSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** If provided, clicking Create Deal opens a modal instead of routing */
   onAddDeal?: () => void
 }
 
@@ -23,20 +22,16 @@ export function AccountDealsSection({
   isDragging,
   onAddDeal,
 }: AccountDealsSectionProps) {
-  const accountDeals = mockCrmSalesDeal.sampleDeals.filter((deal) => deal.accountId === accountId)
+  const accountDeals = mockCrmSalesDeal.sampleDeals.filter((d) => d.accountId === accountId)
 
   const getStageColor = (stage: string) =>
     (mockCrmSalesDeal.stageColors && mockCrmSalesDeal.stageColors[stage]) || 'bg-gray-100 text-gray-800'
 
-  const totalValue = accountDeals.reduce((sum, deal) => sum + deal.amount, 0)
-  const activeDeals = accountDeals.filter((deal) => !['Closed Won', 'Closed Lost'].includes(deal.stage))
+  const totalValue = accountDeals.reduce((sum, d) => sum + d.amount, 0)
+  const activeDeals = accountDeals.filter((d) => !['Closed Won', 'Closed Lost'].includes(d.stage))
 
   const handleAdd = () => {
-    if (onAddDeal) {
-      onAddDeal()
-      return
-    }
-    // Fallback: hard route if no modal handler provided
+    if (onAddDeal) return onAddDeal()
     window.location.href = `/deals/new?accountId=${accountId}&returnTo=account`
   }
 
@@ -73,7 +68,6 @@ export function AccountDealsSection({
           />
         ) : (
           <div className="space-y-4">
-            {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-3 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold text-primary">{accountDeals.length}</p>
@@ -91,7 +85,6 @@ export function AccountDealsSection({
 
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Recent deals and opportunities</p>
-              {/* Always use the click handler so modal is used when provided */}
               <Button size="sm" variant="outline" onClick={handleAdd}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Deal
@@ -110,21 +103,21 @@ export function AccountDealsSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {accountDeals.slice(0, 5).map((deal) => (
-                    <TableRow key={deal.id}>
+                  {accountDeals.slice(0, 5).map((d) => (
+                    <TableRow key={d.id}>
                       <TableCell>
-                        <Badge className={getStageColor(deal.stage)}>{deal.stage}</Badge>
+                        <Badge className={getStageColor(d.stage)}>{d.stage}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{deal.vehicleInfo}</div>
+                        <div className="font-medium">{d.vehicleInfo}</div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">{formatCurrency(deal.amount)}</span>
+                        <span className="font-medium">{formatCurrency(d.amount)}</span>
                       </TableCell>
-                      <TableCell>{formatDate(deal.expectedCloseDate)}</TableCell>
+                      <TableCell>{formatDate(d.expectedCloseDate)}</TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" asChild>
-                          <Link to={`/deals/${deal.id}`}>
+                          <Link to={`/deals/${d.id}`}>
                             <ExternalLink className="h-3 w-3" />
                           </Link>
                         </Button>
