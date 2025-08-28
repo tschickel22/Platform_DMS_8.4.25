@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAccountManagement } from './hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
@@ -13,53 +13,22 @@ import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
+import { AdvancedSearch } from '@/components/common/AdvancedSearch'
 
 export default function AccountList() {
   const { accounts, loading, error, deleteAccount, createAccount } = useAccountManagement()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
-  // Advanced search filtering logic
-    // Apply advanced search
-    const passesAdvancedSearch = matchesAdvanced(account)
-  }
 
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
   
-    // Basic search
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     industry: searchParams.get('industry') || '',
     createdAfter: searchParams.get('createdAfter') || '',
-    
-    // Advanced search
-    const matchesAdvanced = advancedSearchCriteria.length === 0 || 
-      advancedSearchCriteria.every(criteria => {
-        const fieldValue = (account as any)[criteria.field]?.toString().toLowerCase() || ''
-        const searchValue = criteria.value.toLowerCase()
-        
-        switch (criteria.operator) {
-          case 'contains':
-            return fieldValue.includes(searchValue)
-          case 'equals':
-            return fieldValue === searchValue
-          case 'starts_with':
-            return fieldValue.startsWith(searchValue)
-          case 'ends_with':
-            return fieldValue.endsWith(searchValue)
-          case 'not_equals':
-            return fieldValue !== searchValue
-          case 'is_empty':
-            return !fieldValue
-          case 'is_not_empty':
-            return !!fieldValue
-          default:
-            return true
-        }
-      })
-    
-    return matchesSearch && passesAdvancedSearch && matchesFilters
+    createdBefore: searchParams.get('createdBefore') || ''
   })
 
   const handleSelectAll = (checked: boolean) => {
@@ -106,6 +75,7 @@ export default function AccountList() {
   // Filter accounts based on current filters
   const filteredAccounts = React.useMemo(() => {
     return accounts.filter(account => {
+      // Basic search
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
         const matchesSearch = 
@@ -131,10 +101,40 @@ export default function AccountList() {
         const filterDate = new Date(filters.createdBefore)
         if (createdDate > filterDate) return false
       }
+
+      // Advanced search filtering logic
+      // Advanced search
+      const matchesAdvanced = advancedSearchCriteria.length === 0 || 
+        advancedSearchCriteria.every(criteria => {
+          const fieldValue = (account as any)[criteria.field]?.toString().toLowerCase() || ''
+          const searchValue = criteria.value.toLowerCase()
+          
+          switch (criteria.operator) {
+            case 'contains':
+              return fieldValue.includes(searchValue)
+            case 'equals':
+              return fieldValue === searchValue
+            case 'starts_with':
+              return fieldValue.startsWith(searchValue)
+            case 'ends_with':
+              return fieldValue.endsWith(searchValue)
+            case 'not_equals':
+              return fieldValue !== searchValue
+            case 'is_empty':
+              return !fieldValue
+            case 'is_not_empty':
+              return !!fieldValue
+            default:
+              return true
+          }
+        })
       
-      return true
+      // Apply advanced search
+      const passesAdvancedSearch = matchesAdvanced
+      
+      return passesAdvancedSearch
     })
-  }, [accounts, filters])
+  }, [accounts, filters, advancedSearchCriteria])
 
   const industries = React.useMemo(() => {
     const uniqueIndustries = [...new Set(accounts.map(acc => acc.industry).filter(Boolean))]
@@ -152,12 +152,6 @@ export default function AccountList() {
     if (window.confirm('Are you sure you want to delete this account?')) {
       deleteAccount(id)
     }
-  }
-
-  const handleImport = (importedData: any[]) => {
-    importedData.forEach(accountData => {
-      createAccount(accountData)
-    })
   }
 
   const sampleFields = ['name', 'email', 'phone', 'address', 'website', 'industry']
@@ -231,23 +225,25 @@ export default function AccountList() {
           onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
           onLoadFilter={(filter) => setFilters(filter.filters)}
           onDeleteFilter={deleteFilter}
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(account.id)}
-                        onCheckedChange={(checked) => handleSelectAccount(account.id, checked as boolean)}
-                      />
-                    </TableCell>
           onSetDefaultFilter={setDefaultFilter}
-              Manage your business accounts. {filteredAccounts.length} of {accounts.length} accounts shown.
           module="accounts"
         />
       </div>
-            <ImportExportActions
-              module="accounts"
-              data={filteredAccounts}
-              onImport={handleImport}
-              sampleFields={csvFields}
-            />
+
+      <AdvancedSearch
+        onSearch={setAdvancedSearchCriteria}
+        onClear={() => setAdvancedSearchCriteria([])}
+        entityType="accounts"
+      />
+
+      {/* Selection Info */}
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-700">
+            {selectedIds.length} account{selectedIds.length !== 1 ? 's' : ''} selected
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -260,6 +256,12 @@ export default function AccountList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedIds.length === filteredAccounts.length && filteredAccounts.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
@@ -268,43 +270,26 @@ export default function AccountList() {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-          <AdvancedSearch
-            onSearch={setAdvancedSearchCriteria}
-            onClear={() => setAdvancedSearchCriteria([])}
-            entityType="accounts"
-          />
             <TableBody>
               {filteredAccounts.map((account) => (
-          )
-          )
-          }
-        {/* Selection Info */}
-        {selectedIds.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-            <p className="text-sm text-blue-700">
-              {selectedIds.length} account{selectedIds.length !== 1 ? 's' : ''} selected
-            </p>
-          </div>
-        )}
-
                 <TableRow key={account.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.includes(account.id)}
+                      onCheckedChange={(checked) => handleSelectAccount(account.id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     <Link to={`/crm/accounts/${account.id}`} className="text-primary hover:underline">
                       {account.name}
                     </Link>
-              A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.
+                  </TableCell>
                   <TableCell>{account.email}</TableCell>
                   <TableCell>{account.phone}</TableCell>
                   <TableCell>{account.industry}</TableCell>
                   <TableCell>{formatDateTime(account.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" className="mr-2" asChild>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedIds.length === filteredAccounts.length && filteredAccounts.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
                       <Link to={`/crm/accounts/${account.id}/edit`}>Edit</Link>
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(account.id)}>
