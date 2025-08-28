@@ -1,4 +1,3 @@
-// src/modules/accounts/hooks/useAccountManagement.ts
 import { useEffect, useMemo, useState } from 'react'
 import { Account, AccountType, Contact } from '@/types/index'
 import { mockAccounts } from '@/mocks/accountsMock'
@@ -11,7 +10,7 @@ export function useAccountManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load accounts on mount
+  // --- load on mount
   useEffect(() => {
     try {
       const saved = loadFromLocalStorage<Account[]>(LS_KEY, [])
@@ -30,14 +29,12 @@ export function useAccountManagement() {
     }
   }, [])
 
-  // Persist on changes
+  // --- persist on change
   useEffect(() => {
-    if (accounts.length > 0) {
-      saveToLocalStorage(LS_KEY, accounts)
-    }
+    if (accounts.length > 0) saveToLocalStorage(LS_KEY, accounts)
   }, [accounts])
 
-  // ------- Metrics -------
+  // --- metrics
   const metrics = useMemo(() => {
     const totalAccounts = accounts.length
     const customerAccounts = accounts.filter(a => a.type === AccountType.CUSTOMER).length
@@ -66,7 +63,7 @@ export function useAccountManagement() {
     }
   }, [accounts])
 
-  // ------- CRUD -------
+  // --- CRUD
   const createAccount = async (data: Partial<Account>): Promise<Account> => {
     setLoading(true)
     try {
@@ -93,7 +90,6 @@ export function useAccountManagement() {
         createdBy: 'current-user',
         updatedBy: 'current-user',
       }
-
       setAccounts(prev => [newAccount, ...prev])
       return newAccount
     } finally {
@@ -105,13 +101,7 @@ export function useAccountManagement() {
     const current = accounts.find(a => a.id === accountId)
     if (!current) return null
 
-    const updated: Account = {
-      ...current,
-      ...updates,
-      updatedAt: new Date(),
-      updatedBy: 'current-user',
-    }
-
+    const updated: Account = { ...current, ...updates, updatedAt: new Date(), updatedBy: 'current-user' }
     setAccounts(prev => prev.map(a => (a.id === accountId ? updated : a)))
     return updated
   }
@@ -120,11 +110,11 @@ export function useAccountManagement() {
     setAccounts(prev => prev.filter(a => a.id !== accountId))
   }
 
-  // ------- Getters / Filters -------
+  // --- getters / filters
   const getAccount = (accountId: string): Account | null =>
     accounts.find(a => a.id === accountId) || null
 
-  // Compatibility alias
+  // alias used by other screens
   const getAccountById = (accountId: string): Account | null => getAccount(accountId)
 
   const filterAccounts = (filters: {
@@ -132,15 +122,11 @@ export function useAccountManagement() {
     industry?: string
     tags?: string[]
     searchTerm?: string
-  }): Account[] => {
-    return accounts.filter(account => {
+  }): Account[] =>
+    accounts.filter(account => {
       if (filters.type && account.type !== filters.type) return false
       if (filters.industry && account.industry !== filters.industry) return false
-
-      if (filters.tags?.length) {
-        const hasTag = filters.tags.some(t => account.tags.includes(t))
-        if (!hasTag) return false
-      }
+      if (filters.tags?.length && !filters.tags.some(t => account.tags.includes(t))) return false
 
       if (filters.searchTerm) {
         const term = filters.searchTerm.toLowerCase()
@@ -152,28 +138,35 @@ export function useAccountManagement() {
           account.tags.some(t => t.toLowerCase().includes(term))
         if (!match) return false
       }
-
       return true
     })
-  }
 
   const getAccountsByType = (type: AccountType): Account[] =>
     accounts.filter(a => a.type === type)
 
-  const getAllTags = (): string[] => {
-    const all = accounts.flatMap(a => a.tags)
-    return [...new Set(all)].sort()
-  }
+  const getAllTags = (): string[] => [...new Set(accounts.flatMap(a => a.tags))].sort()
 
-  const getAllIndustries = (): string[] => {
-    const all = accounts.map(a => a.industry).filter(Boolean) as string[]
-    return [...new Set(all)].sort()
+  const getAllIndustries = (): string[] =>
+    [...new Set(accounts.map(a => a.industry).filter(Boolean) as string[])].sort()
+
+  // Label helper needed by AccountList
+  const getAccountTypeLabel = (type: AccountType | string): string => {
+    // Prefer labels from mock config if available
+    const opt = mockAccounts?.accountTypes?.find((o: any) => o.value === type)
+    if (opt?.label) return opt.label
+
+    // Fallback mapping
+    const fallback: Record<string, string> = {
+      [AccountType.CUSTOMER]: 'Customer',
+      [AccountType.PROSPECT]: 'Prospect',
+      [AccountType.VENDOR]: 'Vendor',
+      [AccountType.PARTNER]: 'Partner',
+    }
+    return fallback[type as string] || String(type)
   }
 
   // Placeholder until wired to contacts hook / API
-  const getContactsForAccount = (_accountId: string): Contact[] => {
-    return []
-  }
+  const getContactsForAccount = (_accountId: string): Contact[] => []
 
   return {
     // state
@@ -191,9 +184,10 @@ export function useAccountManagement() {
     getAccount,
     getAccountById,
     getContactsForAccount,
-    filterAccounts,        // <-- the missing comma before caused the build error
+    filterAccounts,
     getAccountsByType,
     getAllTags,
     getAllIndustries,
+    getAccountTypeLabel, // <-- added
   }
 }
