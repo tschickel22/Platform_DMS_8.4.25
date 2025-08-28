@@ -191,3 +191,6 @@ export function useAccountManagement() {
     getAccountTypeLabel, // <-- added
   }
 }
+
+
+export { useAccountManagement }
