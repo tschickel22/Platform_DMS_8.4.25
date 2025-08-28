@@ -29,16 +29,30 @@ import {
   Settings,
 } from 'lucide-react'
 
-// Lazy load forms to keep the page snappy
-const ContactForm = React.lazy(() => import('@/modules/contacts/components/ContactForm'))
-const DealForm = React.lazy(() =>
-  import('@/modules/crm-sales-deal/components/DealForm').then(m => ({ default: m.DealForm }))
+// Lazy load forms (robustly pick default or named export to avoid loops)
+const ContactForm = React.lazy(() =>
+  import('@/modules/contacts/components/ContactForm').then(m => ({
+    default: (m as any).default ?? (m as any).ContactForm,
+  }))
 )
-const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
-// ⚠️ Adjust the path below if your service form lives elsewhere:
+
+const DealForm = React.lazy(() =>
+  import('@/modules/crm-sales-deal/components/DealForm').then(m => ({
+    default: (m as any).default ?? (m as any).DealForm,
+  }))
+)
+
+const NewQuoteForm = React.lazy(() =>
+  import('@/modules/quote-builder/components/NewQuoteForm').then(m => ({
+    default: (m as any).default ?? (m as any).NewQuoteForm,
+  }))
+)
+
+// ⚠️ Adjust the path/export if your service form lives elsewhere or is a named export
 const ServiceTicketForm = React.lazy(() =>
-  import('@/modules/service-ops/components/ServiceTicketForm')
-    // If yours is a named export, flip to: .then(m => ({ default: m.ServiceTicketForm }))
+  import('@/modules/service-ops/components/ServiceTicketForm').then(m => ({
+    default: (m as any).default ?? (m as any).ServiceTicketForm,
+  }))
 )
 
 // Section components
@@ -76,9 +90,9 @@ export default function AccountDetail() {
 
   // Single source of truth for modals
   const [openContact, setOpenContact] = useState(false)
-  const [openDeal, setOpenDeal] = useState(false)
-  const [openQuote, setOpenQuote] = useState(false)
-  const [openService, setOpenService] = useState(false)
+  const [openDeal,   setOpenDeal]   = useState(false)
+  const [openQuote,  setOpenQuote]  = useState(false)
+  const [openService,setOpenService]= useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -135,7 +149,7 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — your lists likely read from shared state or re-fetch elsewhere
+    // placeholder — lists likely read from shared state or re-fetch elsewhere
   }
 
   const handleContactSaved = (contact: any) => {
@@ -415,7 +429,7 @@ export default function AccountDetail() {
 
       {/* Contact Modal */}
       <Dialog open={openContact} onOpenChange={setOpenContact}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-2xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
           <ErrorBoundary>
@@ -428,7 +442,7 @@ export default function AccountDetail() {
 
       {/* Deal Modal */}
       <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
           <ErrorBoundary>
@@ -441,7 +455,7 @@ export default function AccountDetail() {
 
       {/* Quote Modal */}
       <Dialog open={openQuote} onOpenChange={setOpenQuote}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
           <ErrorBoundary>
@@ -454,7 +468,7 @@ export default function AccountDetail() {
 
       {/* Service Ticket Modal */}
       <Dialog open={openService} onOpenChange={setOpenService}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
           <ErrorBoundary>
