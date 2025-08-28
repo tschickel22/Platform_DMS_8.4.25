@@ -210,3 +210,6 @@ export default function AccountDetail() {
   }
 
   // Delivery save (localStorage
+   const handleDeliverySave = () => {
+     // TODO: Implement delivery save functionality
+   }
