@@ -1,3 +1,4 @@
+// src/modules/accounts/hooks/useAccountManagement.ts
 import { useEffect, useMemo, useState } from 'react'
 import { Account, AccountType, Contact } from '@/types/index'
 import { mockAccounts } from '@/mocks/accountsMock'
@@ -123,7 +124,7 @@ export function useAccountManagement() {
   const getAccount = (accountId: string): Account | null =>
     accounts.find(a => a.id === accountId) || null
 
-  // Some places in the app call getAccountById; provide the alias for compatibility
+  // Compatibility alias
   const getAccountById = (accountId: string): Account | null => getAccount(accountId)
 
   const filterAccounts = (filters: {
@@ -190,7 +191,7 @@ export function useAccountManagement() {
     getAccount,
     getAccountById,
     getContactsForAccount,
-    filterAccounts,
+    filterAccounts,        // <-- the missing comma before caused the build error
     getAccountsByType,
     getAllTags,
     getAllIndustries,
