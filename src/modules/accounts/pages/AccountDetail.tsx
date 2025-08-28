@@ -1,8 +1,10 @@
+// src/modules/accounts/pages/AccountDetail.tsx
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -11,11 +13,16 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { useAccountManagement } from '../hooks/useAccountManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+import ContactForm from '@/modules/contacts/components/ContactForm'
+import DealForm from '@/modules/crm-sales-deal/components/DealForm'
+import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
+
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+
 import {
   ArrowLeft,
   Edit,
@@ -29,38 +36,12 @@ import {
   Settings,
 } from 'lucide-react'
 
-// Lazy load forms (robustly pick default or named export to avoid loops)
-const ContactForm = React.lazy(() =>
-  import('@/modules/contacts/components/ContactForm').then(m => ({
-    default: (m as any).default ?? (m as any).ContactForm,
-  }))
-)
-
-const DealForm = React.lazy(() =>
-  import('@/modules/crm-sales-deal/components/DealForm').then(m => ({
-    default: (m as any).default ?? (m as any).DealForm,
-  }))
-)
-
-const NewQuoteForm = React.lazy(() =>
-  import('@/modules/quote-builder/components/NewQuoteForm').then(m => ({
-    default: (m as any).default ?? (m as any).NewQuoteForm,
-  }))
-)
-
-// ⚠️ Adjust the path/export if your service form lives elsewhere or is a named export
-const ServiceTicketForm = React.lazy(() =>
-  import('@/modules/service-ops/components/ServiceTicketForm').then(m => ({
-    default: (m as any).default ?? (m as any).ServiceTicketForm,
-  }))
-)
-
-// Section components
-import { AccountContactsSection } from '../components/AccountContactsSection'
-import { AccountDealsSection } from '../components/AccountDealsSection'
-import { AccountQuotesSection } from '../components/AccountQuotesSection'
-import { AccountServiceTicketsSection } from '../components/AccountServiceTicketsSection'
-import { AccountNotesSection } from '../components/AccountNotesSection'
+// Section components (use absolute paths to avoid fragile relatives)
+import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
+import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
+import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
+import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
+import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 
 interface AccountSection {
   id: string
@@ -86,13 +67,13 @@ export default function AccountDetail() {
   const { toast } = useToast()
 
   const [account, setAccount] = useState<any>(null)
-  const [sections, setSections] = useState<AccountSection['type'][]>(DEFAULT_LAYOUT)
+  const [sections, setSections] = useState<AccountSection['type'][]>([...DEFAULT_LAYOUT])
 
-  // Single source of truth for modals
+  // Modals
   const [openContact, setOpenContact] = useState(false)
-  const [openDeal,   setOpenDeal]   = useState(false)
-  const [openQuote,  setOpenQuote]  = useState(false)
-  const [openService,setOpenService]= useState(false)
+  const [openDeal, setOpenDeal] = useState(false)
+  const [openQuote, setOpenQuote] = useState(false)
+  const [openService, setOpenService] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -107,8 +88,8 @@ export default function AccountDetail() {
 
   useEffect(() => {
     if (!accountId) return
-    const saved = loadFromLocalStorage<AccountSection['type'][]>(storageKey, DEFAULT_LAYOUT)
-    setSections(saved || DEFAULT_LAYOUT)
+    const saved = loadFromLocalStorage<AccountSection['type'][]>(storageKey, [...DEFAULT_LAYOUT])
+    setSections(saved || [...DEFAULT_LAYOUT])
   }, [accountId, storageKey])
 
   const saveLayout = () => {
@@ -119,7 +100,7 @@ export default function AccountDetail() {
   }
 
   const resetLayout = () => {
-    setSections(DEFAULT_LAYOUT)
+    setSections([...DEFAULT_LAYOUT])
     setHasUnsavedChanges(true)
     toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
   }
@@ -149,7 +130,7 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — lists likely read from shared state or re-fetch elsewhere
+    // placeholder — sections read from shared state or localStorage
   }
 
   const handleContactSaved = (contact: any) => {
@@ -429,53 +410,37 @@ export default function AccountDetail() {
 
       {/* Contact Modal */}
       <Dialog open={openContact} onOpenChange={setOpenContact}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
         </DialogContent>
       </Dialog>
 
       {/* Deal Modal */}
       <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
         </DialogContent>
       </Dialog>
 
       {/* Quote Modal */}
       <Dialog open={openQuote} onOpenChange={setOpenQuote}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
         </DialogContent>
       </Dialog>
 
       {/* Service Ticket Modal */}
       <Dialog open={openService} onOpenChange={setOpenService}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] maxHeight-[85vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
         </DialogContent>
       </Dialog>
     </>
