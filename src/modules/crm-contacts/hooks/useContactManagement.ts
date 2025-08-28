@@ -8,47 +8,6 @@ import { useToast } from '@/hooks/use-toast'
 export function useContactManagement() {
   const { tenant } = useTenant()
   const { toast } = useToast()
-  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const tenantId = tenant?.id
-      const existingContacts = contactsMock.getContacts(tenantId)
-      
-      // Process each import item
-      const newContacts = importData.map(item => ({
-        firstName: item.firstName || '',
-        lastName: item.lastName || '',
-        email: item.email || '',
-        phone: item.phone || '',
-        accountId: item.accountId || undefined,
-        title: item.title || '',
-        department: item.department || '',
-        preferredContactMethod: item.preferredContactMethod || 'email',
-        tags: Array.isArray(item.tags) ? item.tags : 
-              typeof item.tags === 'string' ? item.tags.split(';').filter(Boolean) : [],
-        ownerId: 'user-1' // Default to current user
-      }))
-      
-      // Create contacts in batch
-      for (const contactData of newContacts) {
-        contactsMock.createContact(contactData, tenantId)
-      }
-      
-      // Refresh the contacts list
-      const updatedContacts = contactsMock.getContacts(tenantId)
-      setContacts(updatedContacts)
-      
-    } catch (err) {
-      console.error('Bulk import error:', err)
-      setError('Failed to import contacts')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }, [tenant?.id])
-
   const location = useLocation()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,6 +57,11 @@ export function useContactManagement() {
         description: 'Failed to load contacts. Please try again.',
         variant: 'destructive'
       })
+    } finally {
+      setLoading(false)
+    }
+  }, [tenant?.id, toast])
+
   // Apply filters to contacts
   const filteredContacts = useCallback(() => {
     let filtered = [...contacts]
@@ -119,11 +83,6 @@ export function useContactManagement() {
     
     return filtered
   }, [contacts, filters])
-
-    } finally {
-      setLoading(false)
-    }
-  }, [tenant?.id, toast])
 
   const getContact = useCallback((id: string): Contact | null => {
     try {
@@ -205,23 +164,6 @@ export function useContactManagement() {
       if (updatedContact) {
         setContacts(prev => prev.map(contact => 
           contact.id === contactId ? updatedContact : contact
-  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
-    try {
-      setLoading(true)
-      
-      for (const item of importData) {
-        await createContact(item)
-      }
-      
-      await loadContacts()
-    } catch (err) {
-      console.error('Error during bulk import:', err)
-      throw new Error('Failed to import contacts')
-    } finally {
-      setLoading(false)
-    }
-  }, [createContact, loadContacts])
-
         ))
       }
       return updatedContact
@@ -231,11 +173,76 @@ export function useContactManagement() {
     }
   }, [tenant?.id])
 
+  const deleteNoteFromContact = useCallback(async (contactId: string, noteId: string): Promise<Contact | null> => {
+    try {
+      const updatedContact = contactsMock.deleteNoteFromContact(contactId, noteId, tenant?.id)
+      if (updatedContact) {
+        setContacts(prev => prev.map(contact => 
+          contact.id === contactId ? updatedContact : contact
         ))
       }
+      return updatedContact
     } catch (err) {
       console.error('Error updating contact note:', err)
       setError('Failed to update note')
+      return null
+    }
+  }, [tenant?.id])
+
+  const searchContacts = useCallback((query: string) => {
+    return contacts.filter(contact => 
+      contact.firstName.toLowerCase().includes(query.toLowerCase()) ||
+      contact.lastName.toLowerCase().includes(query.toLowerCase()) ||
+      contact.email.toLowerCase().includes(query.toLowerCase())
+    )
+  }, [contacts])
+
+  const getContactsByAccount = useCallback((accountId: string) => {
+    return contacts.filter(contact => contact.accountId === accountId)
+  }, [contacts])
+
+  const getContactsByTag = useCallback((tag: string) => {
+    return contacts.filter(contact => contact.tags?.includes(tag))
+  }, [contacts])
+
+  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const tenantId = tenant?.id
+      const existingContacts = contactsMock.getContacts(tenantId)
+      
+      // Process each import item
+      const newContacts = importData.map(item => ({
+        firstName: item.firstName || '',
+        lastName: item.lastName || '',
+        email: item.email || '',
+        phone: item.phone || '',
+        accountId: item.accountId || undefined,
+        title: item.title || '',
+        department: item.department || '',
+        preferredContactMethod: item.preferredContactMethod || 'email',
+        tags: Array.isArray(item.tags) ? item.tags : 
+              typeof item.tags === 'string' ? item.tags.split(';').filter(Boolean) : [],
+        ownerId: 'user-1' // Default to current user
+      }))
+      
+      // Create contacts in batch
+      for (const contactData of newContacts) {
+        contactsMock.createContact(contactData, tenantId)
+      }
+      
+      // Refresh the contacts list
+      const updatedContacts = contactsMock.getContacts(tenantId)
+      setContacts(updatedContacts)
+      
+    } catch (err) {
+      console.error('Bulk import error:', err)
+      setError('Failed to import contacts')
+      throw err
+    } finally {
+      setLoading(false)
     }
   }, [tenant?.id])
 
