@@ -7,16 +7,12 @@ import ContactForm from './components/ContactForm'
 
 export default function ContactsModule() {
   return (
-    <Routes>
-      <Route path="/" element={<ContactList />} />
-      <Route path="/new" element={<ContactForm />} />
     <ErrorBoundary>
       <Routes>
         <Route path="/" element={<ContactList />} />
+        <Route path="/new" element={<ContactForm />} />
         <Route path="/:contactId" element={<ContactDetail />} />
       </Routes>
     </ErrorBoundary>
-  )
-}
   )
 }
