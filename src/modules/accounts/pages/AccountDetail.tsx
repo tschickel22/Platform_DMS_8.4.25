@@ -13,10 +13,19 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
-import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+import ContactForm from '@/modules/contacts/components/ContactForm'
+import DealForm from '@/modules/crm-sales-deal/components/DealForm'
+import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
+import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm' // ⬅️ adjust path if yours differs
+
+import { saveToLocalStorage, loadFromLocalStorage, generateId } from '@/lib/utils'
 
 import {
   ArrowLeft,
@@ -29,57 +38,202 @@ import {
   Save,
   RotateCcw,
   Settings,
+  PackageCheck,
+  Shield,
+  CreditCard,
+  FileText,
+  FileSignature,
+  Receipt,
+  GripVertical,
 } from 'lucide-react'
 
-// Lazy-load all form components to avoid heavy initial loads.
-// IMPORTANT: DealForm is a **named** export; map it to default explicitly.
-const ContactForm = React.lazy(() => import('@/modules/contacts/components/ContactForm'))
-const DealForm = React.lazy(() =>
-  import('@/modules/crm-sales-deal/components/DealForm').then((m) => ({ default: m.DealForm }))
-)
-const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
-const ServiceTicketForm = React.lazy(() =>
-  import('@/modules/service-ops/components/ServiceTicketForm')
-)
-
-// Section components (absolute paths)
+// ---- Existing section components ----
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
 import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
 import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 
+function GenericAccountSection({
+  accountId,
+  type,
+  title,
+  description,
+  createLabel,
+  createPath,
+  Icon,
+  onRemove,
+  isDragging,
+  onAdd,
+}: {
+  accountId: string
+  type:
+    | 'deliveries'
+    | 'warranty'
+    | 'payments'
+    | 'agreements'
+    | 'applications'
+    | 'invoices'
+  title: string
+  description: string
+  createLabel: string
+  createPath: string
+  Icon: React.ComponentType<{ className?: string }>
+  onRemove?: () => void
+  isDragging?: boolean
+  onAdd?: () => void
+}) {
+  const handleCreate = () => {
+    if (onAdd) return onAdd()
+    window.location.href = `${createPath}?accountId=${accountId}&returnTo=account`
+  }
+
+  return (
+    <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className="flex items-center space-x-2">
+          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+          <div>
+            <CardTitle className="text-lg flex items-center">
+              <Icon className="h-5 w-5 mr-2" />
+              {title}
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="secondary">0</Badge>
+          {onRemove && (
+            <Button variant="ghost" size="sm" onClick={onRemove}>
+              ×
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <EmptyState
+          title={`No ${title.toLowerCase()} yet`}
+          description={`Create a ${title.toLowerCase().replace(/s$/, '')} for this account`}
+          icon={<Icon className="h-12 w-12" />}
+          action={{ label: createLabel, onClick: handleCreate }}
+        />
+      </CardContent>
+    </Card>
+  )
+}
+
+type SectionType =
+  | 'contacts'
+  | 'deals'
+  | 'quotes'
+  | 'service'
+  | 'notes'
+  | 'deliveries'
+  | 'warranty'
+  | 'payments'
+  | 'agreements'
+  | 'applications'
+  | 'invoices'
+
 interface AccountSection {
   id: string
-  type: 'contacts' | 'deals' | 'quotes' | 'service' | 'notes'
+  type: SectionType
   title: string
-  component: React.ComponentType<any>
+  component?: React.ComponentType<any>
   description: string
 }
+
+const SECTION_META = {
+  deliveries: {
+    title: 'Deliveries',
+    description: 'Delivery records and scheduling for this account',
+    createLabel: 'Create Delivery',
+    createPath: '/delivery/new',
+    Icon: PackageCheck,
+  },
+  warranty: {
+    title: 'Warranty',
+    description: 'Warranty registrations and claims',
+    createLabel: 'Register / File Claim',
+    createPath: '/inventory/warranty/new',
+    Icon: Shield,
+  },
+  payments: {
+    title: 'Payments',
+    description: 'Payments and finance transactions',
+    createLabel: 'Record Payment',
+    createPath: '/finance/payments/new',
+    Icon: CreditCard,
+  },
+  agreements: {
+    title: 'Agreements',
+    description: 'Contracts and signed documents',
+    createLabel: 'Create Agreement',
+    createPath: '/agreements/new',
+    Icon: FileSignature,
+  },
+  applications: {
+    title: 'Applications',
+    description: 'Finance/credit applications tied to this account',
+    createLabel: 'New Application',
+    createPath: '/client-applications/new',
+    Icon: FileText,
+  },
+  invoices: {
+    title: 'Invoices',
+    description: 'Billing and open invoices',
+    createLabel: 'Create Invoice',
+    createPath: '/invoices/new',
+    Icon: Receipt,
+  },
+} as const
 
 const AVAILABLE_SECTIONS: AccountSection[] = [
   { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
   { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
   { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
   { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
+  { id: 'deliveries', type: 'deliveries', title: SECTION_META.deliveries.title, description: SECTION_META.deliveries.description },
+  { id: 'warranty', type: 'warranty', title: SECTION_META.warranty.title, description: SECTION_META.warranty.description },
+  { id: 'payments', type: 'payments', title: SECTION_META.payments.title, description: SECTION_META.payments.description },
+  { id: 'agreements', type: 'agreements', title: SECTION_META.agreements.title, description: SECTION_META.agreements.description },
+  { id: 'applications', type: 'applications', title: SECTION_META.applications.title, description: SECTION_META.applications.description },
+  { id: 'invoices', type: 'invoices', title: SECTION_META.invoices.title, description: SECTION_META.invoices.description },
   { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
 ]
 
-const DEFAULT_LAYOUT: AccountSection['type'][] = ['contacts', 'deals', 'quotes', 'service', 'notes']
+const DEFAULT_LAYOUT: SectionType[] = [
+  'contacts',
+  'deals',
+  'quotes',
+  'service',
+  'deliveries',
+  'warranty',
+  'payments',
+  'agreements',
+  'applications',
+  'invoices',
+  'notes',
+]
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
   const { getAccount } = useAccountManagement()
+  const { contacts } = useContactManagement()
+  const { vehicles } = useInventoryManagement()
   const { toast } = useToast()
 
   const [account, setAccount] = useState<any>(null)
-  const [sections, setSections] = useState<AccountSection['type'][]>([...DEFAULT_LAYOUT])
+  const [sections, setSections] = useState<SectionType[]>([...DEFAULT_LAYOUT])
 
-  // Modal state
+  // Modals
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
   const [openService, setOpenService] = useState(false)
+
+  // Delivery form is its own modal overlay, so we just toggle it
+  const [openDelivery, setOpenDelivery] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -94,7 +248,7 @@ export default function AccountDetail() {
 
   useEffect(() => {
     if (!accountId) return
-    const saved = loadFromLocalStorage<AccountSection['type'][]>(storageKey, [...DEFAULT_LAYOUT])
+    const saved = loadFromLocalStorage<SectionType[]>(storageKey, [...DEFAULT_LAYOUT])
     setSections(saved || [...DEFAULT_LAYOUT])
   }, [accountId, storageKey])
 
@@ -120,7 +274,7 @@ export default function AccountDetail() {
     setHasUnsavedChanges(true)
   }
 
-  const addSection = (type: AccountSection['type']) => {
+  const addSection = (type: SectionType) => {
     if (!sections.includes(type)) {
       setSections([...sections, type])
       setHasUnsavedChanges(true)
@@ -129,14 +283,14 @@ export default function AccountDetail() {
     }
   }
 
-  const removeSection = (type: AccountSection['type']) => {
+  const removeSection = (type: SectionType) => {
     setSections(sections.filter((s) => s !== type))
     setHasUnsavedChanges(true)
     toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — your lists likely re-fetch elsewhere or read shared state
+    // placeholder — sections read from shared state or localStorage
   }
 
   const handleContactSaved = (contact: any) => {
@@ -164,8 +318,32 @@ export default function AccountDetail() {
     setOpenService(false)
     if (ticket) {
       refreshSection('service')
-      toast({ title: 'Success', description: 'Service ticket created successfully' })
     }
+  }
+
+  // ---- Delivery integration ----
+  const accountContacts = contacts.filter((c) => !accountId || c.accountId === accountId)
+
+  const handleDeliverySaved = (delivery: any) => {
+    setOpenDelivery(false)
+    if (delivery) {
+      refreshSection('deliveries')
+      toast({ title: 'Success', description: 'Delivery scheduled successfully' })
+    }
+  }
+
+  const handleSaveDelivery = async (payload: any) => {
+    // Persist to localStorage; swap for API when ready
+    const existing = loadFromLocalStorage<any[]>('deliveries', [])
+    const record = {
+      id: generateId(),
+      accountId: account.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...payload,
+    }
+    saveToLocalStorage('deliveries', [record, ...existing])
+    handleDeliverySaved(record)
   }
 
   if (!account) {
@@ -189,6 +367,30 @@ export default function AccountDetail() {
     }
     return map[type] || 'bg-gray-100 text-gray-800'
   }
+
+  const renderGeneric = (
+    t: keyof typeof SECTION_META,
+    isDragging?: boolean
+  ) => {
+    const m = SECTION_META[t]
+    return (
+      <GenericAccountSection
+        key={t}
+        accountId={accountId!}
+        type={t}
+        title={m.title}
+        description={m.description}
+        createLabel={m.createLabel}
+        createPath={m.createPath}
+        Icon={m.Icon}
+        isDragging={isDragging}
+        onRemove={() => removeSection(t)}
+        onAdd={t === 'deliveries' ? () => setOpenDelivery(true) : undefined}
+      />
+    )
+  }
+
+  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type))
 
   return (
     <>
@@ -239,7 +441,7 @@ export default function AccountDetail() {
                   <DialogDescription>Select a section to add to this account view.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
-                  {AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type)).map((section) => (
+                  {availableSectionsToAdd.map((section) => (
                     <Button
                       key={section.id}
                       variant="outline"
@@ -252,7 +454,7 @@ export default function AccountDetail() {
                       </div>
                     </Button>
                   ))}
-                  {AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type)).length === 0 && (
+                  {availableSectionsToAdd.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       All available sections are already added to this view.
                     </p>
@@ -350,47 +552,60 @@ export default function AccountDetail() {
           <Droppable droppableId="account-sections">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
-                {sections.map((type, index) => {
-                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
-                  if (!config) return null
-
-                  return (
-                    <Draggable key={type} draggableId={type} index={index}>
-                      {(p, s) => (
-                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                          {type === 'deals' ? (
-                            <AccountDealsSection
-                              accountId={accountId!}
-                              onRemove={() => removeSection(type)}
-                              isDragging={s.isDragging}
-                              onAddDeal={() => setOpenDeal(true)}
-                            />
-                          ) : type === 'quotes' ? (
-                            <AccountQuotesSection
-                              accountId={accountId!}
-                              onRemove={() => removeSection(type)}
-                              isDragging={s.isDragging}
-                              onAddQuote={() => setOpenQuote(true)}
-                            />
-                          ) : type === 'service' ? (
-                            <AccountServiceTicketsSection
-                              accountId={accountId!}
-                              onRemove={() => removeSection(type)}
-                              isDragging={s.isDragging}
-                              onAddService={() => setOpenService(true)}
-                            />
-                          ) : (
-                            <config.component
-                              accountId={accountId!}
-                              onRemove={() => removeSection(type)}
-                              isDragging={s.isDragging}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </Draggable>
-                  )
-                })}
+                {sections.map((type, index) => (
+                  <Draggable key={type} draggableId={type} index={index}>
+                    {(p, s) => (
+                      <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
+                        {type === 'deals' ? (
+                          <AccountDealsSection
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                            onAddDeal={() => setOpenDeal(true)}
+                          />
+                        ) : type === 'quotes' ? (
+                          <AccountQuotesSection
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                            onAddQuote={() => setOpenQuote(true)}
+                          />
+                        ) : type === 'service' ? (
+                          <AccountServiceTicketsSection
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                            onAddService={() => setOpenService(true)}
+                          />
+                        ) : type === 'contacts' ? (
+                          <AccountContactsSection
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                          />
+                        ) : type === 'notes' ? (
+                          <AccountNotesSection
+                            accountId={accountId!}
+                            onRemove={() => removeSection(type)}
+                            isDragging={s.isDragging}
+                          />
+                        ) : type === 'deliveries' ? (
+                          renderGeneric('deliveries', s.isDragging)
+                        ) : type === 'warranty' ? (
+                          renderGeneric('warranty', s.isDragging)
+                        ) : type === 'payments' ? (
+                          renderGeneric('payments', s.isDragging)
+                        ) : type === 'agreements' ? (
+                          renderGeneric('agreements', s.isDragging)
+                        ) : type === 'applications' ? (
+                          renderGeneric('applications', s.isDragging)
+                        ) : type === 'invoices' ? (
+                          renderGeneric('invoices', s.isDragging)
+                        ) : null}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
                 {provided.placeholder}
               </div>
             )}
@@ -418,11 +633,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading…</div>}>
-              <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
         </DialogContent>
       </Dialog>
 
@@ -431,11 +642,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading deal form…</div>}>
-              <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
         </DialogContent>
       </Dialog>
 
@@ -444,11 +651,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading quote form…</div>}>
-              <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
         </DialogContent>
       </Dialog>
 
@@ -457,13 +660,20 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading service form…</div>}>
-              <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
-            </React.Suspense>
-          </ErrorBoundary>
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Form (self-contained modal overlay) */}
+      {openDelivery && (
+        <DeliveryForm
+          // Optional: pass an existing delivery to edit
+          vehicles={vehicles}
+          customers={accountContacts}
+          onSave={handleSaveDelivery}
+          onCancel={() => setOpenDelivery(false)}
+        />
+      )}
     </>
   )
 }
