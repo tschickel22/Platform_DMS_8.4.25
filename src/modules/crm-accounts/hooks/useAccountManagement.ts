@@ -1,146 +1,235 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Account, Note } from '@/types'
-import accountsMock from '@/mocks/accountsMock'
+import { Account } from '@/types'
+import { accountsMock } from '@/mocks/accountsMock'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/hooks/use-toast'
+import { logger } from '@/utils/logger'
 
 export function useAccountManagement() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { tenant } = useTenant()
   const { user } = useAuth()
+  const { toast } = useToast()
 
-  const fetchAccounts = useCallback(() => {
-    setLoading(true)
+  const tenantId = tenant?.id
+
+  // Load accounts
+  const loadAccounts = useCallback(async () => {
     try {
-      const fetchedAccounts = accountsMock.getAccounts()
-      setAccounts(fetchedAccounts)
+      setLoading(true)
       setError(null)
+      const accountsData = accountsMock.getAccounts(tenantId)
+      setAccounts(accountsData || [])
+      logger.debug('Accounts loaded', { count: accountsData?.length || 0, tenantId })
     } catch (err) {
-      console.error('Failed to fetch accounts:', err)
-      setError('Failed to load accounts.')
+      const errorMessage = 'Failed to load accounts'
+      setError(errorMessage)
+      logger.error('Error loading accounts', err, { tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [tenantId, toast])
 
-  useEffect(() => {
-    fetchAccounts()
-  }, [fetchAccounts])
-
-  const getAccountById = useCallback((id: string): Account | undefined => {
-    return accounts.find(account => account.id === id)
-  }, [accounts])
-
-  const createAccount = useCallback((newAccount: Omit<Account, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Account | undefined => {
+  // Get account by ID (null-safe)
+  const getAccountById = useCallback((id: string): Account | null => {
     try {
-      const createdAccount = accountsMock.createAccount(newAccount)
-      setAccounts(prev => [...prev, createdAccount])
-      setError(null)
-      return createdAccount
+      return accountsMock.getAccount(id, tenantId)
     } catch (err) {
-      console.error('Failed to create account:', err)
-      setError('Failed to create account.')
-      return undefined
+      logger.error('Error getting account by ID', err, { accountId: id, tenantId })
+      return null
     }
-  }, [])
+  }, [tenantId])
 
-  const updateAccount = useCallback((id: string, updates: Partial<Account>): Account | undefined => {
+  // Create account
+  const createAccount = useCallback(async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Promise<Account | null> => {
     try {
-      const updatedAccount = accountsMock.updateAccount(id, updates)
+      setLoading(true)
+      const newAccount = accountsMock.createAccount(accountData, tenantId)
+      await loadAccounts() // Refresh list
+      
+      logger.userAction('account_created', { accountId: newAccount.id, tenantId })
+      toast({
+        title: 'Success',
+        description: 'Account created successfully'
+      })
+      
+      return newAccount
+    } catch (err) {
+      const errorMessage = 'Failed to create account'
+      logger.error('Error creating account', err, { tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, loadAccounts, toast])
+
+  // Update account
+  const updateAccount = useCallback(async (id: string, updates: Partial<Account>): Promise<Account | null> => {
+    try {
+      setLoading(true)
+      const updatedAccount = accountsMock.updateAccount(id, updates, tenantId)
       if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === id ? updatedAccount : acc))
-        setError(null)
-        return updatedAccount
+        await loadAccounts() // Refresh list
+        
+        logger.userAction('account_updated', { accountId: id, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Account updated successfully'
+        })
       }
-      setError('Account not found for update.')
-      return undefined
+      
+      return updatedAccount
     } catch (err) {
-      console.error('Failed to update account:', err)
-      setError('Failed to update account.')
-      return undefined
+      const errorMessage = 'Failed to update account'
+      logger.error('Error updating account', err, { accountId: id, tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return null
+    } finally {
+      setLoading(false)
     }
-  }, [])
+  }, [tenantId, loadAccounts, toast])
 
-  const deleteAccount = useCallback((id: string): boolean => {
+  // Delete account
+  const deleteAccount = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const success = accountsMock.deleteAccount(id)
+      setLoading(true)
+      const success = accountsMock.deleteAccount(id, tenantId)
       if (success) {
-        setAccounts(prev => prev.filter(acc => acc.id !== id))
-        setError(null)
+        await loadAccounts() // Refresh list
+        
+        logger.userAction('account_deleted', { accountId: id, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Account deleted successfully'
+        })
+      }
+      
+      return success
+    } catch (err) {
+      const errorMessage = 'Failed to delete account'
+      logger.error('Error deleting account', err, { accountId: id, tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, loadAccounts, toast])
+
+  // Note management
+  const addNote = useCallback(async (accountId: string, content: string): Promise<boolean> => {
+    try {
+      const createdBy = user?.name || 'Unknown User'
+      const updatedAccount = accountsMock.addNoteToAccount(accountId, content, createdBy, tenantId)
+      if (updatedAccount) {
+        await loadAccounts() // Refresh to show new note
+        
+        logger.userAction('account_note_added', { accountId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note added successfully'
+        })
         return true
       }
-      setError('Account not found for deletion.')
       return false
     } catch (err) {
-      console.error('Failed to delete account:', err)
-      setError('Failed to delete account.')
+      logger.error('Error adding note to account', err, { accountId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to add note',
+        variant: 'destructive'
+      })
       return false
     }
-  }, [])
+  }, [tenantId, user?.name, loadAccounts, toast])
 
-  const addNoteToAccount = useCallback((accountId: string, content: string): Note | undefined => {
-    const createdBy = user?.name || 'Unknown User'
+  const updateNote = useCallback(async (accountId: string, noteId: string, content: string): Promise<boolean> => {
     try {
-      const updatedAccount = accountsMock.addNoteToAccount(accountId, content, createdBy)
+      const updatedBy = user?.name || 'Unknown User'
+      const updatedAccount = accountsMock.updateNoteInAccount(accountId, noteId, content, updatedBy, tenantId)
       if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
-        return updatedAccount.notes[updatedAccount.notes.length - 1]
-      }
-      setError('Account not found to add note.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to add note to account:', err)
-      setError('Failed to add note.')
-      return undefined
-    }
-  }, [user])
-
-  const updateNoteInAccount = useCallback((accountId: string, noteId: string, newContent: string): Note | undefined => {
-    try {
-      const updatedAccount = accountsMock.updateNoteInAccount(accountId, noteId, newContent)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
-        return updatedAccount.notes.find(note => note.id === noteId)
-      }
-      setError('Account or note not found for update.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to update note in account:', err)
-      setError('Failed to update note.')
-      return undefined
-    }
-  }, [])
-
-  const deleteNoteFromAccount = useCallback((accountId: string, noteId: string): boolean => {
-    try {
-      const updatedAccount = accountsMock.deleteNoteFromAccount(accountId, noteId)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
+        await loadAccounts() // Refresh to show updated note
+        
+        logger.userAction('account_note_updated', { accountId, noteId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note updated successfully'
+        })
         return true
       }
-      setError('Account or note not found for deletion.')
       return false
     } catch (err) {
-      console.error('Failed to delete note from account:', err)
-      setError('Failed to delete note.')
+      logger.error('Error updating note in account', err, { accountId, noteId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to update note',
+        variant: 'destructive'
+      })
       return false
     }
-  }, [])
+  }, [tenantId, user?.name, loadAccounts, toast])
+
+  const deleteNote = useCallback(async (accountId: string, noteId: string): Promise<boolean> => {
+    try {
+      const updatedAccount = accountsMock.deleteNoteFromAccount(accountId, noteId, tenantId)
+      if (updatedAccount) {
+        await loadAccounts() // Refresh to remove deleted note
+        
+        logger.userAction('account_note_deleted', { accountId, noteId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note deleted successfully'
+        })
+        return true
+      }
+      return false
+    } catch (err) {
+      logger.error('Error deleting note from account', err, { accountId, noteId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to delete note',
+        variant: 'destructive'
+      })
+      return false
+    }
+  }, [tenantId, loadAccounts, toast])
+
+  // Load accounts on mount and when tenant changes
+  useEffect(() => {
+    loadAccounts()
+  }, [loadAccounts])
 
   return {
     accounts,
     loading,
     error,
-    fetchAccounts,
     getAccountById,
     createAccount,
     updateAccount,
     deleteAccount,
-    addNoteToAccount,
-    updateNoteInAccount,
-    deleteNoteFromAccount
+    addNote,
+    updateNote,
+    deleteNote,
+    refresh: loadAccounts
   }
 }

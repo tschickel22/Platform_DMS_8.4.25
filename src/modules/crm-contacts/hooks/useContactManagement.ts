@@ -1,146 +1,235 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Contact, Note } from '@/types'
-import contactsMock from '@/mocks/contactsMock'
+import { Contact } from '@/types'
+import { contactsMock } from '@/mocks/contactsMock'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/hooks/use-toast'
+import { logger } from '@/utils/logger'
 
 export function useContactManagement() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { tenant } = useTenant()
   const { user } = useAuth()
+  const { toast } = useToast()
 
-  const fetchContacts = useCallback(() => {
-    setLoading(true)
+  const tenantId = tenant?.id
+
+  // Load contacts
+  const loadContacts = useCallback(async () => {
     try {
-      const fetchedContacts = contactsMock.getContacts()
-      setContacts(fetchedContacts)
+      setLoading(true)
       setError(null)
+      const contactsData = contactsMock.getContacts(tenantId)
+      setContacts(contactsData || [])
+      logger.debug('Contacts loaded', { count: contactsData?.length || 0, tenantId })
     } catch (err) {
-      console.error('Failed to fetch contacts:', err)
-      setError('Failed to load contacts.')
+      const errorMessage = 'Failed to load contacts'
+      setError(errorMessage)
+      logger.error('Error loading contacts', err, { tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [tenantId, toast])
 
-  useEffect(() => {
-    fetchContacts()
-  }, [fetchContacts])
-
-  const getContactById = useCallback((id: string): Contact | undefined => {
-    return contacts.find(contact => contact.id === id)
-  }, [contacts])
-
-  const createContact = useCallback((newContact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Contact | undefined => {
+  // Get contact by ID (null-safe)
+  const getContactById = useCallback((id: string): Contact | null => {
     try {
-      const createdContact = contactsMock.createContact(newContact)
-      setContacts(prev => [...prev, createdContact])
-      setError(null)
-      return createdContact
+      return contactsMock.getContact(id, tenantId)
     } catch (err) {
-      console.error('Failed to create contact:', err)
-      setError('Failed to create contact.')
-      return undefined
+      logger.error('Error getting contact by ID', err, { contactId: id, tenantId })
+      return null
     }
-  }, [])
+  }, [tenantId])
 
-  const updateContact = useCallback((id: string, updates: Partial<Contact>): Contact | undefined => {
+  // Create contact
+  const createContact = useCallback(async (contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Promise<Contact | null> => {
     try {
-      const updatedContact = contactsMock.updateContact(id, updates)
+      setLoading(true)
+      const newContact = contactsMock.createContact(contactData, tenantId)
+      await loadContacts() // Refresh list
+      
+      logger.userAction('contact_created', { contactId: newContact.id, tenantId })
+      toast({
+        title: 'Success',
+        description: 'Contact created successfully'
+      })
+      
+      return newContact
+    } catch (err) {
+      const errorMessage = 'Failed to create contact'
+      logger.error('Error creating contact', err, { tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, loadContacts, toast])
+
+  // Update contact
+  const updateContact = useCallback(async (id: string, updates: Partial<Contact>): Promise<Contact | null> => {
+    try {
+      setLoading(true)
+      const updatedContact = contactsMock.updateContact(id, updates, tenantId)
       if (updatedContact) {
-        setContacts(prev => prev.map(con => con.id === id ? updatedContact : con))
-        setError(null)
-        return updatedContact
+        await loadContacts() // Refresh list
+        
+        logger.userAction('contact_updated', { contactId: id, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Contact updated successfully'
+        })
       }
-      setError('Contact not found for update.')
-      return undefined
+      
+      return updatedContact
     } catch (err) {
-      console.error('Failed to update contact:', err)
-      setError('Failed to update contact.')
-      return undefined
+      const errorMessage = 'Failed to update contact'
+      logger.error('Error updating contact', err, { contactId: id, tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return null
+    } finally {
+      setLoading(false)
     }
-  }, [])
+  }, [tenantId, loadContacts, toast])
 
-  const deleteContact = useCallback((id: string): boolean => {
+  // Delete contact
+  const deleteContact = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const success = contactsMock.deleteContact(id)
+      setLoading(true)
+      const success = contactsMock.deleteContact(id, tenantId)
       if (success) {
-        setContacts(prev => prev.filter(con => con.id !== id))
-        setError(null)
+        await loadContacts() // Refresh list
+        
+        logger.userAction('contact_deleted', { contactId: id, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Contact deleted successfully'
+        })
+      }
+      
+      return success
+    } catch (err) {
+      const errorMessage = 'Failed to delete contact'
+      logger.error('Error deleting contact', err, { contactId: id, tenantId })
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, loadContacts, toast])
+
+  // Note management
+  const addNote = useCallback(async (contactId: string, content: string): Promise<boolean> => {
+    try {
+      const createdBy = user?.name || 'Unknown User'
+      const updatedContact = contactsMock.addNoteToContact(contactId, content, createdBy, tenantId)
+      if (updatedContact) {
+        await loadContacts() // Refresh to show new note
+        
+        logger.userAction('contact_note_added', { contactId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note added successfully'
+        })
         return true
       }
-      setError('Contact not found for deletion.')
       return false
     } catch (err) {
-      console.error('Failed to delete contact:', err)
-      setError('Failed to delete contact.')
+      logger.error('Error adding note to contact', err, { contactId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to add note',
+        variant: 'destructive'
+      })
       return false
     }
-  }, [])
+  }, [tenantId, user?.name, loadContacts, toast])
 
-  const addNoteToContact = useCallback((contactId: string, content: string): Note | undefined => {
-    const createdBy = user?.name || 'Unknown User'
+  const updateNote = useCallback(async (contactId: string, noteId: string, content: string): Promise<boolean> => {
     try {
-      const updatedContact = contactsMock.addNoteToContact(contactId, content, createdBy)
+      const updatedBy = user?.name || 'Unknown User'
+      const updatedContact = contactsMock.updateNoteInContact(contactId, noteId, content, updatedBy, tenantId)
       if (updatedContact) {
-        setContacts(prev => prev.map(con => con.id === contactId ? updatedContact : con))
-        setError(null)
-        return updatedContact.notes[updatedContact.notes.length - 1]
-      }
-      setError('Contact not found to add note.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to add note to contact:', err)
-      setError('Failed to add note.')
-      return undefined
-    }
-  }, [user])
-
-  const updateNoteInContact = useCallback((contactId: string, noteId: string, newContent: string): Note | undefined => {
-    try {
-      const updatedContact = contactsMock.updateNoteInContact(contactId, noteId, newContent)
-      if (updatedContact) {
-        setContacts(prev => prev.map(con => con.id === contactId ? updatedContact : con))
-        setError(null)
-        return updatedContact.notes.find(note => note.id === noteId)
-      }
-      setError('Contact or note not found for update.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to update note in contact:', err)
-      setError('Failed to update note.')
-      return undefined
-    }
-  }, [])
-
-  const deleteNoteFromContact = useCallback((contactId: string, noteId: string): boolean => {
-    try {
-      const updatedContact = contactsMock.deleteNoteFromContact(contactId, noteId)
-      if (updatedContact) {
-        setContacts(prev => prev.map(con => con.id === contactId ? updatedContact : con))
-        setError(null)
+        await loadContacts() // Refresh to show updated note
+        
+        logger.userAction('contact_note_updated', { contactId, noteId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note updated successfully'
+        })
         return true
       }
-      setError('Contact or note not found for deletion.')
       return false
     } catch (err) {
-      console.error('Failed to delete note from contact:', err)
-      setError('Failed to delete note.')
+      logger.error('Error updating note in contact', err, { contactId, noteId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to update note',
+        variant: 'destructive'
+      })
       return false
     }
-  }, [])
+  }, [tenantId, user?.name, loadContacts, toast])
+
+  const deleteNote = useCallback(async (contactId: string, noteId: string): Promise<boolean> => {
+    try {
+      const updatedContact = contactsMock.deleteNoteFromContact(contactId, noteId, tenantId)
+      if (updatedContact) {
+        await loadContacts() // Refresh to remove deleted note
+        
+        logger.userAction('contact_note_deleted', { contactId, noteId, tenantId })
+        toast({
+          title: 'Success',
+          description: 'Note deleted successfully'
+        })
+        return true
+      }
+      return false
+    } catch (err) {
+      logger.error('Error deleting note from contact', err, { contactId, noteId, tenantId })
+      toast({
+        title: 'Error',
+        description: 'Failed to delete note',
+        variant: 'destructive'
+      })
+      return false
+    }
+  }, [tenantId, loadContacts, toast])
+
+  // Load contacts on mount and when tenant changes
+  useEffect(() => {
+    loadContacts()
+  }, [loadContacts])
 
   return {
     contacts,
     loading,
     error,
-    fetchContacts,
     getContactById,
     createContact,
     updateContact,
     deleteContact,
-    addNoteToContact,
-    updateNoteInContact,
-    deleteNoteFromContact
+    addNote,
+    updateNote,
+    deleteNote,
+    refresh: loadContacts
   }
 }

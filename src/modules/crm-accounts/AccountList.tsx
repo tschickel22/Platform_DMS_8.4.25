@@ -1,309 +1,336 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useAccountManagement } from './hooks/useAccountManagement'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
-import { PlusCircle, Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { formatDateTime } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/loading-skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
-import { FilterPanel } from '@/components/common/FilterPanel'
-import { ImportExportActions } from '@/components/common/ImportExportActions'
-import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
-import { AdvancedSearch } from '@/components/common/AdvancedSearch'
-import { useSavedFilters } from '@/hooks/useSavedFilters'
-import type { Account } from '@/types'
+import { 
+  Building2, 
+  Plus, 
+  Search, 
+  Filter,
+  Users,
+  TrendingUp,
+  Calendar,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye
+} from 'lucide-react'
+import { useAccountManagement } from './hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { formatDate } from '@/lib/utils'
+import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function AccountList() {
-  const { accounts, loading, error, deleteAccount, createAccount } = useAccountManagement()
+  const { accounts, loading, deleteAccount } = useAccountManagement()
+  const { contacts } = useContactManagement()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
 
-  // Advanced search predicate
-  const matchesAdvancedSearch = (account: Account, criteria: any[]) => {
-    if (criteria.length === 0) return true
-    return criteria.every((criterion) => {
-      const fieldValue = (account as any)[criterion.field]?.toString().toLowerCase() || ''
-      const searchValue = String(criterion.value ?? '').toLowerCase()
-      switch (criterion.operator) {
-        case 'contains':
-          return fieldValue.includes(searchValue)
-        case 'equals':
-          return fieldValue === searchValue
-        case 'starts_with':
-          return fieldValue.startsWith(searchValue)
-        case 'ends_with':
-          return fieldValue.endsWith(searchValue)
-        case 'not_equals':
-          return fieldValue !== searchValue
-        case 'is_empty':
-          return fieldValue === ''
-        case 'is_not_empty':
-          return fieldValue !== ''
-        default:
-          return true
-      }
-    })
-  }
+  // Apply URL filters
+  const filteredAccounts = useMemo(() => {
+    let filtered = accounts || []
 
-  const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
-
-  // Filter state
-  const [filters, setFilters] = React.useState({
-    search: searchParams.get('search') || '',
-    industry: searchParams.get('industry') || '',
-    createdAfter: searchParams.get('createdAfter') || '',
-    createdBefore: searchParams.get('createdBefore') || '',
-  })
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) setSelectedIds(filteredAccounts.map((a) => a.id))
-    else setSelectedIds([])
-  }
-
-  const handleSelectAccount = (accountId: string, checked: boolean) => {
-    if (checked) setSelectedIds((prev) => [...prev, accountId])
-    else setSelectedIds((prev) => prev.filter((id) => id !== accountId))
-  }
-
-  const handleImport = (importedData: any[]) => {
-    importedData.forEach((data) => {
-      createAccount(data)
-    })
-  }
-
-  const csvFields = ['name', 'email', 'phone', 'address', 'website', 'industry']
-
-  // Load default filter on mount
-  React.useEffect(() => {
-    const def = getDefaultFilter()
-    const noFiltersApplied = Object.values(filters).every((v) => !v)
-    if (def && noFiltersApplied) {
-      setFilters(def.filters)
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(account => 
+        account.name.toLowerCase().includes(term) ||
+        (account.email && account.email.toLowerCase().includes(term)) ||
+        (account.phone && account.phone.includes(term)) ||
+        (account.industry && account.industry.toLowerCase().includes(term))
+      )
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getDefaultFilter])
 
-  // Sync URL params when filters change
-  React.useEffect(() => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([k, v]) => {
-      if (v) params.set(k, String(v))
-    })
-    setSearchParams(params)
-  }, [filters, setSearchParams])
+    return filtered
+  }, [accounts, searchTerm])
 
-  // Apply filters
-  const filteredAccounts = React.useMemo(() => {
-    return accounts.filter((account) => {
-      // Search
-      if (filters.search) {
-        const s = filters.search.toLowerCase()
-        const matchesSearch =
-          account.name?.toLowerCase().includes(s) ||
-          account.email?.toLowerCase().includes(s) ||
-          account.phone?.toLowerCase().includes(s)
-        if (!matchesSearch) return false
-      }
+  // Calculate header metrics
+  const metrics = useMemo(() => {
+    const totalAccounts = accounts?.length || 0
+    const accountsWithContacts = accounts?.filter(account => 
+      contacts?.some(contact => contact.accountId === account.id)
+    ).length || 0
+    
+    const industries = new Set(accounts?.map(account => account.industry).filter(Boolean))
+    const uniqueIndustries = industries.size
+    
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const recentAccounts = accounts?.filter(account => 
+      new Date(account.createdAt) > thirtyDaysAgo
+    ).length || 0
 
-      // Industry
-      if (filters.industry && account.industry !== filters.industry) return false
+    return {
+      totalAccounts,
+      accountsWithContacts,
+      uniqueIndustries,
+      recentAccounts
+    }
+  }, [accounts, contacts])
 
-      // Created date range
-      if (filters.createdAfter) {
-        const created = new Date(account.createdAt)
-        const after = new Date(filters.createdAfter)
-        if (created < after) return false
-      }
-      if (filters.createdBefore) {
-        const created = new Date(account.createdAt)
-        const before = new Date(filters.createdBefore)
-        if (created > before) return false
-      }
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    const newParams = new URLSearchParams(searchParams)
+    if (value) {
+      newParams.set('search', value)
+    } else {
+      newParams.delete('search')
+    }
+    setSearchParams(newParams)
+  }
 
-      // Advanced
-      return matchesAdvancedSearch(account as Account, advancedSearchCriteria)
-    })
-  }, [accounts, filters, advancedSearchCriteria])
-
-  const industries = React.useMemo(() => {
-    const unique = [...new Set(accounts.map((acc) => acc.industry).filter(Boolean))]
-    return unique.map((industry) => ({ value: industry as string, label: industry as string }))
-  }, [accounts])
-
-  const filterFields = [
-    { key: 'search', label: 'Search', type: 'text' as const },
-    { key: 'industry', label: 'Industry', type: 'select' as const, options: industries },
-    { key: 'createdAfter', label: 'Created After', type: 'date' as const },
-    { key: 'createdBefore', label: 'Created Before', type: 'date' as const },
-  ]
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this account?')) {
-      deleteAccount(id)
+  const handleDeleteAccount = async (accountId: string, accountName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${accountName}"? This action cannot be undone.`)) {
+      await deleteAccount(accountId)
     }
   }
-
-  const sampleFields = ['name', 'email', 'phone', 'address', 'website', 'industry']
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="ri-page-header">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        
+        <div className="ri-stats-grid">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <Card>
+          <CardContent className="pt-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-4 border-b last:border-b-0">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-8 w-20" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
-    )
-  }
-
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>
-  }
-
-  if (accounts.length === 0) {
-    return (
-      <EmptyState
-        title="No Accounts Found"
-        description="Get started by creating a new account."
-        icon={<PlusCircle className="h-12 w-12" />}
-        action={{
-          label: 'Create New Account',
-          onClick: () => (window.location.href = '/crm/accounts/new'),
-        }}
-      />
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <ModuleErrorBoundary moduleName="Accounts">
+      <div className="space-y-6">
+        {/* Page Header */}
         <div className="ri-page-header">
-          <h1 className="ri-page-title">Accounts</h1>
-          <p className="ri-page-description">
-            Manage your business accounts. {filteredAccounts.length} of {accounts.length} accounts shown.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="ri-page-title">Accounts</h1>
+              <p className="ri-page-description">
+                Manage your business accounts and relationships
+              </p>
+            </div>
+            <Button asChild>
+              <Link to="/crm/accounts/new">
+                <Plus className="h-4 w-4 mr-2" />
+                New Account
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <ImportExportActions
-            module="accounts"
-            data={filteredAccounts}
-            onImport={handleImport}
-            sampleFields={sampleFields}
-          />
-          <Button asChild>
-            <Link to="/crm/accounts/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Account
-            </Link>
-          </Button>
+
+        {/* Header Stats */}
+        <div className="ri-stats-grid">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-primary">{metrics.totalAccounts}</div>
+              <p className="text-xs text-muted-foreground">
+                Active business accounts
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">With Contacts</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-success">{metrics.accountsWithContacts}</div>
+              <p className="text-xs text-muted-foreground">
+                Have associated contacts
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Industries</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-info">{metrics.uniqueIndustries}</div>
+              <p className="text-xs text-muted-foreground">
+                Different industries
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold stat-warning">{metrics.recentAccounts}</div>
+              <p className="text-xs text-muted-foreground">
+                New this month
+              </p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="ri-search-bar">
-          <Search className="ri-search-icon" />
-          <Input
-            placeholder="Search accounts..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            className="ri-search-input"
-          />
-        </div>
-        <FilterPanel
-          filters={filters}
-          onFiltersChange={setFilters}
-          savedFilters={savedFilters}
-          onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
-          onLoadFilter={(f) => setFilters(f.filters)}
-          onDeleteFilter={deleteFilter}
-          onSetDefaultFilter={setDefaultFilter}
-          filterFields={filterFields}
-          module="accounts"
-        />
-      </div>
-
-      <AdvancedSearch
-        onSearch={setAdvancedSearchCriteria}
-        onClear={() => setAdvancedSearchCriteria([])}
-        entityType="accounts"
-      />
-
-      {/* Selection Info */}
-      {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-          <p className="text-sm text-blue-700">
-            {selectedIds.length} account{selectedIds.length !== 1 ? 's' : ''} selected
-          </p>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Accounts</CardTitle>
-          <CardDescription>
-            A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectedIds.length === filteredAccounts.length && filteredAccounts.length > 0}
-                    onCheckedChange={(v) => handleSelectAll(!!v)}
+        {/* Search and Filters */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Accounts</CardTitle>
+                <CardDescription>
+                  {filteredAccounts.length} of {accounts?.length || 0} accounts
+                </CardDescription>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="ri-search-bar">
+                  <Search className="ri-search-icon" />
+                  <Input
+                    placeholder="Search accounts..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="ri-search-input"
                   />
-                </TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAccounts.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.includes(account.id)}
-                      onCheckedChange={(v) => handleSelectAccount(account.id, !!v)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <Link to={`/crm/accounts/${account.id}`} className="text-primary hover:underline">
-                      {account.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{account.email}</TableCell>
-                  <TableCell>{account.phone}</TableCell>
-                  <TableCell>{account.industry}</TableCell>
-                  <TableCell>{formatDateTime(account.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="mr-2" asChild>
-                      <Link to={`/crm/accounts/${account.id}/edit`}>Edit</Link>
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(account.id)}>
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Bulk Operations Panel */}
-      <BulkOperationsPanel
-        selectedIds={selectedIds}
-        entityType="accounts"
-        onClearSelection={() => setSelectedIds([])}
-        onRefresh={() => window.location.reload()}
-      />
-    </div>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredAccounts.length === 0 ? (
+              searchTerm ? (
+                <EmptyState
+                  title="No accounts found"
+                  description={`No accounts match "${searchTerm}". Try adjusting your search terms.`}
+                  icon={<Search className="h-12 w-12" />}
+                  action={{
+                    label: 'Clear Search',
+                    onClick: () => handleSearch('')
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  title="No accounts yet"
+                  description="Get started by creating your first business account."
+                  icon={<Building2 className="h-12 w-12" />}
+                  action={{
+                    label: 'Create Account',
+                    onClick: () => window.location.href = '/crm/accounts/new'
+                  }}
+                />
+              )
+            ) : (
+              <div className="space-y-2">
+                {filteredAccounts.map((account) => {
+                  const accountContacts = contacts?.filter(contact => contact.accountId === account.id) || []
+                  
+                  return (
+                    <div key={account.id} className="ri-table-row">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h3 className="font-medium">{account.name}</h3>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              {account.email && <span>{account.email}</span>}
+                              {account.phone && <span>{account.phone}</span>}
+                              {account.industry && (
+                                <Badge variant="outline">{account.industry}</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
+                          <span>{accountContacts.length} contacts</span>
+                          <span>Created {formatDate(account.createdAt)}</span>
+                          {account.tags && account.tags.length > 0 && (
+                            <div className="flex space-x-1">
+                              {account.tags.slice(0, 2).map(tag => (
+                                <Badge key={tag} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {account.tags.length > 2 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{account.tags.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="ri-action-buttons">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/crm/accounts/${account.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/crm/accounts/${account.id}/edit`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteAccount(account.id, account.name)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </ModuleErrorBoundary>
   )
 }

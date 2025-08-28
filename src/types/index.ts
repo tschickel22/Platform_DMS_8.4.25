@@ -338,6 +338,8 @@ export interface Note {
   content: string
   createdAt: string
   createdBy: string
+  updatedAt?: string
+  updatedBy?: string
 }
 
 export interface Account {
@@ -348,6 +350,9 @@ export interface Account {
   email?: string
   website?: string
   industry?: string
+  status?: string
+  ownerId?: string
+  tags?: string[]
   notes: Note[]
   createdAt: string
   updatedAt: string
@@ -365,6 +370,8 @@ export interface Contact {
   title?: string
   department?: string
   isPrimary?: boolean
+  ownerId?: string
+  preferredContactMethod?: 'email' | 'phone' | 'sms'
   socialProfiles?: {
     linkedin?: string
     facebook?: string

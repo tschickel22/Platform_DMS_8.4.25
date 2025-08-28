@@ -122,14 +122,46 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
-                                  <Route path="/crm/accounts" element={<AccountList />} />
-                                  <Route path="/crm/accounts/new" element={<AccountForm />} />
-                                  <Route path="/crm/accounts/:id" element={<AccountDetail />} />
-                                  <Route path="/crm/accounts/:id/edit" element={<AccountForm />} />
-                                  <Route path="/crm/contacts" element={<ContactList />} />
-                                  <Route path="/crm/contacts/new" element={<ContactForm />} />
-                                  <Route path="/crm/contacts/:id" element={<ContactDetail />} />
-                                  <Route path="/crm/contacts/:id/edit" element={<ContactForm />} />
+                                  <Route path="/crm/accounts" element={
+                                    <ErrorBoundary>
+                                      <AccountList />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/accounts/new" element={
+                                    <ErrorBoundary>
+                                      <AccountForm />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/accounts/:id" element={
+                                    <ErrorBoundary>
+                                      <AccountDetail />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/accounts/:id/edit" element={
+                                    <ErrorBoundary>
+                                      <AccountForm />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/contacts" element={
+                                    <ErrorBoundary>
+                                      <ContactList />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/contacts/new" element={
+                                    <ErrorBoundary>
+                                      <ContactForm />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/contacts/:id" element={
+                                    <ErrorBoundary>
+                                      <ContactDetail />
+                                    </ErrorBoundary>
+                                  } />
+                                  <Route path="/crm/contacts/:id/edit" element={
+                                    <ErrorBoundary>
+                                      <ContactForm />
+                                    </ErrorBoundary>
+                                  } />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 

@@ -1,7 +1,12 @@
 import { Contact, Note } from '@/types'
 import { generateId } from '@/lib/utils'
 
-const sampleContacts: Contact[] = [
+// Generate tenant-specific storage key
+const getStorageKey = (tenantId?: string) => {
+  return `mockContacts_${tenantId || 'default'}`
+}
+
+const generateSampleContacts = (): Contact[] => [
   {
     id: 'con-001',
     firstName: 'Alice',
@@ -12,6 +17,8 @@ const sampleContacts: Contact[] = [
     title: 'Sales Manager',
     department: 'Sales',
     isPrimary: true,
+    ownerId: 'user-1',
+    preferredContactMethod: 'email',
     tags: ['Primary Contact', 'Decision Maker'],
     preferences: {
       preferredContactMethod: 'email',
@@ -28,7 +35,8 @@ const sampleContacts: Contact[] = [
         id: generateId(), 
         content: 'Primary contact for RV World.', 
         createdAt: '2024-07-01T10:05:00Z', 
-        createdBy: 'Admin User' 
+        createdBy: 'Admin User',
+        updatedAt: '2024-07-01T10:05:00Z'
       }
     ],
     createdAt: '2024-07-01T10:00:00Z',
@@ -44,6 +52,8 @@ const sampleContacts: Contact[] = [
     title: 'Operations Director',
     department: 'Operations',
     isPrimary: false,
+    ownerId: 'user-2',
+    preferredContactMethod: 'phone',
     tags: ['Sales Contact'],
     preferences: {
       preferredContactMethod: 'phone',
@@ -64,6 +74,8 @@ const sampleContacts: Contact[] = [
     accountId: undefined, // No associated account
     title: 'Independent Buyer',
     isPrimary: false,
+    ownerId: 'user-1',
+    preferredContactMethod: 'sms',
     tags: ['Trade Show Lead', 'Follow-up Needed'],
     preferences: {
       preferredContactMethod: 'sms',
@@ -76,7 +88,8 @@ const sampleContacts: Contact[] = [
         id: generateId(), 
         content: 'Met at trade show, interested in general RV info.', 
         createdAt: '2024-07-05T11:00:00Z', 
-        createdBy: 'Admin User' 
+        createdBy: 'Admin User',
+        updatedAt: '2024-07-05T11:00:00Z'
       }
     ],
     createdAt: '2024-07-05T10:30:00Z',
@@ -90,6 +103,8 @@ const sampleContacts: Contact[] = [
     phone: '(555) 987-6543',
     accountId: undefined, // No associated account
     isPrimary: false,
+    ownerId: 'user-2',
+    preferredContactMethod: 'email',
     tags: [],
     preferences: {
       preferredContactMethod: 'email'
@@ -97,43 +112,110 @@ const sampleContacts: Contact[] = [
     notes: [],
     createdAt: '2024-01-12T11:15:00Z',
     updatedAt: '2024-01-18T16:45:00Z'
+  },
+  {
+    id: 'con-005',
+    firstName: 'Tom',
+    lastName: 'Wilson',
+    email: 'tom.wilson@rvworld.com',
+    phone: '(555) 111-2224',
+    accountId: 'acc-001', // Also linked to RV World Inc.
+    title: 'Service Manager',
+    department: 'Service',
+    isPrimary: false,
+    ownerId: 'user-1',
+    preferredContactMethod: 'phone',
+    tags: ['Service Contact'],
+    preferences: {
+      preferredContactMethod: 'phone',
+      bestTimeToContact: 'Business hours',
+      timezone: 'America/New_York'
+    },
+    notes: [],
+    createdAt: '2024-07-01T10:30:00Z',
+    updatedAt: '2024-07-01T10:30:00Z'
+  },
+  {
+    id: 'con-006',
+    firstName: 'Emily',
+    lastName: 'Davis',
+    email: 'emily.davis@email.com',
+    phone: '(555) 444-5555',
+    accountId: 'acc-004', // Linked to Sunset Mobile Home Community
+    title: 'Community Manager',
+    department: 'Management',
+    isPrimary: true,
+    ownerId: 'user-2',
+    preferredContactMethod: 'email',
+    tags: ['Primary Contact', 'Community Management'],
+    preferences: {
+      preferredContactMethod: 'email',
+      bestTimeToContact: 'Weekdays 8am-6pm',
+      timezone: 'America/Los_Angeles'
+    },
+    notes: [
+      { 
+        id: generateId(), 
+        content: 'Manages day-to-day operations for the community.', 
+        createdAt: '2024-06-01T16:00:00Z', 
+        createdBy: 'Admin User',
+        updatedAt: '2024-06-01T16:00:00Z'
+      }
+    ],
+    createdAt: '2024-06-01T16:00:00Z',
+    updatedAt: '2024-06-01T16:00:00Z'
   }
 ]
 
 export const contactsMock = {
-  getContacts: (): Contact[] => {
+  getContacts: (tenantId?: string): Contact[] => {
     try {
-      const stored = localStorage.getItem('mockContacts')
-      return stored ? JSON.parse(stored) : sampleContacts
+      const storageKey = getStorageKey(tenantId)
+      const stored = localStorage.getItem(storageKey)
+      if (stored) {
+        return JSON.parse(stored)
+      }
+      
+      // Seed with sample data if empty
+      const sampleData = generateSampleContacts()
+      localStorage.setItem(storageKey, JSON.stringify(sampleData))
+      return sampleData
     } catch (error) {
       console.error('Error loading contacts from localStorage:', error)
-      return sampleContacts
+      return generateSampleContacts()
     }
   },
 
-  getContact: (id: string): Contact | undefined => {
-    const contacts = contactsMock.getContacts()
-    return contacts.find(contact => contact.id === id)
+  getContact: (id: string, tenantId?: string): Contact | null => {
+    try {
+      const contacts = contactsMock.getContacts(tenantId)
+      return contacts.find(contact => contact.id === id) || null
+    } catch (error) {
+      console.error('Error getting contact:', error)
+      return null
+    }
   },
 
-  createContact: (newContact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Contact => {
-    const contacts = contactsMock.getContacts()
+  createContact: (newContact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt' | 'notes'>, tenantId?: string): Contact => {
+    const contacts = contactsMock.getContacts(tenantId)
     const contact: Contact = {
       id: generateId(),
       ...newContact,
+      tags: newContact.tags || [],
       notes: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
     contacts.push(contact)
-    localStorage.setItem('mockContacts', JSON.stringify(contacts))
+    localStorage.setItem(getStorageKey(tenantId), JSON.stringify(contacts))
     return contact
   },
 
-  updateContact: (id: string, updates: Partial<Contact>): Contact | undefined => {
-    let contacts = contactsMock.getContacts()
+  updateContact: (id: string, updates: Partial<Contact>, tenantId?: string): Contact | null => {
+    try {
+      let contacts = contactsMock.getContacts(tenantId)
     const index = contacts.findIndex(contact => contact.id === id)
-    if (index === -1) return undefined
+      if (index === -1) return null
 
     const updatedContact = {
       ...contacts[index],
@@ -141,48 +223,64 @@ export const contactsMock = {
       updatedAt: new Date().toISOString()
     }
     contacts[index] = updatedContact
-    localStorage.setItem('mockContacts', JSON.stringify(contacts))
+      localStorage.setItem(getStorageKey(tenantId), JSON.stringify(contacts))
     return updatedContact
+    } catch (error) {
+      console.error('Error updating contact:', error)
+      return null
+    }
   },
 
-  deleteContact: (id: string): boolean => {
-    let contacts = contactsMock.getContacts()
+  deleteContact: (id: string, tenantId?: string): boolean => {
+    try {
+      let contacts = contactsMock.getContacts(tenantId)
     const initialLength = contacts.length
     contacts = contacts.filter(contact => contact.id !== id)
-    localStorage.setItem('mockContacts', JSON.stringify(contacts))
+      localStorage.setItem(getStorageKey(tenantId), JSON.stringify(contacts))
     return contacts.length < initialLength
+    } catch (error) {
+      console.error('Error deleting contact:', error)
+      return false
+    }
   },
 
-  addNoteToContact: (contactId: string, noteContent: string, createdBy: string): Contact | undefined => {
-    const contact = contactsMock.getContact(contactId)
-    if (!contact) return undefined
+  addNoteToContact: (contactId: string, noteContent: string, createdBy: string, tenantId?: string): Contact | null => {
+    const contact = contactsMock.getContact(contactId, tenantId)
+    if (!contact) return null
 
     const newNote: Note = {
       id: generateId(),
       content: noteContent,
       createdAt: new Date().toISOString(),
-      createdBy: createdBy
+      createdBy: createdBy,
+      updatedAt: new Date().toISOString(),
+      updatedBy: createdBy
     }
     const updatedNotes = [...contact.notes, newNote]
-    return contactsMock.updateContact(contactId, { notes: updatedNotes })
+    return contactsMock.updateContact(contactId, { notes: updatedNotes }, tenantId)
   },
 
-  updateNoteInContact: (contactId: string, noteId: string, newContent: string): Contact | undefined => {
-    const contact = contactsMock.getContact(contactId)
-    if (!contact) return undefined
+  updateNoteInContact: (contactId: string, noteId: string, newContent: string, updatedBy: string, tenantId?: string): Contact | null => {
+    const contact = contactsMock.getContact(contactId, tenantId)
+    if (!contact) return null
 
     const updatedNotes = contact.notes.map(note =>
-      note.id === noteId ? { ...note, content: newContent } : note
+      note.id === noteId ? { 
+        ...note, 
+        content: newContent,
+        updatedAt: new Date().toISOString(),
+        updatedBy: updatedBy
+      } : note
     )
-    return contactsMock.updateContact(contactId, { notes: updatedNotes })
+    return contactsMock.updateContact(contactId, { notes: updatedNotes }, tenantId)
   },
 
-  deleteNoteFromContact: (contactId: string, noteId: string): Contact | undefined => {
-    const contact = contactsMock.getContact(contactId)
-    if (!contact) return undefined
+  deleteNoteFromContact: (contactId: string, noteId: string, tenantId?: string): Contact | null => {
+    const contact = contactsMock.getContact(contactId, tenantId)
+    if (!contact) return null
 
     const updatedNotes = contact.notes.filter(note => note.id !== noteId)
-    return contactsMock.updateContact(contactId, { notes: updatedNotes })
+    return contactsMock.updateContact(contactId, { notes: updatedNotes }, tenantId)
   }
 }
 

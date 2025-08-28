@@ -1,283 +1,338 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, Building2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/loading-skeleton'
+import { NotesSection } from '@/components/common/NotesSection'
+import { 
+  ArrowLeft, 
+  Edit, 
+  User, 
+  Mail, 
+  Phone, 
+  Building2, 
+  MapPin,
+  Calendar,
+  ExternalLink,
+  MessageSquare
+} from 'lucide-react'
 import { useContactManagement } from './hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
-import { NotesSection } from '@/components/common/NotesSection'
-import { ActivityTimeline } from '@/components/common/ActivityTimeline'
-import { RelatedRecordsPanel } from '@/components/common/RelatedRecordsPanel'
-import { CommunicationActions } from '@/components/common/CommunicationActions'
-import { useActivityTracking } from '@/hooks/useActivityTracking'
-import { useToast } from '@/hooks/use-toast'
-import { mockCrmProspecting } from '@/mocks/crmProspectingMock'
-import { mockAgreements } from '@/mocks/agreementsMock'
-import { mockServiceOps } from '@/mocks/serviceOpsMock'
-import { mockInvoice } from '@/mocks/invoiceMock'
+import { Contact } from '@/types'
+import { formatDate } from '@/lib/utils'
+import { useTenant } from '@/contexts/TenantContext'
+import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const { getContactById, updateContact, deleteContact, addNoteToContact, updateNoteInContact, deleteNoteFromContact } = useContactManagement()
+  const { getContactById, addNote, updateNote, deleteNote } = useContactManagement()
   const { getAccountById } = useAccountManagement()
-  const { getActivitiesForEntity } = useActivityTracking()
-  const [contact, setContact] = useState<any>(null)
-  const [account, setAccount] = useState<any>(null)
+  const { tenant } = useTenant()
+  const [contact, setContact] = useState<Contact | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (id) {
+    if (!id) {
+      navigate('/crm/contacts')
+      return
+    }
+
+    try {
       const contactData = getContactById(id)
-      setContact(contactData)
-      
-      if (contactData?.accountId) {
-        const accountData = getAccountById(contactData.accountId)
-        setAccount(accountData)
-      }
-    }
-    setLoading(false)
-  }, [id, getContactById, getAccountById])
-
-  // Get related data
-  const relatedLeads = mockCrmProspecting.pipelineLeads.filter(lead => lead.contactId === id)
-  const relatedAgreements = mockAgreements.sampleAgreements.filter(agreement => agreement.contactId === id)
-  const relatedServiceTickets = mockServiceOps.sampleTickets.filter(ticket => ticket.contactId === id)
-  const relatedInvoices = mockInvoice.sampleInvoices.filter(invoice => invoice.contactId === id)
-  const contactActivities = getActivitiesForEntity('contact', id || '')
-
-  const handleEdit = () => {
-    navigate(`/crm/contacts/${id}/edit`)
-  }
-
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
-      const success = deleteContact(id || '')
-      if (success) {
+      if (!contactData) {
         navigate('/crm/contacts')
+        return
+      }
+      setContact(contactData)
+    } catch (error) {
+      console.error('Error loading contact:', error)
+      navigate('/crm/contacts')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, getContactById, navigate])
+
+  // Get linked account
+  const linkedAccount = contact?.accountId ? getAccountById(contact.accountId) : null
+
+  // Check feature availability
+  const emailEnabled = tenant?.settings?.features?.email !== false
+  const smsEnabled = tenant?.settings?.features?.sms !== false
+
+  const handleAddNote = async (content: string) => {
+    if (contact) {
+      const success = await addNote(contact.id, content)
+      if (success) {
+        // Refresh contact data to show new note
+        const updatedContact = getContactById(contact.id)
+        if (updatedContact) {
+          setContact(updatedContact)
+        }
       }
     }
   }
 
-  const handleAddNote = (content: string) => {
-    if (id) {
-      addNoteToContact(id, content)
+  const handleUpdateNote = async (noteId: string, content: string) => {
+    if (contact) {
+      const success = await updateNote(contact.id, noteId, content)
+      if (success) {
+        // Refresh contact data to show updated note
+        const updatedContact = getContactById(contact.id)
+        if (updatedContact) {
+          setContact(updatedContact)
+        }
+      }
     }
   }
 
-  const handleUpdateNote = (noteId: string, content: string) => {
-    if (id) {
-      updateNoteInContact(id, noteId, content)
-    }
-  }
-
-  const handleDeleteNote = (noteId: string) => {
-    if (id) {
-      deleteNoteFromContact(id, noteId)
+  const handleDeleteNote = async (noteId: string) => {
+    if (contact) {
+      const success = await deleteNote(contact.id, noteId)
+      if (success) {
+        // Refresh contact data to remove deleted note
+        const updatedContact = getContactById(contact.id)
+        if (updatedContact) {
+          setContact(updatedContact)
+        }
+      }
     }
   }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-20 w-full" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (!contact) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-semibold mb-2">Contact Not Found</h2>
-        <p className="text-muted-foreground mb-4">The contact you are looking for does not exist or has been deleted.</p>
-        <Button onClick={() => navigate('/crm/contacts')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Contacts
-        </Button>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/crm/contacts')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Contacts
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">Contact Not Found</h3>
+              <p className="text-muted-foreground">
+                The contact you're looking for doesn't exist or has been deleted.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/crm/contacts')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{contact.firstName} {contact.lastName}</h1>
-            <p className="text-muted-foreground">Contact details and information</p>
-          </div>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleEdit}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
+    <ModuleErrorBoundary moduleName="Contact Detail">
       <div className="space-y-6">
-        <div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/crm/contacts')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Contacts
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {contact.firstName} {contact.lastName}
+                {contact.isPrimary && (
+                  <Badge variant="outline" className="ml-2">Primary</Badge>
+                )}
+              </h1>
+              <p className="text-muted-foreground">Contact Details</p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link to={`/crm/contacts/${contact.id}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Contact
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Contact Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Basic information about this contact</CardDescription>
+              <CardTitle className="flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Contact Information
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium text-sm text-muted-foreground">Name</h3>
-                    <p className="text-lg font-semibold">{contact.firstName} {contact.lastName}</p>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3">
+                {linkedAccount ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Account</span>
+                    <Button variant="ghost" size="sm" asChild className="h-auto p-1">
+                      <Link to={`/crm/accounts/${linkedAccount.id}`} className="flex items-center space-x-2">
+                        <Building2 className="h-3 w-3" />
+                        <span className="text-sm">{linkedAccount.name}</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </Button>
                   </div>
-                  {contact.title && (
-                    <div>
-                      <h3 className="font-medium text-sm text-muted-foreground">Title</h3>
-                      <p>{contact.title}</p>
-                    </div>
-                  )}
-                  {contact.department && (
-                    <div>
-                      <h3 className="font-medium text-sm text-muted-foreground">Department</h3>
-                      <p>{contact.department}</p>
-                    </div>
-                  )}
-                  {contact.email && (
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Account</span>
+                    <span className="text-sm text-muted-foreground">No account linked</span>
+                  </div>
+                )}
+                {contact.title && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Title</span>
+                    <span className="text-sm">{contact.title}</span>
+                  </div>
+                )}
+                {contact.department && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Department</span>
+                    <span className="text-sm">{contact.department}</span>
+                  </div>
+                )}
+                {contact.email && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Email</span>
                     <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                      <Mail className="h-3 w-3" />
+                      <a href={`mailto:${contact.email}`} className="text-sm hover:text-primary">
                         {contact.email}
                       </a>
                     </div>
-                  )}
-                  {contact.phone && (
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Phone</span>
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${contact.phone}`} className="text-primary hover:underline">
+                      <Phone className="h-3 w-3" />
+                      <a href={`tel:${contact.phone}`} className="text-sm hover:text-primary">
                         {contact.phone}
                       </a>
                     </div>
-                  )}
-                  {account && (
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <Link to={`/crm/accounts/${account.id}`} className="text-primary hover:underline">
-                        {account.name}
-                      </Link>
-                    </div>
-                  )}
-                  {contact.preferences?.preferredContactMethod && (
-                    <div>
-                      <h3 className="font-medium text-sm text-muted-foreground">Preferred Contact</h3>
-                      <p className="capitalize">{contact.preferences.preferredContactMethod}</p>
-                    </div>
-                  )}
-                  {contact.lastContactDate && (
-                    <div>
-                      <h3 className="font-medium text-sm text-muted-foreground">Last Contact</h3>
-                      <p>{formatDate(contact.lastContactDate)}</p>
-                    </div>
-                  )}
+                  </div>
+                )}
+                {contact.preferredContactMethod && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Preferred Contact</span>
+                    <Badge variant="outline">{contact.preferredContactMethod}</Badge>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Created</span>
+                  <span className="text-sm">{formatDate(contact.createdAt)}</span>
                 </div>
-
-                {/* Tags */}
                 {contact.tags && contact.tags.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-sm text-muted-foreground mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {contact.tags.map((tag: string) => (
-                        <Badge key={tag} variant="secondary">
+                  <div className="flex items-start justify-between">
+                    <span className="text-sm text-muted-foreground">Tags</span>
+                    <div className="flex flex-wrap gap-1 max-w-48">
+                      {contact.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
                           {tag}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* Communication Actions */}
-                <div className="pt-4 border-t">
-                  <CommunicationActions contact={contact} />
-                </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Actions</CardTitle>
+              <CardDescription>
+                Communicate with this contact
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {contact.email && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  disabled={!emailEnabled}
+                  title={!emailEnabled ? 'Email not configured for this tenant' : undefined}
+                  onClick={() => window.location.href = `mailto:${contact.email}`}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
+              )}
+              {contact.phone && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => window.location.href = `tel:${contact.phone}`}
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    disabled={!smsEnabled}
+                    title={!smsEnabled ? 'SMS not configured for this tenant' : undefined}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Send SMS
+                  </Button>
+                </>
+              )}
+              {!contact.email && !contact.phone && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">No contact methods available</p>
+                  <p className="text-xs">Add email or phone to enable actions</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="notes" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="related">Related Records</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="notes">
-            <NotesSection
-              notes={contact.notes}
-              onAddNote={(content) => handleAddNote(content)}
-              onUpdateNote={(noteId, content) => handleUpdateNote(noteId, content)}
-              onDeleteNote={(noteId) => handleDeleteNote(noteId)}
-            />
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <ActivityTimeline
-              activities={contactActivities}
-              title="Contact Activity"
-              description="All activity related to this contact"
-            />
-          </TabsContent>
-
-          <TabsContent value="related">
-            <RelatedRecordsPanel
-              contactId={id}
-              leads={relatedLeads.map(lead => ({
-                id: lead.id,
-                title: `Lead: ${lead.firstName} ${lead.lastName}`,
-                subtitle: `${lead.source} • Score: ${lead.score}`,
-                status: lead.status,
-                date: lead.createdAt,
-                link: `/crm?leadId=${lead.id}`
-              }))}
-              agreements={relatedAgreements.map(agreement => ({
-                id: agreement.id,
-                title: `${agreement.type} Agreement`,
-                subtitle: agreement.vehicleInfo,
-                status: agreement.status,
-                amount: agreement.totalAmount,
-                date: agreement.createdAt,
-                link: `/agreements?agreementId=${agreement.id}`
-              }))}
-              serviceTickets={relatedServiceTickets.map(ticket => ({
-                id: ticket.id,
-                title: ticket.title,
-                subtitle: ticket.vehicleInfo,
-                status: ticket.status,
-                amount: ticket.totalCost,
-                date: ticket.createdAt,
-                link: `/service?ticketId=${ticket.id}`
-              }))}
-              invoices={relatedInvoices.map(invoice => ({
-                id: invoice.id,
-                title: `Invoice ${invoice.id}`,
-                subtitle: invoice.lineItems?.[0]?.description,
-                status: invoice.status,
-                amount: invoice.totalAmount,
-                date: invoice.dueDate,
-                link: `/invoices?invoiceId=${invoice.id}`
-              }))}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Notes Section */}
+        <NotesSection
+          notes={contact.notes || []}
+          onAddNote={handleAddNote}
+          onUpdateNote={handleUpdateNote}
+          onDeleteNote={handleDeleteNote}
+          title="Contact Notes"
+          description="Internal notes and comments about this contact"
+        />
       </div>
-    </div>
+    </ModuleErrorBoundary>
   )
 }

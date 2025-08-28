@@ -1,248 +1,296 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useContactManagement } from './hooks/useContactManagement'
-import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2 } from 'lucide-react'
 import { TagInput } from '@/components/common/TagInput'
+import { ArrowLeft, Save, Building2 } from 'lucide-react'
+import { useContactManagement } from './hooks/useContactManagement'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { Contact } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function ContactForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { getContactById, createContact, updateContact } = useContactManagement()
+  const { accounts } = useAccountManagement()
   const { toast } = useToast()
-  const { getContactById, createContact, updateContact, loading, error } = useContactManagement()
-  const { accounts, loading: accountsLoading } = useAccountManagement()
+  const [loading, setLoading] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [accountId, setAccountId] = useState<string | undefined>(undefined)
-  const [tags, setTags] = useState<string[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const isEditing = !!id
+  const preselectedAccountId = searchParams.get('accountId')
 
+  // Form state
   const [formData, setFormData] = useState({
-    accountId: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
     title: '',
     department: '',
+    accountId: preselectedAccountId || '',
     isPrimary: false,
-    tags: [] as string[],
-    preferences: {
-      preferredContactMethod: 'email' as 'email' | 'phone' | 'sms',
-      bestTimeToContact: '',
-      timezone: ''
-    },
-    socialProfiles: {
-      linkedin: '',
-      facebook: '',
-      twitter: ''
-    },
-    nextFollowUpDate: ''
+    preferredContactMethod: 'email' as 'email' | 'phone' | 'sms',
+    tags: [] as string[]
   })
 
+  // Form validation
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Load contact data for editing
   useEffect(() => {
-    if (id) {
+    if (isEditing && id) {
       const contact = getContactById(id)
       if (contact) {
-        setFirstName(contact.firstName || '')
-        setLastName(contact.lastName || '')
-        setEmail(contact.email || '')
-        setPhone(contact.phone || '')
-        setAccountId(contact.accountId || undefined)
         setFormData({
-          accountId: contact.accountId || '',
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          email: contact.email || '',
+          phone: contact.phone || '',
           title: contact.title || '',
           department: contact.department || '',
-          isPrimary: contact.isPrimary || false,
-          tags: contact.tags || [],
-          preferences: {
-            preferredContactMethod: contact.preferences?.preferredContactMethod || 'email',
-            bestTimeToContact: contact.preferences?.bestTimeToContact || '',
-            timezone: contact.preferences?.timezone || ''
-          },
-          socialProfiles: {
-            linkedin: contact.socialProfiles?.linkedin || '',
-            facebook: contact.socialProfiles?.facebook || '',
-            twitter: contact.socialProfiles?.twitter || ''
-          },
-          nextFollowUpDate: contact.nextFollowUpDate || ''
+          accountId: contact.accountId || '',
+          isPrimary: !!contact.isPrimary,
+          preferredContactMethod: contact.preferredContactMethod || 'email',
+          tags: contact.tags || []
         })
-      } else if (!loading) {
+      } else {
         toast({
-          title: 'Contact Not Found',
-          description: 'The contact you are trying to edit does not exist.',
+          title: 'Error',
+          description: 'Contact not found',
           variant: 'destructive'
         })
         navigate('/crm/contacts')
       }
     }
-  }, [id, getContactById, loading, navigate, toast])
+  }, [id, isEditing, getContactById, navigate, toast])
+
+  // Track unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const handleInputChange = (field: string, value: string | string[] | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setHasUnsavedChanges(true)
+    
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required'
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required'
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+
+    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-\(\)\.]/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number'
+    }
+
+    if (!formData.email && !formData.phone) {
+      newErrors.email = 'Either email or phone is required'
+      newErrors.phone = 'Either email or phone is required'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-
-    const contactData = { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      accountId: accountId === '' ? undefined : accountId,
-      tags
+    
+    if (!validateForm()) {
+      return
     }
 
+    setLoading(true)
     try {
-      if (id) {
-        await updateContact(id, contactData)
-        toast({
-          title: 'Success',
-          description: 'Contact updated successfully.'
-        })
+      if (isEditing && id) {
+        const result = await updateContact(id, formData)
+        if (result) {
+          setHasUnsavedChanges(false)
+          navigate(`/crm/contacts/${id}`)
+        }
       } else {
-        await createContact(contactData)
-        toast({
-          title: 'Success',
-          description: 'Contact created successfully.'
-        })
+        const result = await createContact(formData)
+        if (result) {
+          setHasUnsavedChanges(false)
+          navigate(`/crm/contacts/${result.id}`)
+        }
       }
-      navigate('/crm/contacts')
-    } catch (submitError) {
-      console.error('Submission error:', submitError)
-      toast({
-        title: 'Error',
-        description: `Failed to save contact: ${error || 'Unknown error'}`,
-        variant: 'destructive'
-      })
+    } catch (error) {
+      console.error('Error saving contact:', error)
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
   }
 
-  if (loading || accountsLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        navigate(isEditing ? `/crm/contacts/${id}` : '/crm/contacts')
+      }
+    } else {
+      navigate(isEditing ? `/crm/contacts/${id}` : '/crm/contacts')
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="ri-page-header">
-        <h1 className="ri-page-title">{id ? 'Edit Contact' : 'Create New Contact'}</h1>
-        <p className="ri-page-description">
-          {id ? `Update details for ${firstName} ${lastName}` : 'Fill in the details for your new contact.'}
-        </p>
-      </div>
+    <ModuleErrorBoundary moduleName="Contact Form">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={handleCancel}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {isEditing ? 'Edit Contact' : 'New Contact'}
+            </h1>
+            <p className="text-muted-foreground">
+              {isEditing ? 'Update contact information' : 'Create a new contact'}
+            </p>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Contact Details</CardTitle>
-          <CardDescription>Basic information about the contact.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Sales Manager"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  placeholder="e.g., Sales"
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="account">Account</Label>
-              <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No Account</SelectItem>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isPrimary"
-                checked={formData.isPrimary}
-                onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked as boolean })}
-              />
-              <Label htmlFor="isPrimary">Primary contact for this account</Label>
-            </div>
+        {/* Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder="Enter first name"
+                    className={errors.firstName ? 'border-destructive' : ''}
+                  />
+                  {errors.firstName && (
+                    <p className="text-sm text-destructive">{errors.firstName}</p>
+                  )}
+                </div>
 
-            {/* Contact Preferences */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Contact Preferences</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder="Enter last name"
+                    className={errors.lastName ? 'border-destructive' : ''}
+                  />
+                  {errors.lastName && (
+                    <p className="text-sm text-destructive">{errors.lastName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="Enter email address"
+                    className={errors.email ? 'border-destructive' : ''}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    placeholder="Enter phone number"
+                    className={errors.phone ? 'border-destructive' : ''}
+                  />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder="Enter job title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    value={formData.department}
+                    onChange={(e) => handleInputChange('department', e.target.value)}
+                    placeholder="Enter department"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accountId">Account</Label>
+                  <Select value={formData.accountId} onValueChange={(value) => handleInputChange('accountId', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No account</SelectItem>
+                      {(accounts || []).map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="h-3 w-3" />
+                            <span>{account.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="preferredContactMethod">Preferred Contact Method</Label>
                   <Select 
-                    value={formData.preferences.preferredContactMethod} 
-                    onValueChange={(value) => setFormData({ 
-                      ...formData, 
-                      preferences: { ...formData.preferences, preferredContactMethod: value as 'email' | 'phone' | 'sms' }
-                    })}
+                    value={formData.preferredContactMethod} 
+                    onValueChange={(value) => handleInputChange('preferredContactMethod', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -254,128 +302,40 @@ export default function ContactForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="bestTimeToContact">Best Time to Contact</Label>
-                  <Input
-                    id="bestTimeToContact"
-                    value={formData.preferences.bestTimeToContact}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      preferences: { ...formData.preferences, bestTimeToContact: e.target.value }
-                    })}
-                    placeholder="e.g., Mornings, Weekdays after 2pm"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select 
-                    value={formData.preferences.timezone} 
-                    onValueChange={(value) => setFormData({ 
-                      ...formData, 
-                      preferences: { ...formData.preferences, timezone: value }
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="nextFollowUpDate">Next Follow-up Date</Label>
-                  <Input
-                    id="nextFollowUpDate"
-                    type="date"
-                    value={formData.nextFollowUpDate}
-                    onChange={(e) => setFormData({ ...formData, nextFollowUpDate: e.target.value })}
-                  />
-                </div>
               </div>
-            </div>
 
-            {/* Social Profiles */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Social Profiles</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="linkedin">LinkedIn</Label>
-                  <Input
-                    id="linkedin"
-                    value={formData.socialProfiles.linkedin}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      socialProfiles: { ...formData.socialProfiles, linkedin: e.target.value }
-                    })}
-                    placeholder="LinkedIn profile URL"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="facebook">Facebook</Label>
-                  <Input
-                    id="facebook"
-                    value={formData.socialProfiles.facebook}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      socialProfiles: { ...formData.socialProfiles, facebook: e.target.value }
-                    })}
-                    placeholder="Facebook profile URL"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="twitter">Twitter</Label>
-                  <Input
-                    id="twitter"
-                    value={formData.socialProfiles.twitter}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      socialProfiles: { ...formData.socialProfiles, twitter: e.target.value }
-                    })}
-                    placeholder="Twitter profile URL"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <TagInput
+                  tags={formData.tags}
+                  onTagsChange={(tags) => handleInputChange('tags', tags)}
+                  placeholder="Add tags..."
+                  maxTags={10}
+                />
               </div>
-            </div>
 
-            {/* Tags */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Tags</h3>
-              <TagInput
-                tags={formData.tags}
-                onTagsChange={(tags) => setFormData({ ...formData, tags })}
-                placeholder="Add tags to categorize this contact..."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tags">Tags</Label>
-              <TagInput
-                tags={tags}
-                onTagsChange={setTags}
-                placeholder="Add tags (press Enter or comma to add)"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Contact'
-                )}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/crm/contacts')}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isPrimary"
+                  checked={formData.isPrimary}
+                  onCheckedChange={(checked) => handleInputChange('isPrimary', !!checked)}
+                />
+                <Label htmlFor="isPrimary">Primary contact for account</Label>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {loading ? 'Saving...' : isEditing ? 'Update Contact' : 'Create Contact'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </ModuleErrorBoundary>
   )
 }
