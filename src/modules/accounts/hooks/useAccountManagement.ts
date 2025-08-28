@@ -198,3 +198,5 @@ export function useAccountManagement() {
   }
   getContactsForAccount: (accountId: string) => Contact[]
 }
+
+export { useAccountManagement }
