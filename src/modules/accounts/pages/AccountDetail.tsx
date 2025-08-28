@@ -380,15 +380,23 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
           <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Deal Modal */}
-      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Deal</DialogTitle>
-          <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <ContactForm
+                accountId={account.id}
+                returnTo="account"
+                onSaved={() => setOpenContact(false)}
+              />
+            </React.Suspense>
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <NewQuoteForm
+                accountId={account.id}
+                returnTo="account"
+                onSaved={() => setOpenQuote(false)}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
 
@@ -398,8 +406,12 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
           <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <DealForm
+                accountId={account.id}
+                returnTo="account"
+                onSaved={() => setOpenDeal(false)}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
