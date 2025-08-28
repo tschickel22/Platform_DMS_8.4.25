@@ -1,4 +1,3 @@
-// src/modules/crm-sales-deal/components/DealForm.tsx
 import React, { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,198 +11,171 @@ import { useToast } from '@/hooks/use-toast'
 import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { useDealManagement } from '@/modules/crm-sales-deal/hooks/useDealManagement'
 import { mockInventory } from '@/mocks/inventoryMock'
-import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
-import { formatCurrency, generateId, loadFromLocalStorage, saveToLocalStorage } from '@/lib/utils'
+import type { Deal, DealStage } from '@/modules/crm-sales-deal/types'
+import { formatCurrency } from '@/lib/utils'
+
+type Maybe<T> = T | undefined
 
 type Props = ReturnToBehavior & {
-  dealId?: string // (future edit use)
+  // When opened from DealsList
+  deal?: Partial<Deal>
+  customers?: Array<{ id: string; name?: string }>
+  salesReps?: Array<{ id: string; name: string }>
+  territories?: Array<{ id: string; name: string }>
+  products?: Array<{ id: string; name: string; price?: number }>
+  onSave?: (dealData: Partial<Deal>) => Promise<void> | void
+  onCancel?: () => void
 }
 
-type Deal = {
-  id: string
-  accountId: string
-  contactId?: string
-  vehicleId?: string
-  stage: string
-  amount: number
-  expectedCloseDate?: string
-  probability?: number
-  leadSource?: string
-  notes?: string
-  vehicleInfo?: string
-  createdAt: string
-  updatedAt: string
-}
+const STAGES: DealStage[] = [
+  'PROSPECTING',
+  'QUALIFICATION',
+  'NEEDS_ANALYSIS',
+  'PROPOSAL',
+  'NEGOTIATION',
+  'CLOSED_WON',
+  'CLOSED_LOST',
+] as unknown as DealStage[]
 
-const STAGES: string[] =
-  mockCrmSalesDeal?.stages ||
-  ['Qualification', 'Needs Analysis', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost']
-
-const STAGE_COLORS: Record<string, string> =
-  mockCrmSalesDeal?.stageColors || {
-    Qualification: 'bg-blue-100 text-blue-800',
-    'Needs Analysis': 'bg-indigo-100 text-indigo-800',
-    Proposal: 'bg-amber-100 text-amber-800',
-    Negotiation: 'bg-purple-100 text-purple-800',
-    'Closed Won': 'bg-green-100 text-green-800',
-    'Closed Lost': 'bg-red-100 text-red-800',
-  }
-
-// rough default probability per stage (can be tuned)
-const DEFAULT_PROB: Record<string, number> = {
-  Qualification: 0.2,
-  'Needs Analysis': 0.35,
-  Proposal: 0.5,
-  Negotiation: 0.7,
-  'Closed Won': 1,
-  'Closed Lost': 0,
+const STAGE_BADGE: Record<string, string> = {
+  PROSPECTING: 'bg-sky-100 text-sky-800',
+  QUALIFICATION: 'bg-indigo-100 text-indigo-800',
+  NEEDS_ANALYSIS: 'bg-amber-100 text-amber-800',
+  PROPOSAL: 'bg-purple-100 text-purple-800',
+  NEGOTIATION: 'bg-blue-100 text-blue-800',
+  CLOSED_WON: 'bg-green-100 text-green-800',
+  CLOSED_LOST: 'bg-red-100 text-red-800',
 }
 
 export function DealForm(props: Props) {
   const { toast } = useToast()
-  const { accountId: ctxAccountId, afterSave } = useReturnTargets(props)
-  const isModal = !!props.onSaved
-
-  const { accounts } = useAccountManagement()
+  const { afterSave, accountId: ctxAccountId } = useReturnTargets(props)
+  const isModalFromAccount = !!props.onSaved // AccountDetail passes onSaved
+  const { getAccount } = useAccountManagement()
   const { contacts } = useContactManagement()
+  const { createDeal } = useDealManagement()
 
-  // form state
-  const [form, setForm] = useState<{
-    accountId: string
-    contactId: string
-    vehicleId: string
-    stage: string
-    amount: string
-    expectedCloseDate: string
-    probability: string
-    leadSource: string
-    notes: string
-  }>({
-    accountId: ctxAccountId || '',
+  const accountId = ctxAccountId || (props.deal as any)?.accountId || ''
+
+  const account = accountId ? getAccount(accountId) : undefined
+  const accountContacts = useMemo(
+    () => contacts.filter((c) => !accountId || c.accountId === accountId),
+    [contacts, accountId]
+  )
+
+  // initial values (support both modes)
+  const [form, setForm] = useState({
+    name: props.deal?.name || (account ? `${account.name} – New Opportunity` : ''),
+    accountId: accountId || '',
     contactId: '',
     vehicleId: '',
-    stage: STAGES[0],
-    amount: '',
-    expectedCloseDate: '',
-    probability: String(DEFAULT_PROB[STAGES[0]] ?? 0.2),
-    leadSource: '',
-    notes: '',
+    customerName: props.deal?.customerName || account?.name || '',
+    assignedTo: props.deal?.assignedTo || '',
+    stage: (props.deal?.stage as DealStage) || STAGES[0],
+    value: props.deal?.value?.toString?.() || '',
+    probability: props.deal?.probability?.toString?.() || '20', // percent 0–100
+    expectedCloseDate: props.deal?.expectedCloseDate || '',
+    notes: props.deal?.notes || '',
   })
-
-  const accountContacts = useMemo(
-    () => contacts.filter((c) => !form.accountId || c.accountId === form.accountId),
-    [contacts, form.accountId],
-  )
-
-  const selectedVehicle = useMemo(
-    () => mockInventory?.sampleVehicles?.find((v) => v.id === form.vehicleId),
-    [form.vehicleId],
-  )
-
-  const amountNum = useMemo(() => parseFloat(form.amount || '0') || 0, [form.amount])
-  const probNum = useMemo(
-    () => Math.min(1, Math.max(0, parseFloat(form.probability || '0') || 0)),
-    [form.probability],
-  )
-  const weighted = useMemo(() => amountNum * probNum, [amountNum, probNum])
 
   const onChange = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [key]: value }))
 
-  const onStageChange = (v: string) => {
-    onChange('stage', v)
-    if (form.probability === '' || form.probability === String(DEFAULT_PROB[form.stage] ?? '')) {
-      onChange('probability', String(DEFAULT_PROB[v] ?? 0.2))
-    }
-  }
+  const selectedVehicle = useMemo(
+    () => mockInventory.sampleVehicles.find((v) => v.id === form.vehicleId),
+    [form.vehicleId]
+  )
+
+  const numericValue = Math.max(0, parseFloat(form.value || '0') || 0)
+  const percent = Math.min(100, Math.max(0, parseFloat(form.probability || '0') || 0))
+  const weighted = (numericValue * percent) / 100
 
   const [saving, setSaving] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.accountId) {
-      toast({ title: 'Validation error', description: 'Account is required', variant: 'destructive' })
+    if (!form.name.trim()) {
+      toast({ title: 'Validation error', description: 'Deal name is required', variant: 'destructive' })
       return
     }
-    if (!form.stage) {
-      toast({ title: 'Validation error', description: 'Stage is required', variant: 'destructive' })
+    if (!form.customerName.trim() && !form.accountId) {
+      toast({
+        title: 'Validation error',
+        description: 'Customer/Account is required',
+        variant: 'destructive',
+      })
       return
+    }
+
+    const payload: Partial<Deal> = {
+      // core (what your Deals module expects)
+      name: form.name.trim(),
+      customerName: form.customerName || account?.name || '',
+      stage: form.stage as DealStage,
+      value: numericValue,
+      probability: percent, // your module uses % (0–100)
+      expectedCloseDate: form.expectedCloseDate || undefined,
+      assignedTo: form.assignedTo || undefined,
+      notes: form.notes || undefined,
+      // helpful extra links for Account view
+      // @ts-ignore – these fields are fine to include in Partial<Deal>
+      accountId: form.accountId || undefined,
+      // @ts-ignore
+      contactId: form.contactId || undefined,
+      // @ts-ignore
+      vehicleId: form.vehicleId || undefined,
     }
 
     setSaving(true)
     try {
-      const vehicleInfo = selectedVehicle
-        ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
-        : ''
-
-      const deal: Deal = {
-        id: generateId(),
-        accountId: form.accountId,
-        contactId: form.contactId || undefined,
-        vehicleId: form.vehicleId || undefined,
-        stage: form.stage,
-        amount: amountNum,
-        expectedCloseDate: form.expectedCloseDate || undefined,
-        probability: probNum,
-        leadSource: form.leadSource || undefined,
-        notes: form.notes || undefined,
-        vehicleInfo,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      if (typeof props.onSave === 'function') {
+        // Opened from the Deals module: delegate to parent
+        await props.onSave(payload)
+        props.onCancel?.()
+      } else {
+        // Opened from AccountDetail: create via DealManagement, then afterSave
+        await createDeal(payload)
+        toast({ title: 'Success', description: 'Deal created successfully' })
+        afterSave(payload as Deal, '/deals')
       }
-
-      // Persist to localStorage (same pattern as Quotes/Service)
-      const existing = loadFromLocalStorage<Deal[]>('deals', [])
-      saveToLocalStorage('deals', [deal, ...existing])
-
-      toast({ title: 'Success', description: 'Deal created successfully' })
-      afterSave(deal, '/deals')
     } catch (err) {
       console.error(err)
-      toast({ title: 'Error', description: 'Failed to create deal', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Failed to save deal', variant: 'destructive' })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className={isModal ? 'p-6' : ''}>
-      {!isModal && (
+    <div className={isModalFromAccount ? 'p-6' : ''}>
+      {!isModalFromAccount && (
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Create Deal</h1>
-          <p className="text-muted-foreground">Track a sales opportunity for this customer</p>
+          <h1 className="text-2xl font-bold">{props.deal ? 'Edit Deal' : 'Create Deal'}</h1>
+          <p className="text-muted-foreground">Track a sales opportunity through your pipeline</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={submit} className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Deal Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Label>Deal Name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => onChange('name', e.target.value)}
+                  placeholder="e.g., 2023 Airstream Classic – Upgrade Package"
+                />
+              </div>
+
               <div>
-                <Label>Account *</Label>
-                <Select
-                  value={form.accountId}
-                  onValueChange={(v) => {
-                    onChange('accountId', v)
-                    onChange('contactId', '')
-                  }}
-                  disabled={!!ctxAccountId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Account</Label>
+                <Input value={account?.name || ''} disabled placeholder="(optional)" />
               </div>
 
               <div>
@@ -211,12 +183,13 @@ export function DealForm(props: Props) {
                 <Select
                   value={form.contactId}
                   onValueChange={(v) => onChange('contactId', v)}
-                  disabled={!form.accountId}
+                  disabled={!accountId || accountContacts.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select contact" />
+                    <SelectValue placeholder="Select contact (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">No Contact</SelectItem>
                     {accountContacts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.firstName} {c.lastName}
@@ -244,7 +217,10 @@ export function DealForm(props: Props) {
 
               <div>
                 <Label>Stage *</Label>
-                <Select value={form.stage} onValueChange={onStageChange}>
+                <Select
+                  value={form.stage}
+                  onValueChange={(v) => onChange('stage', v as DealStage)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -252,7 +228,9 @@ export function DealForm(props: Props) {
                     {STAGES.map((s) => (
                       <SelectItem key={s} value={s}>
                         <div className="flex items-center gap-2">
-                          <Badge className={STAGE_COLORS[s] || 'bg-gray-100 text-gray-800'}>{s}</Badge>
+                          <Badge className={STAGE_BADGE[s] || 'bg-gray-100 text-gray-800'}>
+                            {s.replace('_', ' ')}
+                          </Badge>
                         </div>
                       </SelectItem>
                     ))}
@@ -261,44 +239,44 @@ export function DealForm(props: Props) {
               </div>
 
               <div>
+                <Label>Assigned To</Label>
+                <Input
+                  value={form.assignedTo}
+                  onChange={(e) => onChange('assignedTo', e.target.value)}
+                  placeholder="Sales rep (optional)"
+                />
+              </div>
+
+              <div>
                 <Label>Amount</Label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.amount}
-                  onChange={(e) => onChange('amount', e.target.value)}
+                  value={form.value}
+                  onChange={(e) => onChange('value', e.target.value)}
                   placeholder="0.00"
                 />
               </div>
 
               <div>
-                <Label>Expected Close Date</Label>
-                <Input
-                  type="date"
-                  value={form.expectedCloseDate}
-                  onChange={(e) => onChange('expectedCloseDate', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Probability (0–1)</Label>
+                <Label>Probability (%)</Label>
                 <Input
                   type="number"
                   min="0"
-                  max="1"
-                  step="0.01"
+                  max="100"
+                  step="1"
                   value={form.probability}
                   onChange={(e) => onChange('probability', e.target.value)}
                 />
               </div>
 
               <div>
-                <Label>Lead Source</Label>
+                <Label>Expected Close</Label>
                 <Input
-                  value={form.leadSource}
-                  onChange={(e) => onChange('leadSource', e.target.value)}
-                  placeholder="Web, Referral, Event…"
+                  type="date"
+                  value={form.expectedCloseDate}
+                  onChange={(e) => onChange('expectedCloseDate', e.target.value)}
                 />
               </div>
             </div>
@@ -308,7 +286,7 @@ export function DealForm(props: Props) {
                 <div className="text-sm">Weighted Amount</div>
                 <div className="text-xl font-semibold">{formatCurrency(weighted)}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(amountNum)} × {Math.round(probNum * 100)}%
+                  {formatCurrency(numericValue)} × {Math.round(percent)}%
                 </div>
               </div>
               {selectedVehicle && (
@@ -317,9 +295,6 @@ export function DealForm(props: Props) {
                   <div className="text-base font-medium">
                     {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
                   </div>
-                  {selectedVehicle.stockNumber && (
-                    <div className="text-xs text-muted-foreground">Stock #{selectedVehicle.stockNumber}</div>
-                  )}
                 </div>
               )}
             </div>
@@ -330,26 +305,33 @@ export function DealForm(props: Props) {
           <CardHeader>
             <CardTitle>Notes</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Textarea
-              rows={4}
-              value={form.notes}
-              onChange={(e) => onChange('notes', e.target.value)}
-              placeholder="Internal notes about this opportunity…"
-            />
-          </CardContent>
         </Card>
+        <Textarea
+          rows={4}
+          value={form.notes}
+          onChange={(e) => onChange('notes', e.target.value)}
+          placeholder="Internal notes about this opportunity…"
+        />
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => afterSave(null, '/deals')} disabled={saving}>
-            Cancel
-          </Button>
+          {props.onCancel && (
+            <Button type="button" variant="outline" onClick={props.onCancel} disabled={saving}>
+              Cancel
+            </Button>
+          )}
+          {!props.onCancel && (
+            <Button type="button" variant="outline" onClick={() => afterSave(null, '/deals')} disabled={saving}>
+              Cancel
+            </Button>
+          )}
           <Button type="submit" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Creating…' : 'Create Deal'}
+            {saving ? 'Saving…' : props.deal ? 'Save Changes' : 'Create Deal'}
           </Button>
         </div>
       </form>
     </div>
   )
 }
+
+export default DealForm
