@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { X, Save, Plus, Trash2, Wrench, Calendar, Clock } from 'lucide-react'
+import { X, Save, Plus, Trash2, Wrench, Clock } from 'lucide-react'
+
 import { ServiceTicket, ServiceStatus, Priority, ServicePart, ServiceLabor } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
@@ -18,23 +18,24 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 
-interface ServiceTicketFormProps {
+type Props = {
   ticket?: ServiceTicket
   onSave: (ticketData: Partial<ServiceTicket>) => Promise<void>
-  onCancel: () => void
+  onCancel?: () => void
 }
 
-export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFormProps) {
+export function ServiceTicketForm({ ticket, onSave, onCancel }: Props) {
   const { toast } = useToast()
   const { vehicles } = useInventoryManagement()
   const { leads } = useLeadManagement()
-  const { getAccounts } = useAccountManagement()
-  const { getContacts } = useContactManagement()
+  // ✅ use arrays from hooks (no function calls)
+  const { accounts } = useAccountManagement()
+  const { contacts } = useContactManagement()
+
   const [loading, setLoading] = useState(false)
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false)
-  const [accounts, setAccounts] = useState<any[]>([])
-  const [contacts, setContacts] = useState<any[]>([])
   const [filteredContacts, setFilteredContacts] = useState<any[]>([])
+
   const [formData, setFormData] = useState<Partial<ServiceTicket>>({
     customerId: '',
     vehicleId: '',
@@ -54,309 +55,211 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
       estimatedCompletionDate: '',
       customerAuthorization: false,
       technicianNotes: '',
-      customerPortalAccess: true
-    }
+      customerPortalAccess: true,
+    },
   })
 
   const [showAddPart, setShowAddPart] = useState(false)
   const [showAddLabor, setShowAddLabor] = useState(false)
+
   const [newPart, setNewPart] = useState<Partial<ServicePart>>({
     partNumber: '',
     description: '',
     quantity: 1,
     unitCost: 0,
-    total: 0
+    total: 0,
   })
+
   const [newLabor, setNewLabor] = useState<Partial<ServiceLabor>>({
     description: '',
     hours: 1,
     rate: 85,
-    total: 85
+    total: 85,
   })
 
-  // Initialize form with ticket data if editing
+  // Seed form when editing
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load accounts and contacts
-        const [accountsData, contactsData] = await Promise.all([
-          getAccounts(),
-          getContacts()
-        ])
-        setAccounts(accountsData)
-        setContacts(contactsData)
-        
-        // Load ticket data if editing
-        if (ticket) {
-          setFormData({
-            ...ticket,
-            accountId: ticket.accountId || '',
-            contactId: ticket.contactId || '',
-            customFields: {
-              ...ticket.customFields,
-              warrantyStatus: ticket.customFields?.warrantyStatus || 'not_covered',
-              estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate || '',
-              customerAuthorization: ticket.customFields?.customerAuthorization || false,
-              technicianNotes: ticket.customFields?.technicianNotes || '',
-              customerPortalAccess: ticket.customFields?.customerPortalAccess !== false
-            }
-          })
-        }
-      } catch (error) {
-        console.error('Error loading data:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load form data',
-          variant: 'destructive'
-        })
-      }
-    }
+    if (!ticket) return
+    setFormData({
+      ...ticket,
+      accountId: ticket.accountId || '',
+      contactId: ticket.contactId || '',
+      customFields: {
+        warrantyStatus: ticket.customFields?.warrantyStatus ?? 'not_covered',
+        estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate ?? '',
+        customerAuthorization: ticket.customFields?.customerAuthorization ?? false,
+        technicianNotes: ticket.customFields?.technicianNotes ?? '',
+        customerPortalAccess: ticket.customFields?.customerPortalAccess !== false,
+      },
+    })
+  }, [ticket])
 
-    loadData()
-  }, [ticket, getAccounts, getContacts, toast])
-
-  // Filter contacts when account changes
+  // Filter contacts for selected account
   useEffect(() => {
     if (formData.accountId) {
-      const accountContacts = contacts.filter(contact => contact.accountId === formData.accountId)
-      setFilteredContacts(accountContacts)
-      // Clear contact selection if it's not in the filtered list
-      if (formData.contactId && !accountContacts.find(c => c.id === formData.contactId)) {
-        setFormData(prev => ({ ...prev, contactId: '' }))
+      const list = contacts.filter(c => c.accountId === formData.accountId)
+      setFilteredContacts(list)
+      if (formData.contactId && !list.find(c => c.id === formData.contactId)) {
+        setFormData(p => ({ ...p, contactId: '' }))
       }
     } else {
       setFilteredContacts(contacts)
     }
-  }, [formData.accountId, contacts])
+  }, [formData.accountId, formData.contactId, contacts])
 
-  // Update part total when quantity or unit cost changes
+  // Keep part totals synced
   useEffect(() => {
-    const quantity = newPart.quantity || 1
-    const unitCost = newPart.unitCost || 0
-    setNewPart(prev => ({
-      ...prev,
-      total: quantity * unitCost
-    }))
+    setNewPart(p => ({ ...p, total: (p.quantity || 1) * (p.unitCost || 0) }))
   }, [newPart.quantity, newPart.unitCost])
 
-  // Update labor total when hours or rate changes
+  // Keep labor totals synced
   useEffect(() => {
-    const hours = newLabor.hours || 1
-    const rate = newLabor.rate || 85
-    setNewLabor(prev => ({
-      ...prev,
-      total: hours * rate
-    }))
+    setNewLabor(l => ({ ...l, total: (l.hours || 1) * (l.rate || 85) }))
   }, [newLabor.hours, newLabor.rate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!formData.customerId || !formData.title || !formData.description) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive'
+        title: 'Validation error',
+        description: 'Customer, title, and description are required.',
+        variant: 'destructive',
       })
       return
     }
-
     setLoading(true)
     try {
       await onSave(formData)
-      toast({
-        title: 'Success',
-        description: `Service ticket ${ticket ? 'updated' : 'created'} successfully`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${ticket ? 'update' : 'create'} service ticket`,
-        variant: 'destructive'
-      })
+      toast({ title: 'Success', description: `Service ticket ${ticket ? 'updated' : 'created'} successfully` })
+    } catch {
+      toast({ title: 'Error', description: `Failed to ${ticket ? 'update' : 'create'} service ticket`, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
   const handleCustomerSelect = (value: string) => {
-    if (value === 'add-new') {
-      setShowNewCustomerForm(true)
-    } else {
-      setFormData(prev => ({ ...prev, customerId: value }))
-    }
+    if (value === 'add-new') setShowNewCustomerForm(true)
+    else setFormData(p => ({ ...p, customerId: value }))
   }
 
   const handleNewCustomerSuccess = (newCustomer: any) => {
-    setFormData(prev => ({
-      ...prev,
-      customerId: newCustomer.id
-    }))
+    setFormData(p => ({ ...p, customerId: newCustomer.id }))
     setShowNewCustomerForm(false)
-    
-    toast({
-      title: 'Customer Added',
-      description: `${newCustomer.firstName} ${newCustomer.lastName} has been added as a customer.`,
-    })
+    toast({ title: 'Customer added', description: `${newCustomer.firstName} ${newCustomer.lastName} added.` })
   }
 
   const addPart = () => {
     if (!newPart.partNumber || !newPart.description) {
-      toast({
-        title: 'Validation Error',
-        description: 'Part number and description are required',
-        variant: 'destructive'
-      })
+      toast({ title: 'Validation error', description: 'Part number and description are required', variant: 'destructive' })
       return
     }
-
     const part: ServicePart = {
-      id: Math.random().toString(36).substr(2, 9),
-      partNumber: newPart.partNumber || '',
-      description: newPart.description || '',
+      id: Math.random().toString(36).slice(2, 11),
+      partNumber: newPart.partNumber!,
+      description: newPart.description!,
       quantity: newPart.quantity || 1,
       unitCost: newPart.unitCost || 0,
-      total: newPart.total || 0
+      total: newPart.total || 0,
     }
-
-    setFormData(prev => ({
-      ...prev,
-      parts: [...(prev.parts || []), part]
-    }))
-
-    setNewPart({
-      partNumber: '',
-      description: '',
-      quantity: 1,
-      unitCost: 0,
-      total: 0
-    })
+    setFormData(p => ({ ...p, parts: [...(p.parts || []), part] }))
+    setNewPart({ partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
     setShowAddPart(false)
   }
 
-  const removePart = (partId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      parts: prev.parts?.filter(p => p.id !== partId) || []
-    }))
+  const removePart = (id: string) => {
+    setFormData(p => ({ ...p, parts: (p.parts || []).filter(x => x.id !== id) }))
   }
 
   const addLabor = () => {
     if (!newLabor.description) {
-      toast({
-        title: 'Validation Error',
-        description: 'Labor description is required',
-        variant: 'destructive'
-      })
+      toast({ title: 'Validation error', description: 'Labor description is required', variant: 'destructive' })
       return
     }
-
     const labor: ServiceLabor = {
-      id: Math.random().toString(36).substr(2, 9),
-      description: newLabor.description || '',
+      id: Math.random().toString(36).slice(2, 11),
+      description: newLabor.description!,
       hours: newLabor.hours || 1,
       rate: newLabor.rate || 85,
-      total: newLabor.total || 85
+      total: newLabor.total || 85,
     }
-
-    setFormData(prev => ({
-      ...prev,
-      labor: [...(prev.labor || []), labor]
-    }))
-
-    setNewLabor({
-      description: '',
-      hours: 1,
-      rate: 85,
-      total: 85
-    })
+    setFormData(p => ({ ...p, labor: [...(p.labor || []), labor] }))
+    setNewLabor({ description: '', hours: 1, rate: 85, total: 85 })
     setShowAddLabor(false)
   }
 
-  const removeLabor = (laborId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      labor: prev.labor?.filter(l => l.id !== laborId) || []
-    }))
+  const removeLabor = (id: string) => {
+    setFormData(p => ({ ...p, labor: (p.labor || []).filter(x => x.id !== id) }))
   }
 
-  const calculateTotals = () => {
-    const partsTotal = formData.parts?.reduce((sum, part) => sum + part.total, 0) || 0
-    const laborTotal = formData.labor?.reduce((sum, labor) => sum + labor.total, 0) || 0
-    return {
-      partsTotal,
-      laborTotal,
-      grandTotal: partsTotal + laborTotal
-    }
+  const totals = {
+    parts: (formData.parts || []).reduce((s, p) => s + (p.total || 0), 0),
+    labor: (formData.labor || []).reduce((s, l) => s + (l.total || 0), 0),
   }
+  const grandTotal = totals.parts + totals.labor
 
-  const totals = calculateTotals()
-
-  // List of technicians (in a real app, this would come from a database)
+  // simple mock techs (replace with real lookup as needed)
   const technicians = [
     { id: 'Tech-001', name: 'John Smith' },
     { id: 'Tech-002', name: 'Sarah Johnson' },
-    { id: 'Tech-003', name: 'Mike Davis' }
+    { id: 'Tech-003', name: 'Mike Davis' },
   ]
 
+  const isModal = !!onCancel
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      {/* New Customer Form Modal */}
+    <div className={isModal ? 'p-6 max-h-[80vh] overflow-y-auto' : ''}>
       {showNewCustomerForm && (
-        <NewLeadForm
-          onClose={() => setShowNewCustomerForm(false)}
-          onSuccess={handleNewCustomerSuccess}
-        />
+        <NewLeadForm onClose={() => setShowNewCustomerForm(false)} onSuccess={handleNewCustomerSuccess} />
       )}
-      
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{ticket ? 'Edit Service Ticket' : 'Create Service Ticket'}</CardTitle>
-              <CardDescription>
-                {ticket ? 'Update service ticket details' : 'Create a new service ticket'}
-              </CardDescription>
-            </div>
+
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{ticket ? 'Edit Service Ticket' : 'Create Service Ticket'}</h1>
+            <p className="text-muted-foreground">
+              {ticket ? 'Update service ticket details' : 'Create a new service ticket'}
+            </p>
+          </div>
+          {isModal && (
             <Button variant="ghost" size="sm" onClick={onCancel}>
               <X className="h-4 w-4" />
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Ticket Information</h3>
-              
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ticket Information</CardTitle>
+              <CardDescription>Customer and vehicle details for this ticket</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Account Association */}
+                {/* Account */}
                 <div className="space-y-2">
                   <Label htmlFor="accountId">Account</Label>
-                  <Select
-                    value={formData.accountId}
-                    onValueChange={(value) => setFormData({ ...formData, accountId: value })}
-                  >
+                  <Select value={formData.accountId || ''} onValueChange={(v) => setFormData(p => ({ ...p, accountId: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Account</SelectItem>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
+                      {accounts.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Contact Association */}
+                {/* Contact */}
                 <div className="space-y-2">
                   <Label htmlFor="contactId">Contact</Label>
                   <Select
-                    value={formData.contactId}
-                    onValueChange={(value) => setFormData({ ...formData, contactId: value })}
+                    value={formData.contactId || ''}
+                    onValueChange={(v) => setFormData(p => ({ ...p, contactId: v }))}
                     disabled={!formData.accountId && filteredContacts.length === 0}
                   >
                     <SelectTrigger>
@@ -364,39 +267,38 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Contact</SelectItem>
-                      {filteredContacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.firstName} {contact.lastName}
-                          {contact.title && ` - ${contact.title}`}
+                      {filteredContacts.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName}
+                          {c.title ? ` - ${c.title}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
+                {/* Customer (lead) */}
+                <div className="space-y-2">
                   <Label htmlFor="customerId">Customer *</Label>
-                  <Select
-                    value={formData.customerId}
-                    onValueChange={handleCustomerSelect}
-                  >
+                  <Select value={formData.customerId || ''} onValueChange={handleCustomerSelect}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
                       <div className="px-2 py-1.5">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start" 
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
                           onClick={() => handleCustomerSelect('add-new')}
                         >
                           <Plus className="h-3.5 w-3.5 mr-2" />
                           Add New Customer
                         </Button>
                       </div>
-                      <div className="px-2 py-1 border-t"></div>
-                      {leads.map(lead => (
+                      <div className="px-2 py-1 border-t" />
+                      {leads.map((lead: any) => (
                         <SelectItem key={lead.id} value={lead.id}>
                           {lead.firstName} {lead.lastName}
                         </SelectItem>
@@ -404,21 +306,19 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div>
+
+                {/* Vehicle */}
+                <div className="space-y-2">
                   <Label htmlFor="vehicleId">Vehicle</Label>
-                  <Select 
-                    value={formData.vehicleId} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, vehicleId: value }))}
-                  >
+                  <Select value={formData.vehicleId || ''} onValueChange={(v) => setFormData(p => ({ ...p, vehicleId: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select vehicle (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Vehicle</SelectItem>
-                      {vehicles.map(vehicle => (
-                        <SelectItem key={vehicle.id} value={vehicle.id}>
-                          {vehicle.year} {vehicle.make} {vehicle.model}
+                      {vehicles.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.year} {v.make} {v.model}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -430,8 +330,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Label htmlFor="title">Service Title *</Label>
                 <Input
                   id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
                   placeholder="e.g., Annual Maintenance Service"
                 />
               </div>
@@ -440,8 +340,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Label htmlFor="description">Description *</Label>
                 <Textarea
                   id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                   placeholder="Describe the service needed"
                   rows={3}
                 />
@@ -450,9 +350,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <Label htmlFor="priority">Priority</Label>
-                  <Select 
-                    value={formData.priority} 
-                    onValueChange={(value: Priority) => setFormData(prev => ({ ...prev, priority: value }))}
+                  <Select
+                    value={(formData.priority as string) || Priority.MEDIUM}
+                    onValueChange={(v) => setFormData(p => ({ ...p, priority: v as any }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -465,12 +365,12 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select 
-                    value={formData.status} 
-                    onValueChange={(value: ServiceStatus) => setFormData(prev => ({ ...prev, status: value }))}
+                  <Select
+                    value={(formData.status as string) || ServiceStatus.OPEN}
+                    onValueChange={(v) => setFormData(p => ({ ...p, status: v as any }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -484,21 +384,22 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="assignedTo">Assigned Technician</Label>
-                  <Select 
-                    value={formData.assignedTo} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assignedTo: value }))}
-                  >
+                  <Select value={formData.assignedTo || ''} onValueChange={(v) => setFormData(p => ({ ...p, assignedTo: v }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select technician" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Unassigned</SelectItem>
-                      {technicians.map(tech => (
-                        <SelectItem key={tech.id} value={tech.id}>
-                          {tech.name}
+                      {[
+                        { id: 'Tech-001', name: 'John Smith' },
+                        { id: 'Tech-002', name: 'Sarah Johnson' },
+                        { id: 'Tech-003', name: 'Mike Davis' },
+                      ].map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -513,47 +414,44 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     id="scheduledDate"
                     type="date"
                     value={formData.scheduledDate ? new Date(formData.scheduledDate).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      scheduledDate: e.target.value ? new Date(e.target.value) : undefined 
-                    }))}
+                    onChange={(e) =>
+                      setFormData(p => ({ ...p, scheduledDate: e.target.value ? new Date(e.target.value) : undefined }))
+                    }
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="estimatedCompletionDate">Estimated Completion</Label>
                   <Input
                     id="estimatedCompletionDate"
                     type="date"
                     value={formData.customFields?.estimatedCompletionDate || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      customFields: {
-                        ...prev.customFields,
-                        estimatedCompletionDate: e.target.value
-                      }
-                    }))}
+                    onChange={(e) =>
+                      setFormData(p => ({
+                        ...p,
+                        customFields: { ...(p.customFields || {}), estimatedCompletionDate: e.target.value },
+                      }))
+                    }
                   />
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Warranty Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Warranty Information</h3>
-              
+          {/* Warranty & Authorization */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Warranty & Authorization</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="warrantyStatus">Warranty Status</Label>
-                  <Select 
-                    value={formData.customFields?.warrantyStatus || 'not_covered'} 
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      customFields: {
-                        ...prev.customFields,
-                        warrantyStatus: value
-                      }
-                    }))}
+                  <Select
+                    value={formData.customFields?.warrantyStatus || 'not_covered'}
+                    onValueChange={(v) =>
+                      setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), warrantyStatus: v } }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -567,35 +465,34 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="flex items-center space-x-2 pt-8">
+
+                <div className="flex items-center space-x-2 pt-7">
                   <Checkbox
                     id="customerAuthorization"
-                    checked={formData.customFields?.customerAuthorization || false}
-                    onCheckedChange={(checked) => setFormData(prev => ({ 
-                      ...prev, 
-                      customFields: {
-                        ...prev.customFields,
-                        customerAuthorization: !!checked
-                      }
-                    }))}
+                    checked={!!formData.customFields?.customerAuthorization}
+                    onCheckedChange={(checked) =>
+                      setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), customerAuthorization: !!checked } }))
+                    }
                   />
                   <Label htmlFor="customerAuthorization">Customer has authorized work</Label>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Parts */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Parts</h3>
-                <Button type="button" onClick={() => setShowAddPart(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Part
-                </Button>
+          {/* Parts */}
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <div>
+                <CardTitle>Parts</CardTitle>
+                <CardDescription>Add parts needed for this job</CardDescription>
               </div>
-
-              {/* Add Part Form */}
+              <Button type="button" size="sm" onClick={() => setShowAddPart(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Part
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {showAddPart && (
                 <Card className="border-dashed">
                   <CardContent className="pt-6">
@@ -604,8 +501,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Label htmlFor="partNumber">Part Number *</Label>
                         <Input
                           id="partNumber"
-                          value={newPart.partNumber}
-                          onChange={(e) => setNewPart(prev => ({ ...prev, partNumber: e.target.value }))}
+                          value={newPart.partNumber || ''}
+                          onChange={(e) => setNewPart(p => ({ ...p, partNumber: e.target.value }))}
                           placeholder="e.g., AC-COMP-001"
                         />
                       </div>
@@ -613,8 +510,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Label htmlFor="partDescription">Description *</Label>
                         <Input
                           id="partDescription"
-                          value={newPart.description}
-                          onChange={(e) => setNewPart(prev => ({ ...prev, description: e.target.value }))}
+                          value={newPart.description || ''}
+                          onChange={(e) => setNewPart(p => ({ ...p, description: e.target.value }))}
                           placeholder="e.g., AC Compressor"
                         />
                       </div>
@@ -623,9 +520,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Input
                           id="partQuantity"
                           type="number"
-                          min="1"
-                          value={newPart.quantity}
-                          onChange={(e) => setNewPart(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                          min={1}
+                          value={newPart.quantity || 1}
+                          onChange={(e) => setNewPart(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
                         />
                       </div>
                       <div>
@@ -633,19 +530,20 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Input
                           id="partUnitCost"
                           type="number"
+                          min={0}
                           step="0.01"
-                          min="0"
-                          value={newPart.unitCost}
-                          onChange={(e) => setNewPart(prev => ({ ...prev, unitCost: parseFloat(e.target.value) || 0 }))}
+                          value={newPart.unitCost || 0}
+                          onChange={(e) => setNewPart(p => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))}
                         />
                       </div>
                     </div>
+
                     <div className="flex justify-between items-center mt-4">
                       <div>
                         <span className="text-sm font-medium">Total: </span>
                         <span className="font-bold">{formatCurrency(newPart.total || 0)}</span>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2">
                         <Button type="button" variant="outline" onClick={() => setShowAddPart(false)}>
                           Cancel
                         </Button>
@@ -658,56 +556,51 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 </Card>
               )}
 
-              {/* Parts List */}
-              <div className="space-y-3">
-                {formData.parts && formData.parts.length > 0 ? (
-                  formData.parts.map((part) => (
+              {(formData.parts || []).length > 0 ? (
+                <div className="space-y-3">
+                  {(formData.parts || []).map((part) => (
                     <div key={part.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <span className="font-medium">{part.description}</span>
-                          <Badge variant="outline">
-                            {part.partNumber}
-                          </Badge>
+                          <Badge variant="outline">{part.partNumber}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Quantity: {part.quantity} × {formatCurrency(part.unitCost)}
                         </p>
                       </div>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center gap-4">
                         <span className="font-bold">{formatCurrency(part.total)}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removePart(part.id)}
-                        >
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removePart(part.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <Wrench className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No parts added yet</p>
-                    <p className="text-sm">Add parts needed for this service</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Wrench className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No parts added yet</p>
+                  <p className="text-sm">Add parts needed for this service</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Labor */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Labor</h3>
-                <Button type="button" onClick={() => setShowAddLabor(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Labor
-                </Button>
+          {/* Labor */}
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <div>
+                <CardTitle>Labor</CardTitle>
+                <CardDescription>Add labor for this job</CardDescription>
               </div>
-
-              {/* Add Labor Form */}
+              <Button type="button" size="sm" onClick={() => setShowAddLabor(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Labor
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {showAddLabor && (
                 <Card className="border-dashed">
                   <CardContent className="pt-6">
@@ -716,8 +609,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         <Label htmlFor="laborDescription">Description *</Label>
                         <Input
                           id="laborDescription"
-                          value={newLabor.description}
-                          onChange={(e) => setNewLabor(prev => ({ ...prev, description: e.target.value }))}
+                          value={newLabor.description || ''}
+                          onChange={(e) => setNewLabor(p => ({ ...p, description: e.target.value }))}
                           placeholder="e.g., Diagnostic and Repair"
                         />
                       </div>
@@ -727,9 +620,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           id="laborHours"
                           type="number"
                           step="0.5"
-                          min="0.5"
-                          value={newLabor.hours}
-                          onChange={(e) => setNewLabor(prev => ({ ...prev, hours: parseFloat(e.target.value) || 1 }))}
+                          min={0.5}
+                          value={newLabor.hours || 1}
+                          onChange={(e) => setNewLabor(p => ({ ...p, hours: parseFloat(e.target.value) || 1 }))}
                         />
                       </div>
                       <div>
@@ -738,9 +631,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           id="laborRate"
                           type="number"
                           step="0.01"
-                          min="0"
-                          value={newLabor.rate}
-                          onChange={(e) => setNewLabor(prev => ({ ...prev, rate: parseFloat(e.target.value) || 85 }))}
+                          min={0}
+                          value={newLabor.rate || 85}
+                          onChange={(e) => setNewLabor(p => ({ ...p, rate: parseFloat(e.target.value) || 85 }))}
                         />
                       </div>
                       <div>
@@ -750,7 +643,7 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-end space-x-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4">
                       <Button type="button" variant="outline" onClick={() => setShowAddLabor(false)}>
                         Cancel
                       </Button>
@@ -762,10 +655,9 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 </Card>
               )}
 
-              {/* Labor List */}
-              <div className="space-y-3">
-                {formData.labor && formData.labor.length > 0 ? (
-                  formData.labor.map((labor) => (
+              {(formData.labor || []).length > 0 ? (
+                <div className="space-y-3">
+                  {(formData.labor || []).map((labor) => (
                     <div key={labor.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
                         <div className="font-medium">{labor.description}</div>
@@ -773,67 +665,61 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                           {labor.hours} hours × {formatCurrency(labor.rate)}/hr
                         </p>
                       </div>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center gap-4">
                         <span className="font-bold">{formatCurrency(labor.total)}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeLabor(labor.id)}
-                        >
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removeLabor(labor.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No labor added yet</p>
-                    <p className="text-sm">Add labor for this service</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No labor added yet</p>
+                  <p className="text-sm">Add labor for this service</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Totals */}
-            {(formData.parts?.length > 0 || formData.labor?.length > 0) && (
-              <Card className="bg-muted/30">
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Parts Total:</span>
-                      <span>{formatCurrency(totals.partsTotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Labor Total:</span>
-                      <span>{formatCurrency(totals.laborTotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
-                      <span>Grand Total:</span>
-                      <span>{formatCurrency(totals.grandTotal)}</span>
-                    </div>
+          {/* Totals */}
+          {(formData.parts?.length || 0) + (formData.labor?.length || 0) > 0 && (
+            <Card className="bg-muted/30">
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Parts Total:</span>
+                    <span>{formatCurrency(totals.parts)}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="flex justify-between">
+                    <span>Labor Total:</span>
+                    <span>{formatCurrency(totals.labor)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Grand Total:</span>
+                    <span>{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Additional Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Additional Information</h3>
-              
+          {/* Additional info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="technicianNotes">Technician Notes</Label>
                 <Textarea
                   id="technicianNotes"
                   value={formData.customFields?.technicianNotes || ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    customFields: {
-                      ...prev.customFields,
-                      technicianNotes: e.target.value
-                    }
-                  }))}
+                  onChange={(e) =>
+                    setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), technicianNotes: e.target.value } }))
+                  }
                   placeholder="Notes for technicians only (not visible to customer)"
                   rows={3}
                 />
@@ -843,8 +729,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Label htmlFor="notes">Customer Notes</Label>
                 <Textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
                   placeholder="Notes visible to the customer"
                   rows={3}
                 />
@@ -854,40 +740,40 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
                 <Checkbox
                   id="customerPortalAccess"
                   checked={formData.customFields?.customerPortalAccess !== false}
-                  onCheckedChange={(checked) => setFormData(prev => ({ 
-                    ...prev, 
-                    customFields: {
-                      ...prev.customFields,
-                      customerPortalAccess: !!checked
-                    }
-                  }))}
+                  onCheckedChange={(checked) =>
+                    setFormData(p => ({ ...p, customFields: { ...(p.customFields || {}), customerPortalAccess: !!checked } }))
+                  }
                 />
                 <Label htmlFor="customerPortalAccess">Allow customer to view this ticket in portal</Label>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="flex justify-end gap-3 pt-2">
+            {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {ticket ? 'Updating...' : 'Creating...'}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {ticket ? 'Update' : 'Create'} Ticket
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            )}
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  {ticket ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {ticket ? 'Update' : 'Create'} Ticket
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
+
+// Provide default export too (some places import default)
+export default ServiceTicketForm
