@@ -62,7 +62,7 @@ export default function ContactList() {
     
     // Advanced search
     const matchesAdvanced = matchesAdvancedSearch(contact, advancedSearchCriteria)
-    createdAfter: searchParams.get('createdAfter') || '',
+    const createdAfter = searchParams.get('createdAfter') || ''
     return matchesSearch && matchesAdvanced
   })
 
