@@ -708,6 +708,14 @@ export enum TaskPriority {
   URGENT = 'urgent'
 }
 
+export enum AccountType {
+  CUSTOMER = 'customer',
+  PROSPECT = 'prospect',
+  VENDOR = 'vendor',
+  PARTNER = 'partner',
+  COMPETITOR = 'competitor'
+}
+
 export interface Task {
   id: string
   title: string
@@ -726,6 +734,53 @@ export interface Task {
   tags?: string[]
   customFields?: Record<string, any>
   isOverdue?: boolean
+}
+
+export interface Account {
+  id: string
+  name: string
+  type: AccountType
+  industry?: string
+  website?: string
+  phone?: string
+  email?: string
+  address?: Address
+  notes?: string
+  tags: string[]
+  customFields?: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+  createdBy?: string
+  updatedBy?: string
+}
+
+export interface Contact {
+  id: string
+  accountId?: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  title?: string
+  department?: string
+  notes?: string
+  tags: string[]
+  customFields?: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+  createdBy?: string
+  updatedBy?: string
+}
+
+export interface Note {
+  id: string
+  content: string
+  entityType: 'account' | 'contact' | 'lead' | 'deal' | 'service_ticket' | 'quote' | 'agreement'
+  entityId: string
+  createdAt: Date
+  updatedAt: Date
+  createdBy: string
+  createdByName?: string
 }
 
 export interface Contractor {
