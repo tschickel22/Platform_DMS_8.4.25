@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
-import { FilterPanel } from '@/components/common/FilterPanel'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
 import { AdvancedSearch } from '@/components/common/AdvancedSearch'
+import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
@@ -23,6 +23,35 @@ export default function ContactList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
+  
+  // Check if contact matches advanced search criteria
+  const matchesAdvancedSearch = (contact: Contact, criteria: any[]) => {
+    if (criteria.length === 0) return true
+    
+    return criteria.every(criterion => {
+      const fieldValue = (contact as any)[criterion.field]?.toString().toLowerCase() || ''
+      const searchValue = criterion.value.toLowerCase()
+      
+      switch (criterion.operator) {
+        case 'contains':
+          return fieldValue.includes(searchValue)
+        case 'equals':
+          return fieldValue === searchValue
+        case 'starts_with':
+          return fieldValue.startsWith(searchValue)
+        case 'ends_with':
+          return fieldValue.endsWith(searchValue)
+        case 'not_equals':
+          return fieldValue !== searchValue
+        case 'is_empty':
+          return fieldValue === ''
+        case 'is_not_empty':
+          return fieldValue !== ''
+        default:
+          return true
+      }
+    })
+  }
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('contacts')
   
   // Filter state
@@ -30,8 +59,11 @@ export default function ContactList() {
     search: searchParams.get('search') || '',
     accountId: searchParams.get('accountId') || '',
     hasAccount: searchParams.get('hasAccount') || '',
+    
+    // Advanced search
+    const matchesAdvanced = matchesAdvancedSearch(contact, advancedSearchCriteria)
     createdAfter: searchParams.get('createdAfter') || '',
-    createdBefore: searchParams.get('createdBefore') || ''
+    return matchesSearch && matchesAdvanced
   })
 
   const handleSelectAll = (checked: boolean) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAccountManagement } from './hooks/useAccountManagement'
+import { useActivityTracking } from '@/hooks/useActivityTracking'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -12,14 +13,44 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
-import { useSavedFilters } from '@/hooks/useSavedFilters'
 import { AdvancedSearch } from '@/components/common/AdvancedSearch'
+import { useSavedFilters } from '@/hooks/useSavedFilters'
 
 export default function AccountList() {
   const { accounts, loading, error, deleteAccount, createAccount } = useAccountManagement()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
+  
+  // Check if account matches advanced search criteria
+  const matchesAdvancedSearch = (account: Account, criteria: any[]) => {
+    if (criteria.length === 0) return true
+    
+    return criteria.every(criterion => {
+      const fieldValue = (account as any)[criterion.field]?.toString().toLowerCase() || ''
+      const searchValue = criterion.value.toLowerCase()
+      
+      switch (criterion.operator) {
+        case 'contains':
+          return fieldValue.includes(searchValue)
+        case 'equals':
+          return fieldValue === searchValue
+        case 'starts_with':
+          return fieldValue.startsWith(searchValue)
+        case 'ends_with':
+          return fieldValue.endsWith(searchValue)
+        case 'not_equals':
+          return fieldValue !== searchValue
+        case 'is_empty':
+          return fieldValue === ''
+        case 'is_not_empty':
+          return fieldValue !== ''
+        default:
+          return true
+      }
+    })
+  }
 
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
   
@@ -72,69 +103,18 @@ export default function AccountList() {
     setSearchParams(params)
   }, [filters, setSearchParams])
 
-  // Filter accounts based on current filters
-  const filteredAccounts = React.useMemo(() => {
-    return accounts.filter(account => {
-      // Basic search
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
-        const matchesSearch = 
-          account.name.toLowerCase().includes(searchLower) ||
-          account.email?.toLowerCase().includes(searchLower) ||
-          account.phone?.includes(filters.search) ||
-          account.industry?.toLowerCase().includes(searchLower)
-        if (!matchesSearch) return false
-      }
-      
-      if (filters.industry && account.industry !== filters.industry) {
-        return false
-      }
-      
-      if (filters.createdAfter) {
-        const createdDate = new Date(account.createdAt)
-        const filterDate = new Date(filters.createdAfter)
-        if (createdDate < filterDate) return false
-      }
-      
-      if (filters.createdBefore) {
-        const createdDate = new Date(account.createdAt)
-        const filterDate = new Date(filters.createdBefore)
-        if (createdDate > filterDate) return false
-      }
+  // Filter accounts based on search and advanced criteria
+  const filteredAccounts = accounts.filter(account => {
+    // Basic search
+    const matchesSearch = searchTerm === '' ||
+      account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    // Advanced search
+    const matchesAdvanced = matchesAdvancedSearch(account, advancedSearchCriteria)
 
-      // Advanced search filtering logic
-      // Advanced search
-      const matchesAdvanced = advancedSearchCriteria.length === 0 || 
-        advancedSearchCriteria.every(criteria => {
-          const fieldValue = (account as any)[criteria.field]?.toString().toLowerCase() || ''
-          const searchValue = criteria.value.toLowerCase()
-          
-          switch (criteria.operator) {
-            case 'contains':
-              return fieldValue.includes(searchValue)
-            case 'equals':
-              return fieldValue === searchValue
-            case 'starts_with':
-              return fieldValue.startsWith(searchValue)
-            case 'ends_with':
-              return fieldValue.endsWith(searchValue)
-            case 'not_equals':
-              return fieldValue !== searchValue
-            case 'is_empty':
-              return !fieldValue
-            case 'is_not_empty':
-              return !!fieldValue
-            default:
-              return true
-          }
-        })
-      
-      // Apply advanced search
-      const passesAdvancedSearch = matchesAdvanced
-      
-      return passesAdvancedSearch
-    })
-  }, [accounts, filters, advancedSearchCriteria])
+    return matchesSearch && matchesAdvanced
+  })
 
   const industries = React.useMemo(() => {
     const uniqueIndustries = [...new Set(accounts.map(acc => acc.industry).filter(Boolean))]
