@@ -1,417 +1,402 @@
-import React, { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { useAccountManagement } from '../hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
-import { useReturnTargets } from '@/hooks/useReturnTargets'
-import { useDealManagement } from '../hooks/useDealManagement'
-import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
-import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
-import { mockInventory } from '@/mocks/inventoryMock'
-import { X, Save, DollarSign } from 'lucide-react'
+import ContactForm from '@/modules/contacts/components/ContactForm'
+import DealForm from '@/modules/crm-sales-deal/components/DealForm'
+import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+import {
+  ArrowLeft,
+  Edit,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Plus,
+  Save,
+  RotateCcw,
+  Settings,
+} from 'lucide-react'
 
-interface DealFormData {
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  accountId: string
-  contactId: string
-  vehicleId: string
-  stage: string
-  amount: number
-  source: string
+// Section components
+import { AccountContactsSection } from '../components/AccountContactsSection'
+import { AccountDealsSection } from '../components/AccountDealsSection'
+import { AccountQuotesSection } from '../components/AccountQuotesSection'
+import { AccountServiceTicketsSection } from '../components/AccountServiceTicketsSection'
+import { AccountNotesSection } from '../components/AccountNotesSection'
+
+interface AccountSection {
+  id: string
   type: string
-  priority: string
-  probability: number
-  expectedCloseDate: string
-  notes: string
+  title: string
+  component: React.ComponentType<any>
+  description: string
 }
 
-interface ReturnToBehavior {
-  accountId?: string
-  onSaved?: (entity: any) => void
-  returnTo?: 'account' | 'list'
-}
+const AVAILABLE_SECTIONS: AccountSection[] = [
+  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
+  { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
+  { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
+  { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
+  { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
+]
 
-interface DealFormProps extends ReturnToBehavior {
-  dealId?: string
-  onClose?: () => void
-}
+const DEFAULT_LAYOUT = ['contacts', 'deals', 'quotes', 'service', 'notes']
 
-export function DealForm(props: DealFormProps) {
+export default function AccountDetail() {
+  const { accountId } = useParams<{ accountId: string }>()
+  const { getAccount } = useAccountManagement()
   const { toast } = useToast()
-  const { accountId, afterSave } = useReturnTargets(props)
-  const { createDeal, updateDeal, getDeal } = useDealManagement()
-  const { accounts } = useAccountManagement()
-  const { contacts } = useContactManagement()
 
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState<DealFormData>({
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    accountId: accountId || '',
-    contactId: '',
-    vehicleId: '',
-    stage: mockCrmSalesDeal.defaultDeal.stage,
-    amount: mockCrmSalesDeal.defaultDeal.amount,
-    source: mockCrmSalesDeal.defaultDeal.source,
-    type: mockCrmSalesDeal.defaultDeal.type,
-    priority: mockCrmSalesDeal.defaultDeal.priority,
-    probability: mockCrmSalesDeal.defaultDeal.probability,
-    expectedCloseDate: mockCrmSalesDeal.defaultDeal.expectedCloseDate,
-    notes: '',
-  })
+  const [account, setAccount] = useState<any>(null)
+  const [sections, setSections] = useState<string[]>(DEFAULT_LAYOUT)
 
-  const isEditing = !!props.dealId
-  const isModal = !!props.onSaved
+  // Modal state
+  const [openContact, setOpenContact] = useState(false)
+  const [openDeal, setOpenDeal] = useState(false)
+  const [openQuote, setOpenQuote] = useState(false)
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  // Load existing deal for editing
+  const storageKey = `account-detail-layout-${accountId}`
+
   useEffect(() => {
-    if (!props.dealId) return
-    const deal = getDeal(props.dealId)
-    if (deal) {
-      setFormData({
-        customerName: deal.customerName || '',
-        customerEmail: deal.customerEmail || '',
-        customerPhone: deal.customerPhone || '',
-        accountId: deal.accountId || '',
-        contactId: deal.contactId || '',
-        vehicleId: deal.vehicleId || '',
-        stage: deal.stage,
-        amount: deal.amount,
-        source: deal.source,
-        type: deal.type,
-        priority: deal.priority,
-        probability: deal.probability,
-        expectedCloseDate: deal.expectedCloseDate,
-        notes: deal.notes || '',
-      })
+    if (accountId) {
+      const data = getAccount(accountId)
+      setAccount(data)
     }
-  }, [props.dealId, getDeal])
+  }, [accountId, getAccount])
 
-  // Auto-fill customer info when account is selected (only for create)
   useEffect(() => {
-    if (!formData.accountId || isEditing) return
-    const account = accounts.find(acc => acc.id === formData.accountId)
-    if (account) {
-      setFormData(prev => ({
-        ...prev,
-        customerName: account.name,
-        customerEmail: account.email || '',
-        customerPhone: account.phone || '',
-      }))
+    if (accountId) {
+      const saved = loadFromLocalStorage<string[]>(storageKey, DEFAULT_LAYOUT)
+      setSections(saved)
     }
-  }, [formData.accountId, accounts, isEditing])
+  }, [accountId, storageKey])
 
-  // Filter contacts by selected account
-  const filteredContacts = contacts.filter(
-    c => !formData.accountId || c.accountId === formData.accountId
-  )
+  const saveLayout = () => {
+    if (!accountId) return
+    saveToLocalStorage(storageKey, sections)
+    setHasUnsavedChanges(false)
+    toast({ title: 'Layout Saved', description: 'Your customized view has been saved successfully.' })
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      let saved
-      if (isEditing) {
-        saved = await updateDeal(props.dealId!, formData)
-        toast({ title: 'Success', description: 'Deal updated successfully' })
-      } else {
-        saved = await createDeal(formData)
-        toast({ title: 'Success', description: 'Deal created successfully' })
-      }
-      afterSave(saved, '/deals')
-    } catch (err) {
-      console.error(err)
-      toast({ title: 'Error', description: 'Failed to save deal', variant: 'destructive' })
-    } finally {
-      setLoading(false)
+  const resetLayout = () => {
+    setSections(DEFAULT_LAYOUT)
+    setHasUnsavedChanges(true)
+    toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    const newSections = Array.from(sections)
+    const [moved] = newSections.splice(result.source.index, 1)
+    newSections.splice(result.destination.index, 0, moved)
+    setSections(newSections)
+    setHasUnsavedChanges(true)
+  }
+
+  const addSection = (type: string) => {
+    if (!sections.includes(type)) {
+      setSections([...sections, type])
+      setHasUnsavedChanges(true)
+      setIsAddSectionOpen(false)
+      toast({ title: 'Section Added', description: 'New section has been added to your view.' })
     }
   }
 
-  const handleCancel = () => {
-    if (props.onSaved) {
-      props.onSaved(null) // close modal
-    } else {
-      afterSave(null, '/deals')
+  const removeSection = (type: string) => {
+    setSections(sections.filter((s) => s !== type))
+    setHasUnsavedChanges(true)
+    toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
+  }
+
+  const refreshSection = (_: string) => {
+    // no-op placeholder—your section components pull from shared state/localStorage
+  }
+
+  const handleContactSaved = (contact: any) => {
+    setOpenContact(false)
+    if (contact) {
+      refreshSection('contacts')
+      toast({ title: 'Success', description: 'Contact created successfully' })
     }
+  }
+  const handleDealSaved = (deal: any) => {
+    setOpenDeal(false)
+    if (deal) {
+      refreshSection('deals')
+      toast({ title: 'Success', description: 'Deal created successfully' })
+    }
+  }
+  const handleQuoteSaved = (quote: any) => {
+    setOpenQuote(false)
+    if (quote) {
+      refreshSection('quotes')
+      toast({ title: 'Success', description: 'Quote created successfully' })
+    }
+  }
+
+  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type))
+
+  if (!account) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading account...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const getAccountTypeColor = (type: string) => {
+    const map: Record<string, string> = {
+      customer: 'bg-green-100 text-green-800',
+      prospect: 'bg-blue-100 text-blue-800',
+      vendor: 'bg-purple-100 text-purple-800',
+      partner: 'bg-orange-100 text-orange-800',
+      competitor: 'bg-red-100 text-red-800',
+    }
+    return map[type] || 'bg-gray-100 text-gray-800'
   }
 
   return (
-    <div className={isModal ? 'p-6 max-h-[80vh] overflow-y-auto' : ''}>
+    <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{isEditing ? 'Edit Deal' : 'Create New Deal'}</h1>
-            <p className="text-muted-foreground">
-              {isEditing ? 'Update deal information' : 'Create a new sales deal'}
-            </p>
-          </div>
-          {isModal && (
-            <Button variant="ghost" size="sm" onClick={handleCancel}>
-              <X className="h-4 w-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/accounts">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Accounts
+              </Link>
             </Button>
-          )}
+            <div>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-2xl font-bold">{account.name}</h1>
+                <Badge className={getAccountTypeColor(account.type)}>{account.type}</Badge>
+              </div>
+              <p className="text-muted-foreground">
+                {account.industry} • Created {new Date(account.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasUnsavedChanges && (
+              <Button variant="outline" size="sm" onClick={saveLayout}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Layout
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={resetLayout}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset Layout
+            </Button>
+
+            {/* Add Section */}
+            <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Section
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Section</DialogTitle>
+                  <DialogDescription>Select a section to add to this account view.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {availableSectionsToAdd.map((section) => (
+                    <Button
+                      key={section.id}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => addSection(section.type)}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">{section.title}</div>
+                        <div className="text-xs text-muted-foreground">{section.description}</div>
+                      </div>
+                    </Button>
+                  ))}
+                  {availableSectionsToAdd.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      All available sections are already added to this view.
+                    </p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button size="sm" asChild>
+              <Link to={`/accounts/${accountId}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Account
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Deal Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Deal Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerName">Customer Name *</Label>
-                  <Input
-                    id="customerName"
-                    value={formData.customerName}
-                    onChange={e => setFormData(p => ({ ...p, customerName: e.target.value }))}
-                    placeholder="Enter customer name"
-                    required
-                    disabled={!!accountId}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="amount">Deal Amount *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={formData.amount}
-                    onChange={e => setFormData(p => ({ ...p, amount: Number(e.target.value) }))}
-                    placeholder="0"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerEmail">Customer Email</Label>
-                  <Input
-                    id="customerEmail"
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={e => setFormData(p => ({ ...p, customerEmail: e.target.value }))}
-                    placeholder="customer@example.com"
-                    disabled={!!accountId}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="customerPhone">Customer Phone</Label>
-                  <Input
-                    id="customerPhone"
-                    value={formData.customerPhone}
-                    onChange={e => setFormData(p => ({ ...p, customerPhone: e.target.value }))}
-                    placeholder="(555) 123-4567"
-                    disabled={!!accountId}
-                  />
-                </div>
-              </div>
-
-              {!accountId && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="accountId">Account</Label>
-                    <Select
-                      value={formData.accountId}
-                      onValueChange={v => setFormData(p => ({ ...p, accountId: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map(acc => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        {/* Account info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Settings className="h-5 w-5 mr-2" />
+              Account Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                {account.website && (
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {account.website}
+                    </a>
                   </div>
-                  <div>
-                    <Label htmlFor="contactId">Contact</Label>
-                    <Select
-                      value={formData.contactId}
-                      onValueChange={v => setFormData(p => ({ ...p, contactId: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select contact" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredContacts.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.firstName} {c.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                )}
+                {account.email && (
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
+                      {account.email}
+                    </a>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Deal Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Deal Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="stage">Stage *</Label>
-                  <Select
-                    value={formData.stage}
-                    onValueChange={v => setFormData(p => ({ ...p, stage: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCrmSalesDeal.dealStages.map(stage => (
-                        <SelectItem key={stage} value={stage}>
-                          {stage}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={v => setFormData(p => ({ ...p, priority: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCrmSalesDeal.priorities.map(p => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="probability">Probability (%)</Label>
-                  <Input
-                    id="probability"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={formData.probability}
-                    onChange={e => setFormData(p => ({ ...p, probability: Number(e.target.value) }))}
-                  />
-                </div>
+                )}
+                {account.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
+                      {account.phone}
+                    </a>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="source">Source</Label>
-                  <Select
-                    value={formData.source}
-                    onValueChange={v => setFormData(p => ({ ...p, source: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCrmSalesDeal.dealSources.map(s => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
+              <div className="space-y-4">
+                {account.address && (
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="text-sm">
+                      <div>{account.address.street}</div>
+                      <div>
+                        {account.address.city}, {account.address.state} {account.address.zipCode}
+                      </div>
+                      <div>{account.address.country}</div>
+                    </div>
+                  </div>
+                )}
+
+                {account.tags && account.tags.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {account.tags.map((tag: string) => (
+                        <Badge key={tag} variant="outline">
+                          {tag}
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={v => setFormData(p => ({ ...p, type: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCrmSalesDeal.dealTypes.map(t => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
-                  <Input
-                    id="expectedCloseDate"
-                    type="date"
-                    value={formData.expectedCloseDate}
-                    onChange={e => setFormData(p => ({ ...p, expectedCloseDate: e.target.value }))}
-                  />
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="vehicleId">Vehicle/Product</Label>
-                <Select
-                  value={formData.vehicleId}
-                  onValueChange={v => setFormData(p => ({ ...p, vehicleId: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vehicle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockInventory.sampleVehicles.map(v => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.year} {v.make} {v.model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {account.notes && (
+              <div className="mt-6 pt-6 border-t">
+                <p className="text-sm font-medium mb-2">Notes</p>
+                <p className="text-sm text-muted-foreground">{account.notes}</p>
               </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="Add any additional notes about this deal..."
-                  rows={3}
-                />
+        {/* Sections (dnd) */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="account-sections">
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
+                {sections.map((type, index) => {
+                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
+                  if (!config) return null
+                  const Section = config.component
+                  return (
+                    <Draggable key={type} draggableId={type} index={index}>
+                      {(p, s) => (
+                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
+                          <Section accountId={accountId!} onRemove={() => removeSection(type)} isDragging={s.isDragging} />
+                        </div>
+                      )}
+                    </Draggable>
+                  )
+                })}
+                {provided.placeholder}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </Droppable>
+        </DragDropContext>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-4">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? 'Saving...' : isEditing ? 'Update Deal' : 'Create Deal'}
-            </Button>
+        {/* Unsaved indicator */}
+        {hasUnsavedChanges && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <Card className="shadow-lg border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse"></div>
+                  <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
+                  <Button size="sm" onClick={saveLayout}>
+                    Save Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </form>
+        )}
       </div>
-    </div>
+
+      {/* Contact Modal */}
+      <Dialog open={openContact} onOpenChange={setOpenContact}>
+        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Contact</DialogTitle>
+          <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
+          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Deal Modal */}
+      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Deal</DialogTitle>
+          <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
+          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Quote Modal */}
+      <Dialog open={openQuote} onOpenChange={setOpenQuote}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Quote</DialogTitle>
+          <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
-
-export default DealForm
