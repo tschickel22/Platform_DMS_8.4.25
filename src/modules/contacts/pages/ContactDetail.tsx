@@ -1,21 +1,21 @@
-import React from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
   ArrowLeft, 
-  Edit, 
   User, 
-  Building, 
-  Mail, 
   Phone, 
-  MessageSquare,
-  Briefcase,
-  Users
+  Mail, 
+  Building2, 
+  Edit, 
+  Calendar,
+  MessageSquare
 } from 'lucide-react'
-import { useContactManagement } from '../hooks/useContactManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import ContactForm from '@/modules/contacts/components/ContactForm'
 
 export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>()
