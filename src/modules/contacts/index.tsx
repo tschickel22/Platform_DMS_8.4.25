@@ -12,6 +12,7 @@ export default function ContactsModule() {
         <Route path="/" element={<ContactList />} />
         <Route path="/new" element={<ContactForm />} />
         <Route path="/:contactId" element={<ContactDetail />} />
+        <Route path="/:contactId/edit" element={<ContactForm />} />
       </Routes>
     </ErrorBoundary>
   )
