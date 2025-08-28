@@ -32,6 +32,16 @@ export default function AgreementVault() {
 
   const filteredAgreements = agreements.filter(agreement => {
     const matchesSearch = searchTerm === '' || 
+      agreement.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agreement.vehicleInfo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agreement.type.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = statusFilter === 'all' || agreement.status === statusFilter
+
+    return matchesSearch && matchesStatus
+  })
+
+  const columns = [
     {
       key: 'account',
       label: 'Account',
@@ -73,17 +83,10 @@ export default function AgreementVault() {
             linkTo={`/crm/contacts/${contact.id}`}
             showHoverCard={true}
           />
-    },
+        ) : <span className="text-muted-foreground">N/A</span>
       }
-    },
-      agreement.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agreement.vehicleInfo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agreement.type.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === 'all' || agreement.status === statusFilter
-
-    return matchesSearch && matchesStatus
-  })
+    }
+  ]
 
   const getStatusIcon = (status: string) => {
     switch (status) {
