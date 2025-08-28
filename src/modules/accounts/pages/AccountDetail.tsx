@@ -17,22 +17,19 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { useToast } from '@/hooks/use-toast'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-// ✅ Always import the *form components* (not routed pages). Deals is a named export.
 import ContactForm from '@/modules/contacts/components/ContactForm'
+
+// ⚠️ Deal form is a **named export**; map it to default for React.lazy
 const DealForm = React.lazy(() =>
   import('@/modules/crm-sales-deal/components/DealForm').then(m => ({ default: m.DealForm }))
 )
-const NewQuoteForm = React.lazy(() =>
-  import('@/modules/quote-builder/components/NewQuoteForm')
-)
-const ServiceTicketForm = React.lazy(() =>
-  import('@/modules/service-ops/components/ServiceTicketForm')
-)
+
+// Quote + Service are default exports, lazy is fine as-is
+const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
+const ServiceTicketForm = React.lazy(() => import('@/modules/service-ops/components/ServiceTicketForm'))
 
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-import {
-  ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
-} from 'lucide-react'
+import { ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings } from 'lucide-react'
 
 // Sections
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
@@ -128,7 +125,7 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder
+    // placeholder — lists likely re-read from shared state/localStorage
   }
 
   const handleContactSaved = (contact: any) => {
@@ -271,8 +268,69 @@ export default function AccountDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* ...snip identical account info UI... */}
-            {/* Keep your existing account details block here */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                {!!account?.website && (
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {account.website}
+                    </a>
+                  </div>
+                )}
+                {!!account?.email && (
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
+                      {account.email}
+                    </a>
+                  </div>
+                )}
+                {!!account?.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
+                      {account.phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {!!account?.address && (
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="text-sm">
+                      <div>{account.address?.street}</div>
+                      <div>
+                        {account.address?.city}, {account.address?.state} {account.address?.zipCode}
+                      </div>
+                      <div>{account.address?.country}</div>
+                    </div>
+                  </div>
+                )}
+
+                {Array.isArray(account?.tags) && account.tags.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {account.tags.map((tag: string) => (
+                        <Badge key={tag} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!!account?.notes && (
+              <div className="mt-6 pt-6 border-t">
+                <p className="text-sm font-medium mb-2">Notes</p>
+                <p className="text-sm text-muted-foreground">{account.notes}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -295,21 +353,21 @@ export default function AccountDetail() {
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddDeal={() => setOpenDeal(true)}
+                              onAddDeal={() => setOpenDeal(true)}   // ✅ open the Deal modal
                             />
                           ) : type === 'quotes' ? (
                             <AccountQuotesSection
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddQuote={() => setOpenQuote(true)}
+                              onAddQuote={() => setOpenQuote(true)} // ✅ open the Quote modal
                             />
                           ) : type === 'service' ? (
                             <AccountServiceTicketsSection
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddService={() => setOpenService(true)}
+                              onAddService={() => setOpenService(true)} // ✅ open the Service modal
                             />
                           ) : (
                             <Section
