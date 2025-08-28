@@ -103,6 +103,7 @@ export const mockCrmSalesDeal = {
       expectedCloseDate: '2024-02-10',
       createdAt: '2024-01-08T13:20:00Z',
       updatedAt: '2024-01-22T10:30:00Z',
+      accountId: 'acc-002',
       notes: 'Negotiating trade-in value, close to agreement',
       activities: [
         {

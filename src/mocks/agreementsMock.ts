@@ -129,6 +129,33 @@ export const mockAgreements = {
     }
   ],
 
+  sampleQuotes: [
+    {
+      id: 'quote-001',
+      number: 'Q-2024-001',
+      accountId: 'acc-001',
+      amount: 35000,
+      status: 'sent',
+      createdAt: '2024-01-10T09:30:00Z'
+    },
+    {
+      id: 'quote-002', 
+      number: 'Q-2024-002',
+      accountId: 'acc-002',
+      amount: 62000,
+      status: 'accepted',
+      createdAt: '2024-01-15T11:00:00Z'
+    },
+    {
+      id: 'quote-003',
+      number: 'Q-2024-003', 
+      accountId: 'acc-002',
+      amount: 48000,
+      status: 'viewed',
+      createdAt: '2024-01-20T14:30:00Z'
+    }
+  ],
+
   // Sample data for dropdowns when tenant data is not available
   sampleCustomers: [
     { id: 'user-3', name: 'David Johnson', email: 'david.johnson@example.com' }

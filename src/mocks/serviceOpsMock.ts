@@ -62,6 +62,7 @@ export const mockServiceOps = {
       assignedTo: 'tech-002',
       assignedTechName: 'Sarah Davis',
       scheduledDate: '2024-01-15T10:00:00Z',
+      accountId: 'acc-001',
       createdAt: '2024-01-12T09:30:00Z',
       updatedAt: '2024-01-14T14:20:00Z',
       estimatedHours: 4,

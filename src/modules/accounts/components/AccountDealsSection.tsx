@@ -1,113 +1,151 @@
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { useDealManagement } from '@/modules/crm-sales-deal/hooks/useDealManagement'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Link } from 'react-router-dom'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, DollarSign } from 'lucide-react'
-import { EmptyState } from '@/components/ui/empty-state'
-import { TableRowSkeleton } from '@/components/ui/loading-skeleton'
-import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/ui/empty-state'
+import { DollarSign, Plus, ExternalLink, GripVertical } from 'lucide-react'
 import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface AccountDealsSectionProps {
   accountId: string
-  title: string
+  onRemove?: () => void
+  isDragging?: boolean
 }
 
-export function AccountDealsSection({ accountId, title }: AccountDealsSectionProps) {
-  const { deals, loading, error } = useDealManagement()
+export function AccountDealsSection({ accountId, onRemove, isDragging }: AccountDealsSectionProps) {
+  // Filter deals for this account
+  const accountDeals = mockCrmSalesDeal.sampleDeals.filter(deal => 
+    deal.accountId === accountId
+  )
 
-  const associatedDeals = deals.filter(deal => deal.customerId === accountId) // Assuming customerId in deal maps to accountId
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Loading associated deals...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableBody>
-              <TableRowSkeleton columns={4} />
-              <TableRowSkeleton columns={4} />
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    )
+  const getStageColor = (stage: string) => {
+    return mockCrmSalesDeal.stageColors[stage] || 'bg-gray-100 text-gray-800'
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Error loading deals.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-red-500">Failed to load deals: {error.message}</div>
-        </CardContent>
-      </Card>
-    )
-  }
+  const totalValue = accountDeals.reduce((sum, deal) => sum + deal.amount, 0)
+  const activeDeals = accountDeals.filter(deal => 
+    !['Closed Won', 'Closed Lost'].includes(deal.stage)
+  )
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Sales deals associated with this account.</CardDescription>
+    <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className="flex items-center space-x-2">
+          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+          <div>
+            <CardTitle className="text-lg flex items-center">
+              <DollarSign className="h-5 w-5 mr-2" />
+              Sales Deals
+            </CardTitle>
+            <CardDescription>
+              Active and historical deals for this account
+            </CardDescription>
+          </div>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/deals/new?accountId=${accountId}`}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Deal
-          </Link>
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Badge variant="secondary">{accountDeals.length}</Badge>
+          {onRemove && (
+            <Button variant="ghost" size="sm" onClick={onRemove}>
+              ×
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {associatedDeals.length === 0 ? (
+        {accountDeals.length === 0 ? (
           <EmptyState
-            icon={<DollarSign className="h-12 w-12" />}
             title="No deals found"
-            description="This account does not have any associated sales deals yet."
+            description="Create a deal for this account to track sales progress"
+            icon={<DollarSign className="h-12 w-12" />}
             action={{
-              label: 'Add New Deal',
-              onClick: () => window.location.href = `/deals/new?accountId=${accountId}`
+              label: "Create Deal",
+              onClick: () => window.location.href = `/deals?accountId=${accountId}`
             }}
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Stage</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Expected Close</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {associatedDeals.map(deal => (
-                <TableRow key={deal.id}>
-                  <TableCell>
-                    <Link to={`/deals/${deal.id}`} className="text-blue-600 hover:underline">
-                      {deal.vehicleInfo || 'N/A'}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge style={{ backgroundColor: mockCrmSalesDeal.stageColors[deal.stage] }}>
-                      {deal.stage}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatCurrency(deal.amount)}</TableCell>
-                  <TableCell>{deal.expectedCloseDate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-4">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-primary">{accountDeals.length}</p>
+                <p className="text-sm text-muted-foreground">Total Deals</p>
+              </div>
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{activeDeals.length}</p>
+                <p className="text-sm text-muted-foreground">Active Deals</p>
+              </div>
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</p>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Recent deals and opportunities
+              </p>
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/deals?accountId=${accountId}`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Deal
+                </Link>
+              </Button>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Stage</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Expected Close</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accountDeals.slice(0, 5).map((deal) => (
+                    <TableRow key={deal.id}>
+                      <TableCell>
+                        <Badge className={getStageColor(deal.stage)}>
+                          {deal.stage}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{deal.vehicleInfo}</div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">{formatCurrency(deal.amount)}</span>
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(deal.expectedCloseDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/deals/${deal.id}`}>
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {accountDeals.length > 5 && (
+              <div className="text-center">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/deals?accountId=${accountId}`}>
+                    View All {accountDeals.length} Deals
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
