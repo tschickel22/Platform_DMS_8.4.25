@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -15,11 +15,19 @@ import {
 } from '@/components/ui/dialog'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 import ContactForm from '@/modules/contacts/components/ContactForm'
-import DealForm from '@/modules/crm-sales-deal/components/DealForm'
-import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
-import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
+// Ensure we always mount the *form* component, not a routed page:
+const DealForm = React.lazy(() =>
+  import('@/modules/crm-sales-deal/components/DealForm').then(m => ({ default: m.DealForm }))
+)
+const NewQuoteForm = React.lazy(() =>
+  import('@/modules/quote-builder/components/NewQuoteForm') // default export
+)
+const ServiceTicketForm = React.lazy(() =>
+  import('@/modules/service-ops/components/ServiceTicketForm') // default export
+)
 
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
@@ -413,7 +421,11 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
+            </React.Suspense>
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
 
@@ -422,7 +434,11 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
+            </React.Suspense>
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
 
@@ -431,7 +447,11 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
+            </React.Suspense>
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
 
@@ -440,7 +460,11 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+              <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
+            </React.Suspense>
+          </ErrorBoundary>
         </DialogContent>
       </Dialog>
     </>
