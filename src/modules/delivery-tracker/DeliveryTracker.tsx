@@ -16,6 +16,9 @@ import { DeliveryDetail } from './components/DeliveryDetail'
 import { ETANotificationForm } from './components/ETANotificationForm'
 import { DeliveryPhotoCapture } from './components/DeliveryPhotoCapture'
 import { DeliveryDashboard } from './components/DeliveryDashboard'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 
 type FilterStatus = 'all' | DeliveryStatus
 
@@ -469,9 +472,6 @@ function DeliveriesList() {
                         Notify
                       </Button>
                     )}
-import { EntityChip } from '@/components/ui/entity-chip'
-import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
                   </div>
                 </div>
               ))
@@ -480,8 +480,6 @@ import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactMan
                 <CardContent className="pt-6">
                   <div className="text-center py-12 text-muted-foreground">
                     <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-    accountId: 'acc-001',
-    contactId: 'con-001',
                     <p>No deliveries found</p>
                     <p className="text-sm">
                       {statusFilter !== 'all'
