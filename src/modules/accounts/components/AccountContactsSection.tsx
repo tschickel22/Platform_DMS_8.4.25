@@ -13,11 +13,24 @@ interface AccountContactsSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
+  /** If provided, clicking Add will open a modal instead of routing */
+  onAddContact?: () => void
 }
 
-export function AccountContactsSection({ accountId, onRemove, isDragging }: AccountContactsSectionProps) {
+export function AccountContactsSection({
+  accountId,
+  onRemove,
+  isDragging,
+  onAddContact,
+}: AccountContactsSectionProps) {
   const { getContactsByAccount } = useContactManagement()
   const contacts = getContactsByAccount(accountId)
+
+  const handleAdd = () => {
+    if (onAddContact) return onAddContact()
+    // fallback: route to create page and return to account after save
+    window.location.href = `/contacts/new?accountId=${accountId}&returnTo=account`
+  }
 
   return (
     <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
@@ -29,9 +42,7 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
               <User className="h-5 w-5 mr-2" />
               Associated Contacts
             </CardTitle>
-            <CardDescription>
-              Contacts linked to this account
-            </CardDescription>
+            <CardDescription>Contacts linked to this account</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -43,16 +54,14 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
           )}
         </div>
       </CardHeader>
+
       <CardContent>
         {contacts.length === 0 ? (
           <EmptyState
             title="No contacts found"
             description="Add contacts to this account to see them here"
             icon={<User className="h-12 w-12" />}
-            action={{
-              label: "Add Contact",
-              onClick: () => window.location.href = `/contacts?accountId=${accountId}`
-            }}
+            action={{ label: 'Add Contact', onClick: handleAdd }}
           />
         ) : (
           <div className="space-y-4">
@@ -60,14 +69,21 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
               <p className="text-sm text-muted-foreground">
                 {contacts.length} contact{contacts.length !== 1 ? 's' : ''}
               </p>
-              <Button size="sm" variant="outline" asChild>
-                <Link to={`/contacts?accountId=${accountId}`}>
+              {onAddContact ? (
+                <Button size="sm" variant="outline" onClick={handleAdd}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={`/contacts/new?accountId=${accountId}&returnTo=account`}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </Link>
+                </Button>
+              )}
             </div>
-            
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -83,7 +99,7 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
                   {contacts.map((contact) => (
                     <TableRow key={contact.id}>
                       <TableCell>
-                        <Link 
+                        <Link
                           to={`/contacts/${contact.id}`}
                           className="font-medium text-primary hover:underline"
                         >
@@ -91,16 +107,11 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
                         </Link>
                       </TableCell>
                       <TableCell>
-                        {contact.title && (
-                          <Badge variant="outline">{contact.title}</Badge>
-                        )}
+                        {contact.title && <Badge variant="outline">{contact.title}</Badge>}
                       </TableCell>
                       <TableCell>
                         {contact.email && (
-                          <a 
-                            href={`mailto:${contact.email}`}
-                            className="text-primary hover:underline flex items-center"
-                          >
+                          <a href={`mailto:${contact.email}`} className="text-primary hover:underline flex items-center">
                             <Mail className="h-3 w-3 mr-1" />
                             {contact.email}
                           </a>
@@ -108,30 +119,6 @@ export function AccountContactsSection({ accountId, onRemove, isDragging }: Acco
                       </TableCell>
                       <TableCell>
                         {contact.phone && (
-                          <a 
-                            href={`tel:${contact.phone}`}
-                            className="text-primary hover:underline flex items-center"
-                          >
+                          <a href={`tel:${contact.phone}`} className="text-primary hover:underline flex items-center">
                             <Phone className="h-3 w-3 mr-1" />
                             {contact.phone}
-                          </a>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="ghost" asChild>
-                          <Link to={`/contacts/${contact.id}`}>
-                            <ExternalLink className="h-3 w-3" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
