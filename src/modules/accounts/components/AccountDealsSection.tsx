@@ -9,10 +9,11 @@ import { DollarSign, Plus, ExternalLink, GripVertical } from 'lucide-react'
 import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-export interface AccountDealsSectionProps {
+interface AccountDealsSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
+  /** If provided, clicking Create Deal opens a modal instead of routing */
   onAddDeal?: () => void
 }
 
@@ -22,13 +23,17 @@ export function AccountDealsSection({
   isDragging,
   onAddDeal,
 }: AccountDealsSectionProps) {
-  const accountDeals = mockCrmSalesDeal.sampleDeals.filter((d) => d.accountId === accountId)
+  const accountDeals =
+    mockCrmSalesDeal.sampleDeals?.filter((deal) => deal.accountId === accountId) || []
 
   const getStageColor = (stage: string) =>
-    (mockCrmSalesDeal.stageColors && mockCrmSalesDeal.stageColors[stage]) || 'bg-gray-100 text-gray-800'
+    (mockCrmSalesDeal.stageColors && mockCrmSalesDeal.stageColors[stage]) ||
+    'bg-gray-100 text-gray-800'
 
-  const totalValue = accountDeals.reduce((sum, d) => sum + d.amount, 0)
-  const activeDeals = accountDeals.filter((d) => !['Closed Won', 'Closed Lost'].includes(d.stage))
+  const totalValue = accountDeals.reduce((sum, deal) => sum + (deal.amount || 0), 0)
+  const activeDeals = accountDeals.filter(
+    (d) => !['Closed Won', 'Closed Lost'].includes(d.stage)
+  )
 
   const handleAdd = () => {
     if (onAddDeal) return onAddDeal()
@@ -68,6 +73,7 @@ export function AccountDealsSection({
           />
         ) : (
           <div className="space-y-4">
+            {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-3 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold text-primary">{accountDeals.length}</p>
@@ -103,21 +109,21 @@ export function AccountDealsSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {accountDeals.slice(0, 5).map((d) => (
-                    <TableRow key={d.id}>
+                  {accountDeals.slice(0, 5).map((deal) => (
+                    <TableRow key={deal.id}>
                       <TableCell>
-                        <Badge className={getStageColor(d.stage)}>{d.stage}</Badge>
+                        <Badge className={getStageColor(deal.stage)}>{deal.stage}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{d.vehicleInfo}</div>
+                        <div className="font-medium">{deal.vehicleInfo}</div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">{formatCurrency(d.amount)}</span>
+                        <span className="font-medium">{formatCurrency(deal.amount)}</span>
                       </TableCell>
-                      <TableCell>{formatDate(d.expectedCloseDate)}</TableCell>
+                      <TableCell>{formatDate(deal.expectedCloseDate)}</TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" asChild>
-                          <Link to={`/deals/${d.id}`}>
+                          <Link to={`/deals/${deal.id}`}>
                             <ExternalLink className="h-3 w-3" />
                           </Link>
                         </Button>
