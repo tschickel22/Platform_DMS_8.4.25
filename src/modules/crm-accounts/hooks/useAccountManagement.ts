@@ -1,175 +1,148 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Account, Note } from '@/types'
-import accountsMock from '@/mocks/accountsMock'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Account } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
-export function useAccountManagement() {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const { toast } = useToast()
-  const { user } = useAuth()
+type NewAccount = Partial<Account>
 
-  const fetchAccounts = useCallback(() => {
-    setLoading(true)
+const LS_KEY = 'crm.accounts'
+
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function saveToLS(accounts: Account[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(accounts))
+  } catch {
+    // ignore storage errors silently
+  }
+}
+
+export function useAccountManagement() {
+  const { toast } = useToast()
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const didInit = useRef(false)
+
+  // Initial load (from localStorage as a safe fallback)
+  useEffect(() => {
+    if (didInit.current) return
+    didInit.current = true
     try {
-      const fetchedAccounts = accountsMock.getAccounts()
-      setAccounts(fetchedAccounts)
-      setError(null)
-    } catch (err) {
-      console.error('Failed to fetch accounts:', err)
-      setError('Failed to load accounts.')
-    } finally {
+      const data = safeParse<Account[]>(localStorage.getItem(LS_KEY), [])
+      setAccounts(Array.isArray(data) ? data : [])
+      setLoading(false)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load accounts')
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    fetchAccounts()
-  }, [fetchAccounts])
+  // Derived helpers
+  const getAccountById = useCallback(
+    (id: string) => accounts.find((a) => a.id === id) || null,
+    [accounts]
+  )
 
-  const getAccountById = useCallback((id: string): Account | undefined => {
-    return accounts.find(account => account.id === id)
-  }, [accounts])
+  const createAccount = useCallback(async (input: NewAccount) => {
+    const id = input.id ?? crypto.randomUUID?.() ?? String(Date.now())
+    const now = new Date().toISOString()
 
-  const createAccount = useCallback((newAccount: Omit<Account, 'id' | 'createdAt' | 'updatedAt' | 'notes'>): Account | undefined => {
-    try {
-      const createdAccount = accountsMock.createAccount(newAccount)
-      setAccounts(prev => [...prev, createdAccount])
-      setError(null)
-      toast({
-        title: 'Account Created',
-        description: `${newAccount.name} has been created successfully.`
+    // Construct a new Account object while preserving optional fields
+    const newAccount: Account = {
+      id,
+      name: input.name || 'Untitled Account',
+      email: input.email || '',
+      phone: input.phone || '',
+      industry: input.industry || '',
+      website: (input as any).website || '',
+      address: (input as any).address || '',
+      createdAt: (input as any).createdAt || now,
+      updatedAt: now,
+      // carry over any other custom fields that might exist in your type
+      ...(input as any),
+    }
+
+    setAccounts((prev) => {
+      const next = [newAccount, ...prev]
+      saveToLS(next)
+      return next
+    })
+
+    toast({ title: 'Account created', description: newAccount.name })
+    return newAccount
+  }, [toast])
+
+  const updateAccount = useCallback(async (id: string, patch: Partial<Account>) => {
+    let updated: Account | null = null
+    setAccounts((prev) => {
+      const next = prev.map((acc) => {
+        if (acc.id !== id) return acc
+        updated = { ...acc, ...patch, updatedAt: new Date().toISOString() }
+        return updated!
       })
-      return createdAccount
-    } catch (err) {
-      console.error('Failed to create account:', err)
-      setError('Failed to create account.')
-      toast({
-        title: 'Error',
-        description: 'Failed to create account.',
-        variant: 'destructive'
+      saveToLS(next)
+      return next
+    })
+
+    if (updated) {
+      toast({ title: 'Account updated', description: updated.name })
+    } else {
+      toast({ title: 'Not found', description: 'Account could not be updated', variant: 'destructive' })
+    }
+
+    return updated
+  }, [toast])
+
+  const deleteAccount = useCallback(async (id: string) => {
+    let removed = false
+    setAccounts((prev) => {
+      const next = prev.filter((a) => {
+        const keep = a.id !== id
+        if (!keep) removed = true
+        return keep
       })
-      return undefined
+      saveToLS(next)
+      return next
+    })
+
+    if (removed) {
+      toast({ title: 'Account deleted' })
+    } else {
+      toast({ title: 'Not found', description: 'Account could not be deleted', variant: 'destructive' })
     }
   }, [toast])
 
-  const updateAccount = useCallback((id: string, updates: Partial<Account>): Account | undefined => {
-    try {
-      const updatedAccount = accountsMock.updateAccount(id, updates)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === id ? updatedAccount : acc))
-        setError(null)
-        toast({
-          title: 'Account Updated',
-          description: 'Account has been updated successfully.'
-        })
-        return updatedAccount
-      }
-      setError('Account not found for update.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to update account:', err)
-      setError('Failed to update account.')
-      toast({
-        title: 'Error',
-        description: 'Failed to update account.',
-        variant: 'destructive'
-      })
-      return undefined
+  const addNoteToAccount = useCallback(async (id: string, note: { id?: string; text: string; createdAt?: string }) => {
+    const noteId = note.id ?? crypto.randomUUID?.() ?? String(Date.now())
+    const createdAt = note.createdAt ?? new Date().toISOString()
+    const target = getAccountById(id)
+    if (!target) {
+      toast({ title: 'Not found', description: 'Account does not exist', variant: 'destructive' })
+      return null
     }
-  }, [toast])
+    const nextNotes = [...((target as any).notes ?? []), { id: noteId, text: note.text, createdAt }]
+    return updateAccount(id, { ...(target as any), notes: nextNotes } as Partial<Account>)
+  }, [getAccountById, updateAccount, toast])
 
-  const deleteAccount = useCallback((id: string): boolean => {
-    try {
-      const success = accountsMock.deleteAccount(id)
-      if (success) {
-        setAccounts(prev => prev.filter(acc => acc.id !== id))
-        setError(null)
-        toast({
-          title: 'Account Deleted',
-          description: 'Account has been deleted successfully.'
-        })
-        return true
-      }
-      setError('Account not found for deletion.')
-      return false
-    } catch (err) {
-      console.error('Failed to delete account:', err)
-      setError('Failed to delete account.')
-      toast({
-        title: 'Error',
-        description: 'Failed to delete account.',
-        variant: 'destructive'
-      })
-      return false
-    }
-  }, [toast])
-
-  const addNoteToAccount = useCallback((accountId: string, content: string): Note | undefined => {
-    const createdBy = user?.name || 'Unknown User'
-    try {
-      const updatedAccount = accountsMock.addNoteToAccount(accountId, content, createdBy)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
-        return updatedAccount.notes[updatedAccount.notes.length - 1]
-      }
-      setError('Account not found to add note.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to add note to account:', err)
-      setError('Failed to add note.')
-      return undefined
-    }
-  }, [user])
-
-  const updateNoteInAccount = useCallback((accountId: string, noteId: string, newContent: string): Note | undefined => {
-    try {
-      const updatedAccount = accountsMock.updateNoteInAccount(accountId, noteId, newContent)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
-        return updatedAccount.notes.find(note => note.id === noteId)
-      }
-      setError('Account or note not found for update.')
-      return undefined
-    } catch (err) {
-      console.error('Failed to update note in account:', err)
-      setError('Failed to update note.')
-      return undefined
-    }
-  }, [])
-
-  const deleteNoteFromAccount = useCallback((accountId: string, noteId: string): boolean => {
-    try {
-      const updatedAccount = accountsMock.deleteNoteFromAccount(accountId, noteId)
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
-        setError(null)
-        return true
-      }
-      setError('Account or note not found for deletion.')
-      return false
-    } catch (err) {
-      console.error('Failed to delete note from account:', err)
-      setError('Failed to delete note.')
-      return false
-    }
-  }, [])
-
-  return {
-    accounts,
-    loading,
-    error,
-    fetchAccounts,
-    getAccountById,
-    createAccount,
-    updateAccount,
-    deleteAccount,
-    addNoteToAccount,
-    updateNoteInAccount,
-    deleteNoteFromAccount
-  }
+  // Expose API surface used throughout the app
+  return useMemo(
+    () => ({
+      accounts,
+      loading,
+      error,
+      getAccountById,
+      createAccount,
+      updateAccount,
+      deleteAccount,
+      addNoteToAccount,
+    }),
+    [accounts, loading, error, getAccountById, createAccount, updateAccount, deleteAccount, addNoteToAccount]
+  )
 }
