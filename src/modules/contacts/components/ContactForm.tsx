@@ -1,6 +1,6 @@
 // src/modules/contacts/components/ContactForm.tsx
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom' // ✅ useSearchParams
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { mockContacts } from '@/mocks/contactsMock'
 import { mockAccounts } from '@/mocks/accountsMock'
-import { TagInput } from '@/components/common/TagInput' // ✅ FIX: import TagInput
+import { TagInput } from '@/components/common/TagInput'
 
 type Params = { contactId?: string }
 
@@ -32,7 +32,7 @@ type ContactFormState = {
 export default function ContactForm() {
   const navigate = useNavigate()
   const { contactId } = useParams<Params>()
-  const [searchParams] = useSearchParams() // ✅ to read ?accountId=
+  const [searchParams] = useSearchParams()
   const { toast } = useToast()
 
   const { createContact, updateContact, getContactById } = useContactManagement()
@@ -120,7 +120,15 @@ export default function ContactForm() {
         await createContact(formData)
         toast({ title: 'Success', description: 'Contact created successfully.' })
       }
-      navigate('/contacts')
+
+      // ✅ Redirect back to the originating account if available
+      const fromAccountId = searchParams.get('accountId')
+      const targetAccountId = formData.accountId || fromAccountId || ''
+      if (targetAccountId) {
+        navigate(`/accounts/${targetAccountId}`)
+      } else {
+        navigate('/contacts')
+      }
     } catch (err) {
       console.error('Failed to save contact', err)
       toast({
@@ -312,11 +320,12 @@ export default function ContactForm() {
 
             {/* Actions */}
             <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/contacts')}
-              >
+              <Button type="button" variant="outline" onClick={() => {
+                const fromAccountId = searchParams.get('accountId')
+                const targetAccountId = formData.accountId || fromAccountId || ''
+                if (targetAccountId) navigate(`/accounts/${targetAccountId}`)
+                else navigate('/contacts')
+              }}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
