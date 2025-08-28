@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,12 @@ import {
 } from '@/components/ui/dialog'
 import { useAccountManagement } from '../hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
-import ContactForm from '@/modules/contacts/components/ContactForm'
-import DealForm from '@/modules/crm-sales-deal/components/DealForm'
-import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+// Lazy load components to prevent blocking the main render
+const ContactForm = React.lazy(() => import('@/modules/contacts/components/ContactForm'))
+const DealForm = React.lazy(() => import('@/modules/crm-sales-deal/components/DealForm').then(module => ({ default: module.DealForm })))
+const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import {
   ArrowLeft,
