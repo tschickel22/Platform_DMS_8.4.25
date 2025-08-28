@@ -1,20 +1,11 @@
 // src/modules/contacts/pages/ContactDetail.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  ArrowLeft,
-  Edit,
-  Trash,
-  Phone,
-  MessageSquare,
-  Mail,
-  Building2,
-  User as UserIcon,
-} from 'lucide-react'
-import type { Contact } from '@/types'
+import { ArrowLeft, Edit, Trash, Phone, MessageSquare, Mail, Building2, User as UserIcon } from 'lucide-react'
+import { Contact } from '@/types'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -23,22 +14,15 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { NotesSection } from '@/components/common/NotesSection'
 
 export default function ContactDetail() {
-  // NOTE: if your route param is ":contactId", change to { contactId } below.
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const { tenant } = useTenant()
+  // Support either :id or :contactId route params
+  const params = useParams<{ id?: string; contactId?: string }>()
+  const contactId = params.id ?? params.contactId ?? ''
 
-  // pull both variants if available to be resilient
-  const {
-    getContact,
-    getContactById,
-    deleteContact,
-  } = useContactManagement()
-  const {
-    getAccount,
-    getAccountById,
-  } = useAccountManagement()
+  const navigate = useNavigate()
+  const { getContact, deleteContact } = useContactManagement()
+  const { tenant } = useTenant()
+  const { toast } = useToast()
+  const { getAccount } = useAccountManagement()
 
   const [contact, setContact] = useState<Contact | null>(null)
   const [account, setAccount] = useState<any | null>(null)
@@ -46,33 +30,22 @@ export default function ContactDetail() {
 
   useEffect(() => {
     let cancelled = false
+
     const load = async () => {
-      if (!id) {
-        setLoading(false)
-        return
-      }
-      setLoading(true)
       try {
-        // Try async getContactById first; fall back to sync getContact
-        let c: Contact | null = null
-        if (typeof getContactById === 'function') {
-          c = await getContactById(id)
-        } else if (typeof getContact === 'function') {
-          c = getContact(id)
+        if (!contactId) {
+          if (!cancelled) setLoading(false)
+          return
         }
+
+        // getContact is sync in our hook, but await works fine either way
+        const c = await getContact(contactId)
         if (cancelled) return
         setContact(c)
 
         if (c?.accountId) {
-          let a: any | null = null
-          if (typeof getAccountById === 'function') {
-            a = getAccountById(c.accountId)
-          } else if (typeof getAccount === 'function') {
-            a = getAccount(c.accountId)
-          }
-          if (!cancelled) setAccount(a ?? null)
-        } else {
-          setAccount(null)
+          const a = await getAccount(c.accountId)
+          if (!cancelled) setAccount(a)
         }
       } catch (err) {
         console.error('Error loading contact:', err)
@@ -80,11 +53,12 @@ export default function ContactDetail() {
         if (!cancelled) setLoading(false)
       }
     }
+
     load()
     return () => {
       cancelled = true
     }
-  }, [id, getContact, getContactById, getAccount, getAccountById])
+  }, [contactId, getContact, getAccount])
 
   const handleDelete = async () => {
     if (!contact) return
@@ -129,14 +103,11 @@ export default function ContactDetail() {
   const allowSMS = tenant?.settings?.allowSMS ?? true
   const allowEmail = tenant?.settings?.allowEmail ?? true
 
-  // Proper loading gate to avoid false "not found"
+  // ✅ Don’t show “not found” until we finish loading
   if (loading) {
     return (
-      <div className="min-h-[50vh] grid place-items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Loading contact…</p>
-        </div>
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <div className="text-muted-foreground">Loading contact…</div>
       </div>
     )
   }
@@ -165,7 +136,7 @@ export default function ContactDetail() {
             <h1 className="text-3xl font-bold">
               {contact.firstName} {contact.lastName}
             </h1>
-            {contact.title && <p className="text-muted-foreground">{contact.title}</p>}
+            <p className="text-muted-foreground">{contact.title}</p>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -199,23 +170,22 @@ export default function ContactDetail() {
             </div>
             <div>
               <label className="text-sm font-medium">Email</label>
-              <p className="text-sm text-muted-foreground">{contact.email || '—'}</p>
+              <p className="text-sm text-muted-foreground">{contact.email}</p>
             </div>
             <div>
               <label className="text-sm font-medium">Phone</label>
-              <p className="text-sm text-muted-foreground">{contact.phone || '—'}</p>
+              <p className="text-sm text-muted-foreground">{contact.phone}</p>
             </div>
             <div>
               <label className="text-sm font-medium">Title</label>
-              <p className="text-sm text-muted-foreground">{contact.title || '—'}</p>
+              <p className="text-sm text-muted-foreground">{contact.title}</p>
             </div>
             <div>
               <label className="text-sm font-medium">Department</label>
-              <p className="text-sm text-muted-foreground">{contact.department || '—'}</p>
+              <p className="text-sm text-muted-foreground">{contact.department}</p>
             </div>
           </div>
         </CardContent>
-
         <CardContent className="space-y-4">
           <h3 className="text-lg font-semibold">Communication</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -225,7 +195,7 @@ export default function ContactDetail() {
               disabled={!contact.phone || !allowPhone}
             >
               <Phone className="h-4 w-4 mr-2" />
-              Call {contact.phone || ''}
+              Call {contact.phone || 'N/A'}
             </Button>
             <Button
               variant="outline"
@@ -233,7 +203,7 @@ export default function ContactDetail() {
               disabled={!contact.phone || !allowSMS}
             >
               <MessageSquare className="h-4 w-4 mr-2" />
-              SMS {contact.phone || ''}
+              SMS {contact.phone || 'N/A'}
             </Button>
             <Button
               variant="outline"
@@ -241,18 +211,16 @@ export default function ContactDetail() {
               disabled={!contact.email || !allowEmail}
             >
               <Mail className="h-4 w-4 mr-2" />
-              Email {contact.email || ''}
+              Email {contact.email || 'N/A'}
             </Button>
           </div>
-          {contact.tags?.length ? (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {contact.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {contact.tags.map(tag => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -265,10 +233,7 @@ export default function ContactDetail() {
           {account ? (
             <Link
               to={`/accounts/${account.id}`}
-              className={cn(
-                buttonVariants({ variant: 'link' }),
-                'flex items-center justify-start p-0'
-              )}
+              className={cn(buttonVariants({ variant: 'link' }), 'flex items-center justify-start p-0')}
             >
               <Building2 className="h-4 w-4 mr-2" />
               {account.name}
