@@ -502,8 +502,6 @@ import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactMan
 function DeliveryDashboardView() {
   const { deliveries } = useDeliveryManagement()
   const [showDeliveryForm, setShowDeliveryForm] = useState(false)
-    accountId: 'acc-002',
-    contactId: 'con-002',
 
   return (
     <>

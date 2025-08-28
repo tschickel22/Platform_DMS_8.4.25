@@ -8,6 +8,47 @@ import { useToast } from '@/hooks/use-toast'
 export function useContactManagement() {
   const { tenant } = useTenant()
   const { toast } = useToast()
+  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const tenantId = tenant?.id
+      const existingContacts = contactsMock.getContacts(tenantId)
+      
+      // Process each import item
+      const newContacts = importData.map(item => ({
+        firstName: item.firstName || '',
+        lastName: item.lastName || '',
+        email: item.email || '',
+        phone: item.phone || '',
+        accountId: item.accountId || undefined,
+        title: item.title || '',
+        department: item.department || '',
+        preferredContactMethod: item.preferredContactMethod || 'email',
+        tags: Array.isArray(item.tags) ? item.tags : 
+              typeof item.tags === 'string' ? item.tags.split(';').filter(Boolean) : [],
+        ownerId: 'user-1' // Default to current user
+      }))
+      
+      // Create contacts in batch
+      for (const contactData of newContacts) {
+        contactsMock.createContact(contactData, tenantId)
+      }
+      
+      // Refresh the contacts list
+      const updatedContacts = contactsMock.getContacts(tenantId)
+      setContacts(updatedContacts)
+      
+    } catch (err) {
+      console.error('Bulk import error:', err)
+      setError('Failed to import contacts')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [tenant?.id])
+
   const location = useLocation()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
@@ -190,46 +231,13 @@ export function useContactManagement() {
     }
   }, [tenant?.id])
 
-  const deleteNoteFromContact = useCallback(async (contactId: string, noteId: string): Promise<Contact | null> => {
-    try {
-      const updatedContact = contactsMock.deleteNoteFromContact(contactId, noteId, tenant?.id)
-      if (updatedContact) {
-        setContacts(prev => prev.map(contact => 
-          contact.id === contactId ? updatedContact : contact
         ))
       }
-      return updatedContact
-    } catch (error) {
-      console.error('Error deleting note from contact:', error)
-      throw new Error('Failed to delete note')
+    } catch (err) {
+      console.error('Error updating contact note:', err)
+      setError('Failed to update note')
     }
   }, [tenant?.id])
-
-  // Search and filter functions
-  const searchContacts = useCallback((searchTerm: string): Contact[] => {
-    if (!searchTerm.trim()) return contacts
-    
-    const term = searchTerm.toLowerCase()
-    return contacts.filter(contact => {
-      const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase()
-      const email = contact.email?.toLowerCase() || ''
-      const phone = contact.phone?.toLowerCase() || ''
-      
-      return fullName.includes(term) || 
-             email.includes(term) || 
-             phone.includes(term)
-    })
-  }, [contacts])
-
-  const getContactsByAccount = useCallback((accountId: string): Contact[] => {
-    return contacts.filter(contact => contact.accountId === accountId)
-  }, [contacts])
-
-  const getContactsByTag = useCallback((tag: string): Contact[] => {
-    return contacts.filter(contact => 
-      contact.tags?.some(t => t.toLowerCase().includes(tag.toLowerCase()))
-    )
-  }, [contacts])
 
   return {
     contacts: filteredContacts(),

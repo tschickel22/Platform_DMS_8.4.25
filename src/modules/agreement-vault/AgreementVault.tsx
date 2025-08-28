@@ -73,7 +73,7 @@ export default function AgreementVault() {
             linkTo={`/crm/contacts/${contact.id}`}
             showHoverCard={true}
           />
-        ) : <span className="text-muted-foreground">N/A</span>
+    },
       }
     },
       agreement.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
