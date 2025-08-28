@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { Label } from '@/components/ui/label'            // ✅ added
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -16,14 +17,16 @@ import { ArrowLeft, Save, X } from 'lucide-react'
 import { Account, AccountType } from '@/types/index'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { useToast } from '@/hooks/use-toast'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement' // ✅ added
 
 export default function AccountForm() {
-  const { accountId } = useParams<{ accountId: string }>()
+  const { accountId } = useParams<{ accountId?: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
   const { getAccount, createAccount, updateAccount } = useAccountManagement()
-  
-  const isEditing = accountId !== 'new'
+
+  // ✅ only editing when an id exists (e.g. /accounts/:accountId/edit)
+  const isEditing = !!accountId && accountId !== 'new'
   const existingAccount = isEditing ? getAccount(accountId!) : null
 
   const [formData, setFormData] = useState<Partial<Account>>({
@@ -42,20 +45,13 @@ export default function AccountForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-
     try {
       if (isEditing && accountId) {
         await updateAccount(accountId, formData)
-        toast({
-          title: 'Account Updated',
-          description: 'Account has been successfully updated.'
-        })
+        toast({ title: 'Account Updated', description: 'Account has been successfully updated.' })
       } else {
         await createAccount(formData)
-        toast({
-          title: 'Account Created',
-          description: 'New account has been successfully created.'
-        })
+        toast({ title: 'Account Created', description: 'New account has been successfully created.' })
       }
       navigate('/accounts')
     } catch (error) {
@@ -76,28 +72,21 @@ export default function AccountForm() {
   const handleAddressChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      address: {
-        ...prev.address,
-        [field]: value
-      }
+      // ✅ guard against undefined address
+      address: { ...(prev.address ?? {}), [field]: value }
     }))
   }
 
   const handleAddTag = () => {
-    if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...(prev.tags || []), tagInput.trim()]
-      }))
+    const t = tagInput.trim()
+    if (t && !formData.tags?.includes(t)) {
+      setFormData(prev => ({ ...prev, tags: [...(prev.tags || []), t] }))
       setTagInput('')
     }
   }
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags?.filter(tag => tag !== tagToRemove) || []
-    }))
+    setFormData(prev => ({ ...prev, tags: prev.tags?.filter(tag => tag !== tagToRemove) || [] }))
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -133,9 +122,7 @@ export default function AccountForm() {
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Essential account details and contact information
-              </CardDescription>
+              <CardDescription>Essential account details and contact information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -151,8 +138,8 @@ export default function AccountForm() {
 
               <div>
                 <Label htmlFor="type">Account Type *</Label>
-                <Select 
-                  value={formData.type || AccountType.PROSPECT} 
+                <Select
+                  value={(formData.type as string) || AccountType.PROSPECT}
                   onValueChange={(value) => handleInputChange('type', value)}
                 >
                   <SelectTrigger>
@@ -170,8 +157,8 @@ export default function AccountForm() {
 
               <div>
                 <Label htmlFor="industry">Industry</Label>
-                <Select 
-                  value={formData.industry || ''} 
+                <Select
+                  value={(formData.industry as string) || ''}
                   onValueChange={(value) => handleInputChange('industry', value)}
                 >
                   <SelectTrigger>
@@ -228,9 +215,7 @@ export default function AccountForm() {
           <Card>
             <CardHeader>
               <CardTitle>Address Information</CardTitle>
-              <CardDescription>
-                Physical address and location details
-              </CardDescription>
+              <CardDescription>Physical address and location details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -296,9 +281,7 @@ export default function AccountForm() {
           <Card>
             <CardHeader>
               <CardTitle>Tags</CardTitle>
-              <CardDescription>
-                Add tags to categorize and organize accounts
-              </CardDescription>
+              <CardDescription>Add tags to categorize and organize accounts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
@@ -335,9 +318,7 @@ export default function AccountForm() {
           <Card>
             <CardHeader>
               <CardTitle>Notes</CardTitle>
-              <CardDescription>
-                Additional information and comments
-              </CardDescription>
+              <CardDescription>Additional information and comments</CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
