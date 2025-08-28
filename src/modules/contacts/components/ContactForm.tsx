@@ -66,7 +66,7 @@ export default function ContactForm() {
     e.preventDefault()
     setSaving(true)
 
-      if (isEditing && contactId) {
+    try {
         await updateContact(contactId, formData)
         toast({
           title: 'Success',
@@ -87,6 +87,7 @@ export default function ContactForm() {
         })
       } else {
         await createContact(formData)
+      }
       navigate('/contacts')
     } catch (error) {
       toast({
