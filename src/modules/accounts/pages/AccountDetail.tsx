@@ -1,12 +1,14 @@
 // src/modules/accounts/pages/AccountDetail.tsx
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogTrigger,
@@ -15,7 +17,7 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
-import { saveToLocalStorage, loadFromLocalStorage, generateId, formatCurrency } from '@/lib/utils'
+import { saveToLocalStorage, loadFromLocalStorage, generateId } from '@/lib/utils'
 
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
@@ -23,15 +25,7 @@ import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 
-import {
-  ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
-} from 'lucide-react'
-{/* TEMP: debug opener */}
-<Button variant="outline" size="sm" onClick={() => setOpenDelivery(true)}>
-  Open Delivery Modal (debug)
-</Button>
-
-// Existing static sections (kept so everything works today)
+// Section components (existing)
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -39,7 +33,26 @@ import { AccountServiceTicketsSection } from '@/modules/accounts/components/Acco
 import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
 
-// ---------- Types ----------
+// NEW section components (we'll add these files next)
+import { AccountWarrantySection } from '@/modules/accounts/components/AccountWarrantySection'
+import { AccountPaymentsSection } from '@/modules/accounts/components/AccountPaymentsSection'
+import { AccountAgreementsSection } from '@/modules/accounts/components/AccountAgreementsSection'
+import { AccountApplicationsSection } from '@/modules/accounts/components/AccountApplicationsSection'
+import { AccountInvoicesSection } from '@/modules/accounts/components/AccountInvoicesSection'
+
+import {
+  ArrowLeft,
+  Edit,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Plus,
+  Save,
+  RotateCcw,
+  Settings,
+} from 'lucide-react'
+
 type SectionType =
   | 'contacts'
   | 'deals'
@@ -53,104 +66,44 @@ type SectionType =
   | 'invoices'
   | 'notes'
 
-interface AccountSectionDescriptor {
+interface AccountSection {
   id: string
   type: SectionType
   title: string
-  description: string
   component: React.ComponentType<any>
-  /** lower shows earlier; default 100 */
-  sort?: number
-  /** default true */
-  defaultVisible?: boolean
+  description: string
 }
 
-interface AccountSection extends AccountSectionDescriptor {}
+const AVAILABLE_SECTIONS: AccountSection[] = [
+  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
+  { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
+  { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
+  { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
 
-// ---------- Dynamic Section Registry ----------
-// Any module can register a section by exporting a default descriptor from:
-//   src/modules/<module>/account-section.tsx  (or .ts)
-const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
-  string,
-  { default?: AccountSectionDescriptor }
->
+  // NEW
+  { id: 'deliveries', type: 'deliveries', title: 'Deliveries', component: AccountDeliveriesSection, description: 'Delivery records and scheduling' },
+  { id: 'warranty', type: 'warranty', title: 'Warranty', component: AccountWarrantySection, description: 'Warranty registrations and claims' },
+  { id: 'payments', type: 'payments', title: 'Payments', component: AccountPaymentsSection, description: 'Payments and finance transactions' },
+  { id: 'agreements', type: 'agreements', title: 'Agreements', component: AccountAgreementsSection, description: 'Contracts and signed documents' },
+  { id: 'applications', type: 'applications', title: 'Applications', component: AccountApplicationsSection, description: 'Finance/credit applications' },
+  { id: 'invoices', type: 'invoices', title: 'Invoices', component: AccountInvoicesSection, description: 'Billing, invoices and balances' },
 
-const dynamicSections: AccountSection[] = Object.values(sectionModules)
-  .map((m) => m?.default)
-  .filter(Boolean)
-  .map((d) => ({
-    ...d!,
-    sort: d?.sort ?? 100,
-    defaultVisible: d?.defaultVisible ?? true,
-  })) as AccountSection[]
-
-// Static “core” sections that always exist today
-const coreSections: AccountSection[] = [
-  {
-    id: 'contacts',
-    type: 'contacts',
-    title: 'Associated Contacts',
-    description: 'Contacts linked to this account',
-    component: AccountContactsSection,
-    sort: 10,
-    defaultVisible: true,
-  },
-  {
-    id: 'deals',
-    type: 'deals',
-    title: 'Sales Deals',
-    description: 'Active and historical deals',
-    component: AccountDealsSection,
-    sort: 20,
-    defaultVisible: true,
-  },
-  {
-    id: 'quotes',
-    type: 'quotes',
-    title: 'Quotes',
-    description: 'Quotes and proposals',
-    component: AccountQuotesSection,
-    sort: 30,
-    defaultVisible: true,
-  },
-  {
-    id: 'service',
-    type: 'service',
-    title: 'Service Tickets',
-    description: 'Service requests and maintenance',
-    component: AccountServiceTicketsSection,
-    sort: 40,
-    defaultVisible: true,
-  },
-  {
-    id: 'deliveries',
-    type: 'deliveries',
-    title: 'Deliveries',
-    description: 'Delivery records and scheduling',
-    component: AccountDeliveriesSection,
-    sort: 50,
-    defaultVisible: true,
-  },
-  {
-    id: 'notes',
-    type: 'notes',
-    title: 'Notes & Comments',
-    description: 'Internal notes and comments',
-    component: AccountNotesSection,
-    sort: 999,
-    defaultVisible: true,
-  },
+  { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
 ]
 
-// Merge dynamic + core (no duplicates by type; dynamic can override titles/desc if same type exists)
-function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
-  const byType = new Map<SectionType, AccountSection>()
-  for (const s of core) byType.set(s.type, s)
-  for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
-  return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
-}
-
-const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
+const DEFAULT_LAYOUT: SectionType[] = [
+  'contacts',
+  'deals',
+  'quotes',
+  'service',
+  'deliveries',
+  'warranty',
+  'payments',
+  'agreements',
+  'applications',
+  'invoices',
+  'notes',
+]
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -160,16 +113,9 @@ export default function AccountDetail() {
   const { toast } = useToast()
 
   const [account, setAccount] = useState<any>(null)
+  const [sections, setSections] = useState<SectionType[]>([...DEFAULT_LAYOUT])
 
-  // Build default layout from currently-available sections (respecting defaultVisible)
-  const defaultLayout = useMemo(
-    () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
-    []
-  )
-
-  const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
-
-  // Modals
+  // Modals we already support today
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
@@ -189,8 +135,8 @@ export default function AccountDetail() {
 
   useEffect(() => {
     if (!accountId) return
-    const saved = loadFromLocalStorage<SectionType[]>(storageKey, defaultLayout as SectionType[])
-    setSections(saved || (defaultLayout as SectionType[]))
+    const saved = loadFromLocalStorage<SectionType[]>(storageKey, [...DEFAULT_LAYOUT])
+    setSections(saved || [...DEFAULT_LAYOUT])
   }, [accountId, storageKey])
 
   const saveLayout = () => {
@@ -201,7 +147,7 @@ export default function AccountDetail() {
   }
 
   const resetLayout = () => {
-    setSections(defaultLayout as SectionType[])
+    setSections([...DEFAULT_LAYOUT])
     setHasUnsavedChanges(true)
     toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
   }
@@ -231,10 +177,10 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — sections usually read from local state / mocks / localStorage
+    // placeholder — sections read from shared state or localStorage
   }
 
-  // Save handlers
+  // existing save handlers
   const handleContactSaved = (contact: any) => {
     setOpenContact(false)
     if (contact) {
@@ -260,342 +206,7 @@ export default function AccountDetail() {
     setOpenService(false)
     if (ticket) {
       refreshSection('service')
-      toast({ title: 'Success', description: 'Service ticket created successfully' })
     }
   }
 
-  // Delivery (demo persistence to localStorage)
-  const handleDeliverySaved = async (delivery: any | null) => {
-    setOpenDelivery(false)
-    if (!delivery) return
-    const existing = loadFromLocalStorage<any[]>('deliveries', [])
-    const withId = delivery.id ? delivery : { ...delivery, id: generateId() }
-    saveToLocalStorage('deliveries', [withId, ...existing])
-    refreshSection('deliveries')
-    toast({ title: 'Success', description: 'Delivery saved successfully' })
-  }
-
-  // Generic fallback “create route” if a dynamic section asks for it and you don’t wire a modal
-  const routeCreateForType = (t: SectionType) => {
-    const map: Partial<Record<SectionType, string>> = {
-      deals: `/deals/new?accountId=${accountId}&returnTo=account`,
-      quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
-      service: `/service/new?accountId=${accountId}&returnTo=account`,
-      deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      payments: `/finance/payments/new?accountId=${accountId}&returnTo=account`,
-      agreements: `/agreements/new?accountId=${accountId}&returnTo=account`,
-      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
-      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
-      warranty: `/inventory/warranty/new?accountId=${accountId}&returnTo=account`,
-    }
-    const href = map[t]
-    if (href) window.location.href = href
-  }
-
-  if (!account) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading account...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const getAccountTypeColor = (type: string) => {
-    const map: Record<string, string> = {
-      customer: 'bg-green-100 text-green-800',
-      prospect: 'bg-blue-100 text-blue-800',
-      vendor: 'bg-purple-100 text-purple-800',
-      partner: 'bg-orange-100 text-orange-800',
-      competitor: 'bg-red-100 text-red-800',
-    }
-    return map[type] || 'bg-gray-100 text-gray-800'
-  }
-
-  // Sections available to add that aren't currently visible
-  const availableToAdd = AVAILABLE_SECTIONS.filter(
-    (s) => !sections.includes(s.type) && s.defaultVisible !== false
-  )
-
-  return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/accounts">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Accounts
-              </Link>
-            </Button>
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-bold">{account?.name}</h1>
-                {account?.type && <span className={`px-2 py-0.5 rounded-md text-xs ${getAccountTypeColor(account.type)}`}>{account.type}</span>}
-              </div>
-              <p className="text-muted-foreground">
-                {account?.industry ?? '—'} • Created{' '}
-                {account?.createdAt ? new Date(account.createdAt).toLocaleDateString() : '—'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {hasUnsavedChanges && (
-              <Button variant="outline" size="sm" onClick={saveLayout}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Layout
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={resetLayout}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset Layout
-            </Button>
-
-            {/* Add Section */}
-            <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Section
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <div className="space-y-2">
-                  {availableToAdd.map((s) => (
-                    <Button
-                      key={s.id}
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => addSection(s.type)}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium">{s.title}</div>
-                        <div className="text-xs text-muted-foreground">{s.description}</div>
-                      </div>
-                    </Button>
-                  ))}
-                  {availableToAdd.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      All available sections are already added to this view.
-                    </p>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button size="sm" asChild>
-              <Link to={`/accounts/${accountId}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Account
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Account info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="h-5 w-5 mr-2" />
-              Account Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                {!!account?.website && (
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {account.website}
-                    </a>
-                  </div>
-                )}
-                {!!account?.email && (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
-                      {account.email}
-                    </a>
-                  </div>
-                )}
-                {!!account?.phone && (
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
-                      {account.phone}
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                {!!account?.address && (
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div className="text-sm">
-                      <div>{account.address?.street}</div>
-                      <div>
-                        {account.address?.city}, {account.address?.state} {account.address?.zipCode}
-                      </div>
-                      <div>{account.address?.country}</div>
-                    </div>
-                  </div>
-                )}
-
-                {Array.isArray(account?.tags) && account.tags.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Tags</p>
-                    <div className="flex flex-wrap gap-2">
-                      {account.tags.map((tag: string) => (
-                        <span key={tag} className="text-xs px-2 py-0.5 rounded-md border">{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {!!account?.notes && (
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm font-medium mb-2">Notes</p>
-                <p className="text-sm text-muted-foreground">{account.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sections (drag & drop) */}
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="account-sections">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
-                {sections.map((type, index) => {
-                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
-                  if (!config) return null
-                  const Section = config.component as any
-
-                  // Wire specific add handlers for legacy sections;
-                  // always pass a generic onCreate for dynamic ones.
-                  const commonProps = {
-                    accountId: accountId!,
-                    onRemove: () => removeSection(type),
-                    onCreate: () => routeCreateForType(type),
-                  }
-
-                  return (
-                    <Draggable key={type} draggableId={type} index={index}>
-                      {(p, s) => (
-                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                          {type === 'deals' ? (
-                            <AccountDealsSection
-                              {...commonProps}
-                              isDragging={s.isDragging}
-                              onAddDeal={() => setOpenDeal(true)}
-                            />
-                          ) : type === 'quotes' ? (
-                            <AccountQuotesSection
-                              {...commonProps}
-                              isDragging={s.isDragging}
-                              onAddQuote={() => setOpenQuote(true)}
-                            />
-                          ) : type === 'service' ? (
-                            <AccountServiceTicketsSection
-                              {...commonProps}
-                              isDragging={s.isDragging}
-                              onAddService={() => setOpenService(true)}
-                            />
-                          ) : type === 'deliveries' ? (
-                            <AccountDeliveriesSection
-                              {...commonProps}
-                              isDragging={s.isDragging}
-                              onAddDelivery={() => setOpenDelivery(true)}
-                            />
-                          ) : (
-                            <Section
-                              {...commonProps}
-                              isDragging={s.isDragging}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </Draggable>
-                  )
-                })}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-
-        {/* Unsaved indicator */}
-        {hasUnsavedChanges && (
-          <div className="fixed bottom-4 right-4 z-50">
-            <Card className="shadow-lg border-orange-200 bg-orange-50">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
-                  <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
-                  <Button size="sm" onClick={saveLayout}>Save Now</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-
-      {/* Contact Modal */}
-      <Dialog open={openContact} onOpenChange={setOpenContact}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Contact</DialogTitle>
-          <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Deal Modal */}
-      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Deal</DialogTitle>
-          <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Quote Modal */}
-      <Dialog open={openQuote} onOpenChange={setOpenQuote}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Quote</DialogTitle>
-          <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Service Ticket Modal */}
-      <Dialog open={openService} onOpenChange={setOpenService}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
-          <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Delivery Modal */}
-      <Dialog open={openDelivery} onOpenChange={setOpenDelivery}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Schedule Delivery</DialogTitle>
-          <DialogDescription className="sr-only">Schedule a new delivery for this account.</DialogDescription>
-          <DeliveryForm
-            customers={contacts}
-            vehicles={vehicles}
-            onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
-            onCancel={() => setOpenDelivery(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
+  // Delivery save (localStorage
