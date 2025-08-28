@@ -15,9 +15,9 @@ import {
   Plus
 } from 'lucide-react'
 import { useAccountManagement } from '../hooks/useAccountManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
-import { mockAccounts } from '@/mocks/accountsMock'
-
+import AccountForm from '@/modules/accounts/components/AccountForm'
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
   const navigate = useNavigate()

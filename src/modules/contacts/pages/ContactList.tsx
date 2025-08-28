@@ -4,7 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select'
 import { 
   User, 
   Users, 
@@ -17,7 +23,7 @@ import {
   Mail,
   Phone
 } from 'lucide-react'
-import { useContactManagement } from '../hooks/useContactManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { mockContacts } from '@/mocks/contactsMock'
 
