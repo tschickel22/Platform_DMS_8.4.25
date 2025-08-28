@@ -33,16 +33,21 @@ export function useAccountManagement() {
 
   // Initial load (from localStorage as a safe fallback)
   useEffect(() => {
+    console.log('useAccountManagement: Loading accounts...')
     if (didInit.current) return
     didInit.current = true
     try {
-        // Ensure mock data is seeded first
+      // Force reload from mock data
+      const loadedAccounts = accountsMock.getAccounts()
+      console.log('useAccountManagement: Loaded accounts:', loadedAccounts)
         const loadedAccounts = accountsMock.getAccounts()
         console.log('Loaded accounts:', loadedAccounts) // Debug log
       const data = safeParse<Account[]>(localStorage.getItem(LS_KEY), [])
       setAccounts(Array.isArray(data) ? data : [])
       setLoading(false)
     } catch (e: any) {
+      // Fallback to empty array
+      setAccounts([])
       setError(e?.message || 'Failed to load accounts')
       setLoading(false)
     }

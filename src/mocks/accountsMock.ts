@@ -57,25 +57,64 @@ const sampleAccounts: Account[] = [
     notes: [],
     createdAt: '2024-05-10T13:00:00Z',
     updatedAt: '2024-05-10T13:00:00Z'
+  },
+  {
+    id: 'acc-004',
+    name: 'Sunshine RV Center',
+    address: '321 Highway 1, Coastal City, FL',
+    phone: '(555) 777-8888',
+    email: 'info@sunshinerv.com',
+    website: 'www.sunshinerv.com',
+    industry: 'RV Dealership',
+    notes: [
+      { 
+        id: generateId(), 
+        content: 'Large dealership with multiple locations.', 
+        createdAt: '2024-01-15T10:00:00Z', 
+        createdBy: 'Admin User' 
+      }
+    ],
+    createdAt: '2024-01-10T08:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
+  },
+  {
+    id: 'acc-005',
+    name: 'Premier Mobile Homes',
+    address: '654 Industrial Blvd, Manufacturing City, TX',
+    phone: '(555) 999-0000',
+    email: 'sales@premiermh.com',
+    website: 'www.premiermh.com',
+    industry: 'Manufactured Home Dealer',
+    notes: [],
+    createdAt: '2024-01-05T12:00:00Z',
+    updatedAt: '2024-01-05T12:00:00Z'
   }
 ]
 
 export const accountsMock = {
   getAccounts: (): Account[] => {
+    console.log('accountsMock.getAccounts() called')
     try {
       const stored = localStorage.getItem('mockAccounts')
+      console.log('Stored accounts data:', stored)
       if (stored) {
         const parsed = JSON.parse(stored)
+        console.log('Parsed accounts:', parsed)
         // If stored data is empty or invalid, use sample data
-        return Array.isArray(parsed) && parsed.length > 0 ? parsed : sampleAccounts
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log('Returning stored accounts:', parsed.length)
+          return parsed
+        }
       }
       // Initialize with sample data and save to localStorage
+      console.log('Initializing with sample accounts:', sampleAccounts.length)
       localStorage.setItem('mockAccounts', JSON.stringify(sampleAccounts))
       return sampleAccounts
     } catch (error) {
       console.error('Error loading accounts from localStorage:', error)
       // Fallback to sample data and try to save it
       try {
+        console.log('Fallback: saving sample accounts to localStorage')
         localStorage.setItem('mockAccounts', JSON.stringify(sampleAccounts))
       } catch (saveError) {
         console.error('Error saving sample accounts:', saveError)
