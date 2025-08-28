@@ -469,6 +469,9 @@ function DeliveriesList() {
                         Notify
                       </Button>
                     )}
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
                   </div>
                 </div>
               ))
@@ -477,6 +480,8 @@ function DeliveriesList() {
                 <CardContent className="pt-6">
                   <div className="text-center py-12 text-muted-foreground">
                     <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+    accountId: 'acc-001',
+    contactId: 'con-001',
                     <p>No deliveries found</p>
                     <p className="text-sm">
                       {statusFilter !== 'all'
@@ -497,6 +502,8 @@ function DeliveriesList() {
 function DeliveryDashboardView() {
   const { deliveries } = useDeliveryManagement()
   const [showDeliveryForm, setShowDeliveryForm] = useState(false)
+    accountId: 'acc-002',
+    contactId: 'con-002',
 
   return (
     <>
@@ -517,6 +524,8 @@ function DeliveryDashboardView() {
 }
 
 export default function DeliveryTracker() {
+  const { getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
   return (
     <Routes>
       <Route path="/" element={<DeliveryDashboardView />} />
@@ -525,3 +534,48 @@ export default function DeliveryTracker() {
     </Routes>
   )
 }
+
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, delivery) => {
+        if (!delivery.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(delivery.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, delivery) => {
+        if (!delivery.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(delivery.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },

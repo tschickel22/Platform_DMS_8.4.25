@@ -88,6 +88,14 @@ export default function Dashboard() {
     navigate('/crm/contacts')
   }
 
+  const handleAccountsWithFiltersClick = () => {
+    navigate('/crm/accounts?filter=recent')
+  }
+
+  const handleContactsWithFiltersClick = () => {
+    navigate('/crm/contacts?filter=recent')
+  }
+
   // Calculate account metrics
   const recentAccounts = accounts.filter(account => {
     const createdDate = new Date(account.createdAt)
@@ -101,6 +109,13 @@ export default function Dashboard() {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     return createdDate > thirtyDaysAgo
   }).length
+
+  // Calculate additional metrics
+  const accountsWithContacts = accounts.filter(account => 
+    contacts.some(contact => contact.accountId === account.id)
+  ).length
+
+  const contactsWithAccounts = contacts.filter(contact => contact.accountId).length
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -166,7 +181,7 @@ export default function Dashboard() {
         ))}
         
         {/* Account Stats Tile */}
-        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleAccountsClick}>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleAccountsWithFiltersClick}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Accounts
@@ -176,13 +191,13 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold stat-primary">{accounts.length}</div>
             <p className="text-xs stat-success">
-              +{recentAccounts} new this month
+              {accountsWithContacts} with contacts • +{recentAccounts} new
             </p>
           </CardContent>
         </Card>
         
         {/* Contact Stats Tile */}
-        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsClick}>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsWithFiltersClick}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Contacts
@@ -192,7 +207,23 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold stat-success">{contacts.length}</div>
             <p className="text-xs stat-info">
-              +{recentContacts} new this month
+              {contactsWithAccounts} linked • +{recentContacts} new
+            </p>
+          </CardContent>
+        </Card>
+        
+        {/* New Contacts This Month Tile */}
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsWithFiltersClick}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              New Contacts (30d)
+            </CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold stat-info">{recentContacts}</div>
+            <p className="text-xs stat-success">
+              {recentContacts > 0 ? '+' : ''}{((recentContacts / Math.max(contacts.length, 1)) * 100).toFixed(1)}% of total
             </p>
           </CardContent>
         </Card>

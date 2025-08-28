@@ -19,6 +19,9 @@ import { TaskForm } from '@/modules/task-center/components/TaskForm'
 import { useTasks } from '@/hooks/useTasks'
 import { Task, TaskModule, TaskPriority } from '@/types'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 
 
 const mockQuotes: Quote[] = [
@@ -1418,6 +1421,155 @@ function QuoteBuilderTab() {
 }
 
 export default function QuoteBuilder() {
+  const { getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
+  const [quotes] = useState([
+    {
+      id: 'quote-001',
+      number: 'Q-2024-001',
+      customerId: 'cust-001',
+      customerName: 'John Smith',
+      accountId: 'acc-001',
+      contactId: 'con-001',
+      vehicleId: 'veh-001',
+      vehicleInfo: '2023 Forest River Cherokee 274RK',
+      subtotal: 45000,
+      tax: 3600,
+      total: 48600,
+      status: 'sent',
+      validUntil: '2024-02-15T00:00:00Z',
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-20T14:30:00Z'
+    },
+    {
+      id: 'quote-002',
+      number: 'Q-2024-002',
+      customerId: 'cust-002',
+      customerName: 'Maria Rodriguez',
+      accountId: 'acc-002',
+      contactId: 'con-002',
+      vehicleId: 'veh-002',
+      vehicleInfo: '2024 Keystone Montana 3761FL',
+      subtotal: 62000,
+      tax: 4960,
+      total: 66960,
+      status: 'draft',
+      validUntil: '2024-02-28T00:00:00Z',
+      createdAt: '2024-01-18T09:00:00Z',
+      updatedAt: '2024-01-22T16:45:00Z'
+    }
+  ])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState('quotes')
+
+  // Filter quotes
+  const filteredQuotes = React.useMemo(() => {
+    return quotes.filter(quote => {
+      const matchesSearch = searchTerm === '' || 
+        quote.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quote.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quote.vehicleInfo.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesStatus = statusFilter === 'all' || quote.status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [quotes, searchTerm, statusFilter])
+
+  const quoteColumns = [
+    {
+      key: 'number',
+      label: 'Quote #',
+      render: (value) => (
+        <div className="font-medium">{value}</div>
+      )
+    },
+    {
+      key: 'customerName',
+      label: 'Customer',
+      render: (_, quote) => (
+        <div>
+          <div className="font-medium">{quote.customerName}</div>
+          <div className="text-sm text-muted-foreground">{quote.vehicleInfo}</div>
+        </div>
+      )
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, quote) => {
+        if (!quote.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(quote.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, quote) => {
+        if (!quote.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(quote.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      render: (value) => formatCurrency(value)
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => {
+        const colors = {
+          draft: 'bg-gray-100 text-gray-800',
+          sent: 'bg-blue-100 text-blue-800',
+          viewed: 'bg-yellow-100 text-yellow-800',
+          accepted: 'bg-green-100 text-green-800',
+          rejected: 'bg-red-100 text-red-800',
+          expired: 'bg-red-100 text-red-800'
+        }
+        return (
+          <Badge className={colors[value] || 'bg-gray-100 text-gray-800'}>
+            {value}
+          </Badge>
+        )
+      }
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      render: (value) => formatDate(value)
+    }
+  ]
+
   return (
     <Routes>
       <Route path="/" element={<QuotesList />} />

@@ -29,6 +29,9 @@ import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactMan
 import { ServiceTicket, ServiceStatus, Priority, Task, TaskModule, TaskPriority } from '@/types'
 import { formatDate, formatCurrency, formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { useServiceManagement } from './hooks/useServiceManagement'
 import { useToast } from '@/hooks/use-toast'
 import { ServiceTicketForm } from './components/ServiceTicketForm'
@@ -548,6 +551,8 @@ function ServiceTicketsList() {
 
 export default function ServiceOps() {
   const [activeTab, setActiveTab] = useState('tickets')
+  const { getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -565,3 +570,48 @@ export default function ServiceOps() {
     </Routes>
   )
 }
+
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, ticket) => {
+        if (!ticket.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(ticket.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, ticket) => {
+        if (!ticket.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(ticket.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },

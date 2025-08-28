@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Account } from '@/types'
 import { accountsMock } from '@/mocks/accountsMock'
+import { useLocation } from 'react-router-dom'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -12,6 +13,7 @@ export function useAccountManagement() {
   const [error, setError] = useState<string | null>(null)
   const { tenant } = useTenant()
   const { user } = useAuth()
+  const location = useLocation()
   const { toast } = useToast()
 
   const tenantId = tenant?.id
@@ -164,6 +166,26 @@ export function useAccountManagement() {
   }, [tenantId, user?.name, loadAccounts, toast])
 
   const updateNote = useCallback(async (accountId: string, noteId: string, content: string): Promise<boolean> => {
+  // Apply filters to accounts
+  const filteredAccounts = useCallback(() => {
+    let filtered = [...accounts]
+    
+    if (filters.createdAfter) {
+      const filterDate = new Date(filters.createdAfter)
+      filtered = filtered.filter(account => new Date(account.createdAt) > filterDate)
+    }
+    
+    if (filters.status) {
+      filtered = filtered.filter(account => account.status === filters.status)
+    }
+    
+    if (filters.industry) {
+      filtered = filtered.filter(account => account.industry === filters.industry)
+    }
+    
+    return filtered
+  }, [accounts, filters])
+
     try {
       const updatedBy = user?.name || 'Unknown User'
       const updatedAccount = accountsMock.updateNoteInAccount(accountId, noteId, content, updatedBy, tenantId)
@@ -213,16 +235,61 @@ export function useAccountManagement() {
       return false
     }
   }, [tenantId, loadAccounts, toast])
+  const [filters, setFilters] = useState<Record<string, any>>({})
 
   // Load accounts on mount and when tenant changes
   useEffect(() => {
     loadAccounts()
   }, [loadAccounts])
 
+  // Apply URL filters on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const urlFilters: Record<string, any> = {}
+    
+    // Parse URL filters
+    if (searchParams.get('filter') === 'recent') {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      urlFilters.createdAfter = thirtyDaysAgo.toISOString()
+    }
+    
+    if (searchParams.get('status')) {
+      urlFilters.status = searchParams.get('status')
+    }
+    
+    if (searchParams.get('industry')) {
+      urlFilters.industry = searchParams.get('industry')
+    }
+    
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(urlFilters)
+    }
+  }, [location.search])
+
+  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
+    try {
+      setLoading(true)
+      
+      for (const item of importData) {
+        await createAccount(item)
+      }
+      
+      await loadAccounts()
+    } catch (err) {
+      console.error('Error during bulk import:', err)
+      throw new Error('Failed to import accounts')
+    } finally {
+      setLoading(false)
+    }
+  }, [createAccount, loadAccounts])
+
   return {
-    accounts,
+    accounts: filteredAccounts(),
+    allAccounts: accounts,
     loading,
     error,
+    filters,
+    setFilters,
     getAccountById,
     createAccount,
     updateAccount,
@@ -230,6 +297,7 @@ export function useAccountManagement() {
     addNote,
     updateNote,
     deleteNote,
-    refresh: loadAccounts
+    refreshAccounts: loadAccounts,
+    bulkImport
   }
 }

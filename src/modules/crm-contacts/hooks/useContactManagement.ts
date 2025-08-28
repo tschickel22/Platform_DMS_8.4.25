@@ -1,20 +1,47 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Contact, Note } from '@/types'
 import { contactsMock } from '@/mocks/contactsMock'
+import { useLocation } from 'react-router-dom'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
 
 export function useContactManagement() {
   const { tenant } = useTenant()
   const { toast } = useToast()
+  const location = useLocation()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Record<string, any>>({})
 
   // Load contacts on mount and when tenant changes
   useEffect(() => {
     loadContacts()
   }, [tenant?.id])
+
+  // Apply URL filters on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const urlFilters: Record<string, any> = {}
+    
+    // Parse URL filters
+    if (searchParams.get('filter') === 'recent') {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      urlFilters.createdAfter = thirtyDaysAgo.toISOString()
+    }
+    
+    if (searchParams.get('accountId')) {
+      urlFilters.accountId = searchParams.get('accountId')
+    }
+    
+    if (searchParams.get('hasAccount')) {
+      urlFilters.hasAccount = searchParams.get('hasAccount') === 'true'
+    }
+    
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(urlFilters)
+    }
+  }, [location.search])
 
   const loadContacts = useCallback(async () => {
     try {
@@ -30,6 +57,28 @@ export function useContactManagement() {
         description: 'Failed to load contacts. Please try again.',
         variant: 'destructive'
       })
+  // Apply filters to contacts
+  const filteredContacts = useCallback(() => {
+    let filtered = [...contacts]
+    
+    if (filters.createdAfter) {
+      const filterDate = new Date(filters.createdAfter)
+      filtered = filtered.filter(contact => new Date(contact.createdAt) > filterDate)
+    }
+    
+    if (filters.accountId) {
+      filtered = filtered.filter(contact => contact.accountId === filters.accountId)
+    }
+    
+    if (filters.hasAccount !== undefined) {
+      filtered = filtered.filter(contact => 
+        filters.hasAccount ? !!contact.accountId : !contact.accountId
+      )
+    }
+    
+    return filtered
+  }, [contacts, filters])
+
     } finally {
       setLoading(false)
     }
@@ -115,6 +164,23 @@ export function useContactManagement() {
       if (updatedContact) {
         setContacts(prev => prev.map(contact => 
           contact.id === contactId ? updatedContact : contact
+  const bulkImport = useCallback(async (importData: any[]): Promise<void> => {
+    try {
+      setLoading(true)
+      
+      for (const item of importData) {
+        await createContact(item)
+      }
+      
+      await loadContacts()
+    } catch (err) {
+      console.error('Error during bulk import:', err)
+      throw new Error('Failed to import contacts')
+    } finally {
+      setLoading(false)
+    }
+  }, [createContact, loadContacts])
+
         ))
       }
       return updatedContact
@@ -166,9 +232,12 @@ export function useContactManagement() {
   }, [contacts])
 
   return {
-    contacts,
+    contacts: filteredContacts(),
+    allContacts: contacts,
     loading,
     error,
+    filters,
+    setFilters,
     getContact,
     createContact,
     updateContact,
@@ -179,6 +248,7 @@ export function useContactManagement() {
     searchContacts,
     getContactsByAccount,
     getContactsByTag,
-    refreshContacts: loadContacts
+    refreshContacts: loadContacts,
+    bulkImport
   }
 }

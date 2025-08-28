@@ -17,9 +17,14 @@ import {
   Clock,
   AlertCircle
 } from 'lucide-react'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { mockAgreements } from '@/mocks/agreementsMock'
 
 export default function AgreementVault() {
+  const { getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -27,6 +32,50 @@ export default function AgreementVault() {
 
   const filteredAgreements = agreements.filter(agreement => {
     const matchesSearch = searchTerm === '' || 
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, agreement) => {
+        if (!agreement.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(agreement.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, agreement) => {
+        if (!agreement.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(agreement.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
       agreement.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       agreement.vehicleInfo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       agreement.type.toLowerCase().includes(searchTerm.toLowerCase())

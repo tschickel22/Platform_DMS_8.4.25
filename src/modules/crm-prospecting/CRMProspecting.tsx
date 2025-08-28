@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,10 +7,31 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, Plus, Search, Phone, Mail, Calendar, TrendingUp, Target, Settings, Brain, MessageSquare, ListTodo } from 'lucide-react'
+import { 
+  Users, 
+  Plus, 
+  Search, 
+  Phone, 
+  Mail, 
+  Calendar, 
+  TrendingUp, 
+  Target, 
+  Settings, 
+  Brain, 
+  MessageSquare, 
+  ListTodo,
+  Clock,
+  Filter,
+  Download,
+  Upload,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2
+} from 'lucide-react'
 import { Lead, LeadStatus, Task } from '@/types'
 import { TaskForm } from '@/modules/task-center/components/TaskForm'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useLeadManagement } from './hooks/useLeadManagement'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
@@ -29,6 +50,10 @@ import { TagType } from '@/modules/tagging-engine/types'
 import { useTasks } from '@/hooks/useTasks'
 import { TaskModule, TaskPriority } from '@/types'
 import { toast } from '@/hooks/use-toast'
+import { FilterBar } from '@/components/ui/filter-bar'
+import { DataTable } from '@/components/ui/data-table'
+import { EmptyState } from '@/components/ui/empty-state'
+import { EntityChip } from '@/components/ui/entity-chip'
 
 function ContactModal({ isOpen, onClose, leadId }: { isOpen: boolean; onClose: () => void; leadId?: string }) {
   useAccountManagement()
@@ -77,11 +102,15 @@ function LeadsList() {
     assignLead,
     getActivitiesByLead,
     getRemindersByUser,
-    getLeadScore
+    getLeadScore,
+    loading,
+    createLead,
+    updateLead,
+    deleteLead
   } = useLeadManagement()
 
-  const { getAccountById } = useAccountManagement()
-  useContactManagement()
+  const { getAccountById, accounts, getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
 
   const { createTask } = useTasks()
 
@@ -90,6 +119,7 @@ function LeadsList() {
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [activeFilter, setActiveFilter] = useState<'all' | 'new' | 'qualified'>('all')
+  const [activeTab, setActiveTab] = useState('leads')
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
@@ -143,18 +173,131 @@ function LeadsList() {
     return 'All Leads'
   }
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch =
-      `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm)
+  // Filter leads based on search and filters
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      const matchesSearch = searchTerm === '' || 
+        `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.phone.includes(searchTerm) ||
+        (lead.notes && lead.notes.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
-    const matchesSource = sourceFilter === 'all' || lead.sourceId === sourceFilter
-    const matchesAssignee = assigneeFilter === 'all' || lead.assignedTo === assigneeFilter
+      const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
+      const matchesSource = sourceFilter === 'all' || lead.sourceId === sourceFilter
+      const matchesAssignee = assigneeFilter === 'all' || lead.assignedTo === assigneeFilter
 
-    return matchesSearch && matchesStatus && matchesSource && matchesAssignee
-  })
+      return matchesSearch && matchesStatus && matchesSource && matchesAssignee
+    })
+  }, [leads, searchTerm, statusFilter, sourceFilter, assigneeFilter])
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const totalLeads = leads.length
+    const newLeads = leads.filter(lead => lead.status === 'new').length
+    const qualifiedLeads = leads.filter(lead => lead.status === 'qualified').length
+    const convertedLeads = leads.filter(lead => lead.status === 'closed_won').length
+    const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads * 100).toFixed(1) : '0'
+    
+    return {
+      totalLeads,
+      newLeads,
+      qualifiedLeads,
+      convertedLeads,
+      conversionRate
+    }
+  }, [leads])
+
+  const leadColumns = [
+    {
+      key: 'name',
+      label: 'Name',
+      render: (_, lead) => (
+        <div>
+          <div className="font-medium">{lead.firstName} {lead.lastName}</div>
+          <div className="text-sm text-muted-foreground">{lead.email}</div>
+        </div>
+      )
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, lead) => {
+        if (!lead.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(lead.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, lead) => {
+        if (!lead.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(lead.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      render: (value) => (
+        <Badge variant="outline">{value}</Badge>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => {
+        const colors = {
+          new: 'bg-blue-100 text-blue-800',
+          contacted: 'bg-yellow-100 text-yellow-800',
+          qualified: 'bg-green-100 text-green-800',
+          closed_won: 'bg-emerald-100 text-emerald-800',
+          closed_lost: 'bg-red-100 text-red-800'
+        }
+        return (
+          <Badge className={colors[value] || 'bg-gray-100 text-gray-800'}>
+            {value.replace('_', ' ')}
+          </Badge>
+        )
+      }
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      render: (value) => value ? `${value}%` : '—'
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      render: (value) => formatDate(value)
+    }
+  ]
 
   const getTaskInitialData = (lead: Lead) => {
     const lastActivity = lead.lastActivity ? new Date(lead.lastActivity) : new Date(lead.createdAt)
@@ -355,7 +498,7 @@ function LeadsList() {
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{leads.length}</div>
+            <div className="text-2xl font-bold text-blue-900">{metrics.totalLeads}</div>
             <p className="text-xs text-blue-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" /> +12% from last month
             </p>
@@ -374,9 +517,7 @@ function LeadsList() {
             <Users className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-900">
-              {leads.filter(l => l.status === LeadStatus.NEW).length}
-            </div>
+            <div className="text-2xl font-bold text-yellow-900">{metrics.newLeads}</div>
             <p className="text-xs text-yellow-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" /> +8% from last week
             </p>
@@ -395,9 +536,7 @@ function LeadsList() {
             <Target className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">
-              {leads.filter(l => l.status === LeadStatus.QUALIFIED).length}
-            </div>
+            <div className="text-2xl font-bold text-green-900">{metrics.qualifiedLeads}</div>
             <p className="text-xs text-green-600 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" /> +15% from last month
             </p>
@@ -748,6 +887,139 @@ function LeadsList() {
 }
 
 export default function CRMProspecting() {
+  const { leads, loading, createLead, updateLead, deleteLead } = useLeadManagement()
+  const { accounts, getAccount } = useAccountManagement()
+  const { contacts, getContact } = useContactManagement()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState('leads')
+
+  // Filter leads based on search and filters
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      const matchesSearch = searchTerm === '' || 
+        `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.phone.includes(searchTerm) ||
+        lead.notes.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
+      const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter
+
+      return matchesSearch && matchesStatus && matchesSource
+    })
+  }, [leads, searchTerm, statusFilter, sourceFilter])
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const totalLeads = leads.length
+    const newLeads = leads.filter(lead => lead.status === 'new').length
+    const qualifiedLeads = leads.filter(lead => lead.status === 'qualified').length
+    const convertedLeads = leads.filter(lead => lead.status === 'closed_won').length
+    const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads * 100).toFixed(1) : '0'
+    
+    return {
+      totalLeads,
+      newLeads,
+      qualifiedLeads,
+      convertedLeads,
+      conversionRate
+    }
+  }, [leads])
+
+  const leadColumns = [
+    {
+      key: 'name',
+      label: 'Name',
+      render: (_, lead) => (
+        <div>
+          <div className="font-medium">{lead.firstName} {lead.lastName}</div>
+          <div className="text-sm text-muted-foreground">{lead.email}</div>
+        </div>
+      )
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, lead) => {
+        if (!lead.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(lead.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, lead) => {
+        if (!lead.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(lead.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      render: (value) => (
+        <Badge variant="outline">{value}</Badge>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => {
+        const colors = {
+          new: 'bg-blue-100 text-blue-800',
+          contacted: 'bg-yellow-100 text-yellow-800',
+          qualified: 'bg-green-100 text-green-800',
+          closed_won: 'bg-emerald-100 text-emerald-800',
+          closed_lost: 'bg-red-100 text-red-800'
+        }
+        return (
+          <Badge className={colors[value] || 'bg-gray-100 text-gray-800'}>
+            {value.replace('_', ' ')}
+          </Badge>
+        )
+      }
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      render: (value) => value ? `${value}%` : '—'
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      render: (value) => formatDate(value)
+    }
+  ]
+
   return (
     <Routes>
       <Route path="/" element={<LeadsList />} />

@@ -17,6 +17,9 @@ import {
   Trash2,
   DollarSign,
   Calendar,
+import { EntityChip } from '@/components/ui/entity-chip'
+import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
   Receipt,
   CreditCard
 } from 'lucide-react'
@@ -378,6 +381,8 @@ function PaymentHistoryView() {
 }
 
 export default function InvoicePayments() {
+  const { getAccount } = useAccountManagement()
+  const { getContact } = useContactManagement()
   return (
     <div className="space-y-6">
       <Routes>
@@ -388,3 +393,48 @@ export default function InvoicePayments() {
     </div>
   )
 }
+
+    {
+      key: 'account',
+      label: 'Account',
+      render: (_, invoice) => {
+        if (!invoice.accountId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const account = getAccount(invoice.accountId)
+        return account ? (
+          <EntityChip
+            type="account"
+            id={account.id}
+            name={account.name}
+            email={account.email}
+            phone={account.phone}
+            industry={account.industry}
+            linkTo={`/crm/accounts/${account.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (_, invoice) => {
+        if (!invoice.contactId) {
+          return <span className="text-muted-foreground">N/A</span>
+        }
+        const contact = getContact(invoice.contactId)
+        return contact ? (
+          <EntityChip
+            type="contact"
+            id={contact.id}
+            name={`${contact.firstName} ${contact.lastName}`}
+            email={contact.email}
+            phone={contact.phone}
+            title={contact.title}
+            linkTo={`/crm/contacts/${contact.id}`}
+            showHoverCard={true}
+          />
+        ) : <span className="text-muted-foreground">N/A</span>
+      }
+    },
