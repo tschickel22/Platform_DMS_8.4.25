@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useReturnTargets } from '@/hooks/useReturnTargets'
 import { useDealManagement } from '../hooks/useDealManagement'
@@ -43,12 +45,13 @@ interface DealFormProps extends ReturnToBehavior {
 }
 
 export function DealForm(props: DealFormProps) {
+  const navigate = useNavigate()
   const { toast } = useToast()
   const { accountId, afterSave } = useReturnTargets(props)
   const { createDeal, updateDeal, getDeal } = useDealManagement()
   const { accounts } = useAccountManagement()
   const { contacts } = useContactManagement()
-
+  
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<DealFormData>({
     customerName: '',
@@ -64,7 +67,7 @@ export function DealForm(props: DealFormProps) {
     priority: mockCrmSalesDeal.defaultDeal.priority,
     probability: mockCrmSalesDeal.defaultDeal.probability,
     expectedCloseDate: mockCrmSalesDeal.defaultDeal.expectedCloseDate,
-    notes: '',
+    notes: ''
   })
 
   const isEditing = !!props.dealId
@@ -72,63 +75,78 @@ export function DealForm(props: DealFormProps) {
 
   // Load existing deal for editing
   useEffect(() => {
-    if (!props.dealId) return
-    const deal = getDeal(props.dealId)
-    if (deal) {
-      setFormData({
-        customerName: deal.customerName || '',
-        customerEmail: deal.customerEmail || '',
-        customerPhone: deal.customerPhone || '',
-        accountId: deal.accountId || '',
-        contactId: deal.contactId || '',
-        vehicleId: deal.vehicleId || '',
-        stage: deal.stage,
-        amount: deal.amount,
-        source: deal.source,
-        type: deal.type,
-        priority: deal.priority,
-        probability: deal.probability,
-        expectedCloseDate: deal.expectedCloseDate,
-        notes: deal.notes || '',
-      })
+    if (props.dealId) {
+      const deal = getDeal(props.dealId)
+      if (deal) {
+        setFormData({
+          customerName: deal.customerName || '',
+          customerEmail: deal.customerEmail || '',
+          customerPhone: deal.customerPhone || '',
+          accountId: deal.accountId || '',
+          contactId: deal.contactId || '',
+          vehicleId: deal.vehicleId || '',
+          stage: deal.stage,
+          amount: deal.amount,
+          source: deal.source,
+          type: deal.type,
+          priority: deal.priority,
+          probability: deal.probability,
+          expectedCloseDate: deal.expectedCloseDate,
+          notes: deal.notes || ''
+        })
+      }
     }
   }, [props.dealId, getDeal])
 
-  // Auto-fill customer info when account is selected (only for create)
+  // Auto-fill customer info when account is selected
   useEffect(() => {
-    if (!formData.accountId || isEditing) return
-    const account = accounts.find(acc => acc.id === formData.accountId)
-    if (account) {
-      setFormData(prev => ({
-        ...prev,
-        customerName: account.name,
-        customerEmail: account.email || '',
-        customerPhone: account.phone || '',
-      }))
+    if (formData.accountId && !isEditing) {
+      const account = accounts.find(acc => acc.id === formData.accountId)
+      if (account) {
+        setFormData(prev => ({
+          ...prev,
+          customerName: account.name,
+          customerEmail: account.email || '',
+          customerPhone: account.phone || ''
+        }))
+      }
     }
   }, [formData.accountId, accounts, isEditing])
 
   // Filter contacts by selected account
-  const filteredContacts = contacts.filter(
-    c => !formData.accountId || c.accountId === formData.accountId
+  const filteredContacts = contacts.filter(contact => 
+    !formData.accountId || contact.accountId === formData.accountId
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
     try {
-      let saved
+      let savedDeal
       if (isEditing) {
-        saved = await updateDeal(props.dealId!, formData)
-        toast({ title: 'Success', description: 'Deal updated successfully' })
+        savedDeal = await updateDeal(props.dealId!, formData)
+        toast({
+          title: 'Success',
+          description: 'Deal updated successfully'
+        })
       } else {
-        saved = await createDeal(formData)
-        toast({ title: 'Success', description: 'Deal created successfully' })
+        savedDeal = await createDeal(formData)
+        toast({
+          title: 'Success',
+          description: 'Deal created successfully'
+        })
       }
-      afterSave(saved, '/deals')
-    } catch (err) {
-      console.error(err)
-      toast({ title: 'Error', description: 'Failed to save deal', variant: 'destructive' })
+
+      // Use return targets logic
+      afterSave(savedDeal, '/deals')
+    } catch (error) {
+      console.error('Error saving deal:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save deal',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -136,19 +154,21 @@ export function DealForm(props: DealFormProps) {
 
   const handleCancel = () => {
     if (props.onSaved) {
-      props.onSaved(null) // close modal
+      props.onSaved(null) // Close modal
     } else {
       afterSave(null, '/deals')
     }
   }
 
   return (
-    <div className={isModal ? 'p-6 max-h-[80vh] overflow-y-auto' : ''}>
+    <div className={isModal ? 'p-6' : ''}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{isEditing ? 'Edit Deal' : 'Create New Deal'}</h1>
+            <h1 className="text-2xl font-bold">
+              {isEditing ? 'Edit Deal' : 'Create New Deal'}
+            </h1>
             <p className="text-muted-foreground">
               {isEditing ? 'Update deal information' : 'Create a new sales deal'}
             </p>
@@ -161,7 +181,7 @@ export function DealForm(props: DealFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Deal Info */}
+          {/* Customer Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -176,7 +196,7 @@ export function DealForm(props: DealFormProps) {
                   <Input
                     id="customerName"
                     value={formData.customerName}
-                    onChange={e => setFormData(p => ({ ...p, customerName: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
                     placeholder="Enter customer name"
                     required
                     disabled={!!accountId}
@@ -188,7 +208,7 @@ export function DealForm(props: DealFormProps) {
                     id="amount"
                     type="number"
                     value={formData.amount}
-                    onChange={e => setFormData(p => ({ ...p, amount: Number(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, amount: Number(e.target.value) }))}
                     placeholder="0"
                     required
                   />
@@ -202,7 +222,7 @@ export function DealForm(props: DealFormProps) {
                     id="customerEmail"
                     type="email"
                     value={formData.customerEmail}
-                    onChange={e => setFormData(p => ({ ...p, customerEmail: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
                     placeholder="customer@example.com"
                     disabled={!!accountId}
                   />
@@ -212,7 +232,7 @@ export function DealForm(props: DealFormProps) {
                   <Input
                     id="customerPhone"
                     value={formData.customerPhone}
-                    onChange={e => setFormData(p => ({ ...p, customerPhone: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
                     placeholder="(555) 123-4567"
                     disabled={!!accountId}
                   />
@@ -223,17 +243,14 @@ export function DealForm(props: DealFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="accountId">Account</Label>
-                    <Select
-                      value={formData.accountId}
-                      onValueChange={v => setFormData(p => ({ ...p, accountId: v }))}
-                    >
+                    <Select value={formData.accountId} onValueChange={(value) => setFormData(prev => ({ ...prev, accountId: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts.map(acc => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.name}
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -241,17 +258,14 @@ export function DealForm(props: DealFormProps) {
                   </div>
                   <div>
                     <Label htmlFor="contactId">Contact</Label>
-                    <Select
-                      value={formData.contactId}
-                      onValueChange={v => setFormData(p => ({ ...p, contactId: v }))}
-                    >
+                    <Select value={formData.contactId} onValueChange={(value) => setFormData(prev => ({ ...prev, contactId: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select contact" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredContacts.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.firstName} {c.lastName}
+                        {filteredContacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.firstName} {contact.lastName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -271,15 +285,12 @@ export function DealForm(props: DealFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="stage">Stage *</Label>
-                  <Select
-                    value={formData.stage}
-                    onValueChange={v => setFormData(p => ({ ...p, stage: v }))}
-                  >
+                  <Select value={formData.stage} onValueChange={(value) => setFormData(prev => ({ ...prev, stage: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCrmSalesDeal.dealStages.map(stage => (
+                      {mockCrmSalesDeal.dealStages.map((stage) => (
                         <SelectItem key={stage} value={stage}>
                           {stage}
                         </SelectItem>
@@ -289,17 +300,14 @@ export function DealForm(props: DealFormProps) {
                 </div>
                 <div>
                   <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={v => setFormData(p => ({ ...p, priority: v }))}
-                  >
+                  <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCrmSalesDeal.priorities.map(p => (
-                        <SelectItem key={p} value={p}>
-                          {p}
+                      {mockCrmSalesDeal.priorities.map((priority) => (
+                        <SelectItem key={priority} value={priority}>
+                          {priority}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -310,10 +318,10 @@ export function DealForm(props: DealFormProps) {
                   <Input
                     id="probability"
                     type="number"
-                    min={0}
-                    max={100}
+                    min="0"
+                    max="100"
                     value={formData.probability}
-                    onChange={e => setFormData(p => ({ ...p, probability: Number(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, probability: Number(e.target.value) }))}
                   />
                 </div>
               </div>
@@ -321,17 +329,14 @@ export function DealForm(props: DealFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="source">Source</Label>
-                  <Select
-                    value={formData.source}
-                    onValueChange={v => setFormData(p => ({ ...p, source: v }))}
-                  >
+                  <Select value={formData.source} onValueChange={(value) => setFormData(prev => ({ ...prev, source: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCrmSalesDeal.dealSources.map(s => (
-                        <SelectItem key={s} value={s}>
-                          {s}
+                      {mockCrmSalesDeal.dealSources.map((source) => (
+                        <SelectItem key={source} value={source}>
+                          {source}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -339,17 +344,14 @@ export function DealForm(props: DealFormProps) {
                 </div>
                 <div>
                   <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={v => setFormData(p => ({ ...p, type: v }))}
-                  >
+                  <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCrmSalesDeal.dealTypes.map(t => (
-                        <SelectItem key={t} value={t}>
-                          {t}
+                      {mockCrmSalesDeal.dealTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -361,24 +363,21 @@ export function DealForm(props: DealFormProps) {
                     id="expectedCloseDate"
                     type="date"
                     value={formData.expectedCloseDate}
-                    onChange={e => setFormData(p => ({ ...p, expectedCloseDate: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expectedCloseDate: e.target.value }))}
                   />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="vehicleId">Vehicle/Product</Label>
-                <Select
-                  value={formData.vehicleId}
-                  onValueChange={v => setFormData(p => ({ ...p, vehicleId: v }))}
-                >
+                <Select value={formData.vehicleId} onValueChange={(value) => setFormData(prev => ({ ...prev, vehicleId: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockInventory.sampleVehicles.map(v => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.year} {v.make} {v.model}
+                    {mockInventory.sampleVehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.year} {vehicle.make} {vehicle.model}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -390,7 +389,7 @@ export function DealForm(props: DealFormProps) {
                 <Textarea
                   id="notes"
                   value={formData.notes}
-                  onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="Add any additional notes about this deal..."
                   rows={3}
                 />
@@ -398,7 +397,7 @@ export function DealForm(props: DealFormProps) {
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Form Actions */}
           <div className="flex items-center justify-end gap-4">
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
