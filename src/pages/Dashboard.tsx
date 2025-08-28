@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageHeader, StatsGrid, StatCard } from '@/components/ui/page-header'
 import { Users, Package, FileText, DollarSign, TrendingUp, Calendar, Plus, Building2, User } from 'lucide-react'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 import { Lead } from '@/types'
@@ -138,44 +137,66 @@ export default function Dashboard() {
         />
       )}
 
-      <PageHeader
-        title="Dashboard"
-        description="Welcome to your Renter Insight CRM/DMS dashboard"
-      />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome to your Renter Insight CRM/DMS dashboard
+        </p>
+      </div>
 
       {/* Stats Grid */}
-      <StatsGrid>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <StatCard
-            key={stat.name}
-            title={stat.name}
-            value={stat.value}
-            change={stat.change}
-            changeType={stat.changeType}
-            icon={stat.icon}
-          />
+          <Card key={stat.name}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.name}
+              </CardTitle>
+              <stat.icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <p className={`text-xs ${
+                stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {stat.change} from last month
+              </p>
+            </CardContent>
+          </Card>
         ))}
         
         {/* Account Stats Tile */}
-        <StatCard
-          title="Total Accounts"
-          value={accounts.length}
-          change={`+${recentAccounts} new this month`}
-          changeType="positive"
-          icon={Building2}
-          onClick={handleAccountsClick}
-        />
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleAccountsClick}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Accounts
+            </CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold stat-primary">{accounts.length}</div>
+            <p className="text-xs stat-success">
+              +{recentAccounts} new this month
+            </p>
+          </CardContent>
+        </Card>
         
         {/* Contact Stats Tile */}
-        <StatCard
-          title="Total Contacts"
-          value={contacts.length}
-          change={`+${recentContacts} new this month`}
-          changeType="positive"
-          icon={User}
-          onClick={handleContactsClick}
-        />
-      </StatsGrid>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleContactsClick}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Contacts
+            </CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold stat-success">{contacts.length}</div>
+            <p className="text-xs stat-info">
+              +{recentContacts} new this month
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Activity */}
