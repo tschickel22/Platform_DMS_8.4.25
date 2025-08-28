@@ -213,3 +213,4 @@ export default function AccountDetail() {
    const handleDeliverySave = () => {
      // TODO: Implement delivery save functionality
    }
+}
