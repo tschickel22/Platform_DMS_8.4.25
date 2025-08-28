@@ -1,6 +1,7 @@
 import accountsMock from '@/mocks/accountsMock'
 import type { Account } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 type NewAccount = Partial<Account>
 
@@ -34,6 +35,7 @@ export function useAccountManagement() {
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
+    try {
         // Ensure mock data is seeded first
         const loadedAccounts = accountsMock.getAccounts()
         console.log('Loaded accounts:', loadedAccounts) // Debug log
