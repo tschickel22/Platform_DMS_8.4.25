@@ -12,7 +12,6 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
-import { AdvancedSearch } from '@/components/common/AdvancedSearch'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
 export default function AccountList() {
@@ -20,6 +19,11 @@ export default function AccountList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
+  // Advanced search filtering logic
+    // Apply advanced search
+    const passesAdvancedSearch = matchesAdvanced(account)
+  }
+
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
   
     // Basic search
@@ -55,7 +59,7 @@ export default function AccountList() {
         }
       })
     
-    return matchesSearch && matchesAdvanced
+    return matchesSearch && passesAdvancedSearch && matchesFilters
   })
 
   const handleSelectAll = (checked: boolean) => {
