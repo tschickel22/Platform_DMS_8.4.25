@@ -149,8 +149,6 @@ export interface Quote {
   updatedAt: Date
   accountId?: string
   contactId?: string
-  accountId?: string
-  contactId?: string
 }
 
 export interface QuoteItem {

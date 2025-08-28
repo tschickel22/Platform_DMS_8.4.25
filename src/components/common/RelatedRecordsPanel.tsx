@@ -33,6 +33,8 @@ interface RelatedRecordsPanelProps {
   agreements?: RelatedRecord[]
   serviceTickets?: RelatedRecord[]
   invoices?: RelatedRecord[]
+  loans?: RelatedRecord[]
+  tasks?: RelatedRecord[]
   onCreateNew?: (type: string) => void
 }
 
@@ -44,6 +46,8 @@ export function RelatedRecordsPanel({
   agreements = [],
   serviceTickets = [],
   invoices = [],
+  loans = [],
+  tasks = [],
   onCreateNew
 }: RelatedRecordsPanelProps) {
   const [activeTab, setActiveTab] = useState('leads')
@@ -131,7 +135,9 @@ export function RelatedRecordsPanel({
     { id: 'quotes', label: 'Quotes', icon: FileText, count: quotes.length },
     { id: 'agreements', label: 'Agreements', icon: DollarSign, count: agreements.length },
     { id: 'service', label: 'Service', icon: Wrench, count: serviceTickets.length },
-    { id: 'invoices', label: 'Invoices', icon: Receipt, count: invoices.length }
+    { id: 'invoices', label: 'Invoices', icon: Receipt, count: invoices.length },
+    { id: 'loans', label: 'Loans', icon: DollarSign, count: loans.length },
+    { id: 'tasks', label: 'Tasks', icon: Calendar, count: tasks.length }
   ]
 
   return (
@@ -173,6 +179,13 @@ export function RelatedRecordsPanel({
 
           <TabsContent value="invoices" className="mt-4">
             {renderRecordList(invoices, 'invoices', 'No invoices associated with this record')}
+          </TabsContent>
+
+          <TabsContent value="loans" className="mt-4">
+            {renderRecordList(loans, 'loans', 'No loans associated with this record')}
+          </TabsContent>
+          <TabsContent value="tasks" className="mt-4">
+            {renderRecordList(tasks, 'tasks', 'No tasks associated with this record')}
           </TabsContent>
         </Tabs>
       </CardContent>
