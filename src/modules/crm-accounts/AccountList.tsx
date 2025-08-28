@@ -13,7 +13,6 @@ import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
 import { AdvancedSearch } from '@/components/common/AdvancedSearch'
-import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
 export default function AccountList() {
