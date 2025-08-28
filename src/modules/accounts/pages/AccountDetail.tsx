@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAccountManagement } from '../hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
 import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
