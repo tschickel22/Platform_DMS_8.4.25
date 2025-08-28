@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -15,23 +15,34 @@ import {
 } from '@/components/ui/dialog'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-import ContactForm from '@/modules/contacts/components/ContactForm'
+import {
+  ArrowLeft,
+  Edit,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Plus,
+  Save,
+  RotateCcw,
+  Settings,
+} from 'lucide-react'
 
-// ⚠️ Deal form is a **named export**; map it to default for React.lazy
+// Lazy-load all form components to avoid heavy initial loads.
+// IMPORTANT: DealForm is a **named** export; map it to default explicitly.
+const ContactForm = React.lazy(() => import('@/modules/contacts/components/ContactForm'))
 const DealForm = React.lazy(() =>
-  import('@/modules/crm-sales-deal/components/DealForm').then(m => ({ default: m.DealForm }))
+  import('@/modules/crm-sales-deal/components/DealForm').then((m) => ({ default: m.DealForm }))
+)
+const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
+const ServiceTicketForm = React.lazy(() =>
+  import('@/modules/service-ops/components/ServiceTicketForm')
 )
 
-// Quote + Service are default exports, lazy is fine as-is
-const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
-const ServiceTicketForm = React.lazy(() => import('@/modules/service-ops/components/ServiceTicketForm'))
-
-import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-import { ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings } from 'lucide-react'
-
-// Sections
+// Section components (absolute paths)
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -64,7 +75,7 @@ export default function AccountDetail() {
   const [account, setAccount] = useState<any>(null)
   const [sections, setSections] = useState<AccountSection['type'][]>([...DEFAULT_LAYOUT])
 
-  // Modals
+  // Modal state
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
@@ -125,7 +136,7 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — lists likely re-read from shared state/localStorage
+    // placeholder — your lists likely re-fetch elsewhere or read shared state
   }
 
   const handleContactSaved = (contact: any) => {
@@ -228,7 +239,7 @@ export default function AccountDetail() {
                   <DialogDescription>Select a section to add to this account view.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
-                  {AVAILABLE_SECTIONS.filter(s => !sections.includes(s.type)).map((section) => (
+                  {AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type)).map((section) => (
                     <Button
                       key={section.id}
                       variant="outline"
@@ -241,7 +252,7 @@ export default function AccountDetail() {
                       </div>
                     </Button>
                   ))}
-                  {AVAILABLE_SECTIONS.filter(s => !sections.includes(s.type)).length === 0 && (
+                  {AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type)).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       All available sections are already added to this view.
                     </p>
@@ -342,7 +353,6 @@ export default function AccountDetail() {
                 {sections.map((type, index) => {
                   const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
                   if (!config) return null
-                  const Section = config.component as any
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
@@ -353,24 +363,24 @@ export default function AccountDetail() {
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddDeal={() => setOpenDeal(true)}   // ✅ open the Deal modal
+                              onAddDeal={() => setOpenDeal(true)}
                             />
                           ) : type === 'quotes' ? (
                             <AccountQuotesSection
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddQuote={() => setOpenQuote(true)} // ✅ open the Quote modal
+                              onAddQuote={() => setOpenQuote(true)}
                             />
                           ) : type === 'service' ? (
                             <AccountServiceTicketsSection
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
-                              onAddService={() => setOpenService(true)} // ✅ open the Service modal
+                              onAddService={() => setOpenService(true)}
                             />
                           ) : (
-                            <Section
+                            <config.component
                               accountId={accountId!}
                               onRemove={() => removeSection(type)}
                               isDragging={s.isDragging}
@@ -409,7 +419,7 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
           <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading…</div>}>
               <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
             </React.Suspense>
           </ErrorBoundary>
@@ -422,7 +432,7 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
           <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading deal form…</div>}>
               <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
             </React.Suspense>
           </ErrorBoundary>
@@ -435,7 +445,7 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
           <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading quote form…</div>}>
               <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
             </React.Suspense>
           </ErrorBoundary>
@@ -448,7 +458,7 @@ export default function AccountDetail() {
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
           <ErrorBoundary>
-            <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
+            <React.Suspense fallback={<div className="p-6 text-center">Loading service form…</div>}>
               <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
             </React.Suspense>
           </ErrorBoundary>
