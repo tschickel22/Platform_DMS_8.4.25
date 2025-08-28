@@ -477,18 +477,8 @@ export default function ContactList() {
             loading={loading}
             selectable={true}
             selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            actions={actions}
-            onRowClick={(contact) => navigate(`/crm/contacts/${contact.id}`)}
-            emptyState={{
-              title: 'No contacts found',
-              description: 'Get started by creating your first contact.',
-              icon: Users,
-              action: {
-                label: 'Create Contact',
-                onClick: () => navigate('/crm/contacts/new')
-              }
-            }}
+            data={allContacts}
+            onImport={bulkImport}
           />
         </CardContent>
       </Card>
