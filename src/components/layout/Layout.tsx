@@ -43,8 +43,8 @@ import MarketingMenuItems from '@/components/menu/MarketingMenuItems'
 const ROUTES = {
   DASHBOARD: '/',
   CRM: '/crm',
-  ACCOUNTS: '/crm/accounts',
-  CONTACTS: '/crm/contacts',
+  ACCOUNTS: '/accounts',
+  CONTACTS: '/contacts',
   DEALS: '/deals',
   QUOTES: '/quotes',
 

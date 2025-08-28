@@ -118,8 +118,8 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
-                                  <Route path="/accounts/*" element={<AccountsModule />} />
-                                  <Route path="/contacts/*" element={<ContactsModule />} />
+                                  <Route path="/crm/accounts/*" element={<AccountsModule />} />
+                                  <Route path="/crm/contacts/*" element={<ContactsModule />} />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
