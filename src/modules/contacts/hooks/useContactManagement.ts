@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Contact } from '@/types'
+import { Contact } from '@/types/index'
 import { mockContacts } from '@/mocks/contactsMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 

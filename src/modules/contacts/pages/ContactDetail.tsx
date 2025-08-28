@@ -12,7 +12,7 @@ import {
   Edit, 
   Calendar,
   MessageSquare
-} from 'lucide-react'
+import { Contact } from '@/types/index'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import ContactForm from '@/modules/contacts/components/ContactForm'

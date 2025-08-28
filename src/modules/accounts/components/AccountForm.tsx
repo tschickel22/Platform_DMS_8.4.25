@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, X } from 'lucide-react'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { Account, AccountType } from '@/types'
+import { Account, AccountType } from '@/types/index'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { useToast } from '@/hooks/use-toast'
 

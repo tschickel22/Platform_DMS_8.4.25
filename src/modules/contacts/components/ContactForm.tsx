@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, X } from 'lucide-react'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { Contact } from '@/types'
+import { Contact } from '@/types/index'
 import { mockContacts } from '@/mocks/contactsMock'
 import { useToast } from '@/hooks/use-toast'
 

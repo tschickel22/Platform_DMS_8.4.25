@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Account, AccountType } from '@/types'
+import { Account, AccountType } from '@/types/index'
 import { mockAccounts } from '@/mocks/accountsMock'
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 
