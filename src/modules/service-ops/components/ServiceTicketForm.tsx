@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,8 @@ import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useLeadManagement } from '@/modules/crm-prospecting/hooks/useLeadManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
 
 interface ServiceTicketFormProps {
@@ -25,8 +28,13 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
   const { toast } = useToast()
   const { vehicles } = useInventoryManagement()
   const { leads } = useLeadManagement()
+  const { getAccounts } = useAccountManagement()
+  const { getContacts } = useContactManagement()
   const [loading, setLoading] = useState(false)
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false)
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [contacts, setContacts] = useState<any[]>([])
+  const [filteredContacts, setFilteredContacts] = useState<any[]>([])
   const [formData, setFormData] = useState<Partial<ServiceTicket>>({
     customerId: '',
     vehicleId: '',
@@ -37,6 +45,8 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
     assignedTo: '',
     scheduledDate: undefined,
     notes: '',
+    accountId: '',
+    contactId: '',
     parts: [],
     labor: [],
     customFields: {
@@ -66,20 +76,58 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
 
   // Initialize form with ticket data if editing
   useEffect(() => {
-    if (ticket) {
-      setFormData({
-        ...ticket,
-        customFields: {
-          ...ticket.customFields,
-          warrantyStatus: ticket.customFields?.warrantyStatus || 'not_covered',
-          estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate || '',
-          customerAuthorization: ticket.customFields?.customerAuthorization || false,
-          technicianNotes: ticket.customFields?.technicianNotes || '',
-          customerPortalAccess: ticket.customFields?.customerPortalAccess !== false
+    const loadData = async () => {
+      try {
+        // Load accounts and contacts
+        const [accountsData, contactsData] = await Promise.all([
+          getAccounts(),
+          getContacts()
+        ])
+        setAccounts(accountsData)
+        setContacts(contactsData)
+        
+        // Load ticket data if editing
+        if (ticket) {
+          setFormData({
+            ...ticket,
+            accountId: ticket.accountId || '',
+            contactId: ticket.contactId || '',
+            customFields: {
+              ...ticket.customFields,
+              warrantyStatus: ticket.customFields?.warrantyStatus || 'not_covered',
+              estimatedCompletionDate: ticket.customFields?.estimatedCompletionDate || '',
+              customerAuthorization: ticket.customFields?.customerAuthorization || false,
+              technicianNotes: ticket.customFields?.technicianNotes || '',
+              customerPortalAccess: ticket.customFields?.customerPortalAccess !== false
+            }
+          })
         }
-      })
+      } catch (error) {
+        console.error('Error loading data:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load form data',
+          variant: 'destructive'
+        })
+      }
     }
-  }, [ticket])
+
+    loadData()
+  }, [ticket, getAccounts, getContacts, toast])
+
+  // Filter contacts when account changes
+  useEffect(() => {
+    if (formData.accountId) {
+      const accountContacts = contacts.filter(contact => contact.accountId === formData.accountId)
+      setFilteredContacts(accountContacts)
+      // Clear contact selection if it's not in the filtered list
+      if (formData.contactId && !accountContacts.find(c => c.id === formData.contactId)) {
+        setFormData(prev => ({ ...prev, contactId: '' }))
+      }
+    } else {
+      setFilteredContacts(contacts)
+    }
+  }, [formData.accountId, contacts])
 
   // Update part total when quantity or unit cost changes
   useEffect(() => {
@@ -282,6 +330,50 @@ export function ServiceTicketForm({ ticket, onSave, onCancel }: ServiceTicketFor
               <h3 className="text-lg font-semibold">Ticket Information</h3>
               
               <div className="grid gap-4 md:grid-cols-2">
+                {/* Account Association */}
+                <div className="space-y-2">
+                  <Label htmlFor="accountId">Account</Label>
+                  <Select
+                    value={formData.accountId}
+                    onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Account</SelectItem>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Contact Association */}
+                <div className="space-y-2">
+                  <Label htmlFor="contactId">Contact</Label>
+                  <Select
+                    value={formData.contactId}
+                    onValueChange={(value) => setFormData({ ...formData, contactId: value })}
+                    disabled={!formData.accountId && filteredContacts.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select contact (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Contact</SelectItem>
+                      {filteredContacts.map((contact) => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.firstName} {contact.lastName}
+                          {contact.title && ` - ${contact.title}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="customerId">Customer *</Label>
                   <Select
