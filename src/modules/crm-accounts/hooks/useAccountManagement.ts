@@ -40,7 +40,6 @@ export function useAccountManagement() {
       // Force reload from mock data
       const loadedAccounts = accountsMock.getAccounts()
       console.log('useAccountManagement: Loaded accounts:', loadedAccounts)
-        const loadedAccounts = accountsMock.getAccounts()
         console.log('Loaded accounts:', loadedAccounts) // Debug log
       const data = safeParse<Account[]>(localStorage.getItem(LS_KEY), [])
       setAccounts(Array.isArray(data) ? data : [])
