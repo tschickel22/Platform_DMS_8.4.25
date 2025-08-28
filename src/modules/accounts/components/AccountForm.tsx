@@ -9,6 +9,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+import { TagInput } from '@/components/common/TagInput'
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
@@ -249,6 +250,28 @@ export default function AccountForm() {
                     maxLength={2}
                   />
                 </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <TagInput
+                  tags={formData.tags}
+                  onTagsChange={(newTags) => setFormData({ ...formData, tags: newTags })}
+                  placeholder="Add tags to categorize this account..."
+                  suggestions={[
+                    'VIP Customer',
+                    'High Value',
+                    'Commercial',
+                    'Referral Source',
+                    'Preferred Vendor',
+                    'Strategic Partner',
+                    'First Time Buyer',
+                    'Repeat Customer',
+                    'Luxury Buyer',
+                    'Budget Conscious'
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

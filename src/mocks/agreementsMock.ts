@@ -65,6 +65,8 @@ export const mockAgreements = {
       customerId: 'cust-002',
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
+      accountId: 'acc-002',
+      contactId: 'cont-003',
       vehicleId: 'veh-002',
       vehicleInfo: '2024 Keystone Montana 3761FL',
       quoteId: 'quote-002',

@@ -103,6 +103,8 @@ export interface Lead {
   sourceId?: string
   status: LeadStatus
   assignedTo?: string
+  accountId?: string
+  contactId?: string
   notes: string
   score?: number
   lastActivity?: Date
@@ -133,6 +135,8 @@ export interface Quote {
   id: string
   customerId: string
   vehicleId: string
+  accountId?: string
+  contactId?: string
   items: QuoteItem[]
   subtotal: number
   tax: number
@@ -163,6 +167,8 @@ export interface Agreement {
   vehicleId?: string
   vehicleInfo?: string
   quoteId?: string
+  accountId?: string
+  contactId?: string
   terms: string
   customerId: string
   signedDate?: Date
@@ -199,6 +205,8 @@ export interface ServiceTicket {
   id: string
   customerId: string
   vehicleId?: string
+  accountId?: string
+  contactId?: string
   title: string
   description: string
   priority: Priority
@@ -235,6 +243,8 @@ export interface Delivery {
   id: string
   customerId: string
   vehicleId: string
+  accountId?: string
+  contactId?: string
   status: DeliveryStatus
   scheduledDate: Date
   deliveredDate?: Date
@@ -258,6 +268,8 @@ export interface Commission {
   id: string
   salesPersonId: string
   dealId: string
+  accountId?: string
+  contactId?: string
   type: CommissionType
   rate: number
   amount: number
@@ -272,6 +284,8 @@ export interface Commission {
 export interface Invoice {
   id: string
   customerId: string
+  accountId?: string
+  contactId?: string
   number: string
   items: InvoiceItem[]
   subtotal: number
@@ -317,6 +331,8 @@ export interface Loan {
   customerPhone?: string
   vehicleId?: string
   vehicleInfo?: string
+  accountId?: string
+  contactId?: string
   loanAmount: number
   downPayment: number
   interestRate: number
@@ -725,6 +741,8 @@ export interface Task {
   module: TaskModule
   assignedTo?: string
   assignedToName?: string
+  accountId?: string
+  contactId?: string
   dueDate?: Date
   createdAt: Date
   updatedAt: Date
@@ -736,6 +754,16 @@ export interface Task {
   isOverdue?: boolean
 }
 
+export interface Note {
+  id: string
+  content: string
+  entityType: 'account' | 'contact' | 'lead' | 'deal' | 'service_ticket' | 'quote' | 'agreement' | 'invoice' | 'loan' | 'delivery' | 'task'
+  entityId: string
+  createdAt: Date
+  updatedAt: Date
+  createdBy: string
+  createdByName?: string
+}
 export interface Account {
   id: string
   name: string

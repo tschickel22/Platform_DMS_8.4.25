@@ -1,53 +1,52 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ArrowLeft, 
-  User, 
-  Phone, 
-  Mail, 
-  Building2, 
-  Edit, 
-  Calendar,
-  MessageSquare,
-  Briefcase,
-  Users,
-  Building
-} from 'lucide-react'
-import { Contact } from '@/types/index'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { ArrowLeft, Edit, Trash2, User, Mail, Phone, MapPin, Building2 } from 'lucide-react'
+import { useContactManagement } from '../hooks/useContactManagement'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import ContactForm from '@/modules/contacts/components/ContactForm'
+import { Contact } from '@/types'
+import { NotesSection } from '@/components/common/NotesSection'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>()
   const navigate = useNavigate()
-  const { getContact } = useContactManagement()
-  const { getAccount } = useAccountManagement()
+  const { getContactById, deleteContact } = useContactManagement()
+  const { getAccountById } = useAccountManagement()
+  const { toast } = useToast()
+  const [contact, setContact] = useState<Contact | null>(null)
+  const [account, setAccount] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const contact = contactId ? getContact(contactId) : null
-  const associatedAccount = contact?.accountId ? getAccount(contact.accountId) : null
+  useEffect(() => {
+    const loadContact = async () => {
+      if (!contactId) return
+      
+      try {
+        const contactData = await getContactById(contactId)
+        setContact(contactData)
+        
+        // Load associated account if exists
+        if (contactData?.accountId) {
+          const accountData = await getAccountById(contactData.accountId)
+          setAccount(accountData)
+        }
+      } catch (error) {
+        console.error('Error loading contact:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load contact details',
+          variant: 'destructive'
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  if (!contact) {
-    return (
-      <div className="space-y-6">
-        <div className="ri-page-header">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/contacts')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Contacts
-            </Button>
-            <div>
-              <h1 className="ri-page-title">Contact Not Found</h1>
-              <p className="ri-page-description">The requested contact could not be found.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+    loadContact()
+  }, [contactId, getContactById, getAccountById, toast])
 
   const handleCommunication = (type: 'phone' | 'email' | 'sms') => {
     switch (type) {
@@ -169,6 +168,65 @@ export default function ContactDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Associated Account */}
+          {account && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Associated Account
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Link
+                      to={`/accounts/${account.id}`}
+                      className="text-lg font-medium text-primary hover:underline"
+                    >
+                      {account.name}
+                    </Link>
+                    <p className="text-sm text-muted-foreground">{account.type}</p>
+                    {account.industry && (
+                      <p className="text-sm text-muted-foreground">{account.industry}</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/accounts/${account.id}`)}
+                  >
+                    View Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tags Display */}
+          {contact.tags && contact.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {contact.tags.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes Section */}
+          <NotesSection
+            entityId={contact.id}
+            entityType="contact"
+          />
 
           {/* Communication History Placeholder */}
           <Card>

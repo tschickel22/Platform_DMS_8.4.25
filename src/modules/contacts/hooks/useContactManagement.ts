@@ -196,6 +196,7 @@ export function useContactManagement() {
     error,
     metrics,
     getContactById,
+    getContactsByAccount,
     createContact,
     updateContact,
     deleteContact,

@@ -67,6 +67,10 @@ export function useAccountManagement() {
   }, [accounts])
 
   // Create a new account
+  const getAccounts = (): Account[] => {
+    return loadFromLocalStorage('accounts', mockAccounts.sampleAccounts)
+  }
+
   const createAccount = async (accountData: Partial<Account>): Promise<Account> => {
     setLoading(true)
     try {

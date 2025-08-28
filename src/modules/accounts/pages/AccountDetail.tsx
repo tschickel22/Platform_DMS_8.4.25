@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   ArrowLeft,
   Edit,
@@ -18,6 +19,7 @@ import {
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { mockAccounts } from '@/mocks/accountsMock' // <- required for type badge
+import { NotesSection } from '@/components/common/NotesSection'
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -168,64 +170,121 @@ export default function AccountDetail() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Contacts ({accountContacts.length})
-                </CardTitle>
-                <Button size="sm" asChild>
-                  <Link to={`/contacts/new?accountId=${account.id}`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Contact
-                  </Link>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Associated Contacts
+                  </CardTitle>
+                  <CardDescription>
+                    Contacts linked to this account
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/contacts/new?accountId=${account.id}`)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
                 </Button>
               </div>
-              <CardDescription>People associated with this account</CardDescription>
             </CardHeader>
             <CardContent>
-              {accountContacts.length > 0 ? (
-                <div className="space-y-3">
-                  {accountContacts.map(contact => (
-                    <Link key={contact.id} to={`/contacts/${contact.id}`}>
-                      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {contact.firstName} {contact.lastName}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {contact.title && <span>{contact.title}</span>}
-                              {contact.title && contact.department && <span>•</span>}
-                              {contact.department && <span>{contact.department}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {contact.email || contact.phone || 'No contact info'}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+              {accountContacts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No contacts associated with this account</p>
+                  <p className="text-sm">Add a contact to get started</p>
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-muted-foreground mb-2">No contacts yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Add contacts to this account to track relationships and communication.
-                  </p>
-                  <Button asChild>
-                    <Link to={`/contacts/new?accountId=${account.id}`}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add First Contact
-                    </Link>
-                  </Button>
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accountContacts.map((contact) => (
+                      <TableRow key={contact.id}>
+                        <TableCell>
+                          <Link
+                            to={`/contacts/${contact.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {contact.firstName} {contact.lastName}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{contact.title || '-'}</TableCell>
+                        <TableCell>
+                          {contact.email ? (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="text-primary hover:underline"
+                            >
+                              {contact.email}
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {contact.phone ? (
+                            <a
+                              href={`tel:${contact.phone}`}
+                              className="text-primary hover:underline"
+                            >
+                              {contact.phone}
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/contacts/${contact.id}/edit`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
+
+          {/* Tags Display */}
+          {account.tags && account.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {account.tags.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes Section */}
+          <NotesSection
+            entityId={account.id}
+            entityType="account"
+          />
         </div>
 
         {/* Sidebar */}

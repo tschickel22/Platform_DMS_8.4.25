@@ -119,6 +119,8 @@ export const mockServiceOps = {
       customerName: 'Maria Rodriguez',
       customerPhone: '(555) 987-6543',
       customerEmail: 'maria.rodriguez@email.com',
+      accountId: 'acc-002',
+      contactId: 'cont-003',
       vehicleId: 'vh-002',
       vehicleInfo: '2019 Keystone Montana 3761FL',
       assignedTo: 'tech-003',

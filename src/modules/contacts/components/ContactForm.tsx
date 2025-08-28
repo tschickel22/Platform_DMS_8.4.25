@@ -270,6 +270,29 @@ export default function ContactForm() {
               </div>
             </div>
 
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label htmlFor="tags">Tags</Label>
+              <TagInput
+                tags={formData.tags}
+                onTagsChange={(newTags) => setFormData({ ...formData, tags: newTags })}
+                placeholder="Add tags to categorize this contact..."
+                suggestions={[
+                  'Decision Maker',
+                  'VIP',
+                  'Financial Contact',
+                  'Technical Contact',
+                  'Executive',
+                  'Operations',
+                  'Purchasing',
+                  'Quick Response',
+                  'Morning Calls',
+                  'Email Preferred',
+                  'Text Preferred'
+                ]}
+              />
+            </div>
+
             {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
