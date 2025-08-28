@@ -171,6 +171,11 @@ export default function AccountDetail() {
       description: 'Section has been removed from your view.'
     })
   }
+
+  const refreshSection = (sectionType: string) => {
+    // Refresh section logic here
+  }
+
   const handleContactSaved = (contact: any) => {
     setOpenContact(false)
     if (contact) {
@@ -435,19 +440,11 @@ export default function AccountDetail() {
             </div>
           )}
         </Droppable>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setOpenDeal(true)}
-              >
+      </DragDropContext>
 
       {/* Empty state when no sections */}
       {sections.length === 0 && (
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setOpenQuote(true)}
-              >
+        <Card>
           <CardContent className="py-12 text-center">
             <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No sections configured</h3>
@@ -479,11 +476,7 @@ export default function AccountDetail() {
             </CardContent>
           </Card>
         </div>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setOpenContact(true)}
-              >
+      )}
     </div>
 
     {/* Contact Modal */}
