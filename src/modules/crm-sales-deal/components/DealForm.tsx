@@ -1,409 +1,355 @@
-// src/modules/accounts/pages/AccountDetail.tsx
-import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+// src/modules/crm-sales-deal/components/DealForm.tsx
+import React, { useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement' // (kept, even if unused elsewhere)
+import { Save } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { mockInventory } from '@/mocks/inventoryMock'
+import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
+import { formatCurrency, generateId, loadFromLocalStorage, saveToLocalStorage } from '@/lib/utils'
 
-import ContactForm from '@/modules/contacts/components/ContactForm'
-import DealForm from '@/modules/crm-sales-deal/components/DealForm'
-import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
-import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
-
-import {
-  ArrowLeft,
-  Edit,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  Save,
-  RotateCcw,
-  Settings,
-} from 'lucide-react'
-
-// Section components (use absolute paths to avoid fragile relatives)
-import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
-import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
-import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
-import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
-import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
-
-interface AccountSection {
-  id: string
-  type: string
-  title: string
-  component: React.ComponentType<any>
-  description: string
+type Props = ReturnToBehavior & {
+  dealId?: string // (future edit use)
 }
 
-const AVAILABLE_SECTIONS: AccountSection[] = [
-  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
-  { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
-  { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
-  { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
-  { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
-]
+type Deal = {
+  id: string
+  accountId: string
+  contactId?: string
+  vehicleId?: string
+  stage: string
+  amount: number
+  expectedCloseDate?: string
+  probability?: number
+  leadSource?: string
+  notes?: string
+  vehicleInfo?: string
+  createdAt: string
+  updatedAt: string
+}
 
-const DEFAULT_LAYOUT = ['contacts', 'deals', 'quotes', 'service', 'notes'] as const
+const STAGES: string[] =
+  mockCrmSalesDeal?.stages ||
+  ['Qualification', 'Needs Analysis', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost']
 
-export default function AccountDetail() {
-  const { accountId } = useParams<{ accountId: string }>()
-  const { getAccount } = useAccountManagement()
+const STAGE_COLORS: Record<string, string> =
+  mockCrmSalesDeal?.stageColors || {
+    Qualification: 'bg-blue-100 text-blue-800',
+    'Needs Analysis': 'bg-indigo-100 text-indigo-800',
+    Proposal: 'bg-amber-100 text-amber-800',
+    Negotiation: 'bg-purple-100 text-purple-800',
+    'Closed Won': 'bg-green-100 text-green-800',
+    'Closed Lost': 'bg-red-100 text-red-800',
+  }
+
+// rough default probability per stage (can be tuned)
+const DEFAULT_PROB: Record<string, number> = {
+  Qualification: 0.2,
+  'Needs Analysis': 0.35,
+  Proposal: 0.5,
+  Negotiation: 0.7,
+  'Closed Won': 1,
+  'Closed Lost': 0,
+}
+
+export function DealForm(props: Props) {
   const { toast } = useToast()
+  const { accountId: ctxAccountId, afterSave } = useReturnTargets(props)
+  const isModal = !!props.onSaved
 
-  const [account, setAccount] = useState<any>(null)
-  const [sections, setSections] = useState<string[]>([...DEFAULT_LAYOUT])
+  const { accounts } = useAccountManagement()
+  const { contacts } = useContactManagement()
 
-  // Modals
-  const [openContact, setOpenContact] = useState(false)
-  const [openDeal, setOpenDeal] = useState(false)
-  const [openQuote, setOpenQuote] = useState(false)
-  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // form state
+  const [form, setForm] = useState<{
+    accountId: string
+    contactId: string
+    vehicleId: string
+    stage: string
+    amount: string
+    expectedCloseDate: string
+    probability: string
+    leadSource: string
+    notes: string
+  }>({
+    accountId: ctxAccountId || '',
+    contactId: '',
+    vehicleId: '',
+    stage: STAGES[0],
+    amount: '',
+    expectedCloseDate: '',
+    probability: String(DEFAULT_PROB[STAGES[0]] ?? 0.2),
+    leadSource: '',
+    notes: '',
+  })
 
-  const storageKey = `account-detail-layout-${accountId ?? 'unknown'}`
+  const accountContacts = useMemo(
+    () => contacts.filter((c) => !form.accountId || c.accountId === form.accountId),
+    [contacts, form.accountId],
+  )
 
-  useEffect(() => {
-    if (!accountId) return
-    const data = getAccount(accountId)
-    setAccount(data ?? null)
-  }, [accountId, getAccount])
+  const selectedVehicle = useMemo(
+    () => mockInventory?.sampleVehicles?.find((v) => v.id === form.vehicleId),
+    [form.vehicleId],
+  )
 
-  useEffect(() => {
-    if (!accountId) return
-    const saved = loadFromLocalStorage<string[]>(storageKey, [...DEFAULT_LAYOUT])
-    setSections(saved || [...DEFAULT_LAYOUT])
-  }, [accountId, storageKey])
+  const amountNum = useMemo(() => parseFloat(form.amount || '0') || 0, [form.amount])
+  const probNum = useMemo(
+    () => Math.min(1, Math.max(0, parseFloat(form.probability || '0') || 0)),
+    [form.probability],
+  )
+  const weighted = useMemo(() => amountNum * probNum, [amountNum, probNum])
 
-  const saveLayout = () => {
-    if (!accountId) return
-    saveToLocalStorage(storageKey, sections)
-    setHasUnsavedChanges(false)
-    toast({ title: 'Layout Saved', description: 'Your customized view has been saved successfully.' })
-  }
+  const onChange = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm((p) => ({ ...p, [key]: value }))
 
-  const resetLayout = () => {
-    setSections([...DEFAULT_LAYOUT])
-    setHasUnsavedChanges(true)
-    toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
-  }
-
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return
-    const newSections = Array.from(sections)
-    const [moved] = newSections.splice(result.source.index, 1)
-    newSections.splice(result.destination.index, 0, moved)
-    setSections(newSections)
-    setHasUnsavedChanges(true)
-  }
-
-  const addSection = (type: string) => {
-    if (!sections.includes(type)) {
-      setSections([...sections, type])
-      setHasUnsavedChanges(true)
-      setIsAddSectionOpen(false)
-      toast({ title: 'Section Added', description: 'New section has been added to your view.' })
+  const onStageChange = (v: string) => {
+    onChange('stage', v)
+    if (form.probability === '' || form.probability === String(DEFAULT_PROB[form.stage] ?? '')) {
+      onChange('probability', String(DEFAULT_PROB[v] ?? 0.2))
     }
   }
 
-  const removeSection = (type: string) => {
-    setSections(sections.filter((s) => s !== type))
-    setHasUnsavedChanges(true)
-    toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
-  }
+  const [saving, setSaving] = useState(false)
 
-  const refreshSection = (_: string) => {
-    // placeholder — sections read from shared state or localStorage
-  }
-
-  const handleContactSaved = (contact: any) => {
-    setOpenContact(false)
-    if (contact) {
-      refreshSection('contacts')
-      toast({ title: 'Success', description: 'Contact created successfully' })
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.accountId) {
+      toast({ title: 'Validation error', description: 'Account is required', variant: 'destructive' })
+      return
     }
-  }
-  const handleDealSaved = (deal: any) => {
-    setOpenDeal(false)
-    if (deal) {
-      refreshSection('deals')
+    if (!form.stage) {
+      toast({ title: 'Validation error', description: 'Stage is required', variant: 'destructive' })
+      return
+    }
+
+    setSaving(true)
+    try {
+      const vehicleInfo = selectedVehicle
+        ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
+        : ''
+
+      const deal: Deal = {
+        id: generateId(),
+        accountId: form.accountId,
+        contactId: form.contactId || undefined,
+        vehicleId: form.vehicleId || undefined,
+        stage: form.stage,
+        amount: amountNum,
+        expectedCloseDate: form.expectedCloseDate || undefined,
+        probability: probNum,
+        leadSource: form.leadSource || undefined,
+        notes: form.notes || undefined,
+        vehicleInfo,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      // Persist to localStorage (same pattern as Quotes/Service)
+      const existing = loadFromLocalStorage<Deal[]>('deals', [])
+      saveToLocalStorage('deals', [deal, ...existing])
+
       toast({ title: 'Success', description: 'Deal created successfully' })
+      afterSave(deal, '/deals')
+    } catch (err) {
+      console.error(err)
+      toast({ title: 'Error', description: 'Failed to create deal', variant: 'destructive' })
+    } finally {
+      setSaving(false)
     }
-  }
-  const handleQuoteSaved = (quote: any) => {
-    setOpenQuote(false)
-    if (quote) {
-      refreshSection('quotes')
-      toast({ title: 'Success', description: 'Quote created successfully' })
-    }
-  }
-
-  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type))
-
-  if (!account) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading account...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const getAccountTypeColor = (type: string) => {
-    const map: Record<string, string> = {
-      customer: 'bg-green-100 text-green-800',
-      prospect: 'bg-blue-100 text-blue-800',
-      vendor: 'bg-purple-100 text-purple-800',
-      partner: 'bg-orange-100 text-orange-800',
-      competitor: 'bg-red-100 text-red-800',
-    }
-    return map[type] || 'bg-gray-100 text-gray-800'
   }
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/accounts">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Accounts
-              </Link>
-            </Button>
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-bold">{account?.name}</h1>
-                {account?.type && <Badge className={getAccountTypeColor(account.type)}>{account.type}</Badge>}
-              </div>
-              <p className="text-muted-foreground">
-                {account?.industry ?? '—'} • Created{' '}
-                {account?.createdAt ? new Date(account.createdAt).toLocaleDateString() : '—'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {hasUnsavedChanges && (
-              <Button variant="outline" size="sm" onClick={saveLayout}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Layout
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={resetLayout}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset Layout
-            </Button>
-
-            {/* Add Section */}
-            <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Section
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Section</DialogTitle>
-                  <DialogDescription>Select a section to add to this account view.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-2">
-                  {availableSectionsToAdd.map((section) => (
-                    <Button
-                      key={section.id}
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => addSection(section.type)}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium">{section.title}</div>
-                        <div className="text-xs text-muted-foreground">{section.description}</div>
-                      </div>
-                    </Button>
-                  ))}
-                  {availableSectionsToAdd.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      All available sections are already added to this view.
-                    </p>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button size="sm" asChild>
-              <Link to={`/accounts/${accountId}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Account
-              </Link>
-            </Button>
-          </div>
+    <div className={isModal ? 'p-6' : ''}>
+      {!isModal && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Create Deal</h1>
+          <p className="text-muted-foreground">Track a sales opportunity for this customer</p>
         </div>
+      )}
 
-        {/* Account info */}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="h-5 w-5 mr-2" />
-              Account Information
-            </CardTitle>
+            <CardTitle>Deal Information</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                {!!account?.website && (
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {account.website}
-                    </a>
-                  </div>
-                )}
-                {!!account?.email && (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
-                      {account.email}
-                    </a>
-                  </div>
-                )}
-                {!!account?.phone && (
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
-                      {account.phone}
-                    </a>
-                  </div>
-                )}
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Account *</Label>
+                <Select
+                  value={form.accountId}
+                  onValueChange={(v) => {
+                    onChange('accountId', v)
+                    onChange('contactId', '')
+                  }}
+                  disabled={!!ctxAccountId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="space-y-4">
-                {!!account?.address && (
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div className="text-sm">
-                      <div>{account.address?.street}</div>
-                      <div>
-                        {account.address?.city}, {account.address?.state} {account.address?.zipCode}
-                      </div>
-                      <div>{account.address?.country}</div>
-                    </div>
-                  </div>
-                )}
+              <div>
+                <Label>Contact</Label>
+                <Select
+                  value={form.contactId}
+                  onValueChange={(v) => onChange('contactId', v)}
+                  disabled={!form.accountId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accountContacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {Array.isArray(account?.tags) && account.tags.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Tags</p>
-                    <div className="flex flex-wrap gap-2">
-                      {account.tags.map((tag: string) => (
-                        <Badge key={tag} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div>
+                <Label>Vehicle / Product</Label>
+                <Select value={form.vehicleId} onValueChange={(v) => onChange('vehicleId', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockInventory.sampleVehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Stage *</Label>
+                <Select value={form.stage} onValueChange={onStageChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAGES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <div className="flex items-center gap-2">
+                          <Badge className={STAGE_COLORS[s] || 'bg-gray-100 text-gray-800'}>{s}</Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => onChange('amount', e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label>Expected Close Date</Label>
+                <Input
+                  type="date"
+                  value={form.expectedCloseDate}
+                  onChange={(e) => onChange('expectedCloseDate', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Probability (0–1)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={form.probability}
+                  onChange={(e) => onChange('probability', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Lead Source</Label>
+                <Input
+                  value={form.leadSource}
+                  onChange={(e) => onChange('leadSource', e.target.value)}
+                  placeholder="Web, Referral, Event…"
+                />
               </div>
             </div>
 
-            {!!account?.notes && (
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm font-medium mb-2">Notes</p>
-                <p className="text-sm text-muted-foreground">{account.notes}</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-md border p-3 bg-muted/30">
+                <div className="text-sm">Weighted Amount</div>
+                <div className="text-xl font-semibold">{formatCurrency(weighted)}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(amountNum)} × {Math.round(probNum * 100)}%
+                </div>
               </div>
-            )}
+              {selectedVehicle && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <div className="text-sm">Selected</div>
+                  <div className="text-base font-medium">
+                    {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
+                  </div>
+                  {selectedVehicle.stockNumber && (
+                    <div className="text-xs text-muted-foreground">Stock #{selectedVehicle.stockNumber}</div>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Sections (drag & drop) */}
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="account-sections">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
-                {sections.map((type, index) => {
-                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
-                  if (!config) return null
-                  const Section = config.component
-                  return (
-                    <Draggable key={type} draggableId={type} index={index}>
-                      {(p, s) => (
-                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                          <Section
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  )
-                })}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              rows={4}
+              value={form.notes}
+              onChange={(e) => onChange('notes', e.target.value)}
+              placeholder="Internal notes about this opportunity…"
+            />
+          </CardContent>
+        </Card>
 
-        {/* Unsaved indicator */}
-        {hasUnsavedChanges && (
-          <div className="fixed bottom-4 right-4 z-50">
-            <Card className="shadow-lg border-orange-200 bg-orange-50">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
-                  <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
-                  <Button size="sm" onClick={saveLayout}>Save Now</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-
-      {/* Contact Modal */}
-      <Dialog open={openContact} onOpenChange={setOpenContact}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Contact</DialogTitle>
-          <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Deal Modal */}
-      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Deal</DialogTitle>
-          <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Quote Modal */}
-      <Dialog open={openQuote} onOpenChange={setOpenQuote}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Quote</DialogTitle>
-          <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
-        </DialogContent>
-      </Dialog>
-    </>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => afterSave(null, '/deals')} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Creating…' : 'Create Deal'}
+          </Button>
+        </div>
+      </form>
+    </div>
   )
 }
-
-export { DealForm }
