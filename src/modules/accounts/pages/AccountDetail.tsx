@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react'
+// src/modules/accounts/pages/AccountDetail.tsx
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { EmptyState } from '@/components/ui/empty-state'
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
+import { saveToLocalStorage, loadFromLocalStorage, generateId, formatCurrency } from '@/lib/utils'
 
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
@@ -24,29 +23,11 @@ import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 
-import { saveToLocalStorage, loadFromLocalStorage, generateId } from '@/lib/utils'
-
 import {
-  ArrowLeft,
-  Edit,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  Save,
-  RotateCcw,
-  Settings,
-  PackageCheck,
-  Shield,
-  CreditCard,
-  FileText,
-  FileSignature,
-  Receipt,
-  GripVertical,
+  ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
 
-// Sections
+// Existing static sections (kept so everything works today)
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -54,64 +35,7 @@ import { AccountServiceTicketsSection } from '@/modules/accounts/components/Acco
 import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
 
-// Generic card for modules we’ll add later (warranty, payments, etc.)
-function GenericAccountSection({
-  accountId,
-  title,
-  description,
-  createLabel,
-  createPath,
-  Icon,
-  onRemove,
-  isDragging,
-}: {
-  accountId: string
-  title: string
-  description: string
-  createLabel: string
-  createPath: string
-  Icon: React.ComponentType<{ className?: string }>
-  onRemove?: () => void
-  isDragging?: boolean
-}) {
-  const handleCreate = () => {
-    window.location.href = `${createPath}?accountId=${accountId}&returnTo=account`
-  }
-
-  return (
-    <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center space-x-2">
-          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-          <div>
-            <CardTitle className="text-lg flex items-center">
-              <Icon className="h-5 w-5 mr-2" />
-              {title}
-            </CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="secondary">0</Badge>
-          {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>
-              ×
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <EmptyState
-          title={`No ${title.toLowerCase()} yet`}
-          description={`Create a ${title.toLowerCase().replace(/s$/, '')} for this account`}
-          icon={<Icon className="h-12 w-12" />}
-          action={{ label: createLabel, onClick: handleCreate }}
-        />
-      </CardContent>
-    </Card>
-  )
-}
-
+// ---------- Types ----------
 type SectionType =
   | 'contacts'
   | 'deals'
@@ -125,86 +49,104 @@ type SectionType =
   | 'invoices'
   | 'notes'
 
-interface AccountSection {
+interface AccountSectionDescriptor {
   id: string
   type: SectionType
   title: string
-  component?: React.ComponentType<any>
   description: string
+  component: React.ComponentType<any>
+  /** lower shows earlier; default 100 */
+  sort?: number
+  /** default true */
+  defaultVisible?: boolean
 }
 
-const SECTION_META = {
-  deliveries: {
+interface AccountSection extends AccountSectionDescriptor {}
+
+// ---------- Dynamic Section Registry ----------
+// Any module can register a section by exporting a default descriptor from:
+//   src/modules/<module>/account-section.tsx  (or .ts)
+const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
+  string,
+  { default?: AccountSectionDescriptor }
+>
+
+const dynamicSections: AccountSection[] = Object.values(sectionModules)
+  .map((m) => m?.default)
+  .filter(Boolean)
+  .map((d) => ({
+    ...d!,
+    sort: d?.sort ?? 100,
+    defaultVisible: d?.defaultVisible ?? true,
+  })) as AccountSection[]
+
+// Static “core” sections that always exist today
+const coreSections: AccountSection[] = [
+  {
+    id: 'contacts',
+    type: 'contacts',
+    title: 'Associated Contacts',
+    description: 'Contacts linked to this account',
+    component: AccountContactsSection,
+    sort: 10,
+    defaultVisible: true,
+  },
+  {
+    id: 'deals',
+    type: 'deals',
+    title: 'Sales Deals',
+    description: 'Active and historical deals',
+    component: AccountDealsSection,
+    sort: 20,
+    defaultVisible: true,
+  },
+  {
+    id: 'quotes',
+    type: 'quotes',
+    title: 'Quotes',
+    description: 'Quotes and proposals',
+    component: AccountQuotesSection,
+    sort: 30,
+    defaultVisible: true,
+  },
+  {
+    id: 'service',
+    type: 'service',
+    title: 'Service Tickets',
+    description: 'Service requests and maintenance',
+    component: AccountServiceTicketsSection,
+    sort: 40,
+    defaultVisible: true,
+  },
+  {
+    id: 'deliveries',
+    type: 'deliveries',
     title: 'Deliveries',
-    description: 'Delivery records and scheduling for this account',
-    createLabel: 'Schedule Delivery',
-    createPath: '/delivery/new',
-    Icon: PackageCheck,
+    description: 'Delivery records and scheduling',
+    component: AccountDeliveriesSection,
+    sort: 50,
+    defaultVisible: true,
   },
-  warranty: {
-    title: 'Warranty',
-    description: 'Warranty registrations and claims',
-    createLabel: 'Register / File Claim',
-    createPath: '/inventory/warranty/new',
-    Icon: Shield,
+  {
+    id: 'notes',
+    type: 'notes',
+    title: 'Notes & Comments',
+    description: 'Internal notes and comments',
+    component: AccountNotesSection,
+    sort: 999,
+    defaultVisible: true,
   },
-  payments: {
-    title: 'Payments',
-    description: 'Payments and finance transactions',
-    createLabel: 'Record Payment',
-    createPath: '/finance/payments/new',
-    Icon: CreditCard,
-  },
-  agreements: {
-    title: 'Agreements',
-    description: 'Contracts and signed documents',
-    createLabel: 'Create Agreement',
-    createPath: '/agreements/new',
-    Icon: FileSignature,
-  },
-  applications: {
-    title: 'Applications',
-    description: 'Finance/credit applications tied to this account',
-    createLabel: 'New Application',
-    createPath: '/client-applications/new',
-    Icon: FileText,
-  },
-  invoices: {
-    title: 'Invoices',
-    description: 'Billing and open invoices',
-    createLabel: 'Create Invoice',
-    createPath: '/invoices/new',
-    Icon: Receipt,
-  },
-} as const
-
-const AVAILABLE_SECTIONS: AccountSection[] = [
-  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', component: AccountContactsSection, description: 'Contacts linked to this account' },
-  { id: 'deals', type: 'deals', title: 'Sales Deals', component: AccountDealsSection, description: 'Active and historical deals' },
-  { id: 'quotes', type: 'quotes', title: 'Quotes', component: AccountQuotesSection, description: 'Quotes and proposals' },
-  { id: 'service', type: 'service', title: 'Service Tickets', component: AccountServiceTicketsSection, description: 'Service requests and maintenance' },
-  { id: 'deliveries', type: 'deliveries', title: SECTION_META.deliveries.title, description: SECTION_META.deliveries.description },
-  { id: 'warranty', type: 'warranty', title: SECTION_META.warranty.title, description: SECTION_META.warranty.description },
-  { id: 'payments', type: 'payments', title: SECTION_META.payments.title, description: SECTION_META.payments.description },
-  { id: 'agreements', type: 'agreements', title: SECTION_META.agreements.title, description: SECTION_META.agreements.description },
-  { id: 'applications', type: 'applications', title: SECTION_META.applications.title, description: SECTION_META.applications.description },
-  { id: 'invoices', type: 'invoices', title: SECTION_META.invoices.title, description: SECTION_META.invoices.description },
-  { id: 'notes', type: 'notes', title: 'Notes & Comments', component: AccountNotesSection, description: 'Internal notes and comments' },
 ]
 
-const DEFAULT_LAYOUT: SectionType[] = [
-  'contacts',
-  'deals',
-  'quotes',
-  'service',
-  'deliveries',
-  'warranty',
-  'payments',
-  'agreements',
-  'applications',
-  'invoices',
-  'notes',
-]
+// Merge dynamic + core (no duplicates by type; dynamic can override titles/desc if same type exists)
+function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
+  const byType = new Map<SectionType, AccountSection>()
+  for (const s of core) byType.set(s.type, s)
+  for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
+  return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
+}
+
+const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -214,14 +156,21 @@ export default function AccountDetail() {
   const { toast } = useToast()
 
   const [account, setAccount] = useState<any>(null)
-  const [sections, setSections] = useState<SectionType[]>([...DEFAULT_LAYOUT])
+
+  // Build default layout from currently-available sections (respecting defaultVisible)
+  const defaultLayout = useMemo(
+    () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
+    []
+  )
+
+  const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
 
   // Modals
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
   const [openService, setOpenService] = useState(false)
-  const [openDelivery, setOpenDelivery] = useState(false) // DeliveryForm renders its own overlay
+  const [openDelivery, setOpenDelivery] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -236,8 +185,8 @@ export default function AccountDetail() {
 
   useEffect(() => {
     if (!accountId) return
-    const saved = loadFromLocalStorage<SectionType[]>(storageKey, [...DEFAULT_LAYOUT])
-    setSections(saved || [...DEFAULT_LAYOUT])
+    const saved = loadFromLocalStorage<SectionType[]>(storageKey, defaultLayout as SectionType[])
+    setSections(saved || (defaultLayout as SectionType[]))
   }, [accountId, storageKey])
 
   const saveLayout = () => {
@@ -248,7 +197,7 @@ export default function AccountDetail() {
   }
 
   const resetLayout = () => {
-    setSections([...DEFAULT_LAYOUT])
+    setSections(defaultLayout as SectionType[])
     setHasUnsavedChanges(true)
     toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
   }
@@ -278,9 +227,10 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — sections read from shared state or localStorage
+    // placeholder — sections usually read from local state / mocks / localStorage
   }
 
+  // Save handlers
   const handleContactSaved = (contact: any) => {
     setOpenContact(false)
     if (contact) {
@@ -306,24 +256,36 @@ export default function AccountDetail() {
     setOpenService(false)
     if (ticket) {
       refreshSection('service')
+      toast({ title: 'Success', description: 'Service ticket created successfully' })
     }
   }
 
-  // Delivery save (localStorage for now)
-  const accountContacts = contacts.filter((c) => !accountId || c.accountId === accountId)
-  const handleSaveDelivery = async (payload: any) => {
-    const existing = loadFromLocalStorage<any[]>('deliveries', [])
-    const record = {
-      id: generateId(),
-      accountId: account!.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...payload,
-    }
-    saveToLocalStorage('deliveries', [record, ...existing])
+  // Delivery (demo persistence to localStorage)
+  const handleDeliverySaved = async (delivery: any | null) => {
     setOpenDelivery(false)
+    if (!delivery) return
+    const existing = loadFromLocalStorage<any[]>('deliveries', [])
+    const withId = delivery.id ? delivery : { ...delivery, id: generateId() }
+    saveToLocalStorage('deliveries', [withId, ...existing])
     refreshSection('deliveries')
-    toast({ title: 'Success', description: 'Delivery scheduled successfully' })
+    toast({ title: 'Success', description: 'Delivery saved successfully' })
+  }
+
+  // Generic fallback “create route” if a dynamic section asks for it and you don’t wire a modal
+  const routeCreateForType = (t: SectionType) => {
+    const map: Partial<Record<SectionType, string>> = {
+      deals: `/deals/new?accountId=${accountId}&returnTo=account`,
+      quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
+      service: `/service/new?accountId=${accountId}&returnTo=account`,
+      deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
+      payments: `/finance/payments/new?accountId=${accountId}&returnTo=account`,
+      agreements: `/agreements/new?accountId=${accountId}&returnTo=account`,
+      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
+      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
+      warranty: `/inventory/warranty/new?accountId=${accountId}&returnTo=account`,
+    }
+    const href = map[t]
+    if (href) window.location.href = href
   }
 
   if (!account) {
@@ -348,7 +310,10 @@ export default function AccountDetail() {
     return map[type] || 'bg-gray-100 text-gray-800'
   }
 
-  const availableSectionsToAdd = AVAILABLE_SECTIONS.filter((s) => !sections.includes(s.type))
+  // Sections available to add that aren't currently visible
+  const availableToAdd = AVAILABLE_SECTIONS.filter(
+    (s) => !sections.includes(s.type) && s.defaultVisible !== false
+  )
 
   return (
     <>
@@ -365,7 +330,7 @@ export default function AccountDetail() {
             <div>
               <div className="flex items-center space-x-3">
                 <h1 className="text-2xl font-bold">{account?.name}</h1>
-                {account?.type && <Badge className={getAccountTypeColor(account.type)}>{account.type}</Badge>}
+                {account?.type && <span className={`px-2 py-0.5 rounded-md text-xs ${getAccountTypeColor(account.type)}`}>{account.type}</span>}
               </div>
               <p className="text-muted-foreground">
                 {account?.industry ?? '—'} • Created{' '}
@@ -394,25 +359,21 @@ export default function AccountDetail() {
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Section</DialogTitle>
-                  <DialogDescription>Select a section to add to this account view.</DialogDescription>
-                </DialogHeader>
                 <div className="space-y-2">
-                  {availableSectionsToAdd.map((section) => (
+                  {availableToAdd.map((s) => (
                     <Button
-                      key={section.id}
+                      key={s.id}
                       variant="outline"
                       className="w-full justify-start"
-                      onClick={() => addSection(section.type)}
+                      onClick={() => addSection(s.type)}
                     >
                       <div className="text-left">
-                        <div className="font-medium">{section.title}</div>
-                        <div className="text-xs text-muted-foreground">{section.description}</div>
+                        <div className="font-medium">{s.title}</div>
+                        <div className="text-xs text-muted-foreground">{s.description}</div>
                       </div>
                     </Button>
                   ))}
-                  {availableSectionsToAdd.length === 0 && (
+                  {availableToAdd.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       All available sections are already added to this view.
                     </p>
@@ -486,9 +447,7 @@ export default function AccountDetail() {
                     <p className="text-sm font-medium mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
                       {account.tags.map((tag: string) => (
-                        <Badge key={tag} variant="outline">
-                          {tag}
-                        </Badge>
+                        <span key={tag} className="text-xs px-2 py-0.5 rounded-md border">{tag}</span>
                       ))}
                     </div>
                   </div>
@@ -510,110 +469,58 @@ export default function AccountDetail() {
           <Droppable droppableId="account-sections">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
-                {sections.map((type, index) => (
-                  <Draggable key={type} draggableId={type} index={index}>
-                    {(p, s) => (
-                      <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                        {type === 'deals' ? (
-                          <AccountDealsSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            onAddDeal={() => setOpenDeal(true)}
-                          />
-                        ) : type === 'quotes' ? (
-                          <AccountQuotesSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            onAddQuote={() => setOpenQuote(true)}
-                          />
-                        ) : type === 'service' ? (
-                          <AccountServiceTicketsSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            onAddService={() => setOpenService(true)}
-                          />
-                        ) : type === 'contacts' ? (
-                          <AccountContactsSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                          />
-                        ) : type === 'notes' ? (
-                          <AccountNotesSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                          />
-                        ) : type === 'deliveries' ? (
-                          <AccountDeliveriesSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            onAddDelivery={() => setOpenDelivery(true)}
-                          />
-                        ) : type === 'warranty' ? (
-                          <GenericAccountSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            title={SECTION_META.warranty.title}
-                            description={SECTION_META.warranty.description}
-                            createLabel={SECTION_META.warranty.createLabel}
-                            createPath={SECTION_META.warranty.createPath}
-                            Icon={SECTION_META.warranty.Icon}
-                          />
-                        ) : type === 'payments' ? (
-                          <GenericAccountSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            title={SECTION_META.payments.title}
-                            description={SECTION_META.payments.description}
-                            createLabel={SECTION_META.payments.createLabel}
-                            createPath={SECTION_META.payments.createPath}
-                            Icon={SECTION_META.payments.Icon}
-                          />
-                        ) : type === 'agreements' ? (
-                          <GenericAccountSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            title={SECTION_META.agreements.title}
-                            description={SECTION_META.agreements.description}
-                            createLabel={SECTION_META.agreements.createLabel}
-                            createPath={SECTION_META.agreements.createPath}
-                            Icon={SECTION_META.agreements.Icon}
-                          />
-                        ) : type === 'applications' ? (
-                          <GenericAccountSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            title={SECTION_META.applications.title}
-                            description={SECTION_META.applications.description}
-                            createLabel={SECTION_META.applications.createLabel}
-                            createPath={SECTION_META.applications.createPath}
-                            Icon={SECTION_META.applications.Icon}
-                          />
-                        ) : type === 'invoices' ? (
-                          <GenericAccountSection
-                            accountId={accountId!}
-                            onRemove={() => removeSection(type)}
-                            isDragging={s.isDragging}
-                            title={SECTION_META.invoices.title}
-                            description={SECTION_META.invoices.description}
-                            createLabel={SECTION_META.invoices.createLabel}
-                            createPath={SECTION_META.invoices.createPath}
-                            Icon={SECTION_META.invoices.Icon}
-                          />
-                        ) : null}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
+                {sections.map((type, index) => {
+                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
+                  if (!config) return null
+                  const Section = config.component as any
+
+                  // Wire specific add handlers for legacy sections;
+                  // always pass a generic onCreate for dynamic ones.
+                  const commonProps = {
+                    accountId: accountId!,
+                    onRemove: () => removeSection(type),
+                    onCreate: () => routeCreateForType(type),
+                  }
+
+                  return (
+                    <Draggable key={type} draggableId={type} index={index}>
+                      {(p, s) => (
+                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
+                          {type === 'deals' ? (
+                            <AccountDealsSection
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                              onAddDeal={() => setOpenDeal(true)}
+                            />
+                          ) : type === 'quotes' ? (
+                            <AccountQuotesSection
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                              onAddQuote={() => setOpenQuote(true)}
+                            />
+                          ) : type === 'service' ? (
+                            <AccountServiceTicketsSection
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                              onAddService={() => setOpenService(true)}
+                            />
+                          ) : type === 'deliveries' ? (
+                            <AccountDeliveriesSection
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                              onAddDelivery={() => setOpenDelivery(true)}
+                            />
+                          ) : (
+                            <Section
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  )
+                })}
                 {provided.placeholder}
               </div>
             )}
@@ -650,7 +557,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={() => { setOpenDeal(false); refreshSection('deals') }} />
+          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
         </DialogContent>
       </Dialog>
 
@@ -659,7 +566,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={() => { setOpenQuote(false); refreshSection('quotes') }} />
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
         </DialogContent>
       </Dialog>
 
@@ -668,19 +575,23 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={() => { setOpenService(false); refreshSection('service') }} />
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
         </DialogContent>
       </Dialog>
 
-      {/* Delivery Form (self-contained overlay) */}
-      {openDelivery && (
-        <DeliveryForm
-          vehicles={vehicles}
-          customers={accountContacts}
-          onSave={handleSaveDelivery}
-          onCancel={() => setOpenDelivery(false)}
-        />
-      )}
+      {/* Delivery Modal */}
+      <Dialog open={openDelivery} onOpenChange={setOpenDelivery}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Schedule Delivery</DialogTitle>
+          <DialogDescription className="sr-only">Schedule a new delivery for this account.</DialogDescription>
+          <DeliveryForm
+            customers={contacts}
+            vehicles={vehicles}
+            onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
+            onCancel={() => setOpenDelivery(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
