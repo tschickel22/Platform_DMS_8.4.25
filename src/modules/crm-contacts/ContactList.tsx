@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useContactManagement } from './hooks/useContactManagement'
 import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement'
@@ -15,7 +15,6 @@ import { FilterPanel } from '@/components/common/FilterPanel'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
 import { AdvancedSearch } from '@/components/common/AdvancedSearch'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
-import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
 export default function ContactList() {
@@ -26,41 +25,13 @@ export default function ContactList() {
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('contacts')
   
-    // Basic search
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     accountId: searchParams.get('accountId') || '',
     hasAccount: searchParams.get('hasAccount') || '',
     createdAfter: searchParams.get('createdAfter') || '',
-    
-    // Advanced search
-    const matchesAdvanced = advancedSearchCriteria.length === 0 || 
-      advancedSearchCriteria.every(criteria => {
-        const fieldValue = (contact as any)[criteria.field]?.toString().toLowerCase() || ''
-        const searchValue = criteria.value.toLowerCase()
-        
-        switch (criteria.operator) {
-          case 'contains':
-            return fieldValue.includes(searchValue)
-          case 'equals':
-            return fieldValue === searchValue
-          case 'starts_with':
-            return fieldValue.startsWith(searchValue)
-          case 'ends_with':
-            return fieldValue.endsWith(searchValue)
-          case 'not_equals':
-            return fieldValue !== searchValue
-          case 'is_empty':
-            return !fieldValue
-          case 'is_not_empty':
-            return !!fieldValue
-          default:
-            return true
-        }
-      })
-    
-    return matchesSearch && matchesAdvanced
+    createdBefore: searchParams.get('createdBefore') || ''
   })
 
   const handleSelectAll = (checked: boolean) => {
@@ -132,9 +103,35 @@ export default function ContactList() {
         if (createdDate > filterDate) return false
       }
       
-      return true
+      // Advanced search
+      const matchesAdvanced = advancedSearchCriteria.length === 0 || 
+        advancedSearchCriteria.every(criteria => {
+          const fieldValue = (contact as any)[criteria.field]?.toString().toLowerCase() || ''
+          const searchValue = criteria.value.toLowerCase()
+          
+          switch (criteria.operator) {
+            case 'contains':
+              return fieldValue.includes(searchValue)
+            case 'equals':
+              return fieldValue === searchValue
+            case 'starts_with':
+              return fieldValue.startsWith(searchValue)
+            case 'ends_with':
+              return fieldValue.endsWith(searchValue)
+            case 'not_equals':
+              return fieldValue !== searchValue
+            case 'is_empty':
+              return !fieldValue
+            case 'is_not_empty':
+              return !!fieldValue
+            default:
+              return true
+          }
+        })
+      
+      return matchesAdvanced
     })
-  }, [contacts, filters])
+  }, [contacts, filters, advancedSearchCriteria])
 
   const accountOptions = React.useMemo(() => {
     return accounts.map(account => ({ value: account.id, label: account.name }))
@@ -157,24 +154,12 @@ export default function ContactList() {
     }
   }
 
-  const handleImport = (importedData: any[]) => {
-    importedData.forEach(contactData => {
-      createContact(contactData)
-    })
-  }
-
   const sampleFields = ['firstName', 'lastName', 'email', 'phone', 'accountId']
 
-              Manage your individual contacts. {filteredContacts.length} of {contacts.length} contacts shown.
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <ImportExportActions
-              module="contacts"
-              data={filteredContacts}
-              onImport={handleImport}
-              sampleFields={csvFields}
-            />
       </div>
     )
   }
@@ -195,40 +180,20 @@ export default function ContactList() {
         }}
       />
     )
-          <AdvancedSearch
-            onSearch={setAdvancedSearchCriteria}
-            onClear={() => setAdvancedSearchCriteria([])}
-            entityType="contacts"
-          />
   }
-
-        {/* Selection Info */}
-        {selectedIds.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-            <p className="text-sm text-blue-700">
-              {selectedIds.length} contact{selectedIds.length !== 1 ? 's' : ''} selected
-            </p>
-          </div>
-        )}
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="ri-page-header">
           <h1 className="ri-page-title">Contacts</h1>
-              A list of all contacts in your CRM. Showing {filteredContacts.length} contacts.
+          <p className="ri-page-description">
             Manage your individual contacts. {filteredContacts.length} of {contacts.length} contacts shown.
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <ImportExportActions
             module="contacts"
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
             data={filteredContacts}
             onImport={handleImport}
             sampleFields={sampleFields}
@@ -244,12 +209,6 @@ export default function ContactList() {
 
       {/* Search and Filters */}
       <div className="flex items-center space-x-4">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.includes(contact.id)}
-                          onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
-                        />
-                      </TableCell>
         <div className="ri-search-bar">
           <Search className="ri-search-icon" />
           <Input
@@ -262,9 +221,6 @@ export default function ContactList() {
         <FilterPanel
           filters={filters}
           onFiltersChange={setFilters}
-                            {contact.title && (
-                              <p className="text-xs text-muted-foreground">{contact.title}</p>
-                            )}
           savedFilters={savedFilters}
           onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
           onLoadFilter={(filter) => setFilters(filter.filters)}
@@ -273,7 +229,21 @@ export default function ContactList() {
           filterFields={filterFields}
           module="contacts"
         />
+        <AdvancedSearch
+          onSearch={setAdvancedSearchCriteria}
+          onClear={() => setAdvancedSearchCriteria([])}
+          entityType="contacts"
+        />
       </div>
+
+      {/* Selection Info */}
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-700">
+            {selectedIds.length} contact{selectedIds.length !== 1 ? 's' : ''} selected
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -286,6 +256,12 @@ export default function ContactList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Account</TableHead>
                 <TableHead>Email</TableHead>
@@ -300,10 +276,19 @@ export default function ContactList() {
                 const account = contact.accountId ? getAccountById(contact.accountId) : null
                 return (
                   <TableRow key={contact.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(contact.id)}
+                        onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <Link to={`/crm/contacts/${contact.id}`} className="text-primary hover:underline">
                         {contact.firstName} {contact.lastName}
                       </Link>
+                      {contact.title && (
+                        <p className="text-xs text-muted-foreground">{contact.title}</p>
+                      )}
                     </TableCell>
                     <TableCell>
                       {account ? (

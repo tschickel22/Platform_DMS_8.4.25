@@ -30,8 +30,8 @@ export default function ContactForm() {
   const [tags, setTags] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    accountId: preselectedAccountId || '',
+  const [formData, setFormData] = useState({
+    accountId: '',
     title: '',
     department: '',
     isPrimary: false,
@@ -47,6 +47,10 @@ export default function ContactForm() {
       twitter: ''
     },
     nextFollowUpDate: ''
+  })
+
+  useEffect(() => {
+    if (id) {
       const contact = getContactById(id)
       if (contact) {
         setFirstName(contact.firstName || '')
@@ -54,6 +58,7 @@ export default function ContactForm() {
         setEmail(contact.email || '')
         setPhone(contact.phone || '')
         setAccountId(contact.accountId || undefined)
+        setFormData({
           accountId: contact.accountId || '',
           title: contact.title || '',
           department: contact.department || '',
@@ -70,6 +75,7 @@ export default function ContactForm() {
             twitter: contact.socialProfiles?.twitter || ''
           },
           nextFollowUpDate: contact.nextFollowUpDate || ''
+        })
       } else if (!loading) {
         toast({
           title: 'Contact Not Found',
@@ -165,6 +171,7 @@ export default function ContactForm() {
                   onChange={(e) => setLastName(e.target.value)}
                   required
                 />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -182,7 +189,6 @@ export default function ContactForm() {
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   placeholder="e.g., Sales"
                 />
-              </div>
               </div>
             </div>
             <div className="grid gap-2">
@@ -204,28 +210,28 @@ export default function ContactForm() {
               />
             </div>
             <div className="grid gap-2">
-                <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No Account</SelectItem>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isPrimary"
-                  checked={formData.isPrimary}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked as boolean })}
-                />
-                <Label htmlFor="isPrimary">Primary contact for this account</Label>
-              </div>
+              <Label htmlFor="account">Account</Label>
+              <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Account</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isPrimary"
+                checked={formData.isPrimary}
+                onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked as boolean })}
+              />
+              <Label htmlFor="isPrimary">Primary contact for this account</Label>
             </div>
 
             {/* Contact Preferences */}
@@ -346,7 +352,6 @@ export default function ContactForm() {
                 onTagsChange={(tags) => setFormData({ ...formData, tags })}
                 placeholder="Add tags to categorize this contact..."
               />
-              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="tags">Tags</Label>
