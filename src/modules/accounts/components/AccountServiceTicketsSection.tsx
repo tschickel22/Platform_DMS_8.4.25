@@ -9,34 +9,25 @@ import { Wrench, Plus, ExternalLink, GripVertical } from 'lucide-react'
 import { mockServiceOps } from '@/mocks/serviceOpsMock'
 import { formatDate } from '@/lib/utils'
 
-interface AccountServiceTicketsSectionProps {
+export interface AccountServiceTicketsSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** Optional: open a create-ticket modal from AccountDetail */
-  onAddTicket?: () => void
+  onAddService?: () => void
 }
 
 export function AccountServiceTicketsSection({
   accountId,
   onRemove,
   isDragging,
-  onAddTicket,
+  onAddService,
 }: AccountServiceTicketsSectionProps) {
-  const accountTickets = mockServiceOps.sampleTickets.filter(t => t.accountId === accountId)
+  const all = mockServiceOps.sampleTickets || []
+  const tickets = all.filter((t: any) => t.accountId === accountId)
 
-  const getStatusColor = (status: string) =>
-    mockServiceOps.statusColors[status] || 'bg-gray-100 text-gray-800'
-  const getPriorityColor = (priority: string) =>
-    mockServiceOps.priorityColors[priority] || 'bg-gray-100 text-gray-800'
-
-  const openTickets = accountTickets.filter(t => ['Open', 'In Progress', 'Waiting for Parts'].includes(t.status))
-  const completedTickets = accountTickets.filter(t => t.status === 'Completed')
-
-  const handleCreate = () => {
-    if (onAddTicket) return onAddTicket()
-    // safer default route (adjust if your app uses a different path)
-    window.location.href = `/service-tickets/new?accountId=${accountId}&returnTo=account`
+  const handleAdd = () => {
+    if (onAddService) return onAddService()
+    window.location.href = `/service/new?accountId=${accountId}&returnTo=account`
   }
 
   return (
@@ -53,7 +44,7 @@ export function AccountServiceTicketsSection({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{accountTickets.length}</Badge>
+          <Badge variant="secondary">{tickets.length}</Badge>
           {onRemove && (
             <Button variant="ghost" size="sm" onClick={onRemove}>
               ×
@@ -63,43 +54,21 @@ export function AccountServiceTicketsSection({
       </CardHeader>
 
       <CardContent>
-        {accountTickets.length === 0 ? (
+        {tickets.length === 0 ? (
           <EmptyState
-            title="No service tickets found"
-            description="Create a service ticket for this account to track maintenance and repairs"
+            title="No tickets found"
+            description="Create a service ticket for this account"
             icon={<Wrench className="h-12 w-12" />}
-            action={{ label: 'Create Service Ticket', onClick: handleCreate }}
+            action={{ label: 'Create Ticket', onClick: handleAdd }}
           />
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-primary">{accountTickets.length}</p>
-                <p className="text-sm text-muted-foreground">Total Tickets</p>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-600">{openTickets.length}</p>
-                <p className="text-sm text-muted-foreground">Open</p>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{completedTickets.length}</p>
-                <p className="text-sm text-muted-foreground">Completed</p>
-              </div>
-            </div>
-
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Recent service activity</p>
-              {onAddTicket ? (
-                <Button size="sm" variant="outline" onClick={handleCreate}>
-                  <Plus className="h-4 w-4 mr-2" /> Create Ticket
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" asChild>
-                  <Link to={`/service-tickets/new?accountId=${accountId}&returnTo=account`}>
-                    <Plus className="h-4 w-4 mr-2" /> Create Ticket
-                  </Link>
-                </Button>
-              )}
+              <Button size="sm" variant="outline" onClick={handleAdd}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Ticket
+              </Button>
             </div>
 
             <div className="overflow-x-auto">
@@ -107,26 +76,22 @@ export function AccountServiceTicketsSection({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
-                    <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Scheduled</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {accountTickets.slice(0, 5).map((ticket) => (
-                    <TableRow key={ticket.id}>
+                  {tickets.slice(0, 5).map((t: any) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.title}</TableCell>
                       <TableCell>
-                        <Link to={`/service-tickets/${ticket.id}`} className="font-medium text-primary hover:underline">
-                          {ticket.title}
-                        </Link>
+                        <Badge variant="outline">{t.status}</Badge>
                       </TableCell>
-                      <TableCell><Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge></TableCell>
-                      <TableCell><Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge></TableCell>
-                      <TableCell>{ticket.assignedTechName || 'Unassigned'}</TableCell>
+                      <TableCell>{t.scheduledDate ? formatDate(t.scheduledDate) : '—'}</TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" asChild>
-                          <Link to={`/service-tickets/${ticket.id}`}>
+                          <Link to={`/service/${t.id}`}>
                             <ExternalLink className="h-3 w-3" />
                           </Link>
                         </Button>
@@ -137,12 +102,10 @@ export function AccountServiceTicketsSection({
               </Table>
             </div>
 
-            {accountTickets.length > 5 && (
+            {tickets.length > 5 && (
               <div className="text-center">
                 <Button variant="outline" size="sm" asChild>
-                  <Link to={`/service-tickets?accountId=${accountId}`}>
-                    View All {accountTickets.length} Tickets
-                  </Link>
+                  <Link to={`/service?accountId=${accountId}`}>View All {tickets.length} Tickets</Link>
                 </Button>
               </div>
             )}
@@ -152,3 +115,5 @@ export function AccountServiceTicketsSection({
     </Card>
   )
 }
+
+export default AccountServiceTicketsSection
