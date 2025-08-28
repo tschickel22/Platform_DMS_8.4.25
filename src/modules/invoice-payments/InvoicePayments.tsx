@@ -18,13 +18,11 @@ import {
   DollarSign,
   Calendar,
   Receipt,
+  CreditCard
 } from 'lucide-react'
 import { EntityChip } from '@/components/ui/entity-chip'
 import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
-import {
-  CreditCard
-} from 'lucide-react'
 import { useInvoiceManagement } from './hooks/useInvoiceManagement'
 import InvoiceForm from './components/InvoiceForm'
 import InvoiceDetail from './components/InvoiceDetail'

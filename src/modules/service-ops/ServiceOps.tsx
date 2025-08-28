@@ -30,8 +30,6 @@ import { ServiceTicket, ServiceStatus, Priority, Task, TaskModule, TaskPriority 
 import { formatDate, formatCurrency, formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { EntityChip } from '@/components/ui/entity-chip'
-import { useAccountManagement } from '@/modules/crm-accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
 import { useServiceManagement } from './hooks/useServiceManagement'
 import { useToast } from '@/hooks/use-toast'
 import { ServiceTicketForm } from './components/ServiceTicketForm'
