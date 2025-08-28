@@ -9,9 +9,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-import { TagInput } from '@/components/common/TagInput'
   SelectValue
 } from '@/components/ui/select'
+import { TagInput } from '@/components/common/TagInput'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, X } from 'lucide-react'
