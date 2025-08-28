@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -400,6 +400,9 @@ export default function AccountDetail() {
       {/* Contact Modal */}
       <Dialog open={openContact} onOpenChange={setOpenContact}>
         <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Add New Contact</DialogTitle>
+          </DialogHeader>
           <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
         </DialogContent>
       </Dialog>
@@ -407,6 +410,9 @@ export default function AccountDetail() {
       {/* Deal Modal */}
       <Dialog open={openDeal} onOpenChange={setOpenDeal}>
         <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create New Deal</DialogTitle>
+          </DialogHeader>
           <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
         </DialogContent>
       </Dialog>
@@ -421,6 +427,9 @@ export default function AccountDetail() {
       {/* Service Ticket Modal */}
       <Dialog open={openService} onOpenChange={setOpenService}>
         <DialogContent className="p-0 w-[95vw] max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create New Quote</DialogTitle>
+          </DialogHeader>
           <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
         </DialogContent>
       </Dialog>
