@@ -64,9 +64,22 @@ export const accountsMock = {
   getAccounts: (): Account[] => {
     try {
       const stored = localStorage.getItem('mockAccounts')
-      return stored ? JSON.parse(stored) : sampleAccounts
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // If stored data is empty or invalid, use sample data
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : sampleAccounts
+      }
+      // Initialize with sample data and save to localStorage
+      localStorage.setItem('mockAccounts', JSON.stringify(sampleAccounts))
+      return sampleAccounts
     } catch (error) {
       console.error('Error loading accounts from localStorage:', error)
+      // Fallback to sample data and try to save it
+      try {
+        localStorage.setItem('mockAccounts', JSON.stringify(sampleAccounts))
+      } catch (saveError) {
+        console.error('Error saving sample accounts:', saveError)
+      }
       return sampleAccounts
     }
   },

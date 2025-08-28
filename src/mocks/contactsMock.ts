@@ -104,9 +104,22 @@ export const contactsMock = {
   getContacts: (): Contact[] => {
     try {
       const stored = localStorage.getItem('mockContacts')
-      return stored ? JSON.parse(stored) : sampleContacts
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // If stored data is empty or invalid, use sample data
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : sampleContacts
+      }
+      // Initialize with sample data and save to localStorage
+      localStorage.setItem('mockContacts', JSON.stringify(sampleContacts))
+      return sampleContacts
     } catch (error) {
       console.error('Error loading contacts from localStorage:', error)
+      // Fallback to sample data and try to save it
+      try {
+        localStorage.setItem('mockContacts', JSON.stringify(sampleContacts))
+      } catch (saveError) {
+        console.error('Error saving sample contacts:', saveError)
+      }
       return sampleContacts
     }
   },

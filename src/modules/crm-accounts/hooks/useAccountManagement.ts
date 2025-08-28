@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import accountsMock from '@/mocks/accountsMock'
 import type { Account } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -34,7 +34,9 @@ export function useAccountManagement() {
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    try {
+        // Ensure mock data is seeded first
+        const loadedAccounts = accountsMock.getAccounts()
+        console.log('Loaded accounts:', loadedAccounts) // Debug log
       const data = safeParse<Account[]>(localStorage.getItem(LS_KEY), [])
       setAccounts(Array.isArray(data) ? data : [])
       setLoading(false)
