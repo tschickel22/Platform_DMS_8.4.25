@@ -9,7 +9,7 @@ import { DollarSign, Plus, ExternalLink, GripVertical } from 'lucide-react'
 import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-interface AccountDealsSectionProps {
+export interface AccountDealsSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
@@ -26,13 +26,17 @@ export function AccountDealsSection({
   const accountDeals = mockCrmSalesDeal.sampleDeals.filter((deal) => deal.accountId === accountId)
 
   const getStageColor = (stage: string) =>
-    mockCrmSalesDeal.stageColors[stage] || 'bg-gray-100 text-gray-800'
+    (mockCrmSalesDeal.stageColors && mockCrmSalesDeal.stageColors[stage]) || 'bg-gray-100 text-gray-800'
 
   const totalValue = accountDeals.reduce((sum, deal) => sum + deal.amount, 0)
   const activeDeals = accountDeals.filter((deal) => !['Closed Won', 'Closed Lost'].includes(deal.stage))
 
   const handleAdd = () => {
-    if (onAddDeal) return onAddDeal()
+    if (onAddDeal) {
+      onAddDeal()
+      return
+    }
+    // Fallback: hard route if no modal handler provided
     window.location.href = `/deals/new?accountId=${accountId}&returnTo=account`
   }
 
@@ -87,19 +91,11 @@ export function AccountDealsSection({
 
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Recent deals and opportunities</p>
-              {onAddDeal ? (
-                <Button size="sm" variant="outline" onClick={handleAdd}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Deal
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" asChild>
-                  <Link to={`/deals/new?accountId=${accountId}&returnTo=account`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Deal
-                  </Link>
-                </Button>
-              )}
+              {/* Always use the click handler so modal is used when provided */}
+              <Button size="sm" variant="outline" onClick={handleAdd}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Deal
+              </Button>
             </div>
 
             <div className="overflow-x-auto">
@@ -152,3 +148,5 @@ export function AccountDealsSection({
     </Card>
   )
 }
+
+export default AccountDealsSection
