@@ -338,26 +338,6 @@ function InvoicesList() {
   )
 }
 
-function InvoiceDetail() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Invoice Detail</h1>
-        <p className="text-muted-foreground">
-          View and manage invoice details
-        </p>
-      </div>
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-12 text-muted-foreground">
-            <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p>Invoice detail view coming soon</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
 
 function PaymentHistoryView() {
   return (
