@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,7 +18,7 @@ import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
 import { TagSelector } from '@/modules/tagging-engine'
 import { TagType } from '@/modules/tagging-engine/types'
 
-interface DealFormProps {
+interface DealFormProps extends ReturnToBehavior {
   deal?: Deal
   customers: any[] // Using existing customer data
   salesReps: any[] // Using existing sales rep data
@@ -27,12 +28,14 @@ interface DealFormProps {
   onCancel: () => void
 }
 
-export function DealForm({ deal, customers, salesReps, territories, products, onSave, onCancel }: DealFormProps) {
+export default function DealForm(props: DealFormProps) {
+  const { dealId } = props
+  const { accountId: returnAccountId, afterSave } = useReturnTargets(props)
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<Deal>>({
     name: '',
-    customerId: '',
+    customerId: returnAccountId ?? '',
     customerName: '',
     stage: DealStage.PROSPECTING,
     status: DealStatus.ACTIVE,
@@ -126,7 +129,7 @@ export function DealForm({ deal, customers, salesReps, territories, products, on
       toast({
         title: 'Success',
         description: `Deal ${deal ? 'updated' : 'created'} successfully`,
-      })
+      afterSave(saved, '/deals')
     } catch (error) {
       toast({
         title: 'Error',
