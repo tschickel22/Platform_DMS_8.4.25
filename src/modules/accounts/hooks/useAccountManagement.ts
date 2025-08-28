@@ -1,25 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Account, AccountType, Contact } from '@/types/index'
+import { useState, useEffect } from 'react'
+import { Account, AccountType } from '@/types'
 import { mockAccounts } from '@/mocks/accountsMock'
-import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/utils'
-
-const LS_KEY = 'renter-insight-accounts'
+import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 
 export function useAccountManagement() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  // --- load on mount
+  // Load accounts from localStorage on mount
   useEffect(() => {
     try {
-      const saved = loadFromLocalStorage<Account[]>(LS_KEY, [])
-      if (saved && saved.length) {
-        setAccounts(saved)
-      } else {
-        setAccounts(mockAccounts.sampleAccounts)
-        saveToLocalStorage(LS_KEY, mockAccounts.sampleAccounts)
-      }
+      const savedAccounts = loadFromLocalStorage<Account[]>('accounts', mockAccounts.sampleAccounts)
+      setAccounts(savedAccounts)
     } catch (err) {
       console.error('Error loading accounts:', err)
       setError('Failed to load accounts')
@@ -29,28 +24,121 @@ export function useAccountManagement() {
     }
   }, [])
 
-  // --- persist on change
+  // Save accounts to localStorage whenever accounts change
   useEffect(() => {
-    if (accounts.length > 0) saveToLocalStorage(LS_KEY, accounts)
-  }, [accounts])
+    if (!loading) {
+      saveToLocalStorage('accounts', accounts)
+    }
+  }, [accounts, loading])
 
-  // --- metrics
-  const metrics = useMemo(() => {
+  const createAccount = async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>): Promise<Account> => {
+    try {
+      const newAccount: Account = {
+        ...accountData,
+        id: `acc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      setAccounts(prev => [newAccount, ...prev])
+      
+      toast({
+        title: 'Success',
+        description: 'Account created successfully'
+      })
+
+      return newAccount
+    } catch (error) {
+      console.error('Error creating account:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to create account',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const updateAccount = async (accountId: string, updates: Partial<Account>): Promise<Account | null> => {
+    try {
+      const updatedAccounts = accounts.map(account =>
+        account.id === accountId
+          ? { ...account, ...updates, updatedAt: new Date() }
+          : account
+      )
+
+      setAccounts(updatedAccounts)
+      
+      const updatedAccount = updatedAccounts.find(a => a.id === accountId)
+      
+      toast({
+        title: 'Success',
+        description: 'Account updated successfully'
+      })
+
+      return updatedAccount || null
+    } catch (error) {
+      console.error('Error updating account:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update account',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const deleteAccount = async (accountId: string): Promise<void> => {
+    try {
+      setAccounts(prev => prev.filter(account => account.id !== accountId))
+      
+      toast({
+        title: 'Success',
+        description: 'Account deleted successfully'
+      })
+    } catch (error) {
+      console.error('Error deleting account:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete account',
+        variant: 'destructive'
+      })
+      throw error
+    }
+  }
+
+  const getAccount = (accountId: string): Account | undefined => {
+    return accounts.find(account => account.id === accountId)
+  }
+
+  const searchAccounts = (searchTerm: string): Account[] => {
+    if (!searchTerm.trim()) return accounts
+    
+    const term = searchTerm.toLowerCase()
+    return accounts.filter(account =>
+      account.name.toLowerCase().includes(term) ||
+      account.email?.toLowerCase().includes(term) ||
+      account.phone?.includes(term) ||
+      account.industry?.toLowerCase().includes(term) ||
+      account.tags.some(tag => tag.toLowerCase().includes(term))
+    )
+  }
+
+  const filterAccountsByType = (type: AccountType): Account[] => {
+    return accounts.filter(account => account.type === type)
+  }
+
+  const getAccountStats = () => {
     const totalAccounts = accounts.length
-    const customerAccounts = accounts.filter(a => a.type === AccountType.CUSTOMER).length
-    const prospectAccounts = accounts.filter(a => a.type === AccountType.PROSPECT).length
-    const vendorAccounts = accounts.filter(a => a.type === AccountType.VENDOR).length
-    const partnerAccounts = accounts.filter(a => a.type === AccountType.PARTNER).length
+    const customerAccounts = accounts.filter(acc => acc.type === AccountType.CUSTOMER).length
+    const prospectAccounts = accounts.filter(acc => acc.type === AccountType.PROSPECT).length
+    const vendorAccounts = accounts.filter(acc => acc.type === AccountType.VENDOR).length
+    const partnerAccounts = accounts.filter(acc => acc.type === AccountType.PARTNER).length
 
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    const newThisMonth = accounts.filter(a => new Date(a.createdAt) >= startOfMonth).length
-
-    const accountsByIndustry = accounts.reduce<Record<string, number>>((acc, a) => {
-      const key = a.industry || 'Unspecified'
-      acc[key] = (acc[key] || 0) + 1
-      return acc
-    }, {})
+    // Calculate new accounts this month
+    const thisMonth = new Date()
+    thisMonth.setDate(1)
+    const newThisMonth = accounts.filter(acc => new Date(acc.createdAt) >= thisMonth).length
 
     return {
       totalAccounts,
@@ -58,42 +146,7 @@ export function useAccountManagement() {
       prospectAccounts,
       vendorAccounts,
       partnerAccounts,
-      newThisMonth,
-      accountsByIndustry,
-    }
-  }, [accounts])
-
-  // --- CRUD
-  const createAccount = async (data: Partial<Account>): Promise<Account> => {
-    setLoading(true)
-    try {
-      const newAccount: Account = {
-        id: `acc-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        name: data.name || '',
-        type: data.type || AccountType.PROSPECT,
-        industry: data.industry || '',
-        website: data.website || '',
-        phone: data.phone || '',
-        email: data.email || '',
-        address: data.address || {
-          street: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          country: 'USA',
-        },
-        notes: data.notes || '',
-        tags: data.tags || [],
-        customFields: data.customFields || {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: 'current-user',
-        updatedBy: 'current-user',
-      }
-      setAccounts(prev => [newAccount, ...prev])
-      return newAccount
-    } finally {
-      setLoading(false)
+      newThisMonth
     }
   }
 
@@ -101,101 +154,17 @@ export function useAccountManagement() {
     return mockAccounts.accountTypes.find(t => t.value === type)?.label || type
   }
 
-  const updateAccount = async (accountId: string, updates: Partial<Account>): Promise<Account | null> => {
-    const current = accounts.find(a => a.id === accountId)
-    if (!current) return null
-
-    const updated: Account = { ...current, ...updates, updatedAt: new Date(), updatedBy: 'current-user' }
-    setAccounts(prev => prev.map(a => (a.id === accountId ? updated : a)))
-    return updated
-  }
-
-  const deleteAccount = async (accountId: string): Promise<void> => {
-    setAccounts(prev => prev.filter(a => a.id !== accountId))
-  }
-
-  // --- getters / filters
-  const getAccount = (accountId: string): Account | null =>
-    accounts.find(a => a.id === accountId) || null
-
-  // alias used by other screens
-  const getAccountById = (accountId: string): Account | null => getAccount(accountId)
-
-  const filterAccounts = (filters: {
-    type?: AccountType
-    industry?: string
-    tags?: string[]
-    searchTerm?: string
-  }): Account[] =>
-    accounts.filter(account => {
-      if (filters.type && account.type !== filters.type) return false
-      if (filters.industry && account.industry !== filters.industry) return false
-      if (filters.tags?.length && !filters.tags.some(t => account.tags.includes(t))) return false
-
-      if (filters.searchTerm) {
-        const term = filters.searchTerm.toLowerCase()
-        const match =
-          account.name.toLowerCase().includes(term) ||
-          account.email?.toLowerCase().includes(term) ||
-          account.phone?.includes(term) ||
-          account.industry?.toLowerCase().includes(term) ||
-          account.tags.some(t => t.toLowerCase().includes(term))
-        if (!match) return false
-      }
-      return true
-    })
-
-  const getAccountsByType = (type: AccountType): Account[] =>
-    accounts.filter(a => a.type === type)
-
-  const getAllTags = (): string[] => [...new Set(accounts.flatMap(a => a.tags))].sort()
-
-  const getAllIndustries = (): string[] =>
-    [...new Set(accounts.map(a => a.industry).filter(Boolean) as string[])].sort()
-
-  // Label helper needed by AccountList
-  const getAccountTypeLabel = (type: AccountType | string): string => {
-    // Prefer labels from mock config if available
-    const opt = mockAccounts?.accountTypes?.find((o: any) => o.value === type)
-    if (opt?.label) return opt.label
-
-    // Fallback mapping
-    const fallback: Record<string, string> = {
-      [AccountType.CUSTOMER]: 'Customer',
-      [AccountType.PROSPECT]: 'Prospect',
-      [AccountType.VENDOR]: 'Vendor',
-      [AccountType.PARTNER]: 'Partner',
-    }
-    return fallback[type as string] || String(type)
-  }
-
-  // Placeholder until wired to contacts hook / API
-  const getContactsForAccount = (_accountId: string): Contact[] => []
-
   return {
-    // state
     accounts,
     loading,
     error,
-    metrics,
-
-    // CRUD
     createAccount,
+    updateAccount,
+    deleteAccount,
+    getAccount,
+    searchAccounts,
+    filterAccountsByType,
     getAccountStats,
     getAccountTypeLabel
-    deleteAccount,
-
-    // getters / filters
-    getAccount,
-    getAccountById,
-    getContactsForAccount,
-    filterAccounts,
-    getAccountsByType,
-    getAllTags,
-    getAllIndustries,
-    getAccountTypeLabel, // <-- added
   }
 }
-
-
-export { useAccountManagement }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -6,28 +6,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, FileText, Plus, Trash2 } from 'lucide-react'
-import { useQuoteManagement } from '../hooks/useQuoteManagement'
-import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { Quote } from '@/types'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { TagInput } from '@/components/common/TagInput'
-import mockQuoteBuilder from '@/mocks/quoteBuilderMock'
 import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
+import { mockInventory } from '@/mocks/inventoryMock'
+import { mockAccounts } from '@/mocks/accountsMock'
+import { mockContacts } from '@/mocks/contactsMock'
+import { formatCurrency, generateId, saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
+import { Plus, Trash2, Calculator } from 'lucide-react'
 
-interface QuoteFormState {
+interface QuoteFormData {
   accountId: string
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  vehicleInfo: string
-  items: QuoteItemState[]
+  contactId: string
+  vehicleId: string
+  items: QuoteItem[]
   notes: string
-  tags: string[]
   validUntil: string
+  terms: string
 }
 
-interface QuoteItemState {
+interface QuoteItem {
   id: string
   description: string
   quantity: number
@@ -35,36 +33,42 @@ interface QuoteItemState {
   total: number
 }
 
+interface Quote {
+  id: string
+  number: string
+  accountId: string
+  contactId: string
+  vehicleId: string
+  items: QuoteItem[]
+  subtotal: number
+  tax: number
+  total: number
+  status: string
+  validUntil: string
+  terms: string
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
 type Props = ReturnToBehavior & {
   quoteId?: string
-  onClose?: () => void
-  onSuccess?: (quote: Quote) => void
 }
 
 export default function NewQuoteForm(props: Props) {
   const navigate = useNavigate()
-  const { accountId, afterSave } = useReturnTargets(props)
   const { toast } = useToast()
-  
-  const { 
-    quotes, 
-    createQuote, 
-    loading: quotesLoading 
-  } = useQuoteManagement()
-  
-  const { accounts } = useAccountManagement()
-  
+  const { accountId, afterSave } = useReturnTargets(props)
+  const isEditing = !!props.quoteId
+
   const [loading, setLoading] = useState(false)
-  
-  const [formData, setFormData] = useState<QuoteFormState>({
+  const [formData, setFormData] = useState<QuoteFormData>({
     accountId: accountId || '',
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    vehicleInfo: '',
+    contactId: '',
+    vehicleId: '',
     items: [
       {
-        id: '1',
+        id: generateId(),
         description: '',
         quantity: 1,
         unitPrice: 0,
@@ -72,97 +76,113 @@ export default function NewQuoteForm(props: Props) {
       }
     ],
     notes: '',
-    tags: [],
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days from now
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    terms: 'Standard terms and conditions apply. Quote valid for 30 days.'
   })
 
-  // Pre-fill customer info if account is selected
-  useEffect(() => {
-    if (formData.accountId) {
-      const account = accounts.find(a => a.id === formData.accountId)
-      if (account) {
-        setFormData(prev => ({
-          ...prev,
-          customerName: account.name,
-          customerEmail: account.email || '',
-          customerPhone: account.phone || ''
-        }))
-      }
-    }
-  }, [formData.accountId, accounts])
+  // Get account and contact data for dropdowns
+  const accounts = mockAccounts.sampleAccounts
+  const contacts = mockContacts.sampleContacts.filter(c => 
+    !formData.accountId || c.accountId === formData.accountId
+  )
+  const vehicles = mockInventory.sampleVehicles
+
+  // Get selected account for auto-fill
+  const selectedAccount = accounts.find(a => a.id === formData.accountId)
+
+  const updateFormData = (field: keyof QuoteFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
 
   const addItem = () => {
-    const newItem: QuoteItemState = {
-      id: Date.now().toString(),
+    const newItem: QuoteItem = {
+      id: generateId(),
       description: '',
       quantity: 1,
       unitPrice: 0,
       total: 0
     }
-    setFormData({ ...formData, items: [...formData.items, newItem] })
+    updateFormData('items', [...formData.items, newItem])
+  }
+
+  const updateItem = (itemId: string, field: keyof QuoteItem, value: any) => {
+    const updatedItems = formData.items.map(item => {
+      if (item.id === itemId) {
+        const updatedItem = { ...item, [field]: value }
+        // Recalculate total when quantity or unit price changes
+        if (field === 'quantity' || field === 'unitPrice') {
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice
+        }
+        return updatedItem
+      }
+      return item
+    })
+    updateFormData('items', updatedItems)
   }
 
   const removeItem = (itemId: string) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter(item => item.id !== itemId)
-    })
+    if (formData.items.length > 1) {
+      updateFormData('items', formData.items.filter(item => item.id !== itemId))
+    }
   }
 
-  const updateItem = (itemId: string, updates: Partial<QuoteItemState>) => {
-    setFormData({
-      ...formData,
-      items: formData.items.map(item =>
-        item.id === itemId
-          ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
-          : item
-      )
-    })
-  }
-
-  const calculateSubtotal = () => {
-    return formData.items.reduce((sum, item) => sum + item.total, 0)
-  }
-
-  const calculateTax = (subtotal: number) => {
-    return subtotal * 0.08 // 8% tax rate
-  }
-
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal()
-    const tax = calculateTax(subtotal)
-    return subtotal + tax
-  }
+  // Calculate totals
+  const subtotal = formData.items.reduce((sum, item) => sum + item.total, 0)
+  const taxRate = 0.08 // 8% tax
+  const tax = subtotal * taxRate
+  const total = subtotal + tax
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
+
     try {
-      const quoteData = {
-        ...formData,
-        subtotal: calculateSubtotal(),
-        tax: calculateTax(calculateSubtotal()),
-        total: calculateTotal(),
-        status: 'draft' as const
+      // Validation
+      if (!formData.accountId) {
+        throw new Error('Account is required')
       }
-      
-      const savedQuote = await createQuote(quoteData)
-      
+
+      if (formData.items.length === 0 || formData.items.every(item => !item.description.trim())) {
+        throw new Error('At least one quote item is required')
+      }
+
+      // Create quote object
+      const newQuote: Quote = {
+        id: generateId(),
+        number: `Q-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+        accountId: formData.accountId,
+        contactId: formData.contactId,
+        vehicleId: formData.vehicleId,
+        items: formData.items.filter(item => item.description.trim()),
+        subtotal,
+        tax,
+        total,
+        status: 'draft',
+        validUntil: formData.validUntil,
+        terms: formData.terms,
+        notes: formData.notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      // Save to localStorage (in real app, this would be an API call)
+      const existingQuotes = loadFromLocalStorage<Quote[]>('quotes', [])
+      const updatedQuotes = [newQuote, ...existingQuotes]
+      saveToLocalStorage('quotes', updatedQuotes)
+
       toast({
         title: 'Success',
-        description: 'Quote created successfully'
+        description: `Quote ${newQuote.number} created successfully`,
       })
-      
-      if (props.onSuccess) {
-        props.onSuccess(savedQuote)
-      }
-      
-      afterSave(savedQuote, '/quotes')
+
+      // Use afterSave for navigation/modal handling
+      afterSave(newQuote, '/quotes')
+
     } catch (error) {
+      console.error('Error creating quote:', error)
       toast({
         title: 'Error',
-        description: 'Failed to create quote',
+        description: error instanceof Error ? error.message : 'Failed to create quote',
         variant: 'destructive'
       })
     } finally {
@@ -170,69 +190,47 @@ export default function NewQuoteForm(props: Props) {
     }
   }
 
-  const handleCancel = () => {
-    if (props.onSaved) {
-      props.onSaved(null) // Close modal without saving
-    } else if (props.onClose) {
-      props.onClose()
-    } else {
-      navigate('/quotes')
-    }
-  }
+  const isModal = !!props.onSaved
 
   return (
-    <div className="space-y-6 p-6">
-      {!props.onSaved && !props.onClose && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" onClick={handleCancel}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Quotes
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">New Quote</h1>
-              <p className="text-muted-foreground">
-                Create a new quote for a customer
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {(props.onSaved || props.onClose) && (
-        <div className="border-b pb-4">
-          <h2 className="text-xl font-semibold">New Quote</h2>
-          <p className="text-sm text-muted-foreground">
-            Create a new quote for a customer
-          </p>
+    <div className={isModal ? 'p-6' : ''}>
+      {!isModal && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Create New Quote</h1>
+          <p className="text-muted-foreground">Generate a quote for products or services</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {isModal && (
+          <div className="border-b pb-4 mb-6">
+            <h2 className="text-xl font-semibold">Create New Quote</h2>
+            <p className="text-sm text-muted-foreground">Generate a quote for products or services</p>
+          </div>
+        )}
+
+        {/* Quote Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Quote Information
-            </CardTitle>
-            <CardDescription>
-              Customer and quote details
-            </CardDescription>
+            <CardTitle>Quote Information</CardTitle>
+            <CardDescription>Basic quote details and customer information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="accountId">Account</Label>
+                <Label htmlFor="accountId">Account *</Label>
                 <Select
                   value={formData.accountId}
-                  onValueChange={(value) => setFormData({ ...formData, accountId: value })}
-                  disabled={!!accountId} // Disable if pre-filled from account context
+                  onValueChange={(value) => {
+                    updateFormData('accountId', value)
+                    updateFormData('contactId', '') // Reset contact when account changes
+                  }}
+                  disabled={!!accountId} // Auto-filled from account
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Account</SelectItem>
                     {accounts.map((account) => (
                       <SelectItem key={account.id} value={account.id}>
                         {account.name}
@@ -241,35 +239,195 @@ export default function NewQuoteForm(props: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label htmlFor="customerName">Customer Name *</Label>
+                <Label htmlFor="contactId">Contact</Label>
+                <Select
+                  value={formData.contactId}
+                  onValueChange={(value) => updateFormData('contactId', value)}
+                  disabled={!formData.accountId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.firstName} {contact.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="vehicleId">Vehicle/Product</Label>
+                <Select
+                  value={formData.vehicleId}
+                  onValueChange={(value) => updateFormData('vehicleId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="validUntil">Valid Until *</Label>
                 <Input
-                  id="customerName"
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                  id="validUntil"
+                  type="date"
+                  value={formData.validUntil}
+                  onChange={(e) => updateFormData('validUntil', e.target.value)}
                   required
-                  disabled={!!accountId} // Auto-filled from account
                 />
               </div>
-              
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quote Items */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="customerEmail">Customer Email</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                  disabled={!!accountId} // Auto-filled from account
-                />
+                <CardTitle>Quote Items</CardTitle>
+                <CardDescription>Products and services included in this quote</CardDescription>
               </div>
-              
-              <div>
-                <Label htmlFor="customerPhone">Customer Phone</Label>
-                <Input
-                  id="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                  disabled={!!accountId} // Auto-filled from account
-                />
+              <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {formData.items.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 border rounded-lg">
+                  <div className="md:col-span-5">
+                    <Label htmlFor={`description-${item.id}`}>Description *</Label>
+                    <Input
+                      id={`description-${item.id}`}
+                      value={item.description}
+                      onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                      placeholder="Item description"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
+                    <Input
+                      id={`quantity-${item.id}`}
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`unitPrice-${item.id}`}>Unit Price *</Label>
+                    <Input
+                      id={`unitPrice-${item.id}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unitPrice}
+                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Total</Label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
+                      {formatCurrency(item.total)}
+                    </div>
+                  </div>
+                  <div className="md:col-span-1 flex items-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(item.id)}
+                      disabled={formData.items.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quote Totals */}
+            <div className="mt-6 space-y-2 border-t pt-4">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span>Tax (8%):</span>
+                <span>{formatCurrency(tax)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-semibold border-t pt-2">
+                <span>Total:</span>
+                <span>{formatCurrency(total)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Terms and Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Terms and Notes</CardTitle>
+            <CardDescription>Additional terms and internal notes</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="terms">Terms and Conditions</Label>
+              <Textarea
+                id="terms"
+                value={formData.terms}
+                onChange={(e) => updateFormData('terms', e.target.value)}
+                placeholder="Enter terms and conditions"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Internal Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => updateFormData('notes', e.target.value)}
+                placeholder="Internal notes (not visible to customer)"
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form Actions */}
+        <div className="flex items-center justify-end space-x-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => afterSave(null, '/quotes')}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Creating...' : 'Create Quote'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
