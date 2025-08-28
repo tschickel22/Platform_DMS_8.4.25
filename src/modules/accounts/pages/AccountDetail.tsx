@@ -21,7 +21,7 @@ import DealForm from '@/modules/crm-sales-deal/components/DealForm'
 import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
-import WarrantyClaimForm from '@/modules/warranty-mgmt/components/WarrantyClaimForm' // ⬅️ NEW
+import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
