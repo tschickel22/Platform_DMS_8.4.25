@@ -137,7 +137,7 @@ export function RelatedRecordsPanel({
     { id: 'service', label: 'Service', icon: Wrench, count: serviceTickets.length },
     { id: 'invoices', label: 'Invoices', icon: Receipt, count: invoices.length },
     { id: 'loans', label: 'Loans', icon: DollarSign, count: loans.length },
-    { id: 'tasks', label: 'Tasks', icon: Calendar, count: tasks.length }
+    { id: 'tasks', label: 'Tasks', icon: ListTodo, count: tasks.length }
   ]
 
   return (

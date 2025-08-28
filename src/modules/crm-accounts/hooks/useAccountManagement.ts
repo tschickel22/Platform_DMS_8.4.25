@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { Account, Note } from '@/types'
 import accountsMock from '@/mocks/accountsMock'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/hooks/use-toast'
 
 export function useAccountManagement() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
   const { user } = useAuth()
 
   const fetchAccounts = useCallback(() => {
@@ -45,6 +47,10 @@ export function useAccountManagement() {
   }, [])
 
   const updateAccount = useCallback((id: string, updates: Partial<Account>): Account | undefined => {
+      toast({
+        title: 'Account Created',
+        description: `${newAccount.name} has been created successfully.`
+      })
     try {
       const updatedAccount = accountsMock.updateAccount(id, updates)
       if (updatedAccount) {
@@ -71,11 +77,20 @@ export function useAccountManagement() {
       }
       setError('Account not found for deletion.')
       return false
+        toast({
+          title: 'Account Updated',
+          description: 'Account has been updated successfully.'
+        })
     } catch (err) {
       console.error('Failed to delete account:', err)
       setError('Failed to delete account.')
       return false
     }
+      toast({
+        title: 'Error',
+        description: 'Failed to update account.',
+        variant: 'destructive'
+      })
   }, [])
 
   const addNoteToAccount = useCallback((accountId: string, content: string): Note | undefined => {
@@ -85,11 +100,20 @@ export function useAccountManagement() {
       if (updatedAccount) {
         setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc))
         setError(null)
+        toast({
+          title: 'Account Deleted',
+          description: 'Account has been deleted successfully.'
+        })
         return updatedAccount.notes[updatedAccount.notes.length - 1]
       }
       setError('Account not found to add note.')
       return undefined
     } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete account.',
+        variant: 'destructive'
+      })
       console.error('Failed to add note to account:', err)
       setError('Failed to add note.')
       return undefined
@@ -140,6 +164,11 @@ export function useAccountManagement() {
     updateAccount,
     deleteAccount,
     addNoteToAccount,
+      toast({
+        title: 'Error',
+        description: 'Failed to create account.',
+        variant: 'destructive'
+      })
     updateNoteInAccount,
     deleteNoteFromAccount
   }
