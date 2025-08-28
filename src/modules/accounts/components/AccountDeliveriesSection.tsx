@@ -1,3 +1,4 @@
+// src/modules/accounts/components/AccountDeliveriesSection.tsx
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,13 +17,7 @@ type Delivery = {
   status: string
   scheduledDate: string | Date
   deliveredDate?: string | Date
-  address: {
-    street: string
-    city: string
-    state: string
-    zipCode: string
-    country?: string
-  }
+  address: { street: string; city: string; state: string; zipCode: string; country?: string }
   notes?: string
 }
 
@@ -30,7 +25,6 @@ interface AccountDeliveriesSectionProps {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** Clicking "Schedule Delivery" should open the modal in AccountDetail */
   onAddDelivery?: () => void
 }
 
@@ -40,14 +34,16 @@ export function AccountDeliveriesSection({
   isDragging,
   onAddDelivery,
 }: AccountDeliveriesSectionProps) {
-  // pull persisted deliveries (AccountDetail saves to this key)
   const all = loadFromLocalStorage<Delivery[]>('deliveries', [])
   const deliveries = (all || []).filter(d => d.accountId === accountId)
 
   const handleAdd = () => {
-    if (onAddDelivery) return onAddDelivery()
-    // fallback route if modal isn’t wired
-    window.location.href = `/delivery/list?accountId=${accountId}&returnTo=account`
+    if (onAddDelivery) {
+      onAddDelivery()
+    } else {
+      // fallback route if modal wiring is missing
+      window.location.href = `/delivery/list?accountId=${accountId}&returnTo=account`
+    }
   }
 
   return (
@@ -60,11 +56,15 @@ export function AccountDeliveriesSection({
               <Truck className="h-5 w-5 mr-2" />
               Deliveries
             </CardTitle>
-            <CardDescription>Recent deliveries and scheduling</CardDescription>
+            <CardDescription>Delivery records and scheduling</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary">{deliveries.length}</Badge>
+          <Button variant="outline" size="sm" onClick={handleAdd}>
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule Delivery
+          </Button>
           {onRemove && (
             <Button variant="ghost" size="sm" onClick={onRemove}>
               ×
@@ -83,14 +83,6 @@ export function AccountDeliveriesSection({
           />
         ) : (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Recent deliveries</p>
-              <Button size="sm" variant="outline" onClick={handleAdd}>
-                <Plus className="h-4 w-4 mr-2" />
-                Schedule Delivery
-              </Button>
-            </div>
-
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -107,9 +99,7 @@ export function AccountDeliveriesSection({
                   {deliveries.slice(0, 5).map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="font-medium">#{d.id}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{d.status.replace('_', ' ')}</Badge>
-                      </TableCell>
+                      <TableCell><Badge variant="outline">{d.status.replace('_', ' ')}</Badge></TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
@@ -139,14 +129,6 @@ export function AccountDeliveriesSection({
                 </TableBody>
               </Table>
             </div>
-
-            {deliveries.length > 5 && (
-              <div className="text-center">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/delivery/list?accountId=${accountId}`}>View All {deliveries.length} Deliveries</Link>
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </CardContent>
