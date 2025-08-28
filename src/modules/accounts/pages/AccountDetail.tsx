@@ -1,22 +1,24 @@
 import React from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Account } from '@/types/index'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Building, 
-  Globe, 
-  Mail, 
-  Phone, 
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  ArrowLeft,
+  Edit,
+  Building,
+  Globe,
+  Mail,
+  Phone,
   MapPin,
   User,
   Plus
 } from 'lucide-react'
-import { useAccountManagement } from '../hooks/useAccountManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
-import AccountForm from '@/modules/accounts/components/AccountForm'
+import { mockAccounts } from '@/mocks/accountsMock' // <- required for type badge
+
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
   const navigate = useNavigate()
@@ -60,9 +62,7 @@ export default function AccountDetail() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="ri-page-title">{account.name}</h1>
-                <Badge className={typeConfig?.color}>
-                  {typeConfig?.label}
-                </Badge>
+                <Badge className={typeConfig?.color}>{typeConfig?.label}</Badge>
               </div>
               <p className="ri-page-description">
                 {account.industry && `${account.industry} • `}
@@ -95,9 +95,9 @@ export default function AccountDetail() {
                 {account.website && (
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={account.website} 
-                      target="_blank" 
+                    <a
+                      href={account.website}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline"
                     >
@@ -109,10 +109,7 @@ export default function AccountDetail() {
                 {account.email && (
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={`mailto:${account.email}`}
-                      className="text-primary hover:underline"
-                    >
+                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
                       {account.email}
                     </a>
                   </div>
@@ -121,10 +118,7 @@ export default function AccountDetail() {
                 {account.phone && (
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={`tel:${account.phone}`}
-                      className="text-primary hover:underline"
-                    >
+                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
                       {account.phone}
                     </a>
                   </div>
@@ -146,7 +140,7 @@ export default function AccountDetail() {
                 )}
               </div>
 
-              {account.tags.length > 0 && (
+              {account.tags && account.tags.length > 0 && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Tags</Label>
                   <div className="flex flex-wrap gap-2">
@@ -185,9 +179,7 @@ export default function AccountDetail() {
                   </Link>
                 </Button>
               </div>
-              <CardDescription>
-                People associated with this account
-              </CardDescription>
+              <CardDescription>People associated with this account</CardDescription>
             </CardHeader>
             <CardContent>
               {accountContacts.length > 0 ? (
