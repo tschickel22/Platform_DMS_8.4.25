@@ -1,4 +1,3 @@
-// src/modules/accounts/pages/AccountDetail.tsx
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
@@ -15,25 +14,27 @@ import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagem
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
-import { saveToLocalStorage, loadFromLocalStorage, generateId, formatCurrency } from '@/lib/utils'
+import { saveToLocalStorage, loadFromLocalStorage, generateId } from '@/lib/utils'
 
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
 import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
+import WarrantyClaimForm from '@/modules/warranty-mgmt/components/WarrantyClaimForm' // ⬅️ NEW
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
 
-// Existing static sections (kept so everything works today)
+// Existing static sections
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
 import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
 import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
+import { AccountWarrantySection } from '@/modules/accounts/components/AccountWarrantySection' // ⬅️ NEW
 
 // ---------- Types ----------
 type SectionType =
@@ -55,17 +56,13 @@ interface AccountSectionDescriptor {
   title: string
   description: string
   component: React.ComponentType<any>
-  /** lower shows earlier; default 100 */
   sort?: number
-  /** default true */
   defaultVisible?: boolean
 }
 
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
-// Any module can register a section by exporting a default descriptor from:
-//   src/modules/<module>/account-section.tsx  (or .ts)
 const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
   string,
   { default?: AccountSectionDescriptor }
@@ -80,7 +77,7 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
     defaultVisible: d?.defaultVisible ?? true,
   })) as AccountSection[]
 
-// Static “core” sections that always exist today
+// Static “core” sections
 const coreSections: AccountSection[] = [
   {
     id: 'contacts',
@@ -127,6 +124,16 @@ const coreSections: AccountSection[] = [
     sort: 50,
     defaultVisible: true,
   },
+  // Warranty can also come from dynamic registry; this keeps the layout predictable
+  {
+    id: 'warranty',
+    type: 'warranty',
+    title: 'Warranty',
+    description: 'Warranty registrations and coverage',
+    component: AccountWarrantySection,
+    sort: 60,
+    defaultVisible: true,
+  },
   {
     id: 'notes',
     type: 'notes',
@@ -138,7 +145,6 @@ const coreSections: AccountSection[] = [
   },
 ]
 
-// Merge dynamic + core (no duplicates by type; dynamic can override titles/desc if same type exists)
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
   const byType = new Map<SectionType, AccountSection>()
   for (const s of core) byType.set(s.type, s)
@@ -157,7 +163,6 @@ export default function AccountDetail() {
 
   const [account, setAccount] = useState<any>(null)
 
-  // Build default layout from currently-available sections (respecting defaultVisible)
   const defaultLayout = useMemo(
     () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
     []
@@ -171,6 +176,7 @@ export default function AccountDetail() {
   const [openQuote, setOpenQuote] = useState(false)
   const [openService, setOpenService] = useState(false)
   const [openDelivery, setOpenDelivery] = useState(false)
+  const [openWarranty, setOpenWarranty] = useState(false) // ⬅️ NEW
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -271,7 +277,19 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Delivery saved successfully' })
   }
 
-  // Generic fallback “create route” if a dynamic section asks for it and you don’t wire a modal
+  // Warranty (demo persistence to localStorage) ⬅️ NEW
+  const handleWarrantySaved = (claim: any | null) => {
+    setOpenWarranty(false)
+    if (!claim) return
+    const existing = loadFromLocalStorage<any[]>('warranties', [])
+    const withId = claim.id ? claim : { ...claim, id: generateId() }
+    const withAccount = { ...withId, accountId }
+    saveToLocalStorage('warranties', [withAccount, ...existing])
+    refreshSection('warranty')
+    toast({ title: 'Success', description: 'Warranty claim saved successfully' })
+  }
+
+  // Generic fallback route
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
@@ -310,7 +328,6 @@ export default function AccountDetail() {
     return map[type] || 'bg-gray-100 text-gray-800'
   }
 
-  // Sections available to add that aren't currently visible
   const availableToAdd = AVAILABLE_SECTIONS.filter(
     (s) => !sections.includes(s.type) && s.defaultVisible !== false
   )
@@ -474,8 +491,6 @@ export default function AccountDetail() {
                   if (!config) return null
                   const Section = config.component as any
 
-                  // Wire specific add handlers for legacy sections;
-                  // always pass a generic onCreate for dynamic ones.
                   const commonProps = {
                     accountId: accountId!,
                     onRemove: () => removeSection(type),
@@ -510,6 +525,12 @@ export default function AccountDetail() {
                               isDragging={s.isDragging}
                               onAddDelivery={() => setOpenDelivery(true)}
                             />
+                          ) : type === 'warranty' ? (
+                            <AccountWarrantySection
+                              {...commonProps}
+                              isDragging={s.isDragging}
+                              onAddWarranty={() => setOpenWarranty(true)} // ⬅️ open modal
+                            />
                           ) : (
                             <Section
                               {...commonProps}
@@ -527,7 +548,6 @@ export default function AccountDetail() {
           </Droppable>
         </DragDropContext>
 
-        {/* Unsaved indicator */}
         {hasUnsavedChanges && (
           <div className="fixed bottom-4 right-4 z-50">
             <Card className="shadow-lg border-orange-200 bg-orange-50">
@@ -579,16 +599,28 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-{/* Delivery Modal (DeliveryForm has its own overlay) */}
-{openDelivery && (
-  <DeliveryForm
-    customers={contacts}
-    vehicles={vehicles}
-    onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
-    onCancel={() => setOpenDelivery(false)}
-  />
-)}
+      {/* Delivery Modal (DeliveryForm has its own overlay) */}
+      {openDelivery && (
+        <DeliveryForm
+          customers={contacts}
+          vehicles={vehicles}
+          onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
+          onCancel={() => setOpenDelivery(false)}
+        />
+      )}
 
+      {/* Warranty Modal */}
+      <Dialog open={openWarranty} onOpenChange={setOpenWarranty}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">New Warranty Claim</DialogTitle>
+          <DialogDescription className="sr-only">Create a new warranty claim for this account.</DialogDescription>
+          <WarrantyClaimForm
+            accountId={account.id}
+            returnTo="account"
+            onSaved={handleWarrantySaved}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
