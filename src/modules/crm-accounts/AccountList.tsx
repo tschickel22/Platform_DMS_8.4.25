@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAccountManagement } from './hooks/useAccountManagement'
-import { useActivityTracking } from '@/hooks/useActivityTracking'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,22 +14,20 @@ import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
 import { AdvancedSearch } from '@/components/common/AdvancedSearch'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
+import type { Account } from '@/types'
 
 export default function AccountList() {
   const { accounts, loading, error, deleteAccount, createAccount } = useAccountManagement()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
-  
-  // Check if account matches advanced search criteria
+
+  // Advanced search predicate
   const matchesAdvancedSearch = (account: Account, criteria: any[]) => {
     if (criteria.length === 0) return true
-    
-    return criteria.every(criterion => {
+    return criteria.every((criterion) => {
       const fieldValue = (account as any)[criterion.field]?.toString().toLowerCase() || ''
-      const searchValue = criterion.value.toLowerCase()
-      
+      const searchValue = String(criterion.value ?? '').toLowerCase()
       switch (criterion.operator) {
         case 'contains':
           return fieldValue.includes(searchValue)
@@ -53,33 +50,27 @@ export default function AccountList() {
   }
 
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
-  
+
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     industry: searchParams.get('industry') || '',
     createdAfter: searchParams.get('createdAfter') || '',
-    createdBefore: searchParams.get('createdBefore') || ''
+    createdBefore: searchParams.get('createdBefore') || '',
   })
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(filteredAccounts.map(account => account.id))
-    } else {
-      setSelectedIds([])
-    }
+    if (checked) setSelectedIds(filteredAccounts.map((a) => a.id))
+    else setSelectedIds([])
   }
 
   const handleSelectAccount = (accountId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds(prev => [...prev, accountId])
-    } else {
-      setSelectedIds(prev => prev.filter(id => id !== accountId))
-    }
+    if (checked) setSelectedIds((prev) => [...prev, accountId])
+    else setSelectedIds((prev) => prev.filter((id) => id !== accountId))
   }
 
   const handleImport = (importedData: any[]) => {
-    importedData.forEach(data => {
+    importedData.forEach((data) => {
       createAccount(data)
     })
   }
@@ -88,44 +79,65 @@ export default function AccountList() {
 
   // Load default filter on mount
   React.useEffect(() => {
-    const defaultFilter = getDefaultFilter()
-    if (defaultFilter && Object.keys(filters).every(key => !filters[key])) {
-      setFilters(defaultFilter.filters)
+    const def = getDefaultFilter()
+    const noFiltersApplied = Object.values(filters).every((v) => !v)
+    if (def && noFiltersApplied) {
+      setFilters(def.filters)
     }
-  }, [getDefaultFilter])
+  }, [getDefaultFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update URL params when filters change
+  // Sync URL params when filters change
   React.useEffect(() => {
     const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value)
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v) params.set(k, String(v))
     })
     setSearchParams(params)
   }, [filters, setSearchParams])
 
-  // Filter accounts based on search and advanced criteria
-  const filteredAccounts = accounts.filter(account => {
-    // Basic search
-    const matchesSearch = searchTerm === '' ||
-      account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    // Advanced search
-    const matchesAdvanced = matchesAdvancedSearch(account, advancedSearchCriteria)
+  // Apply filters
+  const filteredAccounts = React.useMemo(() => {
+    return accounts.filter((account) => {
+      // Search
+      if (filters.search) {
+        const s = filters.search.toLowerCase()
+        const matchesSearch =
+          account.name?.toLowerCase().includes(s) ||
+          account.email?.toLowerCase().includes(s) ||
+          account.phone?.toLowerCase().includes(s)
+        if (!matchesSearch) return false
+      }
 
-    return matchesSearch && matchesAdvanced
-  })
+      // Industry
+      if (filters.industry && account.industry !== filters.industry) return false
+
+      // Created date range
+      if (filters.createdAfter) {
+        const created = new Date(account.createdAt)
+        const after = new Date(filters.createdAfter)
+        if (created < after) return false
+      }
+      if (filters.createdBefore) {
+        const created = new Date(account.createdAt)
+        const before = new Date(filters.createdBefore)
+        if (created > before) return false
+      }
+
+      // Advanced
+      return matchesAdvancedSearch(account as Account, advancedSearchCriteria)
+    })
+  }, [accounts, filters, advancedSearchCriteria])
 
   const industries = React.useMemo(() => {
-    const uniqueIndustries = [...new Set(accounts.map(acc => acc.industry).filter(Boolean))]
-    return uniqueIndustries.map(industry => ({ value: industry!, label: industry! }))
+    const unique = [...new Set(accounts.map((acc) => acc.industry).filter(Boolean))]
+    return unique.map((industry) => ({ value: industry as string, label: industry as string }))
   }, [accounts])
 
   const filterFields = [
     { key: 'search', label: 'Search', type: 'text' as const },
     { key: 'industry', label: 'Industry', type: 'select' as const, options: industries },
     { key: 'createdAfter', label: 'Created After', type: 'date' as const },
-    { key: 'createdBefore', label: 'Created Before', type: 'date' as const }
+    { key: 'createdBefore', label: 'Created Before', type: 'date' as const },
   ]
 
   const handleDelete = async (id: string) => {
@@ -156,7 +168,7 @@ export default function AccountList() {
         icon={<PlusCircle className="h-12 w-12" />}
         action={{
           label: 'Create New Account',
-          onClick: () => window.location.href = '/crm/accounts/new'
+          onClick: () => (window.location.href = '/crm/accounts/new'),
         }}
       />
     )
@@ -172,12 +184,7 @@ export default function AccountList() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <ImportExportActions
-            module="accounts"
-            data={filteredAccounts}
-            onImport={handleImport}
-            sampleFields={sampleFields}
-          />
+          <ImportExportActions module="accounts" data={filteredAccounts} onImport={handleImport} sampleFields={sampleFields} />
           <Button asChild>
             <Link to="/crm/accounts/new">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -203,18 +210,15 @@ export default function AccountList() {
           onFiltersChange={setFilters}
           savedFilters={savedFilters}
           onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
-          onLoadFilter={(filter) => setFilters(filter.filters)}
+          onLoadFilter={(f) => setFilters(f.filters)}
           onDeleteFilter={deleteFilter}
           onSetDefaultFilter={setDefaultFilter}
+          filterFields={filterFields}   {/* <-- important: provide fields to avoid undefined.map */}
           module="accounts"
         />
       </div>
 
-      <AdvancedSearch
-        onSearch={setAdvancedSearchCriteria}
-        onClear={() => setAdvancedSearchCriteria([])}
-        entityType="accounts"
-      />
+      <AdvancedSearch onSearch={setAdvancedSearchCriteria} onClear={() => setAdvancedSearchCriteria([])} entityType="accounts" />
 
       {/* Selection Info */}
       {selectedIds.length > 0 && (
@@ -228,9 +232,7 @@ export default function AccountList() {
       <Card>
         <CardHeader>
           <CardTitle>All Accounts</CardTitle>
-          <CardDescription>
-            A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.
-          </CardDescription>
+          <CardDescription>A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -239,7 +241,7 @@ export default function AccountList() {
                 <TableHead className="w-12">
                   <Checkbox
                     checked={selectedIds.length === filteredAccounts.length && filteredAccounts.length > 0}
-                    onCheckedChange={handleSelectAll}
+                    onCheckedChange={(v) => handleSelectAll(!!v)}
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
@@ -256,7 +258,7 @@ export default function AccountList() {
                   <TableCell>
                     <Checkbox
                       checked={selectedIds.includes(account.id)}
-                      onCheckedChange={(checked) => handleSelectAccount(account.id, checked as boolean)}
+                      onCheckedChange={(v) => handleSelectAccount(account.id, !!v)}
                     />
                   </TableCell>
                   <TableCell className="font-medium">
