@@ -67,6 +67,7 @@ export default function ContactForm() {
     setSaving(true)
 
     try {
+      if (isEditing && contactId) {
         await updateContact(contactId, formData)
         toast({
           title: 'Success',
