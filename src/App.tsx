@@ -182,6 +182,7 @@ function App() {
                                   {/* Fallback inside app */}
                                   <Route path="*" element={<Navigate to="/" replace />} />
                                 </Routes>
+                                </React.Suspense>
                               </ErrorBoundary>
                             </Layout>
                           </ProtectedRoute>

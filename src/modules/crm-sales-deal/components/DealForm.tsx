@@ -405,3 +405,5 @@ export default function AccountDetail() {
     </>
   )
 }
+
+export { DealForm }
