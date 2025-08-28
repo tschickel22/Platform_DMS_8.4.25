@@ -396,6 +396,54 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Deal Modal */}
+      <Dialog open={showDealModal} onOpenChange={setShowDealModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Create New Deal</DialogTitle>
+          </DialogHeader>
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-4">Loading deal form...</div>}>
+              <LazyDealForm
+                accountId={account.id}
+                onSaved={(deal) => {
+                  setShowDealModal(false)
+                  refreshAccountData()
+                  toast({
+                    title: 'Success',
+                    description: 'Deal created successfully'
+                  })
+                }}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quote Modal */}
+      <Dialog open={showQuoteModal} onOpenChange={setShowQuoteModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Create New Quote</DialogTitle>
+          </DialogHeader>
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="p-4">Loading quote form...</div>}>
+              <LazyNewQuoteForm
+                accountId={account.id}
+                onSaved={(quote) => {
+                  setShowQuoteModal(false)
+                  refreshAccountData()
+                  toast({
+                    title: 'Success',
+                    description: 'Quote created successfully'
+                  })
+                }}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
+        </DialogContent>
+      </Dialog>
+
       {/* Quote Modal */}
       <Dialog open={openQuote} onOpenChange={setOpenQuote}>
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
