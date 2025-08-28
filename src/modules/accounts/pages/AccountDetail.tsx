@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import { useAccountManagement } from '../hooks/useAccountManagement'
 import { useToast } from '@/hooks/use-toast'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -16,6 +17,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 const ContactForm = React.lazy(() => import('@/modules/contacts/components/ContactForm'))
 const DealForm = React.lazy(() => import('@/modules/crm-sales-deal/components/DealForm').then(module => ({ default: module.DealForm })))
 const NewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
+const LazyDealForm = React.lazy(() => import('@/modules/crm-sales-deal/components/DealForm').then(module => ({ default: module.DealForm })))
+const LazyNewQuoteForm = React.lazy(() => import('@/modules/quote-builder/components/NewQuoteForm'))
 import { saveToLocalStorage, loadFromLocalStorage } from '@/lib/utils'
 import {
   ArrowLeft,
@@ -67,6 +70,8 @@ export default function AccountDetail() {
   const [openContact, setOpenContact] = useState(false)
   const [openDeal, setOpenDeal] = useState(false)
   const [openQuote, setOpenQuote] = useState(false)
+  const [showDealModal, setShowDealModal] = useState(false)
+  const [showQuoteModal, setShowQuoteModal] = useState(false)
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
@@ -124,6 +129,10 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
+    // no-op placeholder—your section components pull from shared state/localStorage
+  }
+
+  const refreshAccountData = () => {
     // no-op placeholder—your section components pull from shared state/localStorage
   }
 
@@ -375,21 +384,29 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
           <ErrorBoundary>
             <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
               <ContactForm
                 accountId={account.id}
                 returnTo="account"
-                onSaved={() => setOpenContact(false)}
+                onSaved={handleContactSaved}
               />
             </React.Suspense>
+          </ErrorBoundary>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deal Modal */}
+      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
+        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Deal</DialogTitle>
+          <DialogDescription className="sr-only">Create a new deal for this account.</DialogDescription>
           <ErrorBoundary>
             <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <NewQuoteForm
+              <DealForm
                 accountId={account.id}
                 returnTo="account"
-                onSaved={() => setOpenQuote(false)}
+                onSaved={handleDealSaved}
               />
             </React.Suspense>
           </ErrorBoundary>
@@ -449,13 +466,13 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
           <ErrorBoundary>
             <React.Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
-              <DealForm
-                accountId={account.id}
-                returnTo="account"
-                onSaved={() => setOpenDeal(false)}
-              />
+              <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
             </React.Suspense>
           </ErrorBoundary>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
