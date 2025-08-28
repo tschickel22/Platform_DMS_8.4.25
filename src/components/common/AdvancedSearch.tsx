@@ -185,7 +185,7 @@ export function AdvancedSearch({
 
             <div className="flex justify-between">
               <Button variant="outline" onClick={addCriteria}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Filter className="h-4 w-4 mr-2" />
                 Add Criteria
               </Button>
               
