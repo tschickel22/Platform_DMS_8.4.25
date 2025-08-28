@@ -1,336 +1,275 @@
 import React, { useState, useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/loading-skeleton'
-import { EmptyState } from '@/components/ui/empty-state'
-import { 
-  Building2, 
-  Plus, 
-  Search, 
-  Filter,
-  Users,
-  TrendingUp,
-  Calendar,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye
-} from 'lucide-react'
+import { PageHeader, StatsGrid, StatCard } from '@/components/ui/page-header'
+import { FilterBar } from '@/components/ui/filter-bar'
+import { ModernTable, ModernTableColumn, ModernTableAction } from '@/components/ui/modern-table'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EntityChip } from '@/components/ui/entity-chip'
+import { RouteGuard } from '@/components/ui/route-guard'
+import { Plus, Building2, Users, TrendingUp, Calendar, Eye, Edit, Trash2 } from 'lucide-react'
 import { useAccountManagement } from './hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/crm-contacts/hooks/useContactManagement'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { formatDate } from '@/lib/utils'
-import ErrorBoundary, { ModuleErrorBoundary } from '@/components/ErrorBoundary'
+import { useSavedFilters } from '@/hooks/useSavedFilters'
+import { Account } from '@/types'
+import { logger } from '@/utils/logger'
 
 export default function AccountList() {
+  const navigate = useNavigate()
   const { accounts, loading, deleteAccount } = useAccountManagement()
   const { contacts } = useContactManagement()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
+  const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('accounts')
+  
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [filters, setFilters] = useState({
+    industry: '',
+    status: '',
+    hasContacts: '',
+    createdAfter: '',
+    owner: ''
+  })
 
-  // Apply URL filters
-  const filteredAccounts = useMemo(() => {
-    let filtered = accounts || []
+  React.useEffect(() => {
+    logger.pageView('/crm/accounts')
+  }, [])
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(account => 
-        account.name.toLowerCase().includes(term) ||
-        (account.email && account.email.toLowerCase().includes(term)) ||
-        (account.phone && account.phone.includes(term)) ||
-        (account.industry && account.industry.toLowerCase().includes(term))
-      )
-    }
-
-    return filtered
-  }, [accounts, searchTerm])
-
-  // Calculate header metrics
+  // Calculate metrics from live data
   const metrics = useMemo(() => {
-    const totalAccounts = accounts?.length || 0
-    const accountsWithContacts = accounts?.filter(account => 
-      contacts?.some(contact => contact.accountId === account.id)
-    ).length || 0
-    
-    const industries = new Set(accounts?.map(account => account.industry).filter(Boolean))
-    const uniqueIndustries = industries.size
+    const totalAccounts = accounts.length
+    const activeAccounts = accounts.filter(acc => acc.status === 'Active').length
+    const accountsWithContacts = accounts.filter(acc => 
+      contacts.some(contact => contact.accountId === acc.id)
+    ).length
     
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const recentAccounts = accounts?.filter(account => 
-      new Date(account.createdAt) > thirtyDaysAgo
-    ).length || 0
+    const recentAccounts = accounts.filter(acc => 
+      new Date(acc.createdAt) > thirtyDaysAgo
+    ).length
+
+    const industries = [...new Set(accounts.map(acc => acc.industry).filter(Boolean))].length
 
     return {
       totalAccounts,
+      activeAccounts,
       accountsWithContacts,
-      uniqueIndustries,
-      recentAccounts
+      recentAccounts,
+      industries
     }
   }, [accounts, contacts])
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    const newParams = new URLSearchParams(searchParams)
-    if (value) {
-      newParams.set('search', value)
-    } else {
-      newParams.delete('search')
+  // Filter accounts based on search and filters
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter(account => {
+      // Search filter
+      const matchesSearch = !searchTerm || 
+        account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        account.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        account.phone?.includes(searchTerm) ||
+        account.industry?.toLowerCase().includes(searchTerm.toLowerCase())
+
+      // Industry filter
+      const matchesIndustry = !filters.industry || account.industry === filters.industry
+
+      // Status filter
+      const matchesStatus = !filters.status || account.status === filters.status
+
+      // Has contacts filter
+      const matchesHasContacts = !filters.hasContacts || 
+        (filters.hasContacts === 'yes' && contacts.some(c => c.accountId === account.id)) ||
+        (filters.hasContacts === 'no' && !contacts.some(c => c.accountId === account.id))
+
+      // Created after filter
+      const matchesCreatedAfter = !filters.createdAfter || 
+        new Date(account.createdAt) >= new Date(filters.createdAfter)
+
+      // Owner filter
+      const matchesOwner = !filters.owner || account.ownerId === filters.owner
+
+      return matchesSearch && matchesIndustry && matchesStatus && 
+             matchesHasContacts && matchesCreatedAfter && matchesOwner
+    })
+  }, [accounts, contacts, searchTerm, filters])
+
+  // Get unique industries for filter dropdown
+  const industries = useMemo(() => 
+    [...new Set(accounts.map(acc => acc.industry).filter(Boolean))].sort()
+  , [accounts])
+
+  // Table columns
+  const columns: ModernTableColumn<Account>[] = [
+    {
+      key: 'name',
+      label: 'Account Name',
+      sortable: true,
+      render: (value, account) => (
+        <div className="space-y-1">
+          <div className="font-medium">{value}</div>
+          {account.industry && (
+            <div className="text-xs text-muted-foreground">{account.industry}</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'contacts',
+      label: 'Contacts',
+      render: (_, account) => {
+        const accountContacts = contacts.filter(c => c.accountId === account.id)
+        return accountContacts.length > 0 ? (
+          <div className="flex items-center gap-1">
+            <Users className="h-3 w-3 text-muted-foreground" />
+            <span className="text-sm">{accountContacts.length}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">None</span>
+        )
+      }
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      render: (value) => value || <span className="text-muted-foreground">—</span>
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      render: (value) => value || <span className="text-muted-foreground">—</span>
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => <StatusBadge status={value || 'Unknown'} />
+    },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      render: (value) => new Date(value).toLocaleDateString()
     }
-    setSearchParams(newParams)
+  ]
+
+  // Table actions
+  const actions: ModernTableAction<Account>[] = [
+    {
+      label: 'View Details',
+      icon: Eye,
+      onClick: (account) => navigate(`/crm/accounts/${account.id}`)
+    },
+    {
+      label: 'Edit Account',
+      icon: Edit,
+      onClick: (account) => navigate(`/crm/accounts/${account.id}/edit`)
+    },
+    {
+      label: 'Delete Account',
+      icon: Trash2,
+      variant: 'destructive',
+      onClick: async (account) => {
+        if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
+          await deleteAccount(account.id)
+        }
+      }
+    }
+  ]
+
+  // Filter chips for display
+  const filterChips = Object.entries(filters)
+    .filter(([_, value]) => value)
+    .map(([key, value]) => ({
+      key,
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      value: value
+    }))
+
+  const handleRemoveFilter = (key: string) => {
+    setFilters(prev => ({ ...prev, [key]: '' }))
   }
 
-  const handleDeleteAccount = async (accountId: string, accountName: string) => {
-    if (window.confirm(`Are you sure you want to delete "${accountName}"? This action cannot be undone.`)) {
-      await deleteAccount(accountId)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="ri-page-header">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        
-        <div className="ri-stats-grid">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-20" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        <Card>
-          <CardContent className="pt-6">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border-b last:border-b-0">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-48" />
-                </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const handleClearAllFilters = () => {
+    setFilters({
+      industry: '',
+      status: '',
+      hasContacts: '',
+      createdAfter: '',
+      owner: ''
+    })
+    setSearchTerm('')
   }
 
   return (
-    <ModuleErrorBoundary moduleName="Accounts">
+    <RouteGuard moduleName="Accounts">
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="ri-page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="ri-page-title">Accounts</h1>
-              <p className="ri-page-description">
-                Manage your business accounts and relationships
-              </p>
-            </div>
-            <Button asChild>
-              <Link to="/crm/accounts/new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Account
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Accounts"
+          description="Manage your business accounts and relationships"
+        >
+          <Button onClick={() => navigate('/crm/accounts/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Account
+          </Button>
+        </PageHeader>
 
-        {/* Header Stats */}
-        <div className="ri-stats-grid">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-primary">{metrics.totalAccounts}</div>
-              <p className="text-xs text-muted-foreground">
-                Active business accounts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With Contacts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-success">{metrics.accountsWithContacts}</div>
-              <p className="text-xs text-muted-foreground">
-                Have associated contacts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Industries</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-info">{metrics.uniqueIndustries}</div>
-              <p className="text-xs text-muted-foreground">
-                Different industries
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold stat-warning">{metrics.recentAccounts}</div>
-              <p className="text-xs text-muted-foreground">
-                New this month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Metrics */}
+        <StatsGrid>
+          <StatCard
+            title="Total Accounts"
+            value={metrics.totalAccounts}
+            icon={Building2}
+            onClick={() => {/* Could filter to show all */}}
+          />
+          <StatCard
+            title="Active Accounts"
+            value={metrics.activeAccounts}
+            change={`${Math.round((metrics.activeAccounts / metrics.totalAccounts) * 100)}%`}
+            changeType="positive"
+            icon={TrendingUp}
+          />
+          <StatCard
+            title="With Contacts"
+            value={metrics.accountsWithContacts}
+            change={`${Math.round((metrics.accountsWithContacts / metrics.totalAccounts) * 100)}%`}
+            changeType="positive"
+            icon={Users}
+          />
+          <StatCard
+            title="New This Month"
+            value={metrics.recentAccounts}
+            icon={Calendar}
+          />
+        </StatsGrid>
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>All Accounts</CardTitle>
-                <CardDescription>
-                  {filteredAccounts.length} of {accounts?.length || 0} accounts
-                </CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="ri-search-bar">
-                  <Search className="ri-search-icon" />
-                  <Input
-                    placeholder="Search accounts..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="ri-search-input"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredAccounts.length === 0 ? (
-              searchTerm ? (
-                <EmptyState
-                  title="No accounts found"
-                  description={`No accounts match "${searchTerm}". Try adjusting your search terms.`}
-                  icon={<Search className="h-12 w-12" />}
-                  action={{
-                    label: 'Clear Search',
-                    onClick: () => handleSearch('')
-                  }}
-                />
-              ) : (
-                <EmptyState
-                  title="No accounts yet"
-                  description="Get started by creating your first business account."
-                  icon={<Building2 className="h-12 w-12" />}
-                  action={{
-                    label: 'Create Account',
-                    onClick: () => window.location.href = '/crm/accounts/new'
-                  }}
-                />
-              )
-            ) : (
-              <div className="space-y-2">
-                {filteredAccounts.map((account) => {
-                  const accountContacts = contacts?.filter(contact => contact.accountId === account.id) || []
-                  
-                  return (
-                    <div key={account.id} className="ri-table-row">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <h3 className="font-medium">{account.name}</h3>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              {account.email && <span>{account.email}</span>}
-                              {account.phone && <span>{account.phone}</span>}
-                              {account.industry && (
-                                <Badge variant="outline">{account.industry}</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
-                          <span>{accountContacts.length} contacts</span>
-                          <span>Created {formatDate(account.createdAt)}</span>
-                          {account.tags && account.tags.length > 0 && (
-                            <div className="flex space-x-1">
-                              {account.tags.slice(0, 2).map(tag => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {account.tags.length > 2 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{account.tags.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="ri-action-buttons">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/crm/accounts/${account.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/crm/accounts/${account.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteAccount(account.id, account.name)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Filters */}
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search accounts..."
+          filterChips={filterChips}
+          onRemoveFilter={handleRemoveFilter}
+          onClearAllFilters={handleClearAllFilters}
+        />
+
+        {/* Table */}
+        <ModernTable
+          data={filteredAccounts}
+          columns={columns}
+          loading={loading}
+          selectable={true}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          actions={actions}
+          getRowId={(account) => account.id}
+          onRowClick={(account) => navigate(`/crm/accounts/${account.id}`)}
+          emptyState={{
+            title: 'No accounts found',
+            description: 'Get started by creating your first account',
+            icon: Building2,
+            action: {
+              label: 'Create Account',
+              onClick: () => navigate('/crm/accounts/new')
+            }
+          }}
+        />
       </div>
-    </ModuleErrorBoundary>
+    </RouteGuard>
   )
 }
