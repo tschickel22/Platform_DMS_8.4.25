@@ -15,11 +15,15 @@ import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
 import { mockServiceOps } from '@/mocks/serviceOpsMock'
 import { formatCurrency, generateId, loadFromLocalStorage, saveToLocalStorage } from '@/lib/utils'
 
-type Ticket = any // use your real type if desired
+/** Replace with your real type if desired */
+type Ticket = any
 
 type Props = ReturnToBehavior & {
   ticketId?: string
 }
+
+type PartLine = { id: string; partNumber: string; description: string; quantity: number; unitCost: number; total: number }
+type LaborLine = { id: string; description: string; hours: number; rate: number; total: number }
 
 export function ServiceTicketForm(props: Props) {
   const { toast } = useToast()
@@ -30,19 +34,19 @@ export function ServiceTicketForm(props: Props) {
   const isModal = !!props.onSaved
   const [loading, setLoading] = useState(false)
 
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState({
     accountId: ctxAccountId || '',
     contactId: '',
     vehicleId: '',
     title: '',
     description: '',
-    priority: mockServiceOps.priorities[1] ?? 'Medium',
+    priority: mockServiceOps.priorities?.[1] ?? 'Medium',
     status: mockServiceOps.statuses?.[0] ?? 'Open',
     assignedTo: '',
     scheduledDate: '',
     notes: '',
-    parts: [] as Array<{ id: string; partNumber: string; description: string; quantity: number; unitCost: number; total: number }>,
-    labor: [] as Array<{ id: string; description: string; hours: number; rate: number; total: number }>,
+    parts: [] as PartLine[],
+    labor: [] as LaborLine[],
     customFields: {
       warrantyStatus: 'not_covered',
       estimatedCompletionDate: '',
@@ -52,46 +56,56 @@ export function ServiceTicketForm(props: Props) {
     },
   })
 
+  // contacts filtered by account (when selected)
   const accountContacts = useMemo(
     () => contacts.filter((c) => !formData.accountId || c.accountId === formData.accountId),
     [contacts, formData.accountId],
   )
 
-  // Parts & labor adders
-  const [newPart, setNewPart] = useState({ partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
-  const [newLabor, setNewLabor] = useState({ description: '', hours: 1, rate: 85, total: 85 })
-  useEffect(() => setNewPart((p) => ({ ...p, total: (p.quantity || 0) * (p.unitCost || 0) })), [newPart.quantity, newPart.unitCost])
-  useEffect(() => setNewLabor((l) => ({ ...l, total: (l.hours || 0) * (l.rate || 0) })), [newLabor.hours, newLabor.rate])
+  // inline new editors
+  const [newPart, setNewPart] = useState<PartLine>({ id: '', partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
+  const [newLabor, setNewLabor] = useState<LaborLine>({ id: '', description: '', hours: 1, rate: 85, total: 85 })
 
+  useEffect(() => {
+    setNewPart((p) => ({ ...p, total: (p.quantity || 0) * (p.unitCost || 0) }))
+  }, [newPart.quantity, newPart.unitCost])
+
+  useEffect(() => {
+    setNewLabor((l) => ({ ...l, total: (l.hours || 0) * (l.rate || 0) }))
+  }, [newLabor.hours, newLabor.rate])
+
+  // totals
   const totals = useMemo(() => {
-    const partsTotal = formData.parts.reduce((s: number, p: any) => s + p.total, 0)
-    const laborTotal = formData.labor.reduce((s: number, l: any) => s + l.total, 0)
+    const partsTotal = formData.parts.reduce((s, p) => s + (p.total || 0), 0)
+    const laborTotal = formData.labor.reduce((s, l) => s + (l.total || 0), 0)
     return { partsTotal, laborTotal, grandTotal: partsTotal + laborTotal }
   }, [formData.parts, formData.labor])
 
+  // part actions
   const addPart = () => {
-    if (!newPart.partNumber || !newPart.description) {
+    if (!newPart.partNumber.trim() || !newPart.description.trim()) {
       toast({ title: 'Validation Error', description: 'Part number and description are required', variant: 'destructive' })
       return
     }
-    setFormData((p: any) => ({ ...p, parts: [...p.parts, { ...newPart, id: generateId() }] }))
-    setNewPart({ partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
+    setFormData((p) => ({ ...p, parts: [...p.parts, { ...newPart, id: generateId() }] }))
+    setNewPart({ id: '', partNumber: '', description: '', quantity: 1, unitCost: 0, total: 0 })
   }
-  const removePart = (id: string) => setFormData((p: any) => ({ ...p, parts: p.parts.filter((x: any) => x.id !== id) }))
+  const removePart = (id: string) => setFormData((p) => ({ ...p, parts: p.parts.filter((x) => x.id !== id) }))
 
+  // labor actions
   const addLabor = () => {
-    if (!newLabor.description) {
+    if (!newLabor.description.trim()) {
       toast({ title: 'Validation Error', description: 'Labor description is required', variant: 'destructive' })
       return
     }
-    setFormData((p: any) => ({ ...p, labor: [...p.labor, { ...newLabor, id: generateId() }] }))
-    setNewLabor({ description: '', hours: 1, rate: 85, total: 85 })
+    setFormData((p) => ({ ...p, labor: [...p.labor, { ...newLabor, id: generateId() }] }))
+    setNewLabor({ id: '', description: '', hours: 1, rate: 85, total: 85 })
   }
-  const removeLabor = (id: string) => setFormData((p: any) => ({ ...p, labor: p.labor.filter((x: any) => x.id !== id) }))
+  const removeLabor = (id: string) => setFormData((p) => ({ ...p, labor: p.labor.filter((x) => x.id !== id) }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.title || !formData.description) {
+    if (!formData.title.trim() || !formData.description.trim()) {
       toast({ title: 'Validation Error', description: 'Title and Description are required', variant: 'destructive' })
       return
     }
@@ -117,10 +131,12 @@ export function ServiceTicketForm(props: Props) {
   return (
     <div className={isModal ? 'p-6' : ''}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Create Service Ticket</h1>
-          <p className="text-muted-foreground">Track service requests and maintenance</p>
-        </div>
+        {!isModal && (
+          <div>
+            <h1 className="text-2xl font-bold">Create Service Ticket</h1>
+            <p className="text-muted-foreground">Track service requests and maintenance</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basics */}
@@ -132,7 +148,11 @@ export function ServiceTicketForm(props: Props) {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label>Account</Label>
-                  <Select value={formData.accountId} onValueChange={(v) => setFormData((p: any) => ({ ...p, accountId: v, contactId: '' }))} disabled={!!ctxAccountId}>
+                  <Select
+                    value={formData.accountId}
+                    onValueChange={(v) => setFormData((p) => ({ ...p, accountId: v, contactId: '' }))}
+                    disabled={!!ctxAccountId}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select account (optional)" />
                     </SelectTrigger>
@@ -149,7 +169,11 @@ export function ServiceTicketForm(props: Props) {
 
                 <div>
                   <Label>Contact</Label>
-                  <Select value={formData.contactId} onValueChange={(v) => setFormData((p: any) => ({ ...p, contactId: v }))} disabled={!formData.accountId && accountContacts.length === 0}>
+                  <Select
+                    value={formData.contactId}
+                    onValueChange={(v) => setFormData((p) => ({ ...p, contactId: v }))}
+                    disabled={!formData.accountId && accountContacts.length === 0}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select contact (optional)" />
                     </SelectTrigger>
@@ -166,22 +190,26 @@ export function ServiceTicketForm(props: Props) {
 
                 <div className="md:col-span-2">
                   <Label>Service Title *</Label>
-                  <Input value={formData.title} onChange={(e) => setFormData((p: any) => ({ ...p, title: e.target.value }))} />
+                  <Input value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))} />
                 </div>
 
                 <div className="md:col-span-2">
                   <Label>Description *</Label>
-                  <Textarea value={formData.description} onChange={(e) => setFormData((p: any) => ({ ...p, description: e.target.value }))} rows={3} />
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                    rows={3}
+                  />
                 </div>
 
                 <div>
                   <Label>Priority</Label>
-                  <Select value={formData.priority} onValueChange={(v) => setFormData((p: any) => ({ ...p, priority: v }))}>
+                  <Select value={formData.priority} onValueChange={(v) => setFormData((p) => ({ ...p, priority: v }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockServiceOps.priorities.map((p) => (
+                      {(mockServiceOps.priorities || ['Low', 'Medium', 'High', 'Urgent']).map((p) => (
                         <SelectItem key={p} value={p}>
                           {p}
                         </SelectItem>
@@ -192,7 +220,7 @@ export function ServiceTicketForm(props: Props) {
 
                 <div>
                   <Label>Status</Label>
-                  <Select value={formData.status} onValueChange={(v) => setFormData((p: any) => ({ ...p, status: v }))}>
+                  <Select value={formData.status} onValueChange={(v) => setFormData((p) => ({ ...p, status: v }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -211,7 +239,7 @@ export function ServiceTicketForm(props: Props) {
                   <Input
                     type="date"
                     value={formData.scheduledDate || ''}
-                    onChange={(e) => setFormData((p: any) => ({ ...p, scheduledDate: e.target.value }))}
+                    onChange={(e) => setFormData((p) => ({ ...p, scheduledDate: e.target.value }))}
                   />
                 </div>
               </div>
@@ -233,7 +261,7 @@ export function ServiceTicketForm(props: Props) {
                   No parts added yet
                 </div>
               ) : (
-                formData.parts.map((p: any) => (
+                formData.parts.map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
@@ -258,11 +286,17 @@ export function ServiceTicketForm(props: Props) {
               <div className="grid gap-4 md:grid-cols-4 border rounded-lg p-3">
                 <div className="md:col-span-1">
                   <Label>Part # *</Label>
-                  <Input value={newPart.partNumber} onChange={(e) => setNewPart((x) => ({ ...x, partNumber: e.target.value }))} />
+                  <Input
+                    value={newPart.partNumber}
+                    onChange={(e) => setNewPart((x) => ({ ...x, partNumber: e.target.value }))}
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <Label>Description *</Label>
-                  <Input value={newPart.description} onChange={(e) => setNewPart((x) => ({ ...x, description: e.target.value }))} />
+                  <Input
+                    value={newPart.description}
+                    onChange={(e) => setNewPart((x) => ({ ...x, description: e.target.value }))}
+                  />
                 </div>
                 <div className="md:col-span-1 grid grid-cols-3 gap-2">
                   <div>
@@ -310,7 +344,7 @@ export function ServiceTicketForm(props: Props) {
                   No labor added yet
                 </div>
               ) : (
-                formData.labor.map((l: any) => (
+                formData.labor.map((l) => (
                   <div key={l.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <div className="font-medium">{l.description}</div>
@@ -332,7 +366,10 @@ export function ServiceTicketForm(props: Props) {
               <div className="grid gap-4 md:grid-cols-4 border rounded-lg p-3">
                 <div className="md:col-span-2">
                   <Label>Description *</Label>
-                  <Input value={newLabor.description} onChange={(e) => setNewLabor((x) => ({ ...x, description: e.target.value }))} />
+                  <Input
+                    value={newLabor.description}
+                    onChange={(e) => setNewLabor((x) => ({ ...x, description: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label>Hours</Label>
@@ -392,7 +429,7 @@ export function ServiceTicketForm(props: Props) {
                     type="date"
                     value={formData.customFields.estimatedCompletionDate || ''}
                     onChange={(e) =>
-                      setFormData((p: any) => ({
+                      setFormData((p) => ({
                         ...p,
                         customFields: { ...p.customFields, estimatedCompletionDate: e.target.value },
                       }))
@@ -404,7 +441,7 @@ export function ServiceTicketForm(props: Props) {
                     id="customerAuthorization"
                     checked={!!formData.customFields.customerAuthorization}
                     onCheckedChange={(checked) =>
-                      setFormData((p: any) => ({
+                      setFormData((p) => ({
                         ...p,
                         customFields: { ...p.customFields, customerAuthorization: !!checked },
                       }))
@@ -419,7 +456,7 @@ export function ServiceTicketForm(props: Props) {
                 <Textarea
                   value={formData.customFields.technicianNotes || ''}
                   onChange={(e) =>
-                    setFormData((p: any) => ({ ...p, customFields: { ...p.customFields, technicianNotes: e.target.value } }))
+                    setFormData((p) => ({ ...p, customFields: { ...p.customFields, technicianNotes: e.target.value } }))
                   }
                   rows={3}
                 />
@@ -427,7 +464,11 @@ export function ServiceTicketForm(props: Props) {
 
               <div>
                 <Label>Customer Notes</Label>
-                <Textarea value={formData.notes} onChange={(e) => setFormData((p: any) => ({ ...p, notes: e.target.value }))} rows={3} />
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                  rows={3}
+                />
               </div>
 
               <div className="flex items-center space-x-2">
@@ -435,7 +476,7 @@ export function ServiceTicketForm(props: Props) {
                   id="customerPortalAccess"
                   checked={formData.customFields.customerPortalAccess !== false}
                   onCheckedChange={(checked) =>
-                    setFormData((p: any) => ({ ...p, customFields: { ...p.customFields, customerPortalAccess: !!checked } }))
+                    setFormData((p) => ({ ...p, customFields: { ...p.customFields, customerPortalAccess: !!checked } }))
                   }
                 />
                 <Label htmlFor="customerPortalAccess">Allow customer to view this ticket in portal</Label>
