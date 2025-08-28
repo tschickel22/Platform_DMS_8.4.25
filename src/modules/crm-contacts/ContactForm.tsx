@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react'
 import { TagInput } from '@/components/common/TagInput'
 import { useToast } from '@/hooks/use-toast'
-import { TagInput } from '@/components/common/TagInput'
 
 export default function ContactForm() {
   const { id } = useParams<{ id: string }>()
