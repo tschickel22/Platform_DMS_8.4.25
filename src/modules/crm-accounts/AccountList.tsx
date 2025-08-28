@@ -272,6 +272,9 @@ export default function AccountList() {
           />
             <TableBody>
               {filteredAccounts.map((account) => (
+          )
+          )
+          }
         {/* Selection Info */}
         {selectedIds.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
