@@ -12,7 +12,9 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { useAccountManagement } from '../hooks/useAccountManagement'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+
 import { useToast } from '@/hooks/use-toast'
 import ContactForm from '@/modules/contacts/components/ContactForm'
 import DealForm from '@/modules/crm-sales-deal/components/DealForm'
