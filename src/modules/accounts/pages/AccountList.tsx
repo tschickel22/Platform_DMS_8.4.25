@@ -4,18 +4,25 @@ import { Account, AccountType } from '@/types/index'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
-import { 
-  Building2, 
-  Users, 
-  Plus, 
-  Search, 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
+import {
+  Building2,
+  Users,
+  Plus,
+  Search,
   Filter,
   TrendingUp,
   Building,
@@ -50,7 +57,7 @@ export default function AccountList() {
       // Search filter
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
-        const matchesSearch = 
+        const matchesSearch =
           account.name.toLowerCase().includes(term) ||
           account.email?.toLowerCase().includes(term) ||
           account.phone?.includes(term) ||
@@ -143,9 +150,7 @@ export default function AccountList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-success">{filteredMetrics.customers}</div>
-            <p className="text-xs text-muted-foreground">
-              Active customer accounts
-            </p>
+            <p className="text-xs text-muted-foreground">Active customer accounts</p>
           </CardContent>
         </Card>
 
@@ -156,9 +161,7 @@ export default function AccountList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold stat-warning">{filteredMetrics.prospects}</div>
-            <p className="text-xs text-muted-foreground">
-              Potential customers
-            </p>
+            <p className="text-xs text-muted-foreground">Potential customers</p>
           </CardContent>
         </Card>
 
@@ -168,10 +171,10 @@ export default function AccountList() {
             <Handshake className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold stat-info">{filteredMetrics.vendors + filteredMetrics.partners}</div>
-            <p className="text-xs text-muted-foreground">
-              Business relationships
-            </p>
+            <div className="text-2xl font-bold stat-info">
+              {filteredMetrics.vendors + filteredMetrics.partners}
+            </div>
+            <p className="text-xs text-muted-foreground">Business relationships</p>
           </CardContent>
         </Card>
       </div>
@@ -244,9 +247,7 @@ export default function AccountList() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>All Accounts ({filteredAccounts.length})</CardTitle>
-              <CardDescription>
-                Manage and track your business relationships
-              </CardDescription>
+              <CardDescription>Manage and track your business relationships</CardDescription>
             </div>
             <Button variant="outline" size="sm">
               <Filter className="h-4 w-4 mr-2" />
@@ -258,7 +259,7 @@ export default function AccountList() {
           <div className="space-y-4">
             {filteredAccounts.map((account) => {
               const typeConfig = mockAccounts.accountTypes.find(t => t.value === account.type)
-              
+
               return (
                 <Link key={account.id} to={`/accounts/${account.id}`}>
                   <div className="ri-table-row">
@@ -271,9 +272,7 @@ export default function AccountList() {
                           <p className="text-sm font-medium text-foreground truncate">
                             {account.name}
                           </p>
-                          <Badge className={typeConfig?.color}>
-                            {typeConfig?.label}
-                          </Badge>
+                          <Badge className={typeConfig?.color}>{typeConfig?.label}</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           {account.industry && (
@@ -282,12 +281,8 @@ export default function AccountList() {
                               {account.industry}
                             </span>
                           )}
-                          {account.email && (
-                            <span>{account.email}</span>
-                          )}
-                          {account.phone && (
-                            <span>{account.phone}</span>
-                          )}
+                          {account.email && <span>{account.email}</span>}
+                          {account.phone && <span>{account.phone}</span>}
                         </div>
                         {account.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
@@ -320,8 +315,7 @@ export default function AccountList() {
                 <p className="text-sm text-muted-foreground mb-4">
                   {searchTerm || typeFilter !== 'all' || industryFilter !== 'all' || tagFilter !== 'all'
                     ? 'Try adjusting your filters or search terms.'
-                    : 'Get started by creating your first account.'
-                  }
+                    : 'Get started by creating your first account.'}
                 </p>
                 <Button asChild>
                   <Link to="/accounts/new">
