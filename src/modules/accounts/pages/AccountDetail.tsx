@@ -11,8 +11,6 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
-
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
@@ -28,6 +26,10 @@ import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
+{/* TEMP: debug opener */}
+<Button variant="outline" size="sm" onClick={() => setOpenDelivery(true)}>
+  Open Delivery Modal (debug)
+</Button>
 
 // Existing static sections (kept so everything works today)
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
