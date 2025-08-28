@@ -322,5 +322,3 @@ export default function AccountDetail() {
     </div>
   )
 }
-
-export default loading
