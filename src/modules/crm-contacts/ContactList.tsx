@@ -5,12 +5,16 @@ import { useAccountManagement } from '../crm-accounts/hooks/useAccountManagement
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { PlusCircle, Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterPanel } from '@/components/common/FilterPanel'
+import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
+import { AdvancedSearch } from '@/components/common/AdvancedSearch'
+import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
@@ -18,16 +22,70 @@ export default function ContactList() {
   const { contacts, loading, error, deleteContact, createContact } = useContactManagement()
   const { getAccountById, accounts } = useAccountManagement()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('contacts')
   
+    // Basic search
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     accountId: searchParams.get('accountId') || '',
     hasAccount: searchParams.get('hasAccount') || '',
     createdAfter: searchParams.get('createdAfter') || '',
-    createdBefore: searchParams.get('createdBefore') || ''
+    
+    // Advanced search
+    const matchesAdvanced = advancedSearchCriteria.length === 0 || 
+      advancedSearchCriteria.every(criteria => {
+        const fieldValue = (contact as any)[criteria.field]?.toString().toLowerCase() || ''
+        const searchValue = criteria.value.toLowerCase()
+        
+        switch (criteria.operator) {
+          case 'contains':
+            return fieldValue.includes(searchValue)
+          case 'equals':
+            return fieldValue === searchValue
+          case 'starts_with':
+            return fieldValue.startsWith(searchValue)
+          case 'ends_with':
+            return fieldValue.endsWith(searchValue)
+          case 'not_equals':
+            return fieldValue !== searchValue
+          case 'is_empty':
+            return !fieldValue
+          case 'is_not_empty':
+            return !!fieldValue
+          default:
+            return true
+        }
+      })
+    
+    return matchesSearch && matchesAdvanced
   })
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredContacts.map(contact => contact.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectContact = (contactId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, contactId])
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== contactId))
+    }
+  }
+
+  const handleImport = (importedData: any[]) => {
+    importedData.forEach(data => {
+      createContact(data)
+    })
+  }
+
+  const csvFields = ['firstName', 'lastName', 'email', 'phone', 'accountId']
 
   // Update URL params when filters change
   React.useEffect(() => {
@@ -107,10 +165,16 @@ export default function ContactList() {
 
   const sampleFields = ['firstName', 'lastName', 'email', 'phone', 'accountId']
 
-  if (loading) {
+              Manage your individual contacts. {filteredContacts.length} of {contacts.length} contacts shown.
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <ImportExportActions
+              module="contacts"
+              data={filteredContacts}
+              onImport={handleImport}
+              sampleFields={csvFields}
+            />
       </div>
     )
   }
@@ -131,20 +195,40 @@ export default function ContactList() {
         }}
       />
     )
+          <AdvancedSearch
+            onSearch={setAdvancedSearchCriteria}
+            onClear={() => setAdvancedSearchCriteria([])}
+            entityType="contacts"
+          />
   }
+
+        {/* Selection Info */}
+        {selectedIds.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <p className="text-sm text-blue-700">
+              {selectedIds.length} contact{selectedIds.length !== 1 ? 's' : ''} selected
+            </p>
+          </div>
+        )}
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="ri-page-header">
           <h1 className="ri-page-title">Contacts</h1>
-          <p className="ri-page-description">
+              A list of all contacts in your CRM. Showing {filteredContacts.length} contacts.
             Manage your individual contacts. {filteredContacts.length} of {contacts.length} contacts shown.
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <ImportExportActions
             module="contacts"
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
             data={filteredContacts}
             onImport={handleImport}
             sampleFields={sampleFields}
@@ -160,6 +244,12 @@ export default function ContactList() {
 
       {/* Search and Filters */}
       <div className="flex items-center space-x-4">
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(contact.id)}
+                          onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                        />
+                      </TableCell>
         <div className="ri-search-bar">
           <Search className="ri-search-icon" />
           <Input
@@ -172,6 +262,9 @@ export default function ContactList() {
         <FilterPanel
           filters={filters}
           onFiltersChange={setFilters}
+                            {contact.title && (
+                              <p className="text-xs text-muted-foreground">{contact.title}</p>
+                            )}
           savedFilters={savedFilters}
           onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
           onLoadFilter={(filter) => setFilters(filter.filters)}
@@ -248,6 +341,14 @@ export default function ContactList() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Bulk Operations Panel */}
+      <BulkOperationsPanel
+        selectedIds={selectedIds}
+        entityType="contacts"
+        onClearSelection={() => setSelectedIds([])}
+        onRefresh={() => window.location.reload()}
+      />
     </div>
   )
 }

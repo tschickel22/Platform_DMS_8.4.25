@@ -4,26 +4,84 @@ import { useAccountManagement } from './hooks/useAccountManagement'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { PlusCircle, Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { formatDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
+import { BulkOperationsPanel } from '@/components/common/BulkOperationsPanel'
+import { AdvancedSearch } from '@/components/common/AdvancedSearch'
+import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
 
 export default function AccountList() {
   const { accounts, loading, error, deleteAccount, createAccount } = useAccountManagement()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter, getDefaultFilter } = useSavedFilters('accounts')
   
+    // Basic search
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     industry: searchParams.get('industry') || '',
     createdAfter: searchParams.get('createdAfter') || '',
-    createdBefore: searchParams.get('createdBefore') || ''
+    
+    // Advanced search
+    const matchesAdvanced = advancedSearchCriteria.length === 0 || 
+      advancedSearchCriteria.every(criteria => {
+        const fieldValue = (account as any)[criteria.field]?.toString().toLowerCase() || ''
+        const searchValue = criteria.value.toLowerCase()
+        
+        switch (criteria.operator) {
+          case 'contains':
+            return fieldValue.includes(searchValue)
+          case 'equals':
+            return fieldValue === searchValue
+          case 'starts_with':
+            return fieldValue.startsWith(searchValue)
+          case 'ends_with':
+            return fieldValue.endsWith(searchValue)
+          case 'not_equals':
+            return fieldValue !== searchValue
+          case 'is_empty':
+            return !fieldValue
+          case 'is_not_empty':
+            return !!fieldValue
+          default:
+            return true
+        }
+      })
+    
+    return matchesSearch && matchesAdvanced
   })
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredAccounts.map(account => account.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectAccount = (accountId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, accountId])
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== accountId))
+    }
+  }
+
+  const handleImport = (importedData: any[]) => {
+    importedData.forEach(data => {
+      createAccount(data)
+    })
+  }
+
+  const csvFields = ['name', 'email', 'phone', 'address', 'website', 'industry']
 
   // Load default filter on mount
   React.useEffect(() => {
@@ -170,11 +228,23 @@ export default function AccountList() {
           onSaveFilter={(name, isDefault) => saveFilter(name, filters, isDefault)}
           onLoadFilter={(filter) => setFilters(filter.filters)}
           onDeleteFilter={deleteFilter}
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(account.id)}
+                        onCheckedChange={(checked) => handleSelectAccount(account.id, checked as boolean)}
+                      />
+                    </TableCell>
           onSetDefaultFilter={setDefaultFilter}
-          filterFields={filterFields}
+              Manage your business accounts. {filteredAccounts.length} of {accounts.length} accounts shown.
           module="accounts"
         />
       </div>
+            <ImportExportActions
+              module="accounts"
+              data={filteredAccounts}
+              onImport={handleImport}
+              sampleFields={csvFields}
+            />
 
       <Card>
         <CardHeader>
@@ -195,20 +265,40 @@ export default function AccountList() {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
+          <AdvancedSearch
+            onSearch={setAdvancedSearchCriteria}
+            onClear={() => setAdvancedSearchCriteria([])}
+            entityType="accounts"
+          />
             <TableBody>
               {filteredAccounts.map((account) => (
+        {/* Selection Info */}
+        {selectedIds.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <p className="text-sm text-blue-700">
+              {selectedIds.length} account{selectedIds.length !== 1 ? 's' : ''} selected
+            </p>
+          </div>
+        )}
+
                 <TableRow key={account.id}>
                   <TableCell className="font-medium">
                     <Link to={`/crm/accounts/${account.id}`} className="text-primary hover:underline">
                       {account.name}
                     </Link>
-                  </TableCell>
+              A list of all accounts in your CRM. Showing {filteredAccounts.length} accounts.
                   <TableCell>{account.email}</TableCell>
                   <TableCell>{account.phone}</TableCell>
                   <TableCell>{account.industry}</TableCell>
                   <TableCell>{formatDateTime(account.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" className="mr-2" asChild>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.length === filteredAccounts.length && filteredAccounts.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                       <Link to={`/crm/accounts/${account.id}/edit`}>Edit</Link>
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(account.id)}>
@@ -221,6 +311,14 @@ export default function AccountList() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Bulk Operations Panel */}
+      <BulkOperationsPanel
+        selectedIds={selectedIds}
+        entityType="accounts"
+        onClearSelection={() => setSelectedIds([])}
+        onRefresh={() => window.location.reload()}
+      />
     </div>
   )
 }

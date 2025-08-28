@@ -9,7 +9,20 @@ const sampleContacts: Contact[] = [
     email: 'alice.smith@rvworld.com',
     phone: '(555) 111-2223',
     accountId: 'acc-001', // Linked to RV World Inc.
+    title: 'Sales Manager',
+    department: 'Sales',
+    isPrimary: true,
     tags: ['Primary Contact', 'Decision Maker'],
+    preferences: {
+      preferredContactMethod: 'email',
+      bestTimeToContact: 'Weekdays 9am-5pm',
+      timezone: 'America/New_York'
+    },
+    socialProfiles: {
+      linkedin: 'https://linkedin.com/in/alice-smith'
+    },
+    lastContactDate: '2024-01-20T14:30:00Z',
+    nextFollowUpDate: '2024-02-01',
     notes: [
       { 
         id: generateId(), 
@@ -28,7 +41,16 @@ const sampleContacts: Contact[] = [
     email: 'bob.j@mhsolutions.com',
     phone: '(555) 333-4445',
     accountId: 'acc-002', // Linked to Mobile Home Solutions
+    title: 'Operations Director',
+    department: 'Operations',
+    isPrimary: false,
     tags: ['Sales Contact'],
+    preferences: {
+      preferredContactMethod: 'phone',
+      bestTimeToContact: 'Mornings',
+      timezone: 'America/Chicago'
+    },
+    lastContactDate: '2024-01-18T10:00:00Z',
     notes: [],
     createdAt: '2024-06-20T09:10:00Z',
     updatedAt: '2024-06-20T09:10:00Z'
@@ -40,7 +62,15 @@ const sampleContacts: Contact[] = [
     email: 'charlie.b@example.com',
     phone: '(555) 777-8888',
     accountId: undefined, // No associated account
+    title: 'Independent Buyer',
+    isPrimary: false,
     tags: ['Trade Show Lead', 'Follow-up Needed'],
+    preferences: {
+      preferredContactMethod: 'sms',
+      bestTimeToContact: 'Evenings',
+      timezone: 'America/Los_Angeles'
+    },
+    nextFollowUpDate: '2024-02-05',
     notes: [
       { 
         id: generateId(), 
@@ -59,7 +89,11 @@ const sampleContacts: Contact[] = [
     email: 'sarah@example.com',
     phone: '(555) 987-6543',
     accountId: undefined, // No associated account
+    isPrimary: false,
     tags: [],
+    preferences: {
+      preferredContactMethod: 'email'
+    },
     notes: [],
     createdAt: '2024-01-12T11:15:00Z',
     updatedAt: '2024-01-18T16:45:00Z'

@@ -362,10 +362,95 @@ export interface Contact {
   accountId?: string
   notes: Note[]
   tags?: string[]
+  title?: string
+  department?: string
+  isPrimary?: boolean
+  socialProfiles?: {
+    linkedin?: string
+    facebook?: string
+    twitter?: string
+  }
+  preferences?: {
+    preferredContactMethod?: 'email' | 'phone' | 'sms'
+    bestTimeToContact?: string
+    timezone?: string
+  }
+  lastContactDate?: string
+  nextFollowUpDate?: string
   createdAt: string
   updatedAt: string
 }
 
+export interface Activity {
+  id: string
+  type: ActivityType
+  title: string
+  description?: string
+  accountId?: string
+  contactId?: string
+  leadId?: string
+  userId: string
+  userName: string
+  timestamp: string
+  metadata?: Record<string, any>
+  relatedEntityType?: string
+  relatedEntityId?: string
+}
+
+export enum ActivityType {
+  CALL = 'call',
+  EMAIL = 'email',
+  SMS = 'sms',
+  MEETING = 'meeting',
+  NOTE = 'note',
+  TASK_CREATED = 'task_created',
+  TASK_COMPLETED = 'task_completed',
+  QUOTE_SENT = 'quote_sent',
+  AGREEMENT_SIGNED = 'agreement_signed',
+  SERVICE_SCHEDULED = 'service_scheduled',
+  INVOICE_SENT = 'invoice_sent',
+  PAYMENT_RECEIVED = 'payment_received'
+}
+
+export interface BulkOperation {
+  id: string
+  type: BulkOperationType
+  entityType: 'accounts' | 'contacts' | 'leads'
+  entityIds: string[]
+  operation: string
+  parameters?: Record<string, any>
+  status: BulkOperationStatus
+  progress: number
+  results?: BulkOperationResult[]
+  createdAt: string
+  completedAt?: string
+  createdBy: string
+}
+
+export enum BulkOperationType {
+  UPDATE = 'update',
+  DELETE = 'delete',
+  TAG = 'tag',
+  EXPORT = 'export',
+  ASSIGN = 'assign',
+  EMAIL = 'email',
+  SMS = 'sms'
+}
+
+export enum BulkOperationStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled'
+}
+
+export interface BulkOperationResult {
+  entityId: string
+  success: boolean
+  error?: string
+  data?: any
+}
 export interface SavedFilter {
   id: string
   name: string
