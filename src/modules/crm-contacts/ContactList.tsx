@@ -16,6 +16,7 @@ import { AdvancedSearch } from '@/components/common/AdvancedSearch'
 import { FilterPanel } from '@/components/common/FilterPanel'
 import { ImportExportActions } from '@/components/common/ImportExportActions'
 import { useSavedFilters } from '@/hooks/useSavedFilters'
+import type { Contact } from '@/types'
 
 export default function ContactList() {
   const { contacts, loading, error, deleteContact, createContact } = useContactManagement()
@@ -23,15 +24,14 @@ export default function ContactList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [advancedSearchCriteria, setAdvancedSearchCriteria] = useState<any[]>([])
-  
-  // Check if contact matches advanced search criteria
+
+  // Advanced search matcher
   const matchesAdvancedSearch = (contact: Contact, criteria: any[]) => {
     if (criteria.length === 0) return true
-    
-    return criteria.every(criterion => {
+    return criteria.every((criterion) => {
       const fieldValue = (contact as any)[criterion.field]?.toString().toLowerCase() || ''
-      const searchValue = criterion.value.toLowerCase()
-      
+      const searchValue = String(criterion.value ?? '').toLowerCase()
+
       switch (criterion.operator) {
         case 'contains':
           return fieldValue.includes(searchValue)
@@ -52,38 +52,30 @@ export default function ContactList() {
       }
     })
   }
+
   const { savedFilters, saveFilter, deleteFilter, setDefaultFilter } = useSavedFilters('contacts')
-  
+
   // Filter state
   const [filters, setFilters] = React.useState({
     search: searchParams.get('search') || '',
     accountId: searchParams.get('accountId') || '',
     hasAccount: searchParams.get('hasAccount') || '',
-    
-    // Advanced search
-    const matchesAdvanced = matchesAdvancedSearch(contact, advancedSearchCriteria)
-    const createdAfter = searchParams.get('createdAfter') || ''
-    return matchesSearch && matchesAdvanced
+    createdAfter: searchParams.get('createdAfter') || '',
+    createdBefore: searchParams.get('createdBefore') || ''
   })
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(filteredContacts.map(contact => contact.id))
-    } else {
-      setSelectedIds([])
-    }
+    if (checked) setSelectedIds(filteredContacts.map((c) => c.id))
+    else setSelectedIds([])
   }
 
   const handleSelectContact = (contactId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds(prev => [...prev, contactId])
-    } else {
-      setSelectedIds(prev => prev.filter(id => id !== contactId))
-    }
+    if (checked) setSelectedIds((prev) => [...prev, contactId])
+    else setSelectedIds((prev) => prev.filter((id) => id !== contactId))
   }
 
   const handleImport = (importedData: any[]) => {
-    importedData.forEach(data => {
+    importedData.forEach((data) => {
       createContact(data)
     })
   }
@@ -94,88 +86,62 @@ export default function ContactList() {
   React.useEffect(() => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value)
+      if (value) params.set(key, String(value))
     })
     setSearchParams(params)
   }, [filters, setSearchParams])
 
   // Filter contacts based on current filters
   const filteredContacts = React.useMemo(() => {
-    return contacts.filter(contact => {
+    return contacts.filter((contact) => {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
-        const matchesSearch = 
+        const matchesSearch =
           `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchLower) ||
           contact.email?.toLowerCase().includes(searchLower) ||
           contact.phone?.includes(filters.search)
         if (!matchesSearch) return false
       }
-      
-      if (filters.accountId && contact.accountId !== filters.accountId) {
-        return false
-      }
-      
-      if (filters.hasAccount === 'yes' && !contact.accountId) {
-        return false
-      }
-      
-      if (filters.hasAccount === 'no' && contact.accountId) {
-        return false
-      }
-      
+
+      if (filters.accountId && contact.accountId !== filters.accountId) return false
+
+      if (filters.hasAccount === 'yes' && !contact.accountId) return false
+      if (filters.hasAccount === 'no' && contact.accountId) return false
+
       if (filters.createdAfter) {
         const createdDate = new Date(contact.createdAt)
         const filterDate = new Date(filters.createdAfter)
         if (createdDate < filterDate) return false
       }
-      
+
       if (filters.createdBefore) {
         const createdDate = new Date(contact.createdAt)
         const filterDate = new Date(filters.createdBefore)
         if (createdDate > filterDate) return false
       }
-      
+
       // Advanced search
-      const matchesAdvanced = advancedSearchCriteria.length === 0 || 
-        advancedSearchCriteria.every(criteria => {
-          const fieldValue = (contact as any)[criteria.field]?.toString().toLowerCase() || ''
-          const searchValue = criteria.value.toLowerCase()
-          
-          switch (criteria.operator) {
-            case 'contains':
-              return fieldValue.includes(searchValue)
-            case 'equals':
-              return fieldValue === searchValue
-            case 'starts_with':
-              return fieldValue.startsWith(searchValue)
-            case 'ends_with':
-              return fieldValue.endsWith(searchValue)
-            case 'not_equals':
-              return fieldValue !== searchValue
-            case 'is_empty':
-              return !fieldValue
-            case 'is_not_empty':
-              return !!fieldValue
-            default:
-              return true
-          }
-        })
-      
-      return matchesAdvanced
+      return matchesAdvancedSearch(contact as Contact, advancedSearchCriteria)
     })
   }, [contacts, filters, advancedSearchCriteria])
 
-  const accountOptions = React.useMemo(() => {
-    return accounts.map(account => ({ value: account.id, label: account.name }))
-  }, [accounts])
+  const accountOptions = React.useMemo(
+    () => accounts.map((account) => ({ value: account.id, label: account.name })),
+    [accounts]
+  )
 
   const filterFields = [
     { key: 'search', label: 'Search', type: 'text' as const },
     { key: 'accountId', label: 'Account', type: 'select' as const, options: accountOptions },
-    { key: 'hasAccount', label: 'Has Account', type: 'select' as const, options: [
-      { value: 'yes', label: 'Yes' },
-      { value: 'no', label: 'No' }
-    ]},
+    {
+      key: 'hasAccount',
+      label: 'Has Account',
+      type: 'select' as const,
+      options: [
+        { value: 'yes', label: 'Yes' },
+        { value: 'no', label: 'No' }
+      ]
+    },
     { key: 'createdAfter', label: 'Created After', type: 'date' as const },
     { key: 'createdBefore', label: 'Created Before', type: 'date' as const }
   ]
@@ -208,7 +174,7 @@ export default function ContactList() {
         icon={<PlusCircle className="h-12 w-12" />}
         action={{
           label: 'Create New Contact',
-          onClick: () => window.location.href = '/crm/contacts/new'
+          onClick: () => (window.location.href = '/crm/contacts/new')
         }}
       />
     )
@@ -224,12 +190,7 @@ export default function ContactList() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <ImportExportActions
-            module="contacts"
-            data={filteredContacts}
-            onImport={handleImport}
-            sampleFields={sampleFields}
-          />
+          <ImportExportActions module="contacts" data={filteredContacts} onImport={handleImport} sampleFields={sampleFields} />
           <Button asChild>
             <Link to="/crm/contacts/new">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -291,7 +252,7 @@ export default function ContactList() {
                 <TableHead className="w-12">
                   <Checkbox
                     checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
-                    onCheckedChange={handleSelectAll}
+                    onCheckedChange={(v) => handleSelectAll(!!v)}
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
@@ -311,16 +272,14 @@ export default function ContactList() {
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.includes(contact.id)}
-                        onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                        onCheckedChange={(checked) => handleSelectContact(contact.id, !!checked)}
                       />
                     </TableCell>
                     <TableCell className="font-medium">
                       <Link to={`/crm/contacts/${contact.id}`} className="text-primary hover:underline">
                         {contact.firstName} {contact.lastName}
                       </Link>
-                      {contact.title && (
-                        <p className="text-xs text-muted-foreground">{contact.title}</p>
-                      )}
+                      {contact.title && <p className="text-xs text-muted-foreground">{contact.title}</p>}
                     </TableCell>
                     <TableCell>
                       {account ? (
