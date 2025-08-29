@@ -1,3 +1,4 @@
+// src/modules/accounts/components/AccountWarrantySection.tsx
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,21 +25,26 @@ interface Props {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
+  /** when present, use this to open the create modal */
   onCreate?: () => void
 }
 
-export default function AccountWarrantySection({
+export function AccountWarrantySection({
   accountId,
   onRemove,
   isDragging,
   onCreate,
 }: Props) {
-  const all = loadFromLocalStorage<Warranty[]>('warranties', [])
-  const warranties = (all || []).filter(w => w.accountId === accountId)
+  const all = loadFromLocalStorage<Warranty[]>('warranties', []) || []
+  const warranties = all.filter(w => w.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) onCreate()
-    else window.location.href = `/inventory/warranty/new?accountId=${accountId}&returnTo=account`
+    if (onCreate) {
+      onCreate()
+    } else {
+      // Fallback: navigate to module list with filter
+      window.location.href = `/inventory/warranty?accountId=${accountId}&returnTo=account`
+    }
   }
 
   const statusTone = (s?: Warranty['status']) => {
@@ -70,7 +76,9 @@ export default function AccountWarrantySection({
             <Plus className="h-4 w-4 mr-2" />
             Create Claim
           </Button>
-          {onRemove && <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>}
+          {onRemove && (
+            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
+          )}
         </div>
       </CardHeader>
 
@@ -78,7 +86,7 @@ export default function AccountWarrantySection({
         {warranties.length === 0 ? (
           <EmptyState
             title="No warranty claims yet"
-            description="Create a warranty claim for this account"
+            description="Create a claim for this account"
             icon={<ShieldCheck className="h-12 w-12" />}
             action={{ label: 'Create Claim', onClick: handleAdd }}
           />
@@ -133,3 +141,6 @@ export default function AccountWarrantySection({
     </Card>
   )
 }
+
+// also provide a default export so either import style works
+export default AccountWarrantySection
