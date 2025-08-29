@@ -4,6 +4,7 @@ dist/
 .vite/
 build/
 out/
+package-lock.json
 
 # Ignore environment variables
 .env
@@ -53,45 +54,79 @@ coverage/
 .npm/
 .yarn-cache/
 
-# Ignore Bolt-specific internal files (if any, usually handled by Bolt itself)
-.bolt/
-
-# --- STRICT MODULE IGNORING ---
-# Ignore all apps/ directories (assuming they are separate deployments)
+# Ignore separate app deployments (not part of core)
 apps/
 
-# Ignore all src/modules/ directories by default
-src/modules/
+# Ignore large documentation files
+*.md
+!README.md
 
-# EXCEPT for the ones needed for Brochure Builder and its direct interactions
-# These lines will re-include the necessary directories
-!src/modules/brochures/
-!src/modules/brochures/**
-!src/modules/inventory-management/
-!src/modules/inventory-management/**
-!src/modules/land-management/
-!src/modules/land-management/**
-!src/modules/property-listings/
-!src/modules/property-listings/**
-!src/modules/quote-builder/
-!src/modules/quote-builder/**
-!src/modules/website-builder/
+# Ignore patch files and analysis files
+*.patch
+analysis-files.md
+WEBSITE_BUILDER_IMPLEMENTATION_PLAN.md
 
-# Ensure core src/ directories are not ignored
+# Ignore large config files we don't need to see
+netlify.toml
+renter_insight_openapi.yaml
+renter_insight_bolt_manifest.json
+
+# Ignore test files to save tokens
+src/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.setup.ts
+vitest.config.ts
+
+# Ignore public site (separate deployment)
+public-site/
+
+# Ignore duplicate image files
+public/image*.png
+dist/image*.png
+
+# Ignore large mock files we don't need to examine
+src/mocks/templateMocks.ts
+src/mocks/warrantyMock.ts
+src/mocks/platformAdminMock.ts
+src/mocks/reportingSuiteMock.ts
+src/mocks/crmProspectingMock.ts
+src/mocks/crmSalesDealMock.ts
+src/mocks/commissionEngineMock.ts
+src/mocks/propertyListingsMock.ts
+
+# Ignore utility files we don't need to change
+src/utils/versionManager.ts
+src/utils/colorUtils.ts
+src/utils/mockDataDiscovery.ts
+src/shared/featureFlags.ts
+
+# Ignore large component files we don't need to examine
+src/components/common/
+src/components/ui/loading-skeleton.tsx
+src/components/ui/use-toast.tsx
+
+# Ignore netlify functions (working correctly)
+netlify/
+
+# Keep core files visible
 !src/App.tsx
 !src/main.tsx
 !src/index.css
-!src/lib/
-!src/lib/**
-!src/components/
-!src/components/**
-!src/contexts/
-!src/contexts/**
-!src/hooks/
-!src/hooks/**
-!src/utils/
-!src/utils/**
-!src/mocks/
-!src/mocks/**
 !src/types/
-!src/types/**
+!src/lib/
+!src/contexts/
+!src/hooks/
+!src/components/ui/
+!src/components/layout/
+!src/components/auth/
+!src/components/ErrorBoundary.tsx
+!src/pages/
+!src/utils/apiClient.ts
+!src/utils/logger.ts
+
+# Keep all modules visible (this is the key fix)
+!src/modules/
+!src/modules/**
