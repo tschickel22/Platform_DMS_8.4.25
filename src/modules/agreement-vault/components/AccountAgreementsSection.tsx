@@ -25,7 +25,7 @@ interface Props {
   isDragging?: boolean
 }
 
-const AccountAgreementsSection: React.FC<Props> = ({
+export function AccountAgreementsSection({
   accountId,
   onCreate,
   onRemove,
@@ -122,6 +122,5 @@ const AccountAgreementsSection: React.FC<Props> = ({
       </CardContent>
     </Card>
   )
-}
 
 export default AccountAgreementsSection
