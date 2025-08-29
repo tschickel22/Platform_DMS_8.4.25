@@ -31,7 +31,7 @@ import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyCl
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
 
-// NEW: Application modal form (now default-exported)
+// Finance applications
 import FinanceApplicationForm from '@/modules/finance-application/components/FinanceApplicationForm'
 import { useFinanceApplications } from '@/modules/finance-application/hooks/useFinanceApplications'
 
@@ -70,7 +70,6 @@ interface AccountSectionDescriptor {
   sort?: number
   defaultVisible?: boolean
 }
-
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
@@ -88,7 +87,6 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
     defaultVisible: d?.defaultVisible ?? true,
   })) as AccountSection[]
 
-// Static “core” sections
 const coreSections: AccountSection[] = [
   {
     id: 'contacts',
@@ -152,7 +150,6 @@ function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSe
   for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
   return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
 }
-
 const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
 
 // ---------------- Quick Payment (inline modal content) ----------------
@@ -270,8 +267,8 @@ export default function AccountDetail() {
   const { vehicles } = useInventoryManagement()
   const { toast } = useToast()
 
-  // NEW: finance templates for default selection
-  const finance = useFinanceApplications() as any
+  // Finance apps (may expose different shapes in different app states)
+  const fin = useFinanceApplications() as any
 
   const [account, setAccount] = useState<any>(null)
 
@@ -291,9 +288,9 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
-  const [openApplication, setOpenApplication] = useState(false) // NEW
+  const [openApplication, setOpenApplication] = useState(false)
 
-  const [newApplicationDraft, setNewApplicationDraft] = useState<any | null>(null) // NEW
+  const [newApplicationDraft, setNewApplicationDraft] = useState<any | null>(null)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -363,7 +360,6 @@ export default function AccountDetail() {
   const handleQuoteSaved = (q: any) => { setOpenQuote(false); if (q) toast({ title: 'Success', description: 'Quote created successfully' }) }
   const handleServiceSaved = (t: any) => { setOpenService(false); if (t) toast({ title: 'Success', description: 'Service ticket created successfully' }) }
 
-  // Deliveries (localStorage demo)
   const handleDeliverySaved = async (delivery: any | null) => {
     setOpenDelivery(false)
     if (!delivery) return
@@ -374,7 +370,6 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Delivery saved successfully' })
   }
 
-  // Warranty (localStorage demo)
   const handleWarrantySaved = async (claim: any | null) => {
     setOpenWarranty(false)
     if (!claim) return
@@ -385,7 +380,6 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Warranty claim saved successfully' })
   }
 
-  // Agreement (localStorage demo)
   const handleAgreementSaved = async (data: any) => {
     const existing = loadFromLocalStorage<any[]>('agreements', [])
     const withId = data.id ? data : { ...data, id: generateId(), accountId }
@@ -395,7 +389,6 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Agreement saved successfully' })
   }
 
-  // Invoice (localStorage demo)
   const handleInvoiceSave = async (data: any) => {
     const existing = loadFromLocalStorage<any[]>('invoices', [])
     const withId = data.id ? data : { ...data, id: generateId(), accountId }
@@ -405,7 +398,7 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
-  // Generic fallback create route
+  // Generic fallback route (used only if a section doesn't override onCreate)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
@@ -419,17 +412,17 @@ export default function AccountDetail() {
     if (href) window.location.href = href
   }
 
-  // Create Application (modalized like other sections)
+  // Create Application (modalized like other sections), resilient to hook shape
   const openCreateApplication = () => {
-    // Try to pick a sensible default template from the finance module
-    const templates =
-      (finance?.templates as any[]) ||
-      (typeof finance?.getTemplates === 'function' ? finance.getTemplates() : []) ||
+    const templates: any[] =
+      (Array.isArray(fin?.templates) && fin.templates) ||
+      (typeof fin?.getTemplates === 'function' ? fin.getTemplates() : []) ||
       []
 
-    const defaultTemplateId =
-      (typeof finance?.getDefaultTemplateId === 'function' && finance.getDefaultTemplateId()) ||
-      (templates[0]?.id ?? 'default')
+    const defaultTemplateId: string =
+      (typeof fin?.getDefaultTemplateId === 'function' && fin.getDefaultTemplateId()) ||
+      templates[0]?.id ||
+      'default'
 
     const draft = {
       id: generateId(),
@@ -646,7 +639,7 @@ export default function AccountDetail() {
                             : type === 'invoices'
                               ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
                               : type === 'applications'
-                                ? { ...commonProps, onCreate: openCreateApplication } // NEW
+                                ? { ...commonProps, onCreate: openCreateApplication }
                                 : commonProps
 
                   return (
@@ -781,7 +774,7 @@ export default function AccountDetail() {
         />
       )}
 
-      {/* Application Modal (standard dialog container) */}
+      {/* Application Modal */}
       <Dialog open={openApplication} onOpenChange={setOpenApplication}>
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Application</DialogTitle>
@@ -791,7 +784,6 @@ export default function AccountDetail() {
             <FinanceApplicationForm
               application={newApplicationDraft}
               onSave={(data) => {
-                // keep as draft in localStorage like others (demo)
                 const existing = loadFromLocalStorage<any[]>('financeApplications', [])
                 const merged = { ...newApplicationDraft, ...data, id: newApplicationDraft.id }
                 saveToLocalStorage('financeApplications', [merged, ...existing])
