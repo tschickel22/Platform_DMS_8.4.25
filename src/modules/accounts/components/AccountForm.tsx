@@ -17,7 +17,7 @@ interface AccountFormProps {
   onCancel?: () => void
 }
 
-export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
+export default function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   
