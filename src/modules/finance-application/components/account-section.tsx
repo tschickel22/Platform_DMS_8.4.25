@@ -1,10 +1,7 @@
-// src/modules/finance-application/components/account-section.tsx
 import type { ComponentType } from 'react'
+import AccountApplicationsSection from './AccountApplicationsSection'
 
-type SectionType =
-  | 'contacts' | 'deals' | 'quotes' | 'service' | 'deliveries'
-  | 'warranty' | 'payments' | 'agreements' | 'applications'
-  | 'invoices' | 'notes'
+type SectionType = 'applications'
 
 export interface AccountSectionDescriptor {
   id: string
@@ -16,16 +13,13 @@ export interface AccountSectionDescriptor {
   defaultVisible?: boolean
 }
 
-// This file is already inside .../components/, so import the sibling directly
-import AccountApplicationsSection from './AccountApplicationsSection'
-
 const descriptor: AccountSectionDescriptor = {
   id: 'applications',
   type: 'applications',
   title: 'Finance Applications',
   description: 'Credit/loan applications for this account',
   component: AccountApplicationsSection,
-  sort: 65, // after Payments (60) and before Invoices (66)
+  sort: 65,
   defaultVisible: true,
 }
 
