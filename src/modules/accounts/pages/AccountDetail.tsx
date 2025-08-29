@@ -1,3 +1,4 @@
+// src/modules/accounts/pages/AccountDetail.tsx
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
