@@ -1,8 +1,8 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FileText, Plus, GripVertical, ExternalLink } from 'lucide-react'
 import { loadFromLocalStorage } from '@/lib/utils'
@@ -20,7 +20,6 @@ interface Props {
   accountId: string
   isDragging?: boolean
   onRemove?: () => void
-  /** open the Create Application modal */
   onCreate?: () => void
 }
 
@@ -32,10 +31,6 @@ export default function AccountApplicationsSection({
 }: Props) {
   const all = loadFromLocalStorage<AppRow[]>('financeApplications', []) || []
   const apps = all.filter(a => a.accountId === accountId)
-
-  const handleAdd = () => {
-    if (onCreate) onCreate()
-  }
 
   return (
     <Card className={`transition-all duration-200 ${isDragging ? 'opacity-50 rotate-1' : ''}`}>
@@ -52,13 +47,11 @@ export default function AccountApplicationsSection({
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary">{apps.length}</Badge>
-          <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Button variant="outline" size="sm" onClick={onCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Create Application
           </Button>
-          {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
-          )}
+          {onRemove && <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>}
         </div>
       </CardHeader>
 
@@ -68,7 +61,7 @@ export default function AccountApplicationsSection({
             title="No applications"
             description="Create a finance application for this account"
             icon={<FileText className="h-12 w-12" />}
-            action={{ label: 'Create Application', onClick: handleAdd }}
+            action={{ label: 'Create Application', onClick: onCreate }}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -89,7 +82,7 @@ export default function AccountApplicationsSection({
                     <TableCell>{a.templateId || '—'}</TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to={`/finance-applications?focus=${a.id}`}>
+                        <Link to={`/client-applications?focus=${a.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
