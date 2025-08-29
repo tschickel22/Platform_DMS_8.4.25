@@ -28,9 +28,11 @@ import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
-// IMPORTANT: use the **named** export (the actual editor)
-import { AgreementForm as AgreementEditor } from '@/modules/agreement-vault/components/AgreementForm'
+import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
+
+// 👉 new: real applications modal form
+import { FinanceApplicationForm } from '@/modules/finance-application/components/FinanceApplicationForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
@@ -67,13 +69,14 @@ interface AccountSectionDescriptor {
   sort?: number
   defaultVisible?: boolean
 }
+
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
-const sectionModules = import.meta.glob(
-  '@/modules/**/account-section.{ts,tsx}',
-  { eager: true }
-) as Record<string, { default?: AccountSectionDescriptor }>
+const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
+  string,
+  { default?: AccountSectionDescriptor }
+>
 
 const dynamicSections: AccountSection[] = Object.values(sectionModules)
   .map((m) => m?.default)
@@ -86,12 +89,60 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
 
 // Static “core” sections
 const coreSections: AccountSection[] = [
-  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', description: 'Contacts linked to this account', component: AccountContactsSection, sort: 10, defaultVisible: true },
-  { id: 'deals', type: 'deals', title: 'Sales Deals', description: 'Active and historical deals', component: AccountDealsSection, sort: 20, defaultVisible: true },
-  { id: 'quotes', type: 'quotes', title: 'Quotes', description: 'Quotes and proposals', component: AccountQuotesSection, sort: 30, defaultVisible: true },
-  { id: 'service', type: 'service', title: 'Service Tickets', description: 'Service requests and maintenance', component: AccountServiceTicketsSection, sort: 40, defaultVisible: true },
-  { id: 'deliveries', type: 'deliveries', title: 'Deliveries', description: 'Delivery records and scheduling', component: AccountDeliveriesSection, sort: 50, defaultVisible: true },
-  { id: 'notes', type: 'notes', title: 'Notes & Comments', description: 'Internal notes and comments', component: AccountNotesSection, sort: 999, defaultVisible: true },
+  {
+    id: 'contacts',
+    type: 'contacts',
+    title: 'Associated Contacts',
+    description: 'Contacts linked to this account',
+    component: AccountContactsSection,
+    sort: 10,
+    defaultVisible: true,
+  },
+  {
+    id: 'deals',
+    type: 'deals',
+    title: 'Sales Deals',
+    description: 'Active and historical deals',
+    component: AccountDealsSection,
+    sort: 20,
+    defaultVisible: true,
+  },
+  {
+    id: 'quotes',
+    type: 'quotes',
+    title: 'Quotes',
+    description: 'Quotes and proposals',
+    component: AccountQuotesSection,
+    sort: 30,
+    defaultVisible: true,
+  },
+  {
+    id: 'service',
+    type: 'service',
+    title: 'Service Tickets',
+    description: 'Service requests and maintenance',
+    component: AccountServiceTicketsSection,
+    sort: 40,
+    defaultVisible: true,
+  },
+  {
+    id: 'deliveries',
+    type: 'deliveries',
+    title: 'Deliveries',
+    description: 'Delivery records and scheduling',
+    component: AccountDeliveriesSection,
+    sort: 50,
+    defaultVisible: true,
+  },
+  {
+    id: 'notes',
+    type: 'notes',
+    title: 'Notes & Comments',
+    description: 'Internal notes and comments',
+    component: AccountNotesSection,
+    sort: 999,
+    defaultVisible: true,
+  },
 ]
 
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
@@ -161,7 +212,7 @@ function QuickPaymentForm({
 
   return (
     <DialogContent className="sm:max-w-lg w-[95vw] max-h-[85vh] overflow-y-auto">
-      <DialogTitle>Create Payment</DialogTitle>
+      <DialogTitle>Record Payment</DialogTitle>
       <DialogDescription>Add a new payment for this account.</DialogDescription>
 
       <form onSubmit={handleSave} className="space-y-4 pt-2">
@@ -236,6 +287,7 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
+  const [openApplication, setOpenApplication] = useState(false) // ← NEW
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -347,6 +399,33 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
+  // Applications (localStorage demo)
+  const handleApplicationSave = async (data: any) => {
+    const existing = loadFromLocalStorage<any[]>('applications', [])
+    const withId = data?.id ? data : { ...data, id: generateId(), accountId }
+    saveToLocalStorage('applications', [withId, ...existing])
+    setOpenApplication(false)
+    refreshSection('applications')
+    toast({ title: 'Success', description: 'Application saved successfully' })
+  }
+
+  const handleApplicationSubmit = async (data: any) => {
+    await handleApplicationSave({ ...data, status: 'submitted', submittedAt: new Date().toISOString() })
+  }
+
+  // Default "new application" shell for the modal
+  const newApplication = useMemo(
+    () => ({
+      id: generateId(),
+      accountId,
+      customerName: account?.name ?? '',
+      templateId: 'standard', // your FinanceApplicationForm will resolve an existing template
+      status: 'draft',
+      data: {},
+    }),
+    [account?.name, accountId]
+  )
+
   // Generic fallback create route (used by types we don't modal-ize)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
@@ -354,7 +433,7 @@ export default function AccountDetail() {
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
+      // applications: (handled via modal now)
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
     }
     const href = map[t]
@@ -563,7 +642,9 @@ export default function AccountDetail() {
                             ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
                             : type === 'invoices'
                               ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
-                              : commonProps
+                              : type === 'applications'
+                                ? { ...commonProps, onCreate: () => setOpenApplication(true) } // ← NEW
+                                : commonProps
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
@@ -679,25 +760,35 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal (now wrapped in Dialog) */}
-      <Dialog open={openAgreement} onOpenChange={setOpenAgreement}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Agreement</DialogTitle>
-          <DialogDescription className="sr-only">Create an agreement for this account.</DialogDescription>
-          <AgreementEditor
-            onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
-            onCancel={() => setOpenAgreement(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Agreement Modal */}
+      {openAgreement && (
+        <AgreementForm
+          onSaved={(data) => handleAgreementSaved(data)}
+          onCancel={() => setOpenAgreement(false)}
+        />
+      )}
 
-      {/* Invoice Modal (overlay component) */}
+      {/* Invoice Modal */}
       {openInvoice && (
         <InvoiceForm
           onSave={handleInvoiceSave}
           onCancel={() => setOpenInvoice(false)}
         />
       )}
+
+      {/* Applications Modal – opens instead of routing */}
+      <Dialog open={openApplication} onOpenChange={setOpenApplication}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">New Finance Application</DialogTitle>
+          <DialogDescription className="sr-only">Create a finance application for this account.</DialogDescription>
+          <FinanceApplicationForm
+            application={newApplication as any}
+            onSave={(data) => handleApplicationSave(data)}
+            onSubmit={(data) => handleApplicationSubmit(data)}
+            onCancel={() => setOpenApplication(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
