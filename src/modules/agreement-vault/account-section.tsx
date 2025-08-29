@@ -1,5 +1,5 @@
-// src/modules/agreement-vault/account-section.tsx
 import type { ComponentType } from 'react'
+import AccountAgreementsSection from './components/AccountAgreementsSection'
 
 type SectionType =
   | 'contacts' | 'deals' | 'quotes' | 'service' | 'deliveries'
@@ -16,16 +16,13 @@ export interface AccountSectionDescriptor {
   defaultVisible?: boolean
 }
 
-// ✅ point at the component inside ./components
-import AccountAgreementsSection from './components/AccountAgreementsSection'
-
 const descriptor: AccountSectionDescriptor = {
   id: 'agreements',
   type: 'agreements',
   title: 'Agreements',
-  description: 'Contracts and signed documents for this account',
-  component: AccountAgreementsSection,
-  sort: 61, // after Payments(60), before Applications(65)/Invoices(66)
+  description: 'Recorded agreements for this account',
+  component: AccountAgreementsSection as ComponentType<any>,
+  sort: 64,              // just before Applications/Invoices if those exist
   defaultVisible: true,
 }
 
