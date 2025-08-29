@@ -97,3 +97,6 @@ export function AccountApplicationsSection({
     </Card>
   )
 }
+
+
+export default AccountApplicationsSection
