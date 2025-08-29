@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
 import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
@@ -28,12 +29,13 @@ import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketFor
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
+import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
 
-// Static sections already in the app
+// Core/static sections
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -64,6 +66,7 @@ interface AccountSectionDescriptor {
   sort?: number
   defaultVisible?: boolean
 }
+
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
@@ -81,7 +84,7 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
     defaultVisible: d?.defaultVisible ?? true,
   })) as AccountSection[]
 
-// Static core sections
+// Static “core” sections
 const coreSections: AccountSection[] = [
   {
     id: 'contacts',
@@ -139,7 +142,6 @@ const coreSections: AccountSection[] = [
   },
 ]
 
-// Merge dynamic + core by type (dynamic can override)
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
   const byType = new Map<SectionType, AccountSection>()
   for (const s of core) byType.set(s.type, s)
@@ -149,11 +151,11 @@ function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSe
 
 const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
 
-// ---------------- Quick Payment (inline modal) ----------------
+// ---------------- Quick Payment (inline modal content) ----------------
 type QuickPayment = {
   id: string
   accountId: string
-  date: string // ISO date
+  date: string
   amount: number
   method: 'cash' | 'card' | 'ach' | 'check' | 'other'
   reference?: string
@@ -218,13 +220,7 @@ function QuickPaymentForm({
           </div>
           <div>
             <Label>Amount</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
+            <Input type="number" step="0.01" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
         </div>
 
@@ -232,9 +228,7 @@ function QuickPaymentForm({
           <div>
             <Label>Method</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as QuickPayment['method'])}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a method" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Choose a method" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="ach">ACH</SelectItem>
@@ -257,9 +251,7 @@ function QuickPaymentForm({
 
         <div className="flex justify-end space-x-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Payment'}
-          </Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Payment'}</Button>
         </div>
       </form>
     </DialogContent>
@@ -276,12 +268,10 @@ export default function AccountDetail() {
 
   const [account, setAccount] = useState<any>(null)
 
-  // Build default layout from currently-available sections (respecting defaultVisible)
   const defaultLayout = useMemo(
     () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
     []
   )
-
   const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
 
   // Modals
@@ -293,6 +283,7 @@ export default function AccountDetail() {
   const [openPayment, setOpenPayment] = useState(false)
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
+  const [openInvoice, setOpenInvoice] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -305,15 +296,13 @@ export default function AccountDetail() {
     setAccount(data ?? null)
   }, [accountId, getAccount])
 
-  // Load & merge saved layout with any new defaults
+  // Merge any saved layout with current defaults
   useEffect(() => {
     if (!accountId) return
     const saved = loadFromLocalStorage<SectionType[]>(storageKey, []) || []
-
-    const validTypes = new Set<SectionType>(AVAILABLE_SECTIONS.map((s) => s.type))
-    const cleaned = saved.filter((t) => validTypes.has(t))
+    const valid = new Set<SectionType>(AVAILABLE_SECTIONS.map((s) => s.type))
+    const cleaned = saved.filter((t) => valid.has(t))
     const mergedUnique = Array.from(new Set<SectionType>([...cleaned, ...(defaultLayout as SectionType[])]))
-
     setSections(mergedUnique)
     if (saved.length && mergedUnique.length !== saved.length) setHasUnsavedChanges(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -356,40 +345,15 @@ export default function AccountDetail() {
     toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
   }
 
-  const refreshSection = (_: string) => {
-    // placeholder — sections read from local state / mocks / localStorage
-  }
+  const refreshSection = (_: string) => {}
 
-  // Save handlers (localStorage demos)
-  const handleContactSaved = (contact: any) => {
-    setOpenContact(false)
-    if (contact) {
-      refreshSection('contacts')
-      toast({ title: 'Success', description: 'Contact created successfully' })
-    }
-  }
-  const handleDealSaved = (deal: any) => {
-    setOpenDeal(false)
-    if (deal) {
-      refreshSection('deals')
-      toast({ title: 'Success', description: 'Deal created successfully' })
-    }
-  }
-  const handleQuoteSaved = (quote: any) => {
-    setOpenQuote(false)
-    if (quote) {
-      refreshSection('quotes')
-      toast({ title: 'Success', description: 'Quote created successfully' })
-    }
-  }
-  const handleServiceSaved = (ticket: any) => {
-    setOpenService(false)
-    if (ticket) {
-      refreshSection('service')
-      toast({ title: 'Success', description: 'Service ticket created successfully' })
-    }
-  }
+  // Save handlers
+  const handleContactSaved = (c: any) => { setOpenContact(false); if (c) toast({ title: 'Success', description: 'Contact created successfully' }) }
+  const handleDealSaved = (d: any) => { setOpenDeal(false); if (d) toast({ title: 'Success', description: 'Deal created successfully' }) }
+  const handleQuoteSaved = (q: any) => { setOpenQuote(false); if (q) toast({ title: 'Success', description: 'Quote created successfully' }) }
+  const handleServiceSaved = (t: any) => { setOpenService(false); if (t) toast({ title: 'Success', description: 'Service ticket created successfully' }) }
 
+  // Deliveries (localStorage demo)
   const handleDeliverySaved = async (delivery: any | null) => {
     setOpenDelivery(false)
     if (!delivery) return
@@ -400,27 +364,38 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Delivery saved successfully' })
   }
 
+  // Warranty (localStorage demo)
   const handleWarrantySaved = async (claim: any | null) => {
     setOpenWarranty(false)
     if (!claim) return
     const existing = loadFromLocalStorage<any[]>('warranties', [])
-    const withId = claim.id ? claim : { ...claim, id: generateId() }
+    const withId = claim.id ? claim : { ...claim, id: generateId(), accountId }
     saveToLocalStorage('warranties', [withId, ...existing])
     refreshSection('warranty')
     toast({ title: 'Success', description: 'Warranty claim saved successfully' })
   }
 
-  const handleAgreementSaved = async (agreement: any | null) => {
-    setOpenAgreement(false)
-    if (!agreement) return
+  // Agreement (localStorage demo)
+  const handleAgreementSaved = async (data: any) => {
     const existing = loadFromLocalStorage<any[]>('agreements', [])
-    const withId = agreement.id ? agreement : { ...agreement, id: generateId() }
+    const withId = data.id ? data : { ...data, id: generateId(), accountId }
     saveToLocalStorage('agreements', [withId, ...existing])
-    // refreshSection('agreements') // enable if your section reads from LS
+    setOpenAgreement(false)
+    refreshSection('agreements')
     toast({ title: 'Success', description: 'Agreement saved successfully' })
   }
 
-  // Generic fallback create (not used for payments/warranty/agreements)
+  // Invoice (localStorage demo)
+  const handleInvoiceSave = async (data: any) => {
+    const existing = loadFromLocalStorage<any[]>('invoices', [])
+    const withId = data.id ? data : { ...data, id: generateId(), accountId }
+    saveToLocalStorage('invoices', [withId, ...existing])
+    setOpenInvoice(false)
+    refreshSection('invoices')
+    toast({ title: 'Success', description: 'Invoice saved successfully' })
+  }
+
+  // Generic fallback create route (used by types we don't modal-ize)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
@@ -428,8 +403,7 @@ export default function AccountDetail() {
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
       applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
-      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
-      // payments, warranty, agreements handled by modals below
+      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`, // fallback (we also open a modal below)
     }
     const href = map[t]
     if (href) window.location.href = href
@@ -620,14 +594,12 @@ export default function AccountDetail() {
                   if (!config) return null
                   const Section = config.component as any
 
-                  // Base props
                   const commonProps = {
                     accountId: accountId!,
                     onRemove: () => removeSection(type),
                     onCreate: () => routeCreateForType(type),
                   }
 
-                  // Override “create” for specific sections to open modals instead of routing
                   const withSpecialHandlers =
                     type === 'deliveries'
                       ? { ...commonProps, onAddDelivery: () => setOpenDelivery(true) }
@@ -637,40 +609,24 @@ export default function AccountDetail() {
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
                           : type === 'agreements'
                             ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
-                            : commonProps
+                            : type === 'invoices'
+                              ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
+                              : commonProps
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
                       {(p, s) => (
                         <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
                           {type === 'deals' ? (
-                            <AccountDealsSection
-                              {...withSpecialHandlers}
-                              isDragging={s.isDragging}
-                              onAddDeal={() => setOpenDeal(true)}
-                            />
+                            <AccountDealsSection {...withSpecialHandlers} isDragging={s.isDragging} onAddDeal={() => setOpenDeal(true)} />
                           ) : type === 'quotes' ? (
-                            <AccountQuotesSection
-                              {...withSpecialHandlers}
-                              isDragging={s.isDragging}
-                              onAddQuote={() => setOpenQuote(true)}
-                            />
+                            <AccountQuotesSection {...withSpecialHandlers} isDragging={s.isDragging} onAddQuote={() => setOpenQuote(true)} />
                           ) : type === 'service' ? (
-                            <AccountServiceTicketsSection
-                              {...withSpecialHandlers}
-                              isDragging={s.isDragging}
-                              onAddService={() => setOpenService(true)}
-                            />
+                            <AccountServiceTicketsSection {...withSpecialHandlers} isDragging={s.isDragging} onAddService={() => setOpenService(true)} />
                           ) : type === 'deliveries' ? (
-                            <AccountDeliveriesSection
-                              {...withSpecialHandlers}
-                              isDragging={s.isDragging}
-                            />
+                            <AccountDeliveriesSection {...withSpecialHandlers} isDragging={s.isDragging} />
                           ) : (
-                            <Section
-                              {...withSpecialHandlers}
-                              isDragging={s.isDragging}
-                            />
+                            <Section {...withSpecialHandlers} isDragging={s.isDragging} />
                           )}
                         </div>
                       )}
@@ -735,7 +691,7 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Delivery Modal (DeliveryForm has its own overlay) */}
+      {/* Delivery Modal (DeliveryForm renders its own overlay UI) */}
       {openDelivery && (
         <DeliveryForm
           customers={contacts}
@@ -751,8 +707,8 @@ export default function AccountDetail() {
           accountId={account.id}
           onSaved={() => {
             setOpenPayment(false)
-            toast({ title: 'Success', description: 'Payment recorded successfully' })
             refreshSection('payments')
+            toast({ title: 'Success', description: 'Payment recorded successfully' })
           }}
           onCancel={() => setOpenPayment(false)}
         />
@@ -771,18 +727,21 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal */}
-      <Dialog open={openAgreement} onOpenChange={setOpenAgreement}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">New Agreement</DialogTitle>
-          <DialogDescription className="sr-only">Create a new agreement for this account.</DialogDescription>
-          <AgreementForm
-            accountId={account.id}
-            returnTo="account"
-            onSaved={handleAgreementSaved}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Agreement Modal (overlay component) */}
+      {openAgreement && (
+        <AgreementForm
+          onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
+          onCancel={() => setOpenAgreement(false)}
+        />
+      )}
+
+      {/* Invoice Modal (overlay component) */}
+      {openInvoice && (
+        <InvoiceForm
+          onSave={handleInvoiceSave}
+          onCancel={() => setOpenInvoice(false)}
+        />
+      )}
     </>
   )
 }
