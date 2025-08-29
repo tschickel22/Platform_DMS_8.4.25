@@ -30,6 +30,7 @@ import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
+import { FinanceApplicationForm } from '@/modules/finance-application/components/FinanceApplicationForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
@@ -284,6 +285,7 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
+  const [openApplication, setOpenApplication] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -395,15 +397,35 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
-  // Generic fallback create route (used by types we don't modal-ize)
+  // Finance Applications (localStorage demo)
+  const handleApplicationSaved = async (data: any | null) => {
+    setOpenApplication(false)
+    if (!data) return
+    const existing = loadFromLocalStorage<any[]>('financeApplications', [])
+    const withId = data.id ? data : { ...data, id: generateId(), accountId }
+    saveToLocalStorage('financeApplications', [withId, ...existing])
+    toast({ title: 'Success', description: 'Application saved successfully' })
+  }
+
+  const handleApplicationSubmitted = async (data: any | null) => {
+    setOpenApplication(false)
+    if (!data) return
+    const existing = loadFromLocalStorage<any[]>('financeApplications', [])
+    const base = data.id ? data : { ...data, id: generateId(), accountId }
+    const submitted = { ...base, status: 'submitted' }
+    saveToLocalStorage('financeApplications', [submitted, ...existing])
+    toast({ title: 'Submitted', description: 'Application submitted successfully' })
+  }
+
+  // Generic fallback create route (for sections we don't modal-ize)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
-      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`, // fallback (we also open a modal below)
+      // applications -> handled via modal to avoid white screen
+      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`, // fallback (we also open a modal)
     }
     const href = map[t]
     if (href) window.location.href = href
@@ -609,9 +631,11 @@ export default function AccountDetail() {
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
                           : type === 'agreements'
                             ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
-                            : type === 'invoices'
-                              ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
-                              : commonProps
+                            : type === 'applications'
+                              ? { ...commonProps, onCreate: () => setOpenApplication(true) }
+                              : type === 'invoices'
+                                ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
+                                : commonProps
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
@@ -742,6 +766,27 @@ export default function AccountDetail() {
           onCancel={() => setOpenInvoice(false)}
         />
       )}
+
+      {/* Finance Application Modal */}
+      <Dialog open={openApplication} onOpenChange={setOpenApplication}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Application</DialogTitle>
+          <DialogDescription className="sr-only">Create a finance application for this account.</DialogDescription>
+          <FinanceApplicationForm
+            application={{
+              id: generateId(),
+              accountId: account.id,
+              customerName: '',
+              status: 'draft',
+              templateId: 'basic',
+              data: {},
+            } as any}
+            onSave={(d) => handleApplicationSaved({ ...(d || {}), accountId })}
+            onSubmit={(d) => handleApplicationSubmitted({ ...(d || {}), accountId })}
+            onCancel={() => setOpenApplication(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
