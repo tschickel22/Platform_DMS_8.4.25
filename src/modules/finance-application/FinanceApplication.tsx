@@ -27,7 +27,6 @@ import { Task, TaskModule, TaskPriority } from '@/types'
 function FinanceApplicationDashboard() {
   const { tenant } = useTenant()
   const { toast } = useToast()
-  const { createTask } = useTasks()
   const [activeTab, setActiveTab] = useState('applications')
   const [showApplicationTypeSelectionModal, setShowApplicationTypeSelectionModal] = useState(false)
   const [applicationCreationMode, setApplicationCreationMode] = useState<'none' | 'completeNow' | 'inviteCustomer'>('none')
