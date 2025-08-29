@@ -28,7 +28,8 @@ import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
-import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
+// IMPORTANT: use the **named** export (the actual editor)
+import { AgreementForm as AgreementEditor } from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
 
 import {
@@ -66,14 +67,13 @@ interface AccountSectionDescriptor {
   sort?: number
   defaultVisible?: boolean
 }
-
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
-const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
-  string,
-  { default?: AccountSectionDescriptor }
->
+const sectionModules = import.meta.glob(
+  '@/modules/**/account-section.{ts,tsx}',
+  { eager: true }
+) as Record<string, { default?: AccountSectionDescriptor }>
 
 const dynamicSections: AccountSection[] = Object.values(sectionModules)
   .map((m) => m?.default)
@@ -86,60 +86,12 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
 
 // Static “core” sections
 const coreSections: AccountSection[] = [
-  {
-    id: 'contacts',
-    type: 'contacts',
-    title: 'Associated Contacts',
-    description: 'Contacts linked to this account',
-    component: AccountContactsSection,
-    sort: 10,
-    defaultVisible: true,
-  },
-  {
-    id: 'deals',
-    type: 'deals',
-    title: 'Sales Deals',
-    description: 'Active and historical deals',
-    component: AccountDealsSection,
-    sort: 20,
-    defaultVisible: true,
-  },
-  {
-    id: 'quotes',
-    type: 'quotes',
-    title: 'Quotes',
-    description: 'Quotes and proposals',
-    component: AccountQuotesSection,
-    sort: 30,
-    defaultVisible: true,
-  },
-  {
-    id: 'service',
-    type: 'service',
-    title: 'Service Tickets',
-    description: 'Service requests and maintenance',
-    component: AccountServiceTicketsSection,
-    sort: 40,
-    defaultVisible: true,
-  },
-  {
-    id: 'deliveries',
-    type: 'deliveries',
-    title: 'Deliveries',
-    description: 'Delivery records and scheduling',
-    component: AccountDeliveriesSection,
-    sort: 50,
-    defaultVisible: true,
-  },
-  {
-    id: 'notes',
-    type: 'notes',
-    title: 'Notes & Comments',
-    description: 'Internal notes and comments',
-    component: AccountNotesSection,
-    sort: 999,
-    defaultVisible: true,
-  },
+  { id: 'contacts', type: 'contacts', title: 'Associated Contacts', description: 'Contacts linked to this account', component: AccountContactsSection, sort: 10, defaultVisible: true },
+  { id: 'deals', type: 'deals', title: 'Sales Deals', description: 'Active and historical deals', component: AccountDealsSection, sort: 20, defaultVisible: true },
+  { id: 'quotes', type: 'quotes', title: 'Quotes', description: 'Quotes and proposals', component: AccountQuotesSection, sort: 30, defaultVisible: true },
+  { id: 'service', type: 'service', title: 'Service Tickets', description: 'Service requests and maintenance', component: AccountServiceTicketsSection, sort: 40, defaultVisible: true },
+  { id: 'deliveries', type: 'deliveries', title: 'Deliveries', description: 'Delivery records and scheduling', component: AccountDeliveriesSection, sort: 50, defaultVisible: true },
+  { id: 'notes', type: 'notes', title: 'Notes & Comments', description: 'Internal notes and comments', component: AccountNotesSection, sort: 999, defaultVisible: true },
 ]
 
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
@@ -209,7 +161,7 @@ function QuickPaymentForm({
 
   return (
     <DialogContent className="sm:max-w-lg w-[95vw] max-h-[85vh] overflow-y-auto">
-      <DialogTitle>Record Payment</DialogTitle>
+      <DialogTitle>Create Payment</DialogTitle>
       <DialogDescription>Add a new payment for this account.</DialogDescription>
 
       <form onSubmit={handleSave} className="space-y-4 pt-2">
@@ -258,107 +210,6 @@ function QuickPaymentForm({
   )
 }
 
-/** ---------------- Quick Application (safe fallback modal) ----------------
- * A lightweight creator to avoid the crash in FinanceApplicationForm.
- * Saves to localStorage using the same pattern as other quick modals.
- */
-function QuickApplicationForm({
-  accountId,
-  onSave,
-  onSubmit,
-  onCancel,
-}: {
-  accountId: string
-  onSave: (data: any | null) => void
-  onSubmit: (data: any | null) => void
-  onCancel: () => void
-}) {
-  const [applicantName, setApplicantName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [amount, setAmount] = useState<number | ''>('')
-  const [notes, setNotes] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const base = () => ({
-    id: generateId(),
-    accountId,
-    customerName: applicantName,
-    email,
-    phone,
-    requestedAmount: typeof amount === 'number' ? amount : 0,
-    status: 'draft',
-    createdAt: new Date().toISOString(),
-    data: {},
-    templateId: 'basic',
-    notes,
-  })
-
-  const disabled = !applicantName || !email
-
-  const handleSave = () => {
-    if (disabled) return
-    setSaving(true)
-    onSave(base())
-    setSaving(false)
-  }
-
-  const handleSubmit = () => {
-    if (disabled) return
-    setSaving(true)
-    onSubmit({ ...base(), status: 'submitted', submittedAt: new Date().toISOString() })
-    setSaving(false)
-  }
-
-  return (
-    <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto">
-      <DialogTitle>Create Application</DialogTitle>
-      <DialogDescription>Capture the key details to start a finance application.</DialogDescription>
-
-      <div className="space-y-4 pt-2">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <Label>Applicant Name *</Label>
-            <Input value={applicantName} onChange={(e) => setApplicantName(e.target.value)} />
-          </div>
-          <div>
-            <Label>Email *</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <Label>Phone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-          <div>
-            <Label>Requested Amount</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label>Notes</Label>
-          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button variant="outline" disabled={disabled || saving} onClick={handleSave}>
-            {saving ? 'Saving…' : 'Save Draft'}
-          </Button>
-          <Button disabled={disabled || saving} onClick={handleSubmit}>
-            {saving ? 'Submitting…' : 'Submit'}
-          </Button>
-        </div>
-      </div>
-    </DialogContent>
-  )
-}
-
 // ---------------- Page ----------------
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -385,7 +236,6 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
-  const [openApplication, setOpenApplication] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -497,33 +347,14 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
-  // Finance Applications (localStorage demo)
-  const handleApplicationSaved = async (data: any | null) => {
-    setOpenApplication(false)
-    if (!data) return
-    const existing = loadFromLocalStorage<any[]>('financeApplications', [])
-    const withId = data.id ? data : { ...data, id: generateId(), accountId }
-    saveToLocalStorage('financeApplications', [withId, ...existing])
-    toast({ title: 'Success', description: 'Application saved successfully' })
-  }
-
-  const handleApplicationSubmitted = async (data: any | null) => {
-    setOpenApplication(false)
-    if (!data) return
-    const existing = loadFromLocalStorage<any[]>('financeApplications', [])
-    const base = data.id ? data : { ...data, id: generateId(), accountId }
-    const submitted = { ...base, status: 'submitted' }
-    saveToLocalStorage('financeApplications', [submitted, ...existing])
-    toast({ title: 'Submitted', description: 'Application submitted successfully' })
-  }
-
-  // Generic fallback create route (kept for types we don't modal-ize)
+  // Generic fallback create route (used by types we don't modal-ize)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
+      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
     }
     const href = map[t]
@@ -556,9 +387,6 @@ export default function AccountDetail() {
     (s) => !sections.includes(s.type) && s.defaultVisible !== false
   )
 
-  const showQuickActions =
-    sections.includes('agreements') || sections.includes('applications') || sections.includes('invoices')
-
   return (
     <>
       <div className="space-y-6">
@@ -582,7 +410,6 @@ export default function AccountDetail() {
               </p>
             </div>
           </div>
-
           <div className="flex items-center space-x-2">
             {hasUnsavedChanges && (
               <Button variant="outline" size="sm" onClick={saveLayout}>
@@ -635,21 +462,6 @@ export default function AccountDetail() {
             </Button>
           </div>
         </div>
-
-        {/* Quick actions row (guaranteed working CTAs) */}
-        {showQuickActions && (
-          <div className="flex flex-wrap gap-2 justify-end">
-            {sections.includes('agreements') && (
-              <Button size="sm" onClick={() => setOpenAgreement(true)}>Create Agreement</Button>
-            )}
-            {sections.includes('applications') && (
-              <Button size="sm" onClick={() => setOpenApplication(true)}>Create Application</Button>
-            )}
-            {sections.includes('invoices') && (
-              <Button size="sm" onClick={() => setOpenInvoice(true)}>Create Invoice</Button>
-            )}
-          </div>
-        )}
 
         {/* Account info */}
         <Card>
@@ -749,11 +561,9 @@ export default function AccountDetail() {
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
                           : type === 'agreements'
                             ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
-                            : type === 'applications'
-                              ? { ...commonProps, onCreate: () => setOpenApplication(true) }
-                              : type === 'invoices'
-                                ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
-                                : commonProps
+                            : type === 'invoices'
+                              ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
+                              : commonProps
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
@@ -869,13 +679,17 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal (overlay component) */}
-      {openAgreement && (
-        <AgreementForm
-          onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
-          onCancel={() => setOpenAgreement(false)}
-        />
-      )}
+      {/* Agreement Modal (now wrapped in Dialog) */}
+      <Dialog open={openAgreement} onOpenChange={setOpenAgreement}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Agreement</DialogTitle>
+          <DialogDescription className="sr-only">Create an agreement for this account.</DialogDescription>
+          <AgreementEditor
+            onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
+            onCancel={() => setOpenAgreement(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Invoice Modal (overlay component) */}
       {openInvoice && (
@@ -884,16 +698,6 @@ export default function AccountDetail() {
           onCancel={() => setOpenInvoice(false)}
         />
       )}
-
-      {/* Finance Application Modal (safe, local form) */}
-      <Dialog open={openApplication} onOpenChange={setOpenApplication}>
-        <QuickApplicationForm
-          accountId={account.id}
-          onSave={handleApplicationSaved}
-          onSubmit={handleApplicationSubmitted}
-          onCancel={() => setOpenApplication(false)}
-        />
-      </Dialog>
     </>
   )
 }
