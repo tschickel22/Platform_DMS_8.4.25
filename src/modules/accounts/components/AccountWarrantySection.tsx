@@ -20,32 +20,25 @@ type Warranty = {
   notes?: string
 }
 
-interface AccountWarrantySectionProps {
+interface Props {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** Prefer this to open the New Claim modal from AccountDetail */
-  onAddWarranty?: () => void
-  /** Generic create fallback (kept for compatibility) */
   onCreate?: () => void
 }
 
-export function AccountWarrantySection({
+export default function AccountWarrantySection({
   accountId,
   onRemove,
   isDragging,
-  onAddWarranty,
   onCreate,
-}: AccountWarrantySectionProps) {
-  // Demo persistence — align with how Deliveries are handled
+}: Props) {
   const all = loadFromLocalStorage<Warranty[]>('warranties', [])
   const warranties = (all || []).filter(w => w.accountId === accountId)
 
   const handleAdd = () => {
-    if (onAddWarranty) return onAddWarranty()
-    if (onCreate) return onCreate()
-    // Last-resort fallback: jump to warranty module list with account filter
-    window.location.href = `/inventory/warranty?accountId=${accountId}&returnTo=account`
+    if (onCreate) onCreate()
+    else window.location.href = `/inventory/warranty/new?accountId=${accountId}&returnTo=account`
   }
 
   const statusTone = (s?: Warranty['status']) => {
@@ -75,21 +68,19 @@ export function AccountWarrantySection({
           <Badge variant="secondary">{warranties.length}</Badge>
           <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Warranty
+            Create Claim
           </Button>
-          {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
-          )}
+          {onRemove && <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>}
         </div>
       </CardHeader>
 
       <CardContent>
         {warranties.length === 0 ? (
           <EmptyState
-            title="No warranties yet"
-            description="Record a warranty for this account"
+            title="No warranty claims yet"
+            description="Create a warranty claim for this account"
             icon={<ShieldCheck className="h-12 w-12" />}
-            action={{ label: 'Record Warranty', onClick: handleAdd }}
+            action={{ label: 'Create Claim', onClick: handleAdd }}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -142,5 +133,3 @@ export function AccountWarrantySection({
     </Card>
   )
 }
-
-export default AccountWarrantySection
