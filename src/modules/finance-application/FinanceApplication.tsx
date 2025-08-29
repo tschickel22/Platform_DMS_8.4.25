@@ -46,9 +46,7 @@ function FinanceApplicationDashboard() {
   // Helper function to apply tile filters
   const applyTileFilter = (status: 'all' | 'draft' | 'pending_review' | 'approved' | 'denied') => {
     setActiveTab('applications')
-    console.log('🔥 TILE CLICKED - Setting statusFilter to:', status)
     setStatusFilter(status)
-    console.log('🔥 TILE CLICKED - statusFilter should now be:', status)
   }
 
   const tileProps = (handler: () => void) => ({
@@ -74,10 +72,6 @@ function FinanceApplicationDashboard() {
 
   // Filter applications based on search and filters
   const filteredApplications = React.useMemo(() => {
-    console.log('🔍 DEBUG - statusFilter:', statusFilter)
-    console.log('🔍 DEBUG - Total applications:', applications.length)
-    console.log('🔍 DEBUG - Application statuses:', applications.map(app => ({ name: app.customerName, status: app.status })))
-    
     let currentApplications = applications
 
     // Search filter (name, email, phone)
@@ -103,9 +97,6 @@ function FinanceApplicationDashboard() {
         return appCreationDate.setHours(0,0,0,0) >= filterDate.setHours(0,0,0,0)
       })
     }
-
-    console.log('🔍 DEBUG - Filtered applications:', currentApplications.length)
-    console.log('🔍 DEBUG - Filtered app details:', currentApplications.map(app => ({ name: app.customerName, status: app.status })))
     
     return currentApplications
   }, [applications, applicationSearchQuery, statusFilter, applicationDateFilter])
@@ -126,26 +117,19 @@ function FinanceApplicationDashboard() {
   }, [templates, templateSearchQuery])
 
   // Get platform-specific labels
-  const getModuleLabel = () => {
-    return 'Applications'
-  }
+  const getModuleLabel = () => 'Applications'
 
   const getApplicationLabel = () => {
     const platformType = tenant?.settings?.platformType || 'mh'
     const labelOverrides = tenant?.settings?.labelOverrides || {}
     
-    if (labelOverrides['finance.application']) {
-      return labelOverrides['finance.application']
-    }
+    if (labelOverrides['finance.application']) return labelOverrides['finance.application']
     
     switch (platformType) {
-      case 'rv':
-        return 'RV Loan Application'
-      case 'auto':
-        return 'Auto Loan Application'
+      case 'rv': return 'RV Loan Application'
+      case 'auto': return 'Auto Loan Application'
       case 'mh':
-      default:
-        return 'MH Finance Application'
+      default: return 'MH Finance Application'
     }
   }
 
@@ -183,50 +167,35 @@ function FinanceApplicationDashboard() {
   const handleStatusChange = (newStatus: string) => {
     if (!selectedApplication) return
     
-    // Check if changing FROM denied TO another status - requires note validation
-    if (selectedApplication.status === 'denied' && newStatus !== 'denied') {
-      if (!currentAdminNote.trim()) {
-        // Set pending status but don't save yet
-        setPendingStatus(newStatus)
-        
-        // Scroll to admin notes section
-        adminNotesRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        })
-        
-        toast({
-          title: 'Internal Note Required',
-          description: 'Please add an internal note explaining the reason for changing from denied status.',
-          variant: 'destructive'
-        })
-        return
-      }
+    // If changing FROM denied to another status, require note
+    if (selectedApplication.status === 'denied' && newStatus !== 'denied' && !currentAdminNote.trim()) {
+      setPendingStatus(newStatus)
+      adminNotesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      toast({
+        title: 'Internal Note Required',
+        description: 'Please add an internal note explaining the reason for changing from denied status.',
+        variant: 'destructive'
+      })
+      return
     }
     
-    // Auto-save the status change
     const isStatusChanging = newStatus !== selectedApplication.status
-    
     if (isStatusChanging) {
       const updateData: any = {
         status: newStatus,
-        reviewedBy: 'Admin User', // In real app, get from auth context
+        reviewedBy: 'Admin User', // placeholder; in real app, get from auth
         reviewedAt: new Date().toISOString(),
         adminNotes: currentAdminNote
       }
       
-      // Update the application
       updateApplication(selectedApplication.id, updateData)
       
-      // Update the selected application state to reflect changes immediately
       const updatedApplication = {
         ...selectedApplication,
         ...updateData,
         updatedAt: new Date().toISOString()
       }
       setSelectedApplication(updatedApplication)
-      
-      // Clear pending status
       setPendingStatus(null)
       
       toast({
@@ -236,35 +205,28 @@ function FinanceApplicationDashboard() {
     }
   }
 
+  const { createTask } = useTasks()
+
   const handleCreateTask = async (taskData: Partial<Task>) => {
     try {
       await createTask(taskData)
       setShowTaskForm(false)
       setInitialTaskData(undefined)
-      toast({
-        title: 'Task Created',
-        description: 'Task has been created successfully',
-      })
+      toast({ title: 'Task Created', description: 'Task has been created successfully' })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
-      })
+      toast({ title: 'Error', description: 'Failed to create task', variant: 'destructive' })
     }
   }
 
   const handleCreateTaskForApplication = (application: FinanceApplicationType) => {
-    // Determine priority based on application status
-    const priority = application.status === 'pending_review' ? TaskPriority.HIGH :
-                    application.status === 'submitted' ? TaskPriority.MEDIUM :
-                    application.status === 'conditionally_approved' ? TaskPriority.HIGH :
-                    TaskPriority.LOW
+    const priority = application.status === 'pending_review' ? TaskPriority.HIGH
+                    : application.status === 'submitted' ? TaskPriority.MEDIUM
+                    : application.status === 'conditionally_approved' ? TaskPriority.HIGH
+                    : TaskPriority.LOW
 
-    // Set due date based on status
     const dueDate = application.status === 'pending_review' || application.status === 'conditionally_approved'
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day for urgent review
-      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days for others
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
 
     setInitialTaskData({
       sourceId: application.id,
@@ -301,27 +263,19 @@ function FinanceApplicationDashboard() {
     setSelectedApplication(application)
     setCurrentAdminNote(application.adminNotes || '')
     setPendingStatus(null)
-    setApplicationCreationMode('none') // Reset creation mode when viewing
+    setApplicationCreationMode('none')
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft':
-        return 'bg-gray-100 text-gray-800'
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800'
-      case 'pending_review':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'approved':
-        return 'bg-green-100 text-green-800'
-      case 'conditionally_approved':
-        return 'bg-orange-100 text-orange-800'
-      case 'denied':
-        return 'bg-red-100 text-red-800'
-      case 'completed':
-        return 'bg-emerald-100 text-emerald-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+      case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'submitted': return 'bg-blue-100 text-blue-800'
+      case 'pending_review': return 'bg-yellow-100 text-yellow-800'
+      case 'approved': return 'bg-green-100 text-green-800'
+      case 'conditionally_approved': return 'bg-orange-100 text-orange-800'
+      case 'denied': return 'bg-red-100 text-red-800'
+      case 'completed': return 'bg-emerald-100 text-emerald-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -330,14 +284,8 @@ function FinanceApplicationDashboard() {
       const newStatusToApply = pendingStatus || selectedApplication.status
       const isStatusChanging = newStatusToApply !== selectedApplication.status
       
-      // Check if note is required (changing FROM denied to another status)
       if (isStatusChanging && selectedApplication.status === 'denied' && newStatusToApply !== 'denied' && !currentAdminNote.trim()) {
-        // Scroll to admin notes section
-        adminNotesRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        })
-        
+        adminNotesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         toast({
           title: 'Internal Note Required',
           description: 'Please add an internal note explaining the reason for changing from denied status.',
@@ -346,30 +294,21 @@ function FinanceApplicationDashboard() {
         return
       }
       
-      // Prepare update data
-      const updateData: any = {
-        adminNotes: currentAdminNote
-      }
-      
-      // Add status change data if status is changing
+      const updateData: any = { adminNotes: currentAdminNote }
       if (isStatusChanging) {
         updateData.status = newStatusToApply
-        updateData.reviewedBy = 'Admin User' // In real app, get from auth context
+        updateData.reviewedBy = 'Admin User'
         updateData.reviewedAt = new Date().toISOString()
       }
       
-      // Update the application
       updateApplication(selectedApplication.id, updateData)
       
-      // Update the selected application state to reflect changes immediately
       const updatedApplication = {
         ...selectedApplication,
         ...updateData,
         updatedAt: new Date().toISOString()
       }
       setSelectedApplication(updatedApplication)
-      
-      // Clear pending status
       setPendingStatus(null)
       
       toast({
@@ -381,7 +320,6 @@ function FinanceApplicationDashboard() {
     }
   }
 
-  // Calculate stats
   const draftApplications = applications.filter(app => app.status === 'draft').length
   const rejectedApplications = applications.filter(app => app.status === 'denied').length
   const pendingReviewApplications = applications.filter(app => app.status === 'pending_review').length
@@ -470,7 +408,7 @@ function FinanceApplicationDashboard() {
                 <div className="flex items-center space-x-2">
                   <Label className="text-sm font-medium">Status:</Label>
                   <Select
-                    value={statusFilter}
+                    value={selectedApplication.status}  // ✅ bind to the selected application, not the dashboard filter
                     onValueChange={handleStatusChange}
                   >
                     <SelectTrigger className="w-[200px]">
@@ -601,11 +539,7 @@ function FinanceApplicationDashboard() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Admin Notes (Internal Only)</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveNotesAndStatus}
-                >
+                <Button variant="outline" size="sm" onClick={handleSaveNotesAndStatus}>
                   <Save className="h-4 w-4 mr-2" />
                   {pendingStatus && pendingStatus !== selectedApplication.status ? 'Save Status & Notes' : 'Save Notes'}
                 </Button>
@@ -666,16 +600,8 @@ function FinanceApplicationDashboard() {
                           <p className="text-sm text-muted-foreground mt-1">{entry.details}</p>
                           {(entry.oldValue || entry.newValue) && (
                             <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                              {entry.oldValue && (
-                                <div>
-                                  <span className="font-medium">From:</span> {entry.oldValue}
-                                </div>
-                              )}
-                              {entry.newValue && (
-                                <div>
-                                  <span className="font-medium">To:</span> {entry.newValue}
-                                </div>
-                              )}
+                              {entry.oldValue && (<div><span className="font-medium">From:</span> {entry.oldValue}</div>)}
+                              {entry.newValue && (<div><span className="font-medium">To:</span> {entry.newValue}</div>)}
                             </div>
                           )}
                           <div className="flex items-center space-x-1 mt-2">
@@ -748,9 +674,7 @@ function FinanceApplicationDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{applications.length}</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
+            <p className="text-xs text-muted-foreground">+12% from last month</p>
           </CardContent>
         </Card>
         
@@ -761,9 +685,7 @@ function FinanceApplicationDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">{draftApplications}</div>
-            <p className="text-xs text-yellow-600 flex items-center mt-1">
-              Pending Review
-            </p>
+            <p className="text-xs text-yellow-600 flex items-center mt-1">Pending Review</p>
           </CardContent>
         </Card>
         
@@ -773,12 +695,8 @@ function FinanceApplicationDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {pendingReviewApplications}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting approval
-            </p>
+            <div className="text-2xl font-bold">{pendingReviewApplications}</div>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
         
@@ -789,9 +707,7 @@ function FinanceApplicationDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">78%</div>
-            <p className="text-xs text-muted-foreground">
-              +5% from last month
-            </p>
+            <p className="text-xs text-muted-foreground">+5% from last month</p>
           </CardContent>
         </Card>
         
@@ -823,9 +739,7 @@ function FinanceApplicationDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Finance Applications</CardTitle>
-              <CardDescription>
-                Manage and review customer finance applications
-              </CardDescription>
+              <CardDescription>Manage and review customer finance applications</CardDescription>
             </CardHeader>
             <CardContent>
               {/* Filter Indicator */}
@@ -851,10 +765,7 @@ function FinanceApplicationDashboard() {
                     className="pl-10"
                   />
                 </div>
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                >
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
@@ -894,29 +805,17 @@ function FinanceApplicationDashboard() {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {application.customerEmail && (
-                          <span>{application.customerEmail} • </span>
-                        )}
+                        {application.customerEmail && (<span>{application.customerEmail} • </span>)}
                         Created: {new Date(application.createdAt).toLocaleDateString()}
-                        {application.submittedAt && (
-                          <span> • Submitted: {new Date(application.submittedAt).toLocaleDateString()}</span>
-                        )}
+                        {application.submittedAt && (<span> • Submitted: {new Date(application.submittedAt).toLocaleDateString()}</span>)}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewApplication(application)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleViewApplication(application)}>
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCreateTaskForApplication(application)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleCreateTaskForApplication(application)}>
                         <ListTodo className="h-4 w-4 mr-2" />
                         Create Task
                       </Button>
@@ -935,9 +834,6 @@ function FinanceApplicationDashboard() {
                       <>
                         <p>No applications found matching your criteria</p>
                         <p className="text-sm">Try adjusting your search or filters</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Debug: statusFilter = "{statusFilter}", total apps = {applications.length}
-                        </p>
                       </>
                     )}
                   </div>
