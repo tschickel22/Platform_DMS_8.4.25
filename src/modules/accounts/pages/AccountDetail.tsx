@@ -30,7 +30,6 @@ import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
-import { FinanceApplicationForm } from '@/modules/finance-application/components/FinanceApplicationForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
@@ -259,6 +258,107 @@ function QuickPaymentForm({
   )
 }
 
+/** ---------------- Quick Application (safe fallback modal) ----------------
+ * A lightweight creator to avoid the crash in FinanceApplicationForm.
+ * Saves to localStorage using the same pattern as other quick modals.
+ */
+function QuickApplicationForm({
+  accountId,
+  onSave,
+  onSubmit,
+  onCancel,
+}: {
+  accountId: string
+  onSave: (data: any | null) => void
+  onSubmit: (data: any | null) => void
+  onCancel: () => void
+}) {
+  const [applicantName, setApplicantName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState<number | ''>('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const base = () => ({
+    id: generateId(),
+    accountId,
+    customerName: applicantName,
+    email,
+    phone,
+    requestedAmount: typeof amount === 'number' ? amount : 0,
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    data: {},
+    templateId: 'basic',
+    notes,
+  })
+
+  const disabled = !applicantName || !email
+
+  const handleSave = () => {
+    if (disabled) return
+    setSaving(true)
+    onSave(base())
+    setSaving(false)
+  }
+
+  const handleSubmit = () => {
+    if (disabled) return
+    setSaving(true)
+    onSubmit({ ...base(), status: 'submitted', submittedAt: new Date().toISOString() })
+    setSaving(false)
+  }
+
+  return (
+    <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto">
+      <DialogTitle>Create Application</DialogTitle>
+      <DialogDescription>Capture the key details to start a finance application.</DialogDescription>
+
+      <div className="space-y-4 pt-2">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label>Applicant Name *</Label>
+            <Input value={applicantName} onChange={(e) => setApplicantName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Email *</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div>
+            <Label>Requested Amount</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label>Notes</Label>
+          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button variant="outline" disabled={disabled || saving} onClick={handleSave}>
+            {saving ? 'Saving…' : 'Save Draft'}
+          </Button>
+          <Button disabled={disabled || saving} onClick={handleSubmit}>
+            {saving ? 'Submitting…' : 'Submit'}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  )
+}
+
 // ---------------- Page ----------------
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>()
@@ -417,15 +517,14 @@ export default function AccountDetail() {
     toast({ title: 'Submitted', description: 'Application submitted successfully' })
   }
 
-  // Generic fallback create route (for sections we don't modal-ize)
+  // Generic fallback create route (kept for types we don't modal-ize)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      // applications -> handled via modal to avoid white screen
-      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`, // fallback (we also open a modal)
+      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
     }
     const href = map[t]
     if (href) window.location.href = href
@@ -457,6 +556,9 @@ export default function AccountDetail() {
     (s) => !sections.includes(s.type) && s.defaultVisible !== false
   )
 
+  const showQuickActions =
+    sections.includes('agreements') || sections.includes('applications') || sections.includes('invoices')
+
   return (
     <>
       <div className="space-y-6">
@@ -480,6 +582,7 @@ export default function AccountDetail() {
               </p>
             </div>
           </div>
+
           <div className="flex items-center space-x-2">
             {hasUnsavedChanges && (
               <Button variant="outline" size="sm" onClick={saveLayout}>
@@ -532,6 +635,21 @@ export default function AccountDetail() {
             </Button>
           </div>
         </div>
+
+        {/* Quick actions row (guaranteed working CTAs) */}
+        {showQuickActions && (
+          <div className="flex flex-wrap gap-2 justify-end">
+            {sections.includes('agreements') && (
+              <Button size="sm" onClick={() => setOpenAgreement(true)}>Create Agreement</Button>
+            )}
+            {sections.includes('applications') && (
+              <Button size="sm" onClick={() => setOpenApplication(true)}>Create Application</Button>
+            )}
+            {sections.includes('invoices') && (
+              <Button size="sm" onClick={() => setOpenInvoice(true)}>Create Invoice</Button>
+            )}
+          </div>
+        )}
 
         {/* Account info */}
         <Card>
@@ -767,25 +885,14 @@ export default function AccountDetail() {
         />
       )}
 
-      {/* Finance Application Modal */}
+      {/* Finance Application Modal (safe, local form) */}
       <Dialog open={openApplication} onOpenChange={setOpenApplication}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
-          <DialogTitle className="sr-only">Create Application</DialogTitle>
-          <DialogDescription className="sr-only">Create a finance application for this account.</DialogDescription>
-          <FinanceApplicationForm
-            application={{
-              id: generateId(),
-              accountId: account.id,
-              customerName: '',
-              status: 'draft',
-              templateId: 'basic',
-              data: {},
-            } as any}
-            onSave={(d) => handleApplicationSaved({ ...(d || {}), accountId })}
-            onSubmit={(d) => handleApplicationSubmitted({ ...(d || {}), accountId })}
-            onCancel={() => setOpenApplication(false)}
-          />
-        </DialogContent>
+        <QuickApplicationForm
+          accountId={account.id}
+          onSave={handleApplicationSaved}
+          onSubmit={handleApplicationSubmitted}
+          onCancel={() => setOpenApplication(false)}
+        />
       </Dialog>
     </>
   )
