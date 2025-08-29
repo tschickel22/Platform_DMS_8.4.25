@@ -1,10 +1,10 @@
-import React from 'react'
-import AccountAgreementsSection from './components/AccountAgreementsSection' // default import
+// src/modules/agreement-vault/account-section.tsx
+// Dynamic Account section descriptor for Agreements.
+// Ensures the "Agreements" section appears on AccountDetail and
+// the "Create Agreement" button will use the supplied onCreate prop.
 
-/**
- * Dynamic Account section descriptor for Agreements.
- * Keeps "Agreements" visible on AccountDetail and wires the "Create Agreement" button.
- */
+import AccountAgreementsSection from './components/AccountAgreementsSection'
+
 const descriptor = {
   id: 'agreements',
   type: 'agreements' as const,
@@ -12,8 +12,7 @@ const descriptor = {
   description: 'Contracts and signed agreements linked to this account',
   defaultVisible: true,
   sort: 60,
-  // IMPORTANT: provide a React *element*, not a component type
-  component: <AccountAgreementsSection />,
+  component: AccountAgreementsSection,
 }
 
 export default descriptor
