@@ -291,3 +291,5 @@ export function AgreementForm({
     </Card>
   )
 }
+
+export default AgreementForm;
