@@ -1,139 +1,153 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ArrowRight, Save, Send, FileText } from 'lucide-react'
-import { FinanceApplication, ApplicationTemplate, ApplicationData } from '../types'
+import { ArrowLeft, ArrowRight, Save, Send, FileText, ListTodo } from 'lucide-react'
+import { FinanceApplication, ApplicationData } from '../types'
 import { useFinanceApplications } from '../hooks/useFinanceApplications'
 import { ApplicationSectionForm } from './ApplicationSectionForm'
 import { useTenant } from '@/contexts/TenantContext'
-import { ListTodo } from 'lucide-react'
-import { FinanceApplication as FinanceApplicationType } from '../types'
 
 interface FinanceApplicationFormProps {
   application: FinanceApplication
   onSave: (data: Partial<FinanceApplication>) => void
   onCancel: () => void
   onSubmit: (data: Partial<FinanceApplication>) => void
-  onCreateTask?: (application: FinanceApplicationType) => void
+  onCreateTask?: (application: FinanceApplication) => void
 }
 
-export function FinanceApplicationForm({ 
-  application, 
-  onSave, 
-  onCancel, 
+export function FinanceApplicationForm({
+  application,
+  onSave,
+  onCancel,
   onSubmit,
-  onCreateTask
+  onCreateTask,
 }: FinanceApplicationFormProps) {
   const { tenant } = useTenant()
   const { getTemplateById } = useFinanceApplications()
+
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [formData, setFormData] = useState<ApplicationData>(application.data || {})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  const template = getTemplateById(application.templateId)
-  
-  if (!template) {
+  // Try to load the configured template; if unavailable, fall back to a simple, inline template
+  const realTemplate = getTemplateById(application.templateId) as any
+  const fallbackTemplate: any = {
+    id: 'quick-fallback',
+    name: 'Quick Application',
+    sections: [
+      {
+        id: 'applicant',
+        title: 'Applicant Information',
+        order: 1,
+        fields: [
+          { id: 'firstName', label: 'First Name', type: 'text', required: true },
+          { id: 'lastName', label: 'Last Name', type: 'text', required: true },
+          { id: 'email', label: 'Email', type: 'email', required: true },
+        ],
+      },
+      {
+        id: 'finance',
+        title: 'Finance Details',
+        order: 2,
+        fields: [
+          { id: 'requestedAmount', label: 'Requested Amount', type: 'number', required: true },
+          { id: 'notes', label: 'Notes', type: 'textarea', required: false },
+        ],
+      },
+    ],
+  }
+  const template = realTemplate ?? fallbackTemplate
+
+  // Defensive: avoid mutating the template object
+  const sections = (template?.sections ?? []).slice().sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+  const currentSection = sections[currentSectionIndex]
+  const progress = sections.length ? ((currentSectionIndex + 1) / sections.length) * 100 : 0
+
+  if (!currentSection) {
     return (
       <div className="text-center py-12">
         <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground">Template not found</p>
+        <p className="text-muted-foreground">No sections available for this template.</p>
         <Button onClick={onCancel} className="mt-4">Go Back</Button>
       </div>
     )
   }
 
-  const sections = template.sections.sort((a, b) => a.order - b.order)
-  const currentSection = sections[currentSectionIndex]
-  const progress = ((currentSectionIndex + 1) / sections.length) * 100
-
-  // Get platform-specific labels
+  // Platform-aware heading
   const getApplicationLabel = () => {
     const platformType = tenant?.settings?.platformType || 'mh'
     const labelOverrides = tenant?.settings?.labelOverrides || {}
-    
-    if (labelOverrides['finance.application']) {
-      return labelOverrides['finance.application']
-    }
-    
+    if (labelOverrides['finance.application']) return labelOverrides['finance.application']
+
     switch (platformType) {
-      case 'rv':
-        return 'RV Loan Application'
-      case 'auto':
-        return 'Auto Loan Application'
+      case 'rv': return 'RV Loan Application'
+      case 'auto': return 'Auto Loan Application'
       case 'mh':
-      default:
-        return 'MH Finance Application'
+      default: return 'MH Finance Application'
     }
   }
 
   const handleSectionDataChange = (sectionId: string, sectionData: Record<string, any>) => {
-    const updatedData = {
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [sectionId]: {
-        ...formData[sectionId],
-        ...sectionData
-      }
-    }
-    setFormData(updatedData)
+        ...(prev as any)[sectionId],
+        ...sectionData,
+      },
+    }))
   }
 
   const validateCurrentSection = (): boolean => {
     const errors: Record<string, string> = {}
-    const sectionData = formData[currentSection.id] || {}
-    
-    currentSection.fields.forEach(field => {
+    const sectionData = (formData as any)[currentSection.id] || {}
+
+    ;(currentSection.fields || []).forEach((field: any) => {
       if (field.required && !sectionData[field.id]) {
         errors[`${currentSection.id}.${field.id}`] = `${field.label} is required`
       }
-      
-      // Additional validation based on field type
+
       if (sectionData[field.id] && field.validation) {
         const value = sectionData[field.id]
-        const validation = field.validation
-        
-        if (validation.minLength && value.length < validation.minLength) {
-          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be at least ${validation.minLength} characters`
+        const { minLength, maxLength, pattern } = field.validation || {}
+
+        if (minLength && String(value).length < minLength) {
+          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be at least ${minLength} characters`
         }
-        
-        if (validation.maxLength && value.length > validation.maxLength) {
-          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be no more than ${validation.maxLength} characters`
+        if (maxLength && String(value).length > maxLength) {
+          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be no more than ${maxLength} characters`
         }
-        
-        if (validation.pattern && !new RegExp(validation.pattern).test(value)) {
+        if (pattern && !(new RegExp(pattern)).test(String(value))) {
           errors[`${currentSection.id}.${field.id}`] = `${field.label} format is invalid`
         }
-        
-        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
           errors[`${currentSection.id}.${field.id}`] = 'Please enter a valid email address'
         }
       }
     })
-    
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   const handleNext = () => {
-    if (validateCurrentSection()) {
-      if (currentSectionIndex < sections.length - 1) {
-        setCurrentSectionIndex(currentSectionIndex + 1)
-      }
+    if (validateCurrentSection() && currentSectionIndex < sections.length - 1) {
+      setCurrentSectionIndex(i => i + 1)
     }
   }
 
   const handlePrevious = () => {
     if (currentSectionIndex > 0) {
-      setCurrentSectionIndex(currentSectionIndex - 1)
+      setCurrentSectionIndex(i => i - 1)
     }
   }
 
   const handleSave = () => {
     onSave({
       data: formData,
-      status: 'draft'
+      status: 'draft',
     })
   }
 
@@ -141,44 +155,37 @@ export function FinanceApplicationForm({
     // Validate all sections
     let allValid = true
     const allErrors: Record<string, string> = {}
-    
-    for (let i = 0; i < sections.length; i++) {
-      const section = sections[i]
-      const sectionData = formData[section.id] || {}
-      
-      section.fields.forEach(field => {
+
+    sections.forEach((section: any) => {
+      const sectionData = (formData as any)[section.id] || {}
+      ;(section.fields || []).forEach((field: any) => {
         if (field.required && !sectionData[field.id]) {
           allErrors[`${section.id}.${field.id}`] = `${field.label} is required`
           allValid = false
         }
       })
-    }
-    
+    })
+
     if (!allValid) {
       setValidationErrors(allErrors)
-      // Find first section with errors and navigate to it
-      const firstErrorSection = sections.findIndex(section => 
+      const firstErrorSection = sections.findIndex((section: any) =>
         Object.keys(allErrors).some(key => key.startsWith(section.id))
       )
-      if (firstErrorSection !== -1) {
-        setCurrentSectionIndex(firstErrorSection)
-      }
+      if (firstErrorSection !== -1) setCurrentSectionIndex(firstErrorSection)
       return
     }
-    
+
     setIsSubmitting(true)
-    
-    // Simulate submission delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise(r => setTimeout(r, 500))
     onSubmit({
       data: formData,
       status: 'submitted',
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
     })
-    
     setIsSubmitting(false)
   }
+
+  const prettyStatus = (application?.status || 'draft').replace('_', ' ').toUpperCase()
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -191,9 +198,7 @@ export function FinanceApplicationForm({
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{getApplicationLabel()}</h1>
-            <p className="text-muted-foreground">
-              {application.customerName || 'New Application'}
-            </p>
+            <p className="text-muted-foreground">{application?.customerName || 'New Application'}</p>
             {onCreateTask && (
               <Button variant="outline" size="sm" onClick={() => onCreateTask(application)}>
                 <ListTodo className="h-4 w-4 mr-2" />
@@ -203,10 +208,8 @@ export function FinanceApplicationForm({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline">
-            {application.status.replace('_', ' ').toUpperCase()}
-          </Badge>
-          {application.fraudCheckStatus && (
+          <Badge variant="outline">{prettyStatus}</Badge>
+          {application?.fraudCheckStatus && (
             <Badge variant="secondary">
               IDV: {application.fraudCheckStatus.charAt(0).toUpperCase() + application.fraudCheckStatus.slice(1)}
             </Badge>
@@ -223,25 +226,21 @@ export function FinanceApplicationForm({
               <span>{Math.round(progress)}% Complete</span>
             </div>
             <Progress value={progress} className="h-2" />
-            <p className="text-sm text-muted-foreground">
-              {currentSection.title}
-            </p>
+            <p className="text-sm text-muted-foreground">{currentSection.title}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Current Section Form */}
+      {/* Current Section */}
       <Card>
         <CardHeader>
           <CardTitle>{currentSection.title}</CardTitle>
-          {currentSection.description && (
-            <CardDescription>{currentSection.description}</CardDescription>
-          )}
+          {currentSection.description && <CardDescription>{currentSection.description}</CardDescription>}
         </CardHeader>
         <CardContent>
           <ApplicationSectionForm
             section={currentSection}
-            data={formData[currentSection.id] || {}}
+            data={(formData as any)[currentSection.id] || {}}
             onChange={(data) => handleSectionDataChange(currentSection.id, data)}
             validationErrors={validationErrors}
             applicationId={application.id}
@@ -249,31 +248,24 @@ export function FinanceApplicationForm({
         </CardContent>
       </Card>
 
-      {/* Navigation */}
+      {/* Nav */}
       <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentSectionIndex === 0}
-        >
+        <Button variant="outline" onClick={handlePrevious} disabled={currentSectionIndex === 0}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Previous
         </Button>
-        
+
         <div className="flex space-x-3">
           <Button variant="outline" onClick={handleSave}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>
-          
+
           {currentSectionIndex === sections.length - 1 ? (
-            <Button 
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                   Submitting...
                 </>
               ) : (
