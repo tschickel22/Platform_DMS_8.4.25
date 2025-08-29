@@ -344,3 +344,5 @@ export function FinanceApplicationForm({
     </Card>
   )
 }
+
+export default FinanceApplicationForm
