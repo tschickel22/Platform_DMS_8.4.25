@@ -30,7 +30,8 @@ import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
-import FinanceApplicationForm from '@/modules/finance-application/components/FinanceApplicationForm'
+// 🔧 FIXED: use named import (the component is NOT a default export)
+import { FinanceApplicationForm } from '@/modules/finance-application/components/FinanceApplicationForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
@@ -285,7 +286,7 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
-  const [openApplication, setOpenApplication] = useState(false) // NEW
+  const [openApplication, setOpenApplication] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -404,7 +405,7 @@ export default function AccountDetail() {
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      // applications: handled via modal below
+      // applications handled via modal below
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
     }
     const href = map[t]
@@ -610,9 +611,9 @@ export default function AccountDetail() {
                         : type === 'warranty'
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
                           : type === 'agreements'
-                            ? { ...commonProps, onCreate: () => setOpenAgreement(true) } // open agreement modal
+                            ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
                             : type === 'applications'
-                              ? { ...commonProps, onCreate: () => setOpenApplication(true) } // open application modal
+                              ? { ...commonProps, onCreate: () => setOpenApplication(true) }
                               : type === 'invoices'
                                 ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
                                 : commonProps
@@ -731,7 +732,7 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal (overlay component, self-rendered form) */}
+      {/* Agreement Modal */}
       {openAgreement && (
         <AgreementForm
           accountId={account.id}
@@ -773,7 +774,7 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice Modal (overlay component) */}
+      {/* Invoice Modal */}
       {openInvoice && (
         <InvoiceForm
           onSave={handleInvoiceSave}
