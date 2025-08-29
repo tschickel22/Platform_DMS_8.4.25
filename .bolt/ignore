@@ -56,6 +56,7 @@ coverage/
 
 # Ignore separate app deployments (not part of core)
 apps/
+public-site/
 
 # Ignore large documentation files
 *.md
@@ -80,38 +81,24 @@ src/__tests__/
 vitest.setup.ts
 vitest.config.ts
 
-# Ignore public site (separate deployment)
-public-site/
-
-# Ignore duplicate image files
-public/image*.png
-dist/image*.png
-
-# Ignore large mock files we don't need to examine
-src/mocks/templateMocks.ts
-src/mocks/warrantyMock.ts
-src/mocks/platformAdminMock.ts
-src/mocks/reportingSuiteMock.ts
-src/mocks/crmProspectingMock.ts
-src/mocks/crmSalesDealMock.ts
-src/mocks/commissionEngineMock.ts
-src/mocks/propertyListingsMock.ts
-
-# Ignore utility files we don't need to change
-src/utils/versionManager.ts
-src/utils/colorUtils.ts
-src/utils/mockDataDiscovery.ts
-src/shared/featureFlags.ts
-
-# Ignore large component files we don't need to examine
-src/components/common/
-src/components/ui/loading-skeleton.tsx
-src/components/ui/use-toast.tsx
-
-# Ignore netlify functions (working correctly)
+# Ignore Netlify functions (assume working correctly, not part of core app logic)
 netlify/
 
-# Keep core files visible
+# Ignore all src/modules/ directories by default
+src/modules/
+src/modules/**
+
+# EXCEPTION: Explicitly re-include only the modules we are working on
+!src/modules/accounts/
+!src/modules/accounts/**
+!src/modules/agreement-vault/
+!src/modules/agreement-vault/**
+!src/modules/finance/
+!src/modules/finance/**
+!src/modules/finance-application/
+!src/modules/finance-application/**
+
+# Keep core src/ directories visible
 !src/App.tsx
 !src/main.tsx
 !src/index.css
@@ -126,7 +113,9 @@ netlify/
 !src/pages/
 !src/utils/apiClient.ts
 !src/utils/logger.ts
-
-# Keep all modules visible (this is the key fix)
-!src/modules/
-!src/modules/**
+!src/utils/colorUtils.ts
+!src/utils/versionManager.ts
+!src/utils/mockDataDiscovery.ts
+!src/shared/featureFlags.ts
+!src/mocks/
+!src/mocks/**
