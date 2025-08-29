@@ -4,7 +4,6 @@ import type { AccountSectionDescriptor as Base, SectionType } from '@/modules/ac
 import { AccountAgreementsSection } from './AccountAgreementsSection'
 
 
-import { AccountAgreementsSection } from './components/AccountAgreementsSection'
 
 type AccountSectionDescriptor = {
   id: string
