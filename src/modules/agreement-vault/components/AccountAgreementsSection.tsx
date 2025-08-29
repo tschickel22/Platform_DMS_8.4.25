@@ -30,7 +30,7 @@ export function AccountAgreementsSection({
   onCreate,
   onRemove,
   isDragging,
-}) => {
+}: Props) {
   const items = useMemo(() => {
     const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
     return all.filter(a => a.accountId === accountId)
@@ -122,5 +122,6 @@ export function AccountAgreementsSection({
       </CardContent>
     </Card>
   )
+}
 
 export default AccountAgreementsSection
