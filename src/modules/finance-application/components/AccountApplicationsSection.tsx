@@ -5,27 +5,23 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { GripVertical, FileSignature, Plus, ExternalLink, Calendar, DollarSign } from 'lucide-react'
+import { GripVertical, Plus, ExternalLink, Calendar } from 'lucide-react'
 import { loadFromLocalStorage, formatDate } from '@/lib/utils'
 
-type ApplicationStatus = 'draft' | 'submitted' | 'approved' | 'declined' | 'funded'
-
-type FinanceApplication = {
+type AppRec = {
   id: string
   accountId?: string
-  customerId: string
-  vehicleId?: string
-  amount: number
-  status: ApplicationStatus
-  submittedDate?: string | Date
-  notes?: string
+  templateId?: string
+  status?: string
+  submittedAt?: string | Date
+  createdAt?: string | Date
+  customerName?: string
 }
 
 interface Props {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** from AccountDetail wiring; open modal when present */
   onCreate?: () => void
 }
 
@@ -35,23 +31,13 @@ export default function AccountApplicationsSection({
   isDragging,
   onCreate,
 }: Props) {
-  const all = loadFromLocalStorage<FinanceApplication[]>('applications', []) || []
-  const apps = all.filter(a => a.accountId === accountId)
+  const all = loadFromLocalStorage<AppRec[]>('applications', []) || []
+  const items = all.filter(a => a.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) onCreate()
-    else window.location.href = `/finance/applications/new?accountId=${accountId}&returnTo=account`
-  }
-
-  const statusTone = (s: ApplicationStatus) => {
-    switch (s) {
-      case 'draft': return 'bg-gray-50 text-gray-700 border-gray-200'
-      case 'submitted': return 'bg-blue-50 text-blue-700 border-blue-200'
-      case 'approved': return 'bg-green-50 text-green-700 border-green-200'
-      case 'funded': return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-      case 'declined': return 'bg-red-50 text-red-700 border-red-200'
-      default: return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
+    if (onCreate) return onCreate()
+    // fallback route if parent didn’t wire a modal
+    window.location.href = `/finance-application/new?accountId=${accountId}&returnTo=account`
   }
 
   return (
@@ -60,18 +46,15 @@ export default function AccountApplicationsSection({
         <div className="flex items-center space-x-2">
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
           <div>
-            <CardTitle className="text-lg flex items-center">
-              <FileSignature className="h-5 w-5 mr-2" />
-              Finance Applications
-            </CardTitle>
+            <CardTitle className="text-lg">Finance Applications</CardTitle>
             <CardDescription>Credit/loan applications for this account</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{apps.length}</Badge>
-          <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Badge variant="secondary">{items.length}</Badge>
+          <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Application
+            Create Application
           </Button>
           {onRemove && (
             <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
@@ -80,49 +63,39 @@ export default function AccountApplicationsSection({
       </CardHeader>
 
       <CardContent>
-        {apps.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyState
-            title="No applications yet"
-            description="Record the first finance application for this account"
-            icon={<FileSignature className="h-12 w-12" />}
-            action={{ label: 'Record Application', onClick: handleAdd }}
+            title="No applications"
+            description="Create an application for this account"
+            action={{ label: 'Create Application', onClick: handleAdd }}
           />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>Application #</TableHead>
+                  <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
-                  <TableHead>Amount</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {apps.slice(0, 5).map((a) => (
+                {items.slice(0, 5).map(a => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">#{a.id}</TableCell>
+                    <TableCell className="font-medium">{a.id}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{a.customerName || '—'}</TableCell>
                     <TableCell>
-                      <Badge className={statusTone(a.status)}>
-                        {a.status.toUpperCase()}
-                      </Badge>
+                      <Badge variant="outline">{(a.status || 'draft').toUpperCase()}</Badge>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {a.submittedDate ? formatDate(a.submittedDate) : '—'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center">
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        {Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(a.amount || 0)}
-                      </div>
+                    <TableCell className="whitespace-nowrap flex items-center">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {a.submittedAt ? formatDate(a.submittedAt) : '—'}
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link to={`/finance/applications?focus=${a.id}`}>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/finance-application?focus=${a.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
