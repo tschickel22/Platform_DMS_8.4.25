@@ -27,12 +27,13 @@ import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
 import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
 import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
+import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
 
-// Static sections available today
+// Static sections already in the app
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -80,7 +81,7 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
     defaultVisible: d?.defaultVisible ?? true,
   })) as AccountSection[]
 
-// Static “core” sections
+// Static core sections
 const coreSections: AccountSection[] = [
   {
     id: 'contacts',
@@ -138,13 +139,14 @@ const coreSections: AccountSection[] = [
   },
 ]
 
-// Merge dynamic + core by type
+// Merge dynamic + core by type (dynamic can override)
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
   const byType = new Map<SectionType, AccountSection>()
   for (const s of core) byType.set(s.type, s)
   for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
   return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
 }
+
 const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
 
 // ---------------- Quick Payment (inline modal) ----------------
@@ -216,7 +218,13 @@ function QuickPaymentForm({
           </div>
           <div>
             <Label>Amount</Label>
-            <Input type="number" step="0.01" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
           </div>
         </div>
 
@@ -224,7 +232,9 @@ function QuickPaymentForm({
           <div>
             <Label>Method</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as QuickPayment['method'])}>
-              <SelectTrigger><SelectValue placeholder="Choose a method" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a method" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="ach">ACH</SelectItem>
@@ -247,7 +257,9 @@ function QuickPaymentForm({
 
         <div className="flex justify-end space-x-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Payment'}</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save Payment'}
+          </Button>
         </div>
       </form>
     </DialogContent>
@@ -264,10 +276,12 @@ export default function AccountDetail() {
 
   const [account, setAccount] = useState<any>(null)
 
+  // Build default layout from currently-available sections (respecting defaultVisible)
   const defaultLayout = useMemo(
     () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
     []
   )
+
   const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
 
   // Modals
@@ -278,6 +292,7 @@ export default function AccountDetail() {
   const [openDelivery, setOpenDelivery] = useState(false)
   const [openPayment, setOpenPayment] = useState(false)
   const [openWarranty, setOpenWarranty] = useState(false)
+  const [openAgreement, setOpenAgreement] = useState(false)
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -290,13 +305,15 @@ export default function AccountDetail() {
     setAccount(data ?? null)
   }, [accountId, getAccount])
 
-  // Load/merge saved layout with new sections
+  // Load & merge saved layout with any new defaults
   useEffect(() => {
     if (!accountId) return
     const saved = loadFromLocalStorage<SectionType[]>(storageKey, []) || []
+
     const validTypes = new Set<SectionType>(AVAILABLE_SECTIONS.map((s) => s.type))
     const cleaned = saved.filter((t) => validTypes.has(t))
     const mergedUnique = Array.from(new Set<SectionType>([...cleaned, ...(defaultLayout as SectionType[])]))
+
     setSections(mergedUnique)
     if (saved.length && mergedUnique.length !== saved.length) setHasUnsavedChanges(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -332,6 +349,7 @@ export default function AccountDetail() {
       toast({ title: 'Section Added', description: 'New section has been added to your view.' })
     }
   }
+
   const removeSection = (type: SectionType) => {
     setSections(sections.filter((s) => s !== type))
     setHasUnsavedChanges(true)
@@ -339,16 +357,39 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder for future data refreshes
+    // placeholder — sections read from local state / mocks / localStorage
   }
 
-  // Save handlers
-  const handleContactSaved = (x: any) => { setOpenContact(false); if (x) { refreshSection('contacts'); toast({ title: 'Success', description: 'Contact created successfully' }) } }
-  const handleDealSaved = (x: any) => { setOpenDeal(false); if (x) { refreshSection('deals'); toast({ title: 'Success', description: 'Deal created successfully' }) } }
-  const handleQuoteSaved = (x: any) => { setOpenQuote(false); if (x) { refreshSection('quotes'); toast({ title: 'Success', description: 'Quote created successfully' }) } }
-  const handleServiceSaved = (x: any) => { setOpenService(false); if (x) { refreshSection('service'); toast({ title: 'Success', description: 'Service ticket created successfully' }) } }
+  // Save handlers (localStorage demos)
+  const handleContactSaved = (contact: any) => {
+    setOpenContact(false)
+    if (contact) {
+      refreshSection('contacts')
+      toast({ title: 'Success', description: 'Contact created successfully' })
+    }
+  }
+  const handleDealSaved = (deal: any) => {
+    setOpenDeal(false)
+    if (deal) {
+      refreshSection('deals')
+      toast({ title: 'Success', description: 'Deal created successfully' })
+    }
+  }
+  const handleQuoteSaved = (quote: any) => {
+    setOpenQuote(false)
+    if (quote) {
+      refreshSection('quotes')
+      toast({ title: 'Success', description: 'Quote created successfully' })
+    }
+  }
+  const handleServiceSaved = (ticket: any) => {
+    setOpenService(false)
+    if (ticket) {
+      refreshSection('service')
+      toast({ title: 'Success', description: 'Service ticket created successfully' })
+    }
+  }
 
-  // Delivery (demo persistence)
   const handleDeliverySaved = async (delivery: any | null) => {
     setOpenDelivery(false)
     if (!delivery) return
@@ -359,7 +400,6 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Delivery saved successfully' })
   }
 
-  // Warranty (demo persistence)
   const handleWarrantySaved = async (claim: any | null) => {
     setOpenWarranty(false)
     if (!claim) return
@@ -370,16 +410,26 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Warranty claim saved successfully' })
   }
 
-  // Fallback routes for non-modal create actions
+  const handleAgreementSaved = async (agreement: any | null) => {
+    setOpenAgreement(false)
+    if (!agreement) return
+    const existing = loadFromLocalStorage<any[]>('agreements', [])
+    const withId = agreement.id ? agreement : { ...agreement, id: generateId() }
+    saveToLocalStorage('agreements', [withId, ...existing])
+    // refreshSection('agreements') // enable if your section reads from LS
+    toast({ title: 'Success', description: 'Agreement saved successfully' })
+  }
+
+  // Generic fallback create (not used for payments/warranty/agreements)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      agreements: `/agreements/new?accountId=${accountId}&returnTo=account`,
       applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
+      // payments, warranty, agreements handled by modals below
     }
     const href = map[t]
     if (href) window.location.href = href
@@ -570,13 +620,14 @@ export default function AccountDetail() {
                   if (!config) return null
                   const Section = config.component as any
 
+                  // Base props
                   const commonProps = {
                     accountId: accountId!,
                     onRemove: () => removeSection(type),
                     onCreate: () => routeCreateForType(type),
                   }
 
-                  // Open in-page modals for these types
+                  // Override “create” for specific sections to open modals instead of routing
                   const withSpecialHandlers =
                     type === 'deliveries'
                       ? { ...commonProps, onAddDelivery: () => setOpenDelivery(true) }
@@ -584,7 +635,9 @@ export default function AccountDetail() {
                         ? { ...commonProps, onCreate: () => setOpenPayment(true) }
                         : type === 'warranty'
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
-                          : commonProps
+                          : type === 'agreements'
+                            ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
+                            : commonProps
 
                   return (
                     <Draggable key={type} draggableId={type} index={index}>
@@ -714,6 +767,19 @@ export default function AccountDetail() {
             accountId={account.id}
             onSaved={(claim) => handleWarrantySaved(claim)}
             onCancel={() => setOpenWarranty(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Agreement Modal */}
+      <Dialog open={openAgreement} onOpenChange={setOpenAgreement}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">New Agreement</DialogTitle>
+          <DialogDescription className="sr-only">Create a new agreement for this account.</DialogDescription>
+          <AgreementForm
+            accountId={account.id}
+            returnTo="account"
+            onSaved={handleAgreementSaved}
           />
         </DialogContent>
       </Dialog>
