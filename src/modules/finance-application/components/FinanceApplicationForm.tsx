@@ -52,7 +52,20 @@ export function FinanceApplicationForm({
   onCreateTask,
 }: FinanceApplicationFormProps) {
   const { tenant } = useTenant()
-  const { getTemplateById } = useFinanceApplications()
+  const fin: any = useFinanceApplications()
+
+  // --- provider-safe helpers (no assumptions about hook shape) ---
+  const getTemplates = useMemo(() => {
+    if (Array.isArray(fin?.templates)) return () => fin.templates
+    if (typeof fin?.getTemplates === 'function') return () => fin.getTemplates()
+    return () => [] as any[]
+  }, [fin])
+
+  const getTemplateById = (id: string) => {
+    if (typeof fin?.getTemplateById === 'function') return fin.getTemplateById(id)
+    const list = getTemplates()
+    return list.find((t: any) => t.id === id)
+  }
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [formData, setFormData] = useState<ApplicationData>(application.data || {})
@@ -77,7 +90,7 @@ export function FinanceApplicationForm({
 
   // Stabilize sections (no in-place mutation)
   const sections = useMemo(
-    () => [...template.sections].sort((a, b) => a.order - b.order),
+    () => [...(template.sections || [])].sort((a, b) => a.order - b.order),
     [template.sections]
   )
 
@@ -108,7 +121,7 @@ export function FinanceApplicationForm({
     const section = sections.find(s => s.id === sectionId)
     if (!section) return errs
     const data = formData[sectionId] || {}
-    section.fields.forEach(field => {
+    section.fields.forEach((field: any) => {
       const value = data[field.id]
       if (field.required && (value === undefined || value === null || value === '')) {
         errs[`${sectionId}.${field.id}`] = `${field.label} is required`
@@ -206,7 +219,7 @@ export function FinanceApplicationForm({
   }
 
   // ========= Derived UI helpers =========
-  const totalCompleted = sections.reduce((acc, s) => acc + (sectionComplete(s.id) ? 1 : 0), 0)
+  const totalCompleted = sections.reduce((acc: number, s: any) => acc + (sectionComplete(s.id) ? 1 : 0), 0)
 
   return (
     <div className="grid gap-6 lg:grid-cols-[240px,1fr]">
@@ -218,7 +231,7 @@ export function FinanceApplicationForm({
             <CardDescription>Select a section to jump</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
-            {sections.map((s, idx) => {
+            {sections.map((s: any, idx: number) => {
               const errored = Object.keys(validationErrors).some(k => k.startsWith(`${s.id}.`))
               const complete = sectionComplete(s.id)
               const active = idx === currentSectionIndex && !atReview
@@ -323,7 +336,7 @@ export function FinanceApplicationForm({
               <ApplicationSectionForm
                 section={currentSection}
                 data={formData[currentSection.id] || {}}
-                onChange={data => handleSectionDataChange(currentSection.id, data)}
+                onChange={(data: any) => handleSectionDataChange(currentSection.id, data)}
                 validationErrors={validationErrors}
                 applicationId={application.id}
               />
@@ -345,7 +358,7 @@ export function FinanceApplicationForm({
                 const grouped: Record<string, string[]> = {}
                 all.forEach(([k, msg]) => {
                   const [sid] = k.split('.')
-                  ;(grouped[sid] ||= []).push(msg)
+                  ;(grouped[sid] ||= []).push(msg as string)
                 })
                 return (
                   <div className="rounded-md border border-orange-200 bg-orange-50 p-4">
@@ -354,7 +367,7 @@ export function FinanceApplicationForm({
                     </div>
                     <ul className="list-disc pl-6 text-sm text-orange-900 space-y-1">
                       {Object.entries(grouped).map(([sid, msgs]) => {
-                        const s = sections.find(x => x.id === sid)
+                        const s: any = sections.find((x: any) => x.id === sid)
                         return (
                           <li key={sid}>
                             <span className="font-medium">{s?.title || sid}:</span>{' '}
@@ -369,7 +382,7 @@ export function FinanceApplicationForm({
 
               {/* Quick summary */}
               <div className="space-y-4">
-                {sections.map((s) => (
+                {sections.map((s: any) => (
                   <div key={s.id} className="rounded-lg border p-4">
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{s.title}</div>
@@ -383,7 +396,7 @@ export function FinanceApplicationForm({
                             <AlertCircle className="h-3 w-3" /> Needs review
                           </Badge>
                         )}
-                        <Button size="sm" variant="ghost" onClick={() => jumpTo(sections.findIndex(x => x.id === s.id))}>
+                        <Button size="sm" variant="ghost" onClick={() => jumpTo(sections.findIndex((x: any) => x.id === s.id))}>
                           Edit
                         </Button>
                       </div>
@@ -394,7 +407,7 @@ export function FinanceApplicationForm({
                         <span>No answers captured yet.</span>
                       ) : (
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {s.fields.slice(0, 9).map(f => (
+                          {s.fields.slice(0, 9).map((f: any) => (
                             <div key={f.id}>
                               <span className="font-medium">{f.label}: </span>
                               <span className="break-words">
