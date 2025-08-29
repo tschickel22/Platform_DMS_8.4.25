@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Building, Calendar, User, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Building, Calendar, User, Plus, Trash2, Building2, Globe } from 'lucide-react'
 import { TagInput } from '@/components/common/TagInput'
+import { NotesSection } from '@/components/common/NotesSection'
 import { useToast } from '@/hooks/use-toast'
 import { useReturnTargets } from '@/hooks/useReturnTargets'
 
