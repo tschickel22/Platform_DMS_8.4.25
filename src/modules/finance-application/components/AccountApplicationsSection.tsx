@@ -23,7 +23,7 @@ interface Props {
   onCreate?: () => void
 }
 
-export default function AccountApplicationsSection({
+export function AccountApplicationsSection({
   accountId,
   isDragging,
   onRemove,
