@@ -85,8 +85,8 @@ vitest.config.ts
 netlify/
 
 # Ignore all src/modules/ directories by default
-src/modules/
-
+# src/modules/
+# src/modules/**
 # EXCEPTION: Explicitly re-include only the modules we are working on
 !src/modules/accounts/
 !src/modules/accounts/**
@@ -96,6 +96,20 @@ src/modules/
 !src/modules/finance/**
 !src/modules/finance-application/
 !src/modules/finance-application/**
+
+# Show more src/ files for debugging
+!src/modules/contacts/
+!src/modules/contacts/**
+!src/modules/invoice-payments/
+!src/modules/invoice-payments/**
+!src/modules/service-ops/
+!src/modules/service-ops/**
+!src/modules/crm-sales-deal/
+!src/modules/crm-sales-deal/**
+!src/modules/delivery-tracker/
+!src/modules/delivery-tracker/**
+!src/modules/warranty-mgmt/
+!src/modules/warranty-mgmt/**
 
 # Keep core src/ directories visible
 !src/App.tsx
