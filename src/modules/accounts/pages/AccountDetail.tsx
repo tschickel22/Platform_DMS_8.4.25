@@ -1,5 +1,5 @@
 // src/modules/accounts/pages/AccountDetail.tsx
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,7 +31,7 @@ import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyCl
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
 
-// Finance applications (⚠️ provider-safe hook usage)
+// Finance applications (guarded usage)
 import FinanceApplicationForm from '@/modules/finance-application/components/FinanceApplicationForm'
 import { useFinanceApplications } from '@/modules/finance-application/hooks/useFinanceApplications'
 
@@ -47,7 +47,6 @@ import { AccountServiceTicketsSection } from '@/modules/accounts/components/Acco
 import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
 import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
 
-// ---------- Types ----------
 type SectionType =
   | 'contacts'
   | 'deals'
@@ -72,7 +71,6 @@ interface AccountSectionDescriptor {
 }
 interface AccountSection extends AccountSectionDescriptor {}
 
-// ---------- Dynamic Section Registry ----------
 const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
   string,
   { default?: AccountSectionDescriptor }
@@ -195,7 +193,7 @@ function QuickPaymentForm({
         amount: Number(amount),
         method,
         reference: reference || undefined,
-        notes: notes || undefined,
+      notes: notes || undefined,
       }
       const existing = loadFromLocalStorage<QuickPayment[]>('payments', []) || []
       saveToLocalStorage('payments', [item, ...existing])
@@ -268,12 +266,10 @@ export default function AccountDetail() {
   const { toast } = useToast()
 
   // Finance apps (provider may not be mounted depending on route layout).
-  // Guard the hook so this page never crashes if the provider is absent.
   let fin: any = null
   try {
     fin = useFinanceApplications() as any
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn('[AccountDetail] useFinanceApplications unavailable; falling back.', err)
     fin = null
   }
@@ -406,7 +402,6 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
-  // Generic fallback route (used only if a section doesn't override onCreate)
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
@@ -420,7 +415,6 @@ export default function AccountDetail() {
     if (href) window.location.href = href
   }
 
-  // Create Application (modalized like other sections), resilient to hook shape
   const openCreateApplication = () => {
     const templates: any[] =
       (Array.isArray(fin?.templates) && fin.templates) ||
@@ -627,7 +621,11 @@ export default function AccountDetail() {
                 {sections.map((type, index) => {
                   const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
                   if (!config || !config.component) return null
-                  const Section = config.component as any
+                  if (typeof config.component !== 'function') {
+                    console.warn('Invalid section component; expected a component type', config)
+                    return null
+                  }
+                  const SectionComp = config.component as React.ComponentType<any>
 
                   const commonProps = {
                     accountId: accountId!,
@@ -663,12 +661,8 @@ export default function AccountDetail() {
                           ) : type === 'deliveries' ? (
                             <AccountDeliveriesSection {...withSpecialHandlers} isDragging={s.isDragging} />
                           ) : (
-  React.isValidElement(Section)
-    ? React.cloneElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging })
-    : React.createElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging })
-)}
-
-   
+                            <SectionComp {...withSpecialHandlers} isDragging={s.isDragging} />
+                          )}
                         </div>
                       )}
                     </Draggable>
@@ -732,7 +726,7 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Delivery Modal (DeliveryForm renders its own overlay UI) */}
+      {/* Delivery Modal */}
       {openDelivery && (
         <DeliveryForm
           customers={contacts}
@@ -770,7 +764,7 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal (overlay component) */}
+      {/* Agreement Modal */}
       {openAgreement && (
         <AgreementForm
           onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
@@ -778,7 +772,7 @@ export default function AccountDetail() {
         />
       )}
 
-      {/* Invoice Modal (overlay component) */}
+      {/* Invoice Modal */}
       {openInvoice && (
         <InvoiceForm
           onSave={handleInvoiceSave}
