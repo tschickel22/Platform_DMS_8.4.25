@@ -1,43 +1,40 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { GripVertical, Plus, ExternalLink, Calendar } from 'lucide-react'
-import { loadFromLocalStorage, formatDate } from '@/lib/utils'
+import { FileText, Plus, GripVertical, ExternalLink } from 'lucide-react'
+import { loadFromLocalStorage } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 
-type AppRec = {
+type AppRow = {
   id: string
   accountId?: string
-  templateId?: string
-  status?: string
-  submittedAt?: string | Date
-  createdAt?: string | Date
   customerName?: string
+  status?: string
+  templateId?: string
 }
 
 interface Props {
   accountId: string
-  onRemove?: () => void
   isDragging?: boolean
+  onRemove?: () => void
+  /** open the Create Application modal */
   onCreate?: () => void
 }
 
 export default function AccountApplicationsSection({
   accountId,
-  onRemove,
   isDragging,
+  onRemove,
   onCreate,
 }: Props) {
-  const all = loadFromLocalStorage<AppRec[]>('applications', []) || []
-  const items = all.filter(a => a.accountId === accountId)
+  const all = loadFromLocalStorage<AppRow[]>('financeApplications', []) || []
+  const apps = all.filter(a => a.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) return onCreate()
-    // fallback route if parent didn’t wire a modal
-    window.location.href = `/finance-application/new?accountId=${accountId}&returnTo=account`
+    if (onCreate) onCreate()
   }
 
   return (
@@ -46,13 +43,16 @@ export default function AccountApplicationsSection({
         <div className="flex items-center space-x-2">
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
           <div>
-            <CardTitle className="text-lg">Finance Applications</CardTitle>
+            <CardTitle className="text-lg flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Finance Applications
+            </CardTitle>
             <CardDescription>Credit/loan applications for this account</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{items.length}</Badge>
-          <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
+          <Badge variant="secondary">{apps.length}</Badge>
+          <Button variant="outline" size="sm" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
             Create Application
           </Button>
@@ -63,10 +63,11 @@ export default function AccountApplicationsSection({
       </CardHeader>
 
       <CardContent>
-        {items.length === 0 ? (
+        {apps.length === 0 ? (
           <EmptyState
             title="No applications"
-            description="Create an application for this account"
+            description="Create a finance application for this account"
+            icon={<FileText className="h-12 w-12" />}
             action={{ label: 'Create Application', onClick: handleAdd }}
           />
         ) : (
@@ -74,28 +75,21 @@ export default function AccountApplicationsSection({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Application #</TableHead>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Applicant</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Template</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.slice(0, 5).map(a => (
+                {apps.slice(0, 5).map(a => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.id}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{a.customerName || '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{(a.status || 'draft').toUpperCase()}</Badge>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {a.submittedAt ? formatDate(a.submittedAt) : '—'}
-                    </TableCell>
+                    <TableCell className="font-medium">{a.customerName || '—'}</TableCell>
+                    <TableCell>{(a.status || 'draft').toUpperCase()}</TableCell>
+                    <TableCell>{a.templateId || '—'}</TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to={`/finance-application?focus=${a.id}`}>
+                        <Link to={`/finance-applications?focus=${a.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
