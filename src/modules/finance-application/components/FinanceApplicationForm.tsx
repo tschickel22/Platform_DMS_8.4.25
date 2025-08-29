@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, ArrowRight, Save, Send, FileText, ListTodo } from 'lucide-react'
 import { FinanceApplication, ApplicationData } from '../types'
 import { useFinanceApplications } from '../hooks/useFinanceApplications'
-import ApplicationSectionForm from './ApplicationSectionForm' // <-- FIX: default import
+import ApplicationSectionForm from './ApplicationSectionForm' // default export
 import { useTenant } from '@/contexts/TenantContext'
 
 interface FinanceApplicationFormProps {
@@ -17,7 +17,7 @@ interface FinanceApplicationFormProps {
   onCreateTask?: (application: FinanceApplication) => void
 }
 
-export function FinanceApplicationForm({
+function FinanceApplicationForm({
   application,
   onSave,
   onCancel,
@@ -262,3 +262,6 @@ export function FinanceApplicationForm({
     </div>
   )
 }
+
+export { FinanceApplicationForm }           // keep named export
+export default FinanceApplicationForm        // add default export
