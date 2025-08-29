@@ -425,6 +425,16 @@ function AgreementForm({
     </div>
   )
 }
+// …(keep your existing imports and code exactly as-is)
+
+export default function AgreementForm(props: AgreementFormProps) {
+  // existing implementation you shared (unchanged)
+  // ...
+}
+
+// Add a named export so both `import AgreementForm …` and
+// `import { AgreementForm } …` work without a Vite error.
+export { AgreementForm };
 
 // Provide BOTH a default export and a named export so either
 // `import AgreementForm from ...` or `import { AgreementForm } from ...` works.
