@@ -1,3 +1,4 @@
+// src/modules/accounts/pages/AccountDetail.tsx
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
@@ -31,7 +32,7 @@ import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
 
-// Static sections that already exist today
+// Static sections available today
 import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
 import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
 import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
@@ -59,14 +60,12 @@ interface AccountSectionDescriptor {
   title: string
   description: string
   component: React.ComponentType<any>
-  sort?: number    // lower shows earlier
+  sort?: number
   defaultVisible?: boolean
 }
 interface AccountSection extends AccountSectionDescriptor {}
 
 // ---------- Dynamic Section Registry ----------
-// Modules may register account sections by exporting a default descriptor from:
-//   src/modules/<module>/account-section.tsx (or .ts)
 const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
   string,
   { default?: AccountSectionDescriptor }
@@ -81,7 +80,7 @@ const dynamicSections: AccountSection[] = Object.values(sectionModules)
     defaultVisible: d?.defaultVisible ?? true,
   })) as AccountSection[]
 
-// Static “core” sections always available
+// Static “core” sections
 const coreSections: AccountSection[] = [
   {
     id: 'contacts',
@@ -139,14 +138,13 @@ const coreSections: AccountSection[] = [
   },
 ]
 
-// Merge dynamic + core by type (dynamic may override labels/component)
+// Merge dynamic + core by type
 function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
   const byType = new Map<SectionType, AccountSection>()
   for (const s of core) byType.set(s.type, s)
   for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
   return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
 }
-
 const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
 
 // ---------------- Quick Payment (inline modal) ----------------
@@ -218,13 +216,7 @@ function QuickPaymentForm({
           </div>
           <div>
             <Label>Amount</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
+            <Input type="number" step="0.01" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
         </div>
 
@@ -232,9 +224,7 @@ function QuickPaymentForm({
           <div>
             <Label>Method</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as QuickPayment['method'])}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a method" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Choose a method" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="ach">ACH</SelectItem>
@@ -257,9 +247,7 @@ function QuickPaymentForm({
 
         <div className="flex justify-end space-x-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Payment'}
-          </Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Payment'}</Button>
         </div>
       </form>
     </DialogContent>
@@ -276,12 +264,10 @@ export default function AccountDetail() {
 
   const [account, setAccount] = useState<any>(null)
 
-  // Build default layout from currently-available sections (respecting defaultVisible)
   const defaultLayout = useMemo(
     () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
     []
   )
-
   const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
 
   // Modals
@@ -304,23 +290,15 @@ export default function AccountDetail() {
     setAccount(data ?? null)
   }, [accountId, getAccount])
 
-  // Load and merge saved layout with any new default sections (e.g., Payments)
+  // Load/merge saved layout with new sections
   useEffect(() => {
     if (!accountId) return
     const saved = loadFromLocalStorage<SectionType[]>(storageKey, []) || []
-
     const validTypes = new Set<SectionType>(AVAILABLE_SECTIONS.map((s) => s.type))
     const cleaned = saved.filter((t) => validTypes.has(t))
-
-    const mergedUnique = Array.from(
-      new Set<SectionType>([...cleaned, ...(defaultLayout as SectionType[])])
-    )
-
+    const mergedUnique = Array.from(new Set<SectionType>([...cleaned, ...(defaultLayout as SectionType[])]))
     setSections(mergedUnique)
-
-    if (saved.length && mergedUnique.length !== saved.length) {
-      setHasUnsavedChanges(true)
-    }
+    if (saved.length && mergedUnique.length !== saved.length) setHasUnsavedChanges(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId])
 
@@ -354,7 +332,6 @@ export default function AccountDetail() {
       toast({ title: 'Section Added', description: 'New section has been added to your view.' })
     }
   }
-
   const removeSection = (type: SectionType) => {
     setSections(sections.filter((s) => s !== type))
     setHasUnsavedChanges(true)
@@ -362,40 +339,16 @@ export default function AccountDetail() {
   }
 
   const refreshSection = (_: string) => {
-    // placeholder — sections read from local state / mocks / localStorage
+    // placeholder for future data refreshes
   }
 
   // Save handlers
-  const handleContactSaved = (contact: any) => {
-    setOpenContact(false)
-    if (contact) {
-      refreshSection('contacts')
-      toast({ title: 'Success', description: 'Contact created successfully' })
-    }
-  }
-  const handleDealSaved = (deal: any) => {
-    setOpenDeal(false)
-    if (deal) {
-      refreshSection('deals')
-      toast({ title: 'Success', description: 'Deal created successfully' })
-    }
-  }
-  const handleQuoteSaved = (quote: any) => {
-    setOpenQuote(false)
-    if (quote) {
-      refreshSection('quotes')
-      toast({ title: 'Success', description: 'Quote created successfully' })
-    }
-  }
-  const handleServiceSaved = (ticket: any) => {
-    setOpenService(false)
-    if (ticket) {
-      refreshSection('service')
-      toast({ title: 'Success', description: 'Service ticket created successfully' })
-    }
-  }
+  const handleContactSaved = (x: any) => { setOpenContact(false); if (x) { refreshSection('contacts'); toast({ title: 'Success', description: 'Contact created successfully' }) } }
+  const handleDealSaved = (x: any) => { setOpenDeal(false); if (x) { refreshSection('deals'); toast({ title: 'Success', description: 'Deal created successfully' }) } }
+  const handleQuoteSaved = (x: any) => { setOpenQuote(false); if (x) { refreshSection('quotes'); toast({ title: 'Success', description: 'Quote created successfully' }) } }
+  const handleServiceSaved = (x: any) => { setOpenService(false); if (x) { refreshSection('service'); toast({ title: 'Success', description: 'Service ticket created successfully' }) } }
 
-  // Delivery (demo persistence to localStorage)
+  // Delivery (demo persistence)
   const handleDeliverySaved = async (delivery: any | null) => {
     setOpenDelivery(false)
     if (!delivery) return
@@ -406,7 +359,7 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Delivery saved successfully' })
   }
 
-  // Warranty (localStorage demo)
+  // Warranty (demo persistence)
   const handleWarrantySaved = async (claim: any | null) => {
     setOpenWarranty(false)
     if (!claim) return
@@ -417,7 +370,7 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Warranty claim saved successfully' })
   }
 
-  // Generic fallback “create route” — kept for other dynamic sections
+  // Fallback routes for non-modal create actions
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
@@ -427,7 +380,6 @@ export default function AccountDetail() {
       agreements: `/agreements/new?accountId=${accountId}&returnTo=account`,
       applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
-      // warranty/payments are handled by in-page modals below
     }
     const href = map[t]
     if (href) window.location.href = href
@@ -618,14 +570,13 @@ export default function AccountDetail() {
                   if (!config) return null
                   const Section = config.component as any
 
-                  // Base props
                   const commonProps = {
                     accountId: accountId!,
                     onRemove: () => removeSection(type),
-                    onCreate: () => routeCreateForType(type), // default behavior
+                    onCreate: () => routeCreateForType(type),
                   }
 
-                  // Custom create handlers for certain dynamic sections to open modals instead of routing
+                  // Open in-page modals for these types
                   const withSpecialHandlers =
                     type === 'deliveries'
                       ? { ...commonProps, onAddDelivery: () => setOpenDelivery(true) }
