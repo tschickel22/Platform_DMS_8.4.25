@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { FileText, Plus, ExternalLink, GripVertical, Calendar } from 'lucide-react'
-import { loadFromLocalStorage, formatDate } from '@/lib/utils'
+import { GripVertical, Plus, ExternalLink } from 'lucide-react'
+import { loadFromLocalStorage, formatCurrency, formatDate } from '@/lib/utils'
 
-type StoredInvoice = {
+type Invoice = {
   id: string
   accountId?: string
   number?: string
   status?: string
-  dueDate?: string | Date
   total?: number
+  dueDate?: string | Date
 }
 
 interface Props {
@@ -24,22 +24,18 @@ interface Props {
   onCreate?: () => void
 }
 
-export default function AccountInvoicesSection({ accountId, onRemove, isDragging, onCreate }: Props) {
-  const all = loadFromLocalStorage<StoredInvoice[]>('invoices', []) || []
-  const invoices = all.filter(i => i.accountId === accountId)
+export default function AccountInvoicesSection({
+  accountId,
+  onRemove,
+  isDragging,
+  onCreate,
+}: Props) {
+  const all = loadFromLocalStorage<Invoice[]>('invoices', []) || []
+  const items = all.filter(i => i.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) onCreate()
-    else window.location.href = `/invoices/list?accountId=${accountId}&returnTo=account`
-  }
-
-  const pill = (s?: string) => {
-    switch ((s || '').toLowerCase()) {
-      case 'paid': return 'bg-green-50 text-green-700 border-green-200'
-      case 'sent': return 'bg-blue-50 text-blue-700 border-blue-200'
-      case 'overdue': return 'bg-red-50 text-red-700 border-red-200'
-      default: return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-    }
+    if (onCreate) return onCreate()
+    window.location.href = `/invoices/new?accountId=${accountId}&returnTo=account`
   }
 
   return (
@@ -48,32 +44,26 @@ export default function AccountInvoicesSection({ accountId, onRemove, isDragging
         <div className="flex items-center space-x-2">
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
           <div>
-            <CardTitle className="text-lg flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Invoices
-            </CardTitle>
+            <CardTitle className="text-lg">Invoices</CardTitle>
             <CardDescription>Invoices for this account</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{invoices.length}</Badge>
-          <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Badge variant="secondary">{items.length}</Badge>
+          <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Invoice
+            Create Invoice
           </Button>
-          {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
-          )}
+          {onRemove && <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>}
         </div>
       </CardHeader>
 
       <CardContent>
-        {invoices.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyState
-            title="No invoices yet"
-            description="Record an invoice for this account"
-            icon={<FileText className="h-12 w-12" />}
-            action={{ label: 'Record Invoice', onClick: handleAdd }}
+            title="No invoices"
+            description="Create an invoice for this account"
+            action={{ label: 'Create Invoice', onClick: handleAdd }}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -81,27 +71,22 @@ export default function AccountInvoicesSection({ accountId, onRemove, isDragging
               <TableHeader>
                 <TableRow>
                   <TableHead>#</TableHead>
-                  <TableHead>Due</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Due</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.slice(0, 5).map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="font-medium">{i.number || i.id}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {i.dueDate ? formatDate(i.dueDate) : '—'}
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge className={pill(i.status)}>{(i.status || 'draft').toUpperCase()}</Badge></TableCell>
-                    <TableCell>{typeof i.total === 'number' ? `$${i.total.toFixed(2)}` : '—'}</TableCell>
+                {items.slice(0, 5).map(inv => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">{inv.number || inv.id}</TableCell>
+                    <TableCell><Badge variant="outline">{(inv.status || 'draft').toUpperCase()}</Badge></TableCell>
+                    <TableCell>{inv.dueDate ? formatDate(inv.dueDate) : '—'}</TableCell>
+                    <TableCell>{formatCurrency(inv.total || 0)}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link to={`/invoices/list?focus=${i.id}`}>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/invoice?focus=${inv.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
