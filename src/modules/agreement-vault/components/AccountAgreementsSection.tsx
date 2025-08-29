@@ -1,11 +1,11 @@
 // src/modules/agreement-vault/components/AccountAgreementsSection.tsx
 import React, { useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { FileText, Plus, GripVertical, ExternalLink, Calendar } from 'lucide-react'
+import { FileText, Plus, ExternalLink, GripVertical, Calendar } from 'lucide-react'
 import { loadFromLocalStorage, formatDate } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 
@@ -17,31 +17,32 @@ type Agreement = {
   effectiveDate?: string | Date
   expirationDate?: string | Date
   name?: string
+  templateName?: string
 }
 
 interface Props {
   accountId: string
-  isDragging?: boolean
+  onCreate?: () => void           // AccountDetail wires this to open the modal
   onRemove?: () => void
-  /** Open the Create Agreement modal (wired by AccountDetail) */
-  onCreate?: () => void
+  isDragging?: boolean
 }
 
-export function AccountAgreementsSection({
+const AccountAgreementsSection: React.FC<Props> = ({
   accountId,
-  isDragging,
-  onRemove,
   onCreate,
-}: Props) {
-  // keep your data + filter, but memoize so it doesn’t re-filter on every render
+  onRemove,
+  isDragging,
+}) => {
   const items = useMemo(() => {
     const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
     return all.filter(a => a.accountId === accountId)
   }, [accountId])
 
-  const handleAdd = () => {
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (onCreate) {
-      onCreate()
+      onCreate()                       // opens the AgreementForm modal from AccountDetail
     } else {
       // ultra-safe fallback so the button never appears to do nothing
       window.location.href = `/agreements/new?accountId=${encodeURIComponent(accountId)}&returnTo=account`
@@ -63,12 +64,20 @@ export function AccountAgreementsSection({
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary">{items.length}</Badge>
-          <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={handleAdd}
+            aria-label="Create Agreement"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Agreement
           </Button>
           {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove} aria-label="Remove section">×</Button>
+            <Button variant="ghost" size="sm" onClick={onRemove} aria-label="Remove section">
+              ×
+            </Button>
           )}
         </div>
       </CardHeader>
@@ -127,5 +136,5 @@ export function AccountAgreementsSection({
   )
 }
 
-// keep the named export (for your imports) and a default export (for the section registry)
 export default AccountAgreementsSection
+export { AccountAgreementsSection }
