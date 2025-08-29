@@ -5,22 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Handshake, Plus, ExternalLink, GripVertical, Calendar } from 'lucide-react'
-import { loadFromLocalStorage } from '@/lib/utils'
-
-type AgreementStatus = 'active' | 'pending' | 'cancelled' | 'expired'
+import { GripVertical, Plus, ExternalLink, Calendar } from 'lucide-react'
+import { loadFromLocalStorage, formatDate } from '@/lib/utils'
 
 type Agreement = {
   id: string
-  accountId: string
-  agreementNumber: string
-  type: string // Retail Installment, Lease, Service Contract, etc.
-  provider?: string
-  startDate?: string
-  endDate?: string
-  amount?: number
-  status?: AgreementStatus
-  notes?: string
+  accountId?: string
+  type?: string
+  status?: string
+  effectiveDate?: string | Date
 }
 
 interface Props {
@@ -30,23 +23,18 @@ interface Props {
   onCreate?: () => void
 }
 
-export function AccountAgreementsSection({ accountId, onRemove, isDragging, onCreate }: Props) {
+export default function AccountAgreementsSection({
+  accountId,
+  onRemove,
+  isDragging,
+  onCreate,
+}: Props) {
   const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
-  const agreements = all.filter(a => a.accountId === accountId)
+  const items = all.filter(a => a.accountId === accountId)
 
   const handleAdd = () => {
-    if (onCreate) onCreate()
-    else window.location.href = `/finance/agreements?accountId=${accountId}&returnTo=account`
-  }
-
-  const statusTone = (s?: AgreementStatus) => {
-    switch (s) {
-      case 'active': return 'bg-green-50 text-green-700 border-green-200'
-      case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case 'cancelled': return 'bg-red-50 text-red-700 border-red-200'
-      case 'expired': return 'bg-gray-50 text-gray-700 border-gray-200'
-      default: return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
+    if (onCreate) return onCreate()
+    window.location.href = `/agreements/new?accountId=${accountId}&returnTo=account`
   }
 
   return (
@@ -55,68 +43,50 @@ export function AccountAgreementsSection({ accountId, onRemove, isDragging, onCr
         <div className="flex items-center space-x-2">
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
           <div>
-            <CardTitle className="text-lg flex items-center">
-              <Handshake className="h-5 w-5 mr-2" />
-              Agreements
-            </CardTitle>
-            <CardDescription>Retail/lease agreements & service contracts</CardDescription>
+            <CardTitle className="text-lg">Agreements</CardTitle>
+            <CardDescription>Recorded agreements for this account</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{agreements.length}</Badge>
-          <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Badge variant="secondary">{items.length}</Badge>
+          <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Agreement
+            Create Agreement
           </Button>
-          {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
-          )}
+          {onRemove && <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>}
         </div>
       </CardHeader>
 
       <CardContent>
-        {agreements.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyState
-            title="No agreements yet"
-            description="Record an agreement for this account"
-            icon={<Handshake className="h-12 w-12" />}
-            action={{ label: 'Record Agreement', onClick: handleAdd }}
+            title="No agreements"
+            description="Create an agreement for this account"
+            action={{ label: 'Create Agreement', onClick: handleAdd }}
           />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>#</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Term</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Effective</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {agreements.slice(0, 5).map((a) => (
+                {items.slice(0, 5).map(a => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.agreementNumber || a.id}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{a.type || '—'}</TableCell>
-                    <TableCell>{a.provider || '—'}</TableCell>
+                    <TableCell className="font-medium">{a.type || '—'}</TableCell>
+                    <TableCell><Badge variant="outline">{(a.status || 'draft').toUpperCase()}</Badge></TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <span className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {a.startDate || '—'}
-                        </span>
-                        <span>→</span>
-                        <span>{a.endDate || '—'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusTone(a.status)}>{(a.status || 'active').toUpperCase()}</Badge>
+                      <Calendar className="h-3 w-3 mr-1 inline" />
+                      {a.effectiveDate ? formatDate(a.effectiveDate) : '—'}
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to={`/finance/agreements?focus=${a.id}`}>
+                        <Link to={`/agreements?focus=${a.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
@@ -131,5 +101,3 @@ export function AccountAgreementsSection({ accountId, onRemove, isDragging, onCr
     </Card>
   )
 }
-
-export default AccountAgreementsSection
