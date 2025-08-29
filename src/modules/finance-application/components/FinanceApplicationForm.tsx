@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, ArrowRight, Save, Send, FileText, ListTodo } from 'lucide-react'
 import { FinanceApplication, ApplicationData } from '../types'
 import { useFinanceApplications } from '../hooks/useFinanceApplications'
-import { ApplicationSectionForm } from './ApplicationSectionForm'
+import ApplicationSectionForm from './ApplicationSectionForm' // <-- FIX: default import
 import { useTenant } from '@/contexts/TenantContext'
 
 interface FinanceApplicationFormProps {
@@ -32,61 +32,42 @@ export function FinanceApplicationForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  // Try to load the configured template; if unavailable, fall back to a simple, inline template
-  const realTemplate = getTemplateById(application.templateId) as any
-  const fallbackTemplate: any = {
-    id: 'quick-fallback',
-    name: 'Quick Application',
-    sections: [
-      {
-        id: 'applicant',
-        title: 'Applicant Information',
-        order: 1,
-        fields: [
-          { id: 'firstName', label: 'First Name', type: 'text', required: true },
-          { id: 'lastName', label: 'Last Name', type: 'text', required: true },
-          { id: 'email', label: 'Email', type: 'email', required: true },
-        ],
-      },
-      {
-        id: 'finance',
-        title: 'Finance Details',
-        order: 2,
-        fields: [
-          { id: 'requestedAmount', label: 'Requested Amount', type: 'number', required: true },
-          { id: 'notes', label: 'Notes', type: 'textarea', required: false },
-        ],
-      },
-    ],
-  }
-  const template = realTemplate ?? fallbackTemplate
+  const template = getTemplateById(application.templateId)
 
-  // Defensive: avoid mutating the template object
-  const sections = (template?.sections ?? []).slice().sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
-  const currentSection = sections[currentSectionIndex]
-  const progress = sections.length ? ((currentSectionIndex + 1) / sections.length) * 100 : 0
-
-  if (!currentSection) {
+  if (!template) {
     return (
       <div className="text-center py-12">
         <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground">No sections available for this template.</p>
-        <Button onClick={onCancel} className="mt-4">Go Back</Button>
+        <p className="text-muted-foreground">Template not found</p>
+        <Button onClick={onCancel} className="mt-4">
+          Go Back
+        </Button>
       </div>
     )
   }
 
-  // Platform-aware heading
+  // non-mutating sort for safety
+  const sections = [...template.sections].sort((a, b) => a.order - b.order)
+  const currentSection = sections[currentSectionIndex]
+  const progress = ((currentSectionIndex + 1) / sections.length) * 100
+
+  // Platform-aware label
   const getApplicationLabel = () => {
     const platformType = tenant?.settings?.platformType || 'mh'
     const labelOverrides = tenant?.settings?.labelOverrides || {}
-    if (labelOverrides['finance.application']) return labelOverrides['finance.application']
+
+    if (labelOverrides['finance.application']) {
+      return labelOverrides['finance.application']
+    }
 
     switch (platformType) {
-      case 'rv': return 'RV Loan Application'
-      case 'auto': return 'Auto Loan Application'
+      case 'rv':
+        return 'RV Loan Application'
+      case 'auto':
+        return 'Auto Loan Application'
       case 'mh':
-      default: return 'MH Finance Application'
+      default:
+        return 'MH Finance Application'
     }
   }
 
@@ -94,7 +75,7 @@ export function FinanceApplicationForm({
     setFormData(prev => ({
       ...prev,
       [sectionId]: {
-        ...(prev as any)[sectionId],
+        ...(prev[sectionId] || {}),
         ...sectionData,
       },
     }))
@@ -102,27 +83,27 @@ export function FinanceApplicationForm({
 
   const validateCurrentSection = (): boolean => {
     const errors: Record<string, string> = {}
-    const sectionData = (formData as any)[currentSection.id] || {}
+    const sectionData = formData[currentSection.id] || {}
 
-    ;(currentSection.fields || []).forEach((field: any) => {
+    currentSection.fields.forEach(field => {
       if (field.required && !sectionData[field.id]) {
         errors[`${currentSection.id}.${field.id}`] = `${field.label} is required`
       }
 
       if (sectionData[field.id] && field.validation) {
         const value = sectionData[field.id]
-        const { minLength, maxLength, pattern } = field.validation || {}
+        const { minLength, maxLength, pattern } = field.validation
 
-        if (minLength && String(value).length < minLength) {
+        if (minLength && value.length < minLength) {
           errors[`${currentSection.id}.${field.id}`] = `${field.label} must be at least ${minLength} characters`
         }
-        if (maxLength && String(value).length > maxLength) {
+        if (maxLength && value.length > maxLength) {
           errors[`${currentSection.id}.${field.id}`] = `${field.label} must be no more than ${maxLength} characters`
         }
-        if (pattern && !(new RegExp(pattern)).test(String(value))) {
+        if (pattern && !new RegExp(pattern).test(value)) {
           errors[`${currentSection.id}.${field.id}`] = `${field.label} format is invalid`
         }
-        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           errors[`${currentSection.id}.${field.id}`] = 'Please enter a valid email address'
         }
       }
@@ -139,16 +120,11 @@ export function FinanceApplicationForm({
   }
 
   const handlePrevious = () => {
-    if (currentSectionIndex > 0) {
-      setCurrentSectionIndex(i => i - 1)
-    }
+    if (currentSectionIndex > 0) setCurrentSectionIndex(i => i - 1)
   }
 
   const handleSave = () => {
-    onSave({
-      data: formData,
-      status: 'draft',
-    })
+    onSave({ data: formData, status: 'draft' })
   }
 
   const handleSubmit = async () => {
@@ -156,9 +132,9 @@ export function FinanceApplicationForm({
     let allValid = true
     const allErrors: Record<string, string> = {}
 
-    sections.forEach((section: any) => {
-      const sectionData = (formData as any)[section.id] || {}
-      ;(section.fields || []).forEach((field: any) => {
+    sections.forEach(section => {
+      const sectionData = formData[section.id] || {}
+      section.fields.forEach(field => {
         if (field.required && !sectionData[field.id]) {
           allErrors[`${section.id}.${field.id}`] = `${field.label} is required`
           allValid = false
@@ -168,15 +144,15 @@ export function FinanceApplicationForm({
 
     if (!allValid) {
       setValidationErrors(allErrors)
-      const firstErrorSection = sections.findIndex((section: any) =>
-        Object.keys(allErrors).some(key => key.startsWith(section.id))
+      const firstErrorSection = sections.findIndex(section =>
+        Object.keys(allErrors).some(key => key.startsWith(section.id)),
       )
       if (firstErrorSection !== -1) setCurrentSectionIndex(firstErrorSection)
       return
     }
 
     setIsSubmitting(true)
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(resolve => setTimeout(resolve, 1000)) // simulate submit
     onSubmit({
       data: formData,
       status: 'submitted',
@@ -184,8 +160,6 @@ export function FinanceApplicationForm({
     })
     setIsSubmitting(false)
   }
-
-  const prettyStatus = (application?.status || 'draft').replace('_', ' ').toUpperCase()
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -198,9 +172,9 @@ export function FinanceApplicationForm({
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{getApplicationLabel()}</h1>
-            <p className="text-muted-foreground">{application?.customerName || 'New Application'}</p>
+            <p className="text-muted-foreground">{application.customerName || 'New Application'}</p>
             {onCreateTask && (
-              <Button variant="outline" size="sm" onClick={() => onCreateTask(application)}>
+              <Button variant="outline" size="sm" onClick={() => onCreateTask(application)} className="mt-2">
                 <ListTodo className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
@@ -208,8 +182,8 @@ export function FinanceApplicationForm({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline">{prettyStatus}</Badge>
-          {application?.fraudCheckStatus && (
+          <Badge variant="outline">{application.status.replace('_', ' ').toUpperCase()}</Badge>
+          {application.fraudCheckStatus && (
             <Badge variant="secondary">
               IDV: {application.fraudCheckStatus.charAt(0).toUpperCase() + application.fraudCheckStatus.slice(1)}
             </Badge>
@@ -222,7 +196,9 @@ export function FinanceApplicationForm({
         <CardContent className="pt-6">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Step {currentSectionIndex + 1} of {sections.length}</span>
+              <span>
+                Step {currentSectionIndex + 1} of {sections.length}
+              </span>
               <span>{Math.round(progress)}% Complete</span>
             </div>
             <Progress value={progress} className="h-2" />
@@ -240,15 +216,15 @@ export function FinanceApplicationForm({
         <CardContent>
           <ApplicationSectionForm
             section={currentSection}
-            data={(formData as any)[currentSection.id] || {}}
-            onChange={(data) => handleSectionDataChange(currentSection.id, data)}
+            data={formData[currentSection.id] || {}}
+            onChange={data => handleSectionDataChange(currentSection.id, data)}
             validationErrors={validationErrors}
             applicationId={application.id}
           />
         </CardContent>
       </Card>
 
-      {/* Nav */}
+      {/* Navigation */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={handlePrevious} disabled={currentSectionIndex === 0}>
           <ArrowLeft className="h-4 w-4 mr-2" />
