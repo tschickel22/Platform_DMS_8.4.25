@@ -1,4 +1,5 @@
-import React from 'react'
+// src/modules/agreement-vault/components/AccountAgreementsSection.tsx
+import React, { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +23,7 @@ interface Props {
   accountId: string
   isDragging?: boolean
   onRemove?: () => void
-  /** open the Create Agreement modal */
+  /** Open the Create Agreement modal (wired by AccountDetail) */
   onCreate?: () => void
 }
 
@@ -32,11 +33,19 @@ export function AccountAgreementsSection({
   onRemove,
   onCreate,
 }: Props) {
-  const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
-  const items = all.filter(a => a.accountId === accountId)
+  // keep your data + filter, but memoize so it doesn’t re-filter on every render
+  const items = useMemo(() => {
+    const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
+    return all.filter(a => a.accountId === accountId)
+  }, [accountId])
 
   const handleAdd = () => {
-    if (onCreate) onCreate()
+    if (onCreate) {
+      onCreate()
+    } else {
+      // ultra-safe fallback so the button never appears to do nothing
+      window.location.href = `/agreements/new?accountId=${encodeURIComponent(accountId)}&returnTo=account`
+    }
   }
 
   return (
@@ -59,7 +68,7 @@ export function AccountAgreementsSection({
             Create Agreement
           </Button>
           {onRemove && (
-            <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
+            <Button variant="ghost" size="sm" onClick={onRemove} aria-label="Remove section">×</Button>
           )}
         </div>
       </CardHeader>
@@ -81,7 +90,7 @@ export function AccountAgreementsSection({
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Effective → Expires</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -118,4 +127,5 @@ export function AccountAgreementsSection({
   )
 }
 
+// keep the named export (for your imports) and a default export (for the section registry)
 export default AccountAgreementsSection
