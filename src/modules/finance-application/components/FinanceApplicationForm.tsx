@@ -9,10 +9,10 @@ import {
   ArrowRight,
   Save,
   Send,
-  FileText,
   ListTodo,
   CheckCircle2,
   AlertCircle,
+  FileText,
 } from 'lucide-react'
 
 import { FinanceApplication, ApplicationData } from '../types'
@@ -30,7 +30,7 @@ interface FinanceApplicationFormProps {
   onCreateTask?: (application: FinanceApplication) => void
 }
 
-/** Small helper to debounce changes before auto-saving */
+/** Debounce helper for autosave */
 function useDebouncedEffect(effect: () => void, deps: React.DependencyList, delay = 800) {
   const first = useRef(true)
   useEffect(() => {
@@ -52,20 +52,19 @@ export function FinanceApplicationForm({
   onCreateTask,
 }: FinanceApplicationFormProps) {
   const { tenant } = useTenant()
+
+  // Be resilient to hook shape differences
   const fin: any = useFinanceApplications()
-
-  // --- provider-safe helpers (no assumptions about hook shape) ---
-  const getTemplates = useMemo(() => {
-    if (Array.isArray(fin?.templates)) return () => fin.templates
-    if (typeof fin?.getTemplates === 'function') return () => fin.getTemplates()
-    return () => [] as any[]
-  }, [fin])
-
-  const getTemplateById = (id: string) => {
+  const resolveTemplateById = (id: string) => {
     if (typeof fin?.getTemplateById === 'function') return fin.getTemplateById(id)
-    const list = getTemplates()
-    return list.find((t: any) => t.id === id)
+    const arr =
+      (typeof fin?.getTemplates === 'function' ? fin.getTemplates() : undefined) ??
+      (Array.isArray(fin?.templates) ? fin.templates : undefined) ??
+      []
+    return Array.isArray(arr) ? arr.find((t: any) => t?.id === id) : undefined
   }
+
+  const template = resolveTemplateById(application.templateId)
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [formData, setFormData] = useState<ApplicationData>(application.data || {})
@@ -73,37 +72,31 @@ export function FinanceApplicationForm({
   const [validationErrors, setValidationErrors] = useState<ValidationMap>({})
   const [lastAutoSaveAt, setLastAutoSaveAt] = useState<string | null>(null)
 
-  const template = getTemplateById(application.templateId)
-
-  // If template isn't found, show a very explicit safe screen
   if (!template) {
     return (
       <div className="text-center py-12">
         <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         <p className="text-muted-foreground">Template not found</p>
-        <Button onClick={onCancel} className="mt-4">
-          Go Back
-        </Button>
+        <Button onClick={onCancel} className="mt-4">Go Back</Button>
       </div>
     )
   }
 
-  // Stabilize sections (no in-place mutation)
+  // Stable, ordered sections
   const sections = useMemo(
-    () => [...(template.sections || [])].sort((a, b) => a.order - b.order),
+    () => [...(template.sections || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [template.sections]
   )
 
-  // Add a synthetic "Review" step as the last screen
+  // ----- Review step -----
   const hasReviewStep = true
   const lastStepIndex = sections.length + (hasReviewStep ? 1 : 0) - 1
   const atReview = hasReviewStep && currentSectionIndex === lastStepIndex
   const visibleSectionsCount = sections.length + (hasReviewStep ? 1 : 0)
-
   const currentSection = !atReview ? sections[currentSectionIndex] : null
   const progress = ((currentSectionIndex + 1) / visibleSectionsCount) * 100
 
-  // ========= Labels / Header =========
+  // ----- Labels -----
   const getApplicationLabel = () => {
     const platformType = tenant?.settings?.platformType || 'mh'
     const labelOverrides = tenant?.settings?.labelOverrides || {}
@@ -115,47 +108,39 @@ export function FinanceApplicationForm({
     }
   }
 
-  // ========= Validation =========
+  // ----- Validation -----
   const sectionErrors = (sectionId: string): ValidationMap => {
     const errs: ValidationMap = {}
-    const section = sections.find(s => s.id === sectionId)
-    if (!section) return errs
+    const s = sections.find((x: any) => x.id === sectionId)
+    if (!s) return errs
     const data = formData[sectionId] || {}
-    section.fields.forEach((field: any) => {
-      const value = data[field.id]
-      if (field.required && (value === undefined || value === null || value === '')) {
-        errs[`${sectionId}.${field.id}`] = `${field.label} is required`
+    ;(s.fields || []).forEach((f: any) => {
+      const value = data[f.id]
+      if (f.required && (value === undefined || value === null || value === '')) {
+        errs[`${sectionId}.${f.id}`] = `${f.label} is required`
       }
-      if (value && field.validation) {
-        const { minLength, maxLength, pattern } = field.validation
-        if (minLength && String(value).length < minLength) {
-          errs[`${sectionId}.${field.id}`] = `${field.label} must be at least ${minLength} characters`
-        }
-        if (maxLength && String(value).length > maxLength) {
-          errs[`${sectionId}.${field.id}`] = `${field.label} must be no more than ${maxLength} characters`
-        }
-        if (pattern && !new RegExp(pattern).test(String(value))) {
-          errs[`${sectionId}.${field.id}`] = `${field.label} format is invalid`
-        }
-        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
-          errs[`${sectionId}.${field.id}`] = 'Please enter a valid email address'
-        }
+      if (value && f.validation) {
+        const { minLength, maxLength, pattern } = f.validation
+        if (minLength && String(value).length < minLength) errs[`${sectionId}.${f.id}`] = `${f.label} must be at least ${minLength} characters`
+        if (maxLength && String(value).length > maxLength) errs[`${sectionId}.${f.id}`] = `${f.label} must be no more than ${maxLength} characters`
+        if (pattern && !new RegExp(pattern).test(String(value))) errs[`${sectionId}.${f.id}`] = `${f.label} format is invalid`
+        if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) errs[`${sectionId}.${f.id}`] = 'Please enter a valid email address'
       }
     })
     return errs
   }
 
-  const validateSection = (sectionIndex: number): boolean => {
-    const s = sections[sectionIndex]
+  const validateSection = (idx: number) => {
+    const s = sections[idx]
     const errs = sectionErrors(s.id)
     setValidationErrors(prev => ({ ...prev, ...errs }))
     return Object.keys(errs).length === 0
   }
 
-  const validateAll = (): { ok: boolean; errors: ValidationMap } => {
+  const validateAll = () => {
     let ok = true
     const all: ValidationMap = {}
-    sections.forEach(s => {
+    sections.forEach((s: any) => {
       const errs = sectionErrors(s.id)
       if (Object.keys(errs).length) ok = false
       Object.assign(all, errs)
@@ -164,66 +149,44 @@ export function FinanceApplicationForm({
     return { ok, errors: all }
   }
 
-  // Track section completion for the left nav UI
   const sectionComplete = (sectionId: string) => Object.keys(sectionErrors(sectionId)).length === 0
 
-  // ========= Data handling =========
+  // ----- Data handling -----
   const handleSectionDataChange = (sectionId: string, sectionData: Record<string, any>) => {
-    setFormData(prev => ({
-      ...prev,
-      [sectionId]: {
-        ...(prev[sectionId] || {}),
-        ...sectionData,
-      },
-    }))
+    setFormData(prev => ({ ...prev, [sectionId]: { ...(prev[sectionId] || {}), ...sectionData } }))
   }
 
-  // Debounced auto-save on data change
+  // Debounced autosave
   useDebouncedEffect(() => {
     onSave({ data: formData, status: 'draft' })
     setLastAutoSaveAt(new Date().toLocaleTimeString())
   }, [formData])
 
-  // ========= Navigation =========
+  // ----- Navigation -----
   const jumpTo = (index: number) => setCurrentSectionIndex(Math.max(0, Math.min(lastStepIndex, index)))
-
-  const handleNext = () => {
-    if (atReview) return
-    const ok = validateSection(currentSectionIndex)
-    if (!ok) return
-    setCurrentSectionIndex(i => Math.min(lastStepIndex, i + 1))
-  }
-
+  const handleNext = () => { if (!atReview && validateSection(currentSectionIndex)) setCurrentSectionIndex(i => Math.min(lastStepIndex, i + 1)) }
   const handlePrevious = () => setCurrentSectionIndex(i => Math.max(0, i - 1))
 
-  // ========= Actions =========
+  // ----- Actions -----
   const handleSaveClick = () => onSave({ data: formData, status: 'draft' })
-
   const handleSubmit = async () => {
     const { ok, errors } = validateAll()
     if (!ok) {
-      // jump to first section with an error
-      const first = sections.findIndex(s => Object.keys(errors).some(k => k.startsWith(`${s.id}.`)))
+      const first = sections.findIndex((s: any) => Object.keys(errors).some(k => k.startsWith(`${s.id}.`)))
       if (first >= 0) setCurrentSectionIndex(first)
       return
     }
     setIsSubmitting(true)
-    // simulate async submit
     await new Promise(r => setTimeout(r, 800))
-    onSubmit({
-      data: formData,
-      status: 'submitted',
-      submittedAt: new Date().toISOString(),
-    })
+    onSubmit({ data: formData, status: 'submitted', submittedAt: new Date().toISOString() })
     setIsSubmitting(false)
   }
 
-  // ========= Derived UI helpers =========
   const totalCompleted = sections.reduce((acc: number, s: any) => acc + (sectionComplete(s.id) ? 1 : 0), 0)
 
   return (
     <div className="grid gap-6 lg:grid-cols-[240px,1fr]">
-      {/* ===== Left rail: section list / status ===== */}
+      {/* Left rail */}
       <aside className="hidden lg:block">
         <Card>
           <CardHeader className="pb-4">
@@ -243,11 +206,7 @@ export function FinanceApplicationForm({
                   onClick={() => jumpTo(idx)}
                 >
                   <span className="truncate">{s.title}</span>
-                  {complete ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  ) : errored ? (
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                  ) : null}
+                  {complete ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : errored ? <AlertCircle className="h-4 w-4 shrink-0 text-destructive" /> : null}
                 </Button>
               )
             })}
@@ -260,9 +219,7 @@ export function FinanceApplicationForm({
                   onClick={() => jumpTo(lastStepIndex)}
                 >
                   Review & Submit
-                  {totalCompleted === sections.length ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : null}
+                  {totalCompleted === sections.length ? <CheckCircle2 className="h-4 w-4" /> : null}
                 </Button>
               </>
             )}
@@ -270,7 +227,7 @@ export function FinanceApplicationForm({
         </Card>
       </aside>
 
-      {/* ===== Main column ===== */}
+      {/* Main column */}
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -305,38 +262,30 @@ export function FinanceApplicationForm({
           <CardContent className="pt-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>
-                  Step {currentSectionIndex + 1} of {visibleSectionsCount}
-                </span>
+                <span>Step {currentSectionIndex + 1} of {visibleSectionsCount}</span>
                 <span>{Math.round(progress)}% Complete</span>
               </div>
               <Progress value={progress} className="h-2" />
-              {!atReview && currentSection ? (
-                <p className="text-sm text-muted-foreground">{currentSection.title}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">Review & Submit</p>
-              )}
-              {lastAutoSaveAt && (
-                <p className="text-xs text-muted-foreground">Auto-saved at {lastAutoSaveAt}</p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                {!atReview && currentSection ? currentSection.title : 'Review & Submit'}
+              </p>
+              {lastAutoSaveAt && <p className="text-xs text-muted-foreground">Auto-saved at {lastAutoSaveAt}</p>}
             </div>
           </CardContent>
         </Card>
 
-        {/* Current Section or Review */}
+        {/* Section or Review */}
         {!atReview && currentSection ? (
           <Card>
             <CardHeader>
               <CardTitle>{currentSection.title}</CardTitle>
-              {currentSection.description && (
-                <CardDescription>{currentSection.description}</CardDescription>
-              )}
+              {currentSection.description && <CardDescription>{currentSection.description}</CardDescription>}
             </CardHeader>
             <CardContent>
               <ApplicationSectionForm
                 section={currentSection}
                 data={formData[currentSection.id] || {}}
-                onChange={(data: any) => handleSectionDataChange(currentSection.id, data)}
+                onChange={(data) => handleSectionDataChange(currentSection.id, data)}
                 validationErrors={validationErrors}
                 applicationId={application.id}
               />
@@ -346,9 +295,7 @@ export function FinanceApplicationForm({
           <Card>
             <CardHeader>
               <CardTitle>Review your application</CardTitle>
-              <CardDescription>
-                Make sure everything looks good before submitting.
-              </CardDescription>
+              <CardDescription>Make sure everything looks good before submitting.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Outstanding required items */}
@@ -357,7 +304,7 @@ export function FinanceApplicationForm({
                 if (all.length === 0) return null
                 const grouped: Record<string, string[]> = {}
                 all.forEach(([k, msg]) => {
-                  const [sid] = k.split('.')
+                  const [sid] = (k as string).split('.')
                   ;(grouped[sid] ||= []).push(msg as string)
                 })
                 return (
@@ -367,11 +314,10 @@ export function FinanceApplicationForm({
                     </div>
                     <ul className="list-disc pl-6 text-sm text-orange-900 space-y-1">
                       {Object.entries(grouped).map(([sid, msgs]) => {
-                        const s: any = sections.find((x: any) => x.id === sid)
+                        const s = sections.find((x: any) => x.id === sid)
                         return (
                           <li key={sid}>
-                            <span className="font-medium">{s?.title || sid}:</span>{' '}
-                            {msgs.join(', ')}
+                            <span className="font-medium">{s?.title || sid}:</span> {msgs.join(', ')}
                           </li>
                         )
                       })}
@@ -387,27 +333,21 @@ export function FinanceApplicationForm({
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{s.title}</div>
                       <div className="flex items-center gap-2">
-                        {sectionComplete(s.id) ? (
-                          <Badge variant="secondary" className="gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Complete
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1">
-                            <AlertCircle className="h-3 w-3" /> Needs review
-                          </Badge>
-                        )}
+                        {sectionComplete(s.id)
+                          ? <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Complete</Badge>
+                          : <Badge variant="outline" className="gap-1"><AlertCircle className="h-3 w-3" /> Needs review</Badge>
+                        }
                         <Button size="sm" variant="ghost" onClick={() => jumpTo(sections.findIndex((x: any) => x.id === s.id))}>
                           Edit
                         </Button>
                       </div>
                     </div>
-                    {/* Very light summary of values */}
                     <div className="mt-2 text-sm text-muted-foreground">
                       {Object.keys(formData[s.id] || {}).length === 0 ? (
                         <span>No answers captured yet.</span>
                       ) : (
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {s.fields.slice(0, 9).map((f: any) => (
+                          {(s.fields || []).slice(0, 9).map((f: any) => (
                             <div key={f.id}>
                               <span className="font-medium">{f.label}: </span>
                               <span className="break-words">
@@ -425,17 +365,15 @@ export function FinanceApplicationForm({
           </Card>
         )}
 
-        {/* Sticky-ish footer actions */}
+        {/* Footer actions */}
         <div className="flex justify-between sticky bottom-0 py-3 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <Button variant="outline" onClick={handlePrevious} disabled={currentSectionIndex === 0}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
+            <ArrowLeft className="h-4 w-4 mr-2" /> Previous
           </Button>
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={handleSaveClick}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
+              <Save className="h-4 w-4 mr-2" /> Save Draft
             </Button>
 
             {atReview ? (
