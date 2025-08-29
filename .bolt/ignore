@@ -86,7 +86,6 @@ netlify/
 
 # Ignore all src/modules/ directories by default
 src/modules/
-src/modules/**
 
 # EXCEPTION: Explicitly re-include only the modules we are working on
 !src/modules/accounts/
