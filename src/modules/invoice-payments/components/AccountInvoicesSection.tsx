@@ -101,4 +101,4 @@ export default function AccountInvoicesSection({
     </Card>
   )
 }
-export default AccountInvoicesSection
+export { AccountInvoicesSection }
