@@ -86,7 +86,7 @@ const STATUS_OPTIONS: { value: AgreementStatus; label: string; color: string }[]
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-50 text-gray-700 border-gray-200' },
 ]
 
-function AgreementForm({
+const AgreementForm: React.FC<AgreementFormProps> = ({
   agreement,
   accountId,
   onSaved,
@@ -96,7 +96,7 @@ function AgreementForm({
   vehicles = [],
   quotes = [],
   selectedTemplate,
-}: AgreementFormProps) {
+}) => {
   const { toast } = useToast()
   const { tenant } = useTenant()
 
@@ -107,10 +107,14 @@ function AgreementForm({
 
   // Form state
   const [title, setTitle] = useState(agreement?.title ?? '')
-  const [type, setType] = useState<AgreementType>(agreement?.type ?? (TYPE_OPTIONS[0].value as AgreementType))
+  const [type, setType] = useState<AgreementType>(
+    agreement?.type ?? (TYPE_OPTIONS[0]?.value as AgreementType)
+  )
   const [status, setStatus] = useState<AgreementStatus>(agreement?.status ?? 'draft')
   const [effectiveDate, setEffectiveDate] = useState<string>(
-    agreement?.effectiveDate ? new Date(agreement.effectiveDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
+    agreement?.effectiveDate
+      ? new Date(agreement.effectiveDate).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10)
   )
   const [expirationDate, setExpirationDate] = useState<string>(
     agreement?.expirationDate ? new Date(agreement.expirationDate).toISOString().slice(0, 10) : ''
@@ -144,12 +148,17 @@ function AgreementForm({
 
   const removeDoc = (id: string) => setDocuments((prev) => prev.filter((d) => d.id !== id))
 
-  const statusColor = STATUS_OPTIONS.find((s) => s.value === status)?.color ?? 'bg-gray-100 text-gray-800'
+  const statusColor =
+    STATUS_OPTIONS.find((s) => s.value === status)?.color ?? 'bg-gray-100 text-gray-800'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) {
-      toast({ title: 'Title required', description: 'Please provide a title for this agreement.', variant: 'destructive' })
+      toast({
+        title: 'Title required',
+        description: 'Please provide a title for this agreement.',
+        variant: 'destructive',
+      })
       return
     }
     setSaving(true)
@@ -180,7 +189,10 @@ function AgreementForm({
         onSaved?.(payload)
       }
 
-      toast({ title: 'Success', description: `Agreement ${agreement?.id ? 'updated' : 'created'} successfully` })
+      toast({
+        title: 'Success',
+        description: `Agreement ${agreement?.id ? 'updated' : 'created'} successfully`,
+      })
     } catch {
       toast({ title: 'Error', description: 'Failed to save agreement', variant: 'destructive' })
     } finally {
@@ -201,7 +213,9 @@ function AgreementForm({
                 {agreement?.id ? 'Edit Agreement' : 'New Agreement'}
               </CardTitle>
               <CardDescription>
-                {selectedTemplate ? 'Agreement will be based on the selected template' : 'Fill in the agreement details'}
+                {selectedTemplate
+                  ? 'Agreement will be based on the selected template'
+                  : 'Fill in the agreement details'}
               </CardDescription>
             </div>
             {status && <Badge className={statusColor}>{statusLabel}</Badge>}
@@ -231,7 +245,12 @@ function AgreementForm({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="title">Title *</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Sales Agreement" />
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Sales Agreement"
+                />
               </div>
 
               <div className="space-y-2">
@@ -241,8 +260,10 @@ function AgreementForm({
                     <SelectValue placeholder="Select agreement type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FALLBACK_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    {TYPE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -258,7 +279,9 @@ function AgreementForm({
                   </SelectTrigger>
                   <SelectContent>
                     {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -270,7 +293,10 @@ function AgreementForm({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="customer">Customer</Label>
-                <Select value={customerId || ''} onValueChange={(v) => setCustomerId(v || undefined)}>
+                <Select
+                  value={customerId || ''}
+                  onValueChange={(v) => setCustomerId(v || undefined)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select customer (optional)" />
                   </SelectTrigger>
@@ -287,7 +313,10 @@ function AgreementForm({
 
               <div className="space-y-2">
                 <Label htmlFor="vehicle">Vehicle</Label>
-                <Select value={vehicleId || ''} onValueChange={(v) => setVehicleId(v || undefined)}>
+                <Select
+                  value={vehicleId || ''}
+                  onValueChange={(v) => setVehicleId(v || undefined)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle (optional)" />
                   </SelectTrigger>
@@ -324,11 +353,21 @@ function AgreementForm({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="effective">Effective Date *</Label>
-                <Input id="effective" type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+                <Input
+                  id="effective"
+                  type="date"
+                  value={effectiveDate}
+                  onChange={(e) => setEffectiveDate(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expires">Expiration Date</Label>
-                <Input id="expires" type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} />
+                <Input
+                  id="expires"
+                  type="date"
+                  value={expirationDate}
+                  onChange={(e) => setExpirationDate(e.target.value)}
+                />
               </div>
             </div>
 
@@ -349,15 +388,26 @@ function AgreementForm({
               <Label>Documents</Label>
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                 <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">Upload agreement documents</p>
-                <Input type="file" multiple accept=".pdf,.doc,.docx,.txt" onChange={onUploadFiles} className="max-w-xs mx-auto" />
+                <p className="text-sm text-muted-foreground mb-2">
+                  Upload agreement documents
+                </p>
+                <Input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={onUploadFiles}
+                  className="max-w-xs mx-auto"
+                />
               </div>
 
               {documents.length > 0 && (
                 <div className="mt-3 space-y-2">
                   <Label>Uploaded Documents</Label>
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center space-x-3">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         <div>
@@ -367,7 +417,12 @@ function AgreementForm({
                           </p>
                         </div>
                       </div>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeDoc(doc.id)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeDoc(doc.id)}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -425,18 +480,6 @@ function AgreementForm({
     </div>
   )
 }
-// …(keep your existing imports and code exactly as-is)
 
-export default function AgreementForm(props: AgreementFormProps) {
-  // existing implementation you shared (unchanged)
-  // ...
-}
-
-// Add a named export so both `import AgreementForm …` and
-// `import { AgreementForm } …` work without a Vite error.
-export { AgreementForm };
-
-// Provide BOTH a default export and a named export so either
-// `import AgreementForm from ...` or `import { AgreementForm } from ...` works.
-export { AgreementForm }
 export default AgreementForm
+export { AgreementForm }
