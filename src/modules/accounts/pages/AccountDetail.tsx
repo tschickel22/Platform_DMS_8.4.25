@@ -30,8 +30,10 @@ import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm
 import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
-// 🔧 FIXED: use named import (the component is NOT a default export)
-import { FinanceApplicationForm } from '@/modules/finance-application/components/FinanceApplicationForm'
+
+// NEW: Application modal form (now default-exported)
+import FinanceApplicationForm from '@/modules/finance-application/components/FinanceApplicationForm'
+import { useFinanceApplications } from '@/modules/finance-application/hooks/useFinanceApplications'
 
 import {
   ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
@@ -268,6 +270,9 @@ export default function AccountDetail() {
   const { vehicles } = useInventoryManagement()
   const { toast } = useToast()
 
+  // NEW: finance templates for default selection
+  const finance = useFinanceApplications() as any
+
   const [account, setAccount] = useState<any>(null)
 
   const defaultLayout = useMemo(
@@ -286,7 +291,9 @@ export default function AccountDetail() {
   const [openWarranty, setOpenWarranty] = useState(false)
   const [openAgreement, setOpenAgreement] = useState(false)
   const [openInvoice, setOpenInvoice] = useState(false)
-  const [openApplication, setOpenApplication] = useState(false)
+  const [openApplication, setOpenApplication] = useState(false) // NEW
+
+  const [newApplicationDraft, setNewApplicationDraft] = useState<any | null>(null) // NEW
 
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -398,18 +405,42 @@ export default function AccountDetail() {
     toast({ title: 'Success', description: 'Invoice saved successfully' })
   }
 
-  // Generic fallback create route (used by types we don't modal-ize)
+  // Generic fallback create route
   const routeCreateForType = (t: SectionType) => {
     const map: Partial<Record<SectionType, string>> = {
       deals: `/deals/new?accountId=${accountId}&returnTo=account`,
       quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
       service: `/service/new?accountId=${accountId}&returnTo=account`,
       deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
-      // applications handled via modal below
+      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
       invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
     }
     const href = map[t]
     if (href) window.location.href = href
+  }
+
+  // Create Application (modalized like other sections)
+  const openCreateApplication = () => {
+    // Try to pick a sensible default template from the finance module
+    const templates =
+      (finance?.templates as any[]) ||
+      (typeof finance?.getTemplates === 'function' ? finance.getTemplates() : []) ||
+      []
+
+    const defaultTemplateId =
+      (typeof finance?.getDefaultTemplateId === 'function' && finance.getDefaultTemplateId()) ||
+      (templates[0]?.id ?? 'default')
+
+    const draft = {
+      id: generateId(),
+      accountId,
+      customerName: account?.name ?? '',
+      status: 'draft',
+      templateId: defaultTemplateId,
+      data: {},
+    }
+    setNewApplicationDraft(draft)
+    setOpenApplication(true)
   }
 
   if (!account) {
@@ -612,10 +643,10 @@ export default function AccountDetail() {
                           ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
                           : type === 'agreements'
                             ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
-                            : type === 'applications'
-                              ? { ...commonProps, onCreate: () => setOpenApplication(true) }
-                              : type === 'invoices'
-                                ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
+                            : type === 'invoices'
+                              ? { ...commonProps, onCreate: () => setOpenInvoice(true) }
+                              : type === 'applications'
+                                ? { ...commonProps, onCreate: openCreateApplication } // NEW
                                 : commonProps
 
                   return (
@@ -665,7 +696,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Contact</DialogTitle>
           <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
-          <ContactForm accountId={account.id} returnTo="account" onSaved={(c) => handleContactSaved(c)} />
+          <ContactForm accountId={account.id} returnTo="account" onSaved={c => { setOpenContact(false); if (c) toast({ title:'Success', description:'Contact created successfully'})}} />
         </DialogContent>
       </Dialog>
 
@@ -674,7 +705,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Deal</DialogTitle>
           <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
-          <DealForm accountId={account.id} returnTo="account" onSaved={(d) => handleDealSaved(d)} />
+          <DealForm accountId={account.id} returnTo="account" onSaved={(d)=>{ setOpenDeal(false); if(d) toast({title:'Success', description:'Deal created successfully'})}} />
         </DialogContent>
       </Dialog>
 
@@ -683,7 +714,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Quote</DialogTitle>
           <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
-          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={(q) => handleQuoteSaved(q)} />
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={(q)=>{ setOpenQuote(false); if(q) toast({title:'Success', description:'Quote created successfully'})}} />
         </DialogContent>
       </Dialog>
 
@@ -692,7 +723,7 @@ export default function AccountDetail() {
         <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
           <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
-          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={(t) => handleServiceSaved(t)} />
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={(t)=>{ setOpenService(false); if(t) toast({title:'Success', description:'Service ticket created successfully'})}} />
         </DialogContent>
       </Dialog>
 
@@ -701,7 +732,9 @@ export default function AccountDetail() {
         <DeliveryForm
           customers={contacts}
           vehicles={vehicles}
-          onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
+          onSave={async (d) => {
+            await handleDeliverySaved({ ...d, accountId })
+          }}
           onCancel={() => setOpenDelivery(false)}
         />
       )}
@@ -732,55 +765,51 @@ export default function AccountDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Agreement Modal */}
+      {/* Agreement Modal (overlay component) */}
       {openAgreement && (
         <AgreementForm
-          accountId={account.id}
-          onSaved={(data) => handleAgreementSaved({ ...data, accountId })}
+          onSave={async (data) => handleAgreementSaved({ ...data, accountId })}
           onCancel={() => setOpenAgreement(false)}
         />
       )}
 
-      {/* Application Modal */}
-      <Dialog open={openApplication} onOpenChange={setOpenApplication}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto">
-          <DialogTitle>Start Application</DialogTitle>
-          <DialogDescription>Complete the finance application for this account.</DialogDescription>
-          <FinanceApplicationForm
-            application={{
-              id: generateId(),
-              templateId: 'basic',
-              data: {},
-              status: 'draft',
-              fraudCheckStatus: 'pending',
-              customerName: account?.name ?? '',
-            } as any}
-            onSave={(partial) => {
-              const existing = loadFromLocalStorage<any[]>('financeApplications', [])
-              const payload = { ...partial, accountId }
-              saveToLocalStorage('financeApplications', [payload, ...existing])
-              toast({ title: 'Saved', description: 'Application draft saved' })
-            }}
-            onSubmit={(partial) => {
-              const existing = loadFromLocalStorage<any[]>('financeApplications', [])
-              const payload = { ...partial, accountId }
-              saveToLocalStorage('financeApplications', [payload, ...existing])
-              toast({ title: 'Submitted', description: 'Application submitted' })
-              setOpenApplication(false)
-              refreshSection('applications')
-            }}
-            onCancel={() => setOpenApplication(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Invoice Modal */}
+      {/* Invoice Modal (overlay component) */}
       {openInvoice && (
         <InvoiceForm
           onSave={handleInvoiceSave}
           onCancel={() => setOpenInvoice(false)}
         />
       )}
+
+      {/* Application Modal (standard dialog container) */}
+      <Dialog open={openApplication} onOpenChange={setOpenApplication}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Application</DialogTitle>
+          <DialogDescription className="sr-only">Create a finance application for this account.</DialogDescription>
+
+          {newApplicationDraft && (
+            <FinanceApplicationForm
+              application={newApplicationDraft}
+              onSave={(data) => {
+                // keep as draft in localStorage like others (demo)
+                const existing = loadFromLocalStorage<any[]>('financeApplications', [])
+                const merged = { ...newApplicationDraft, ...data, id: newApplicationDraft.id }
+                saveToLocalStorage('financeApplications', [merged, ...existing])
+                toast({ title: 'Draft Saved', description: 'Application saved as draft' })
+              }}
+              onSubmit={(data) => {
+                const existing = loadFromLocalStorage<any[]>('financeApplications', [])
+                const merged = { ...newApplicationDraft, ...data, id: newApplicationDraft.id }
+                saveToLocalStorage('financeApplications', [merged, ...existing])
+                setOpenApplication(false)
+                toast({ title: 'Application Submitted', description: 'Application submitted successfully' })
+              }}
+              onCancel={() => setOpenApplication(false)}
+              onCreateTask={() => {}}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
