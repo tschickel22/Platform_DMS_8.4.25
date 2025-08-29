@@ -1,3 +1,4 @@
+// src/modules/agreement-vault/account-section.tsx
 import type { ComponentType } from 'react'
 import AccountAgreementsSection from './components/AccountAgreementsSection'
 
@@ -22,7 +23,7 @@ const descriptor: AccountSectionDescriptor = {
   title: 'Agreements',
   description: 'Recorded agreements for this account',
   component: AccountAgreementsSection as ComponentType<any>,
-  sort: 64,              // just before Applications/Invoices if those exist
+  sort: 64,
   defaultVisible: true,
 }
 
