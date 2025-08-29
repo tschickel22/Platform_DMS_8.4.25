@@ -1,11 +1,12 @@
-import type { ComponentType } from 'react'
-import type { AccountSectionDescriptor as Base, SectionType } from '@/modules/accounts/pages/AccountDetail' // type-only import path ok in TS; if it troubles your setup, inline types.
 // src/modules/agreement-vault/account-section.tsx
-import { AccountAgreementsSection } from './AccountAgreementsSection'
+import type { ComponentType } from 'react'
 
+type SectionType =
+  | 'contacts' | 'deals' | 'quotes' | 'service' | 'deliveries'
+  | 'warranty' | 'payments' | 'agreements' | 'applications'
+  | 'invoices' | 'notes'
 
-
-type AccountSectionDescriptor = {
+export interface AccountSectionDescriptor {
   id: string
   type: SectionType
   title: string
@@ -15,13 +16,16 @@ type AccountSectionDescriptor = {
   defaultVisible?: boolean
 }
 
+// ✅ point at the component inside ./components
+import AccountAgreementsSection from './components/AccountAgreementsSection'
+
 const descriptor: AccountSectionDescriptor = {
   id: 'agreements',
   type: 'agreements',
   title: 'Agreements',
-  description: 'Retail/lease agreements & service contracts',
+  description: 'Contracts and signed documents for this account',
   component: AccountAgreementsSection,
-  sort: 65, // after Payments
+  sort: 61, // after Payments(60), before Applications(65)/Invoices(66)
   defaultVisible: true,
 }
 
