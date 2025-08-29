@@ -86,7 +86,7 @@ const STATUS_OPTIONS: { value: AgreementStatus; label: string; color: string }[]
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-50 text-gray-700 border-gray-200' },
 ]
 
-export default function AgreementForm({
+function AgreementForm({
   agreement,
   accountId,
   onSaved,
@@ -241,7 +241,7 @@ export default function AgreementForm({
                     <SelectValue placeholder="Select agreement type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TYPE_OPTIONS.map((t) => (
+                    {FALLBACK_TYPES.map((t) => (
                       <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -425,3 +425,8 @@ export default function AgreementForm({
     </div>
   )
 }
+
+// Provide BOTH a default export and a named export so either
+// `import AgreementForm from ...` or `import { AgreementForm } from ...` works.
+export { AgreementForm }
+export default AgreementForm
