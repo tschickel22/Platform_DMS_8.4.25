@@ -31,7 +31,7 @@ import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyCl
 import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
 import { InvoiceForm } from '@/modules/invoice-payments/components/InvoiceForm'
 
-// Finance applications
+// Finance applications (⚠️ provider-safe hook usage)
 import FinanceApplicationForm from '@/modules/finance-application/components/FinanceApplicationForm'
 import { useFinanceApplications } from '@/modules/finance-application/hooks/useFinanceApplications'
 
@@ -267,8 +267,16 @@ export default function AccountDetail() {
   const { vehicles } = useInventoryManagement()
   const { toast } = useToast()
 
-  // Finance apps (may expose different shapes in different app states)
-  const fin = useFinanceApplications() as any
+  // Finance apps (provider may not be mounted depending on route layout).
+  // Guard the hook so this page never crashes if the provider is absent.
+  let fin: any = null
+  try {
+    fin = useFinanceApplications() as any
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[AccountDetail] useFinanceApplications unavailable; falling back.', err)
+    fin = null
+  }
 
   const [account, setAccount] = useState<any>(null)
 
@@ -618,7 +626,7 @@ export default function AccountDetail() {
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
                 {sections.map((type, index) => {
                   const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
-                  if (!config) return null
+                  if (!config || !config.component) return null
                   const Section = config.component as any
 
                   const commonProps = {
