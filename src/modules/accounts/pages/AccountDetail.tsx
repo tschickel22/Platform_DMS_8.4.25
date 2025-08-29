@@ -663,8 +663,12 @@ export default function AccountDetail() {
                           ) : type === 'deliveries' ? (
                             <AccountDeliveriesSection {...withSpecialHandlers} isDragging={s.isDragging} />
                           ) : (
-                            {React.isValidElement(Section) ? React.cloneElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging }) : React.createElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging })}
-                          )}
+  React.isValidElement(Section)
+    ? React.cloneElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging })
+    : React.createElement(Section as any, { ...withSpecialHandlers, isDragging: s.isDragging })
+)}
+
+   
                         </div>
                       )}
                     </Draggable>
