@@ -1,29 +1,28 @@
-# Ignore node modules and build artifacts
+# ===========================
+# General Ignored Files
+# ===========================
 node_modules/
 dist/
 .vite/
 build/
 out/
+package-lock.json
 
-# Ignore environment variables
 .env
 .env.local
 .env.*.local
 
-# Ignore editor/IDE specific files
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# Ignore logs and debug files
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.pnpm-debug.log*
 
-# Ignore test/coverage reports
 coverage/
 .nyc_output/
 *.tap
@@ -31,7 +30,6 @@ coverage/
 *.lcov
 *.lcov.info
 
-# Ignore temporary files and caches
 *.tmp
 *.bak
 *.swp
@@ -47,51 +45,65 @@ coverage/
 .yarn/
 .pnpm-store/
 
-# Ignore user-specific files
 .bash_history
 .zsh_history
 .npm/
 .yarn-cache/
 
-# Ignore Bolt-specific internal files (if any, usually handled by Bolt itself)
-.bolt/
-
-# --- STRICT MODULE IGNORING ---
-# Ignore all apps/ directories (assuming they are separate deployments)
 apps/
+public-site/
 
-# Ignore all src/modules/ directories by default
-src/modules/
+*.md
+!README.md
 
-# EXCEPT for the ones needed for Brochure Builder and its direct interactions
-# These lines will re-include the necessary directories
-!src/modules/brochures/
-!src/modules/brochures/**
-!src/modules/inventory-management/
-!src/modules/inventory-management/**
-!src/modules/land-management/
-!src/modules/land-management/**
-!src/modules/property-listings/
-!src/modules/property-listings/**
-!src/modules/quote-builder/
-!src/modules/quote-builder/**
-!src/modules/website-builder/
+*.patch
+analysis-files.md
+WEBSITE_BUILDER_IMPLEMENTATION_PLAN.md
 
-# Ensure core src/ directories are not ignored
+netlify.toml
+renter_insight_openapi.yaml
+renter_insight_bolt_manifest.json
+
+src/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.setup.ts
+vitest.config.ts
+
+netlify/
+
+# ===========================
+# Limit Visible Modules
+# ===========================
+# Hide everything by default
+src/modules/**
+
+# Re-include only the working modules
+!src/modules/accounts/
+!src/modules/accounts/**
+!src/modules/finance/
+!src/modules/finance/**
+!src/modules/finance-application/
+!src/modules/finance-application/**
+!src/modules/agreement-vault/
+!src/modules/agreement-vault/**
+
+# ===========================
+# Core App Files (needed for Bolt context)
+# ===========================
 !src/App.tsx
 !src/main.tsx
 !src/index.css
-!src/lib/
-!src/lib/**
-!src/components/
-!src/components/**
-!src/contexts/
-!src/contexts/**
-!src/hooks/
-!src/hooks/**
-!src/utils/
-!src/utils/**
-!src/mocks/
-!src/mocks/**
-!src/types/
 !src/types/**
+!src/lib/**
+!src/contexts/**
+!src/hooks/**
+!src/components/ui/**
+!src/components/layout/**
+!src/components/auth/**
+!src/components/ErrorBoundary.tsx
+!src/pages/**
+!src/utils/**
+!src/shared/**

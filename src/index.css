@@ -1,10 +1,10 @@
+/* --- External CSS imports must come first (Vite rule) --- */
+@import './styles/shared-colors.css';
+@import url('./modules/calendar-scheduling/index.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import './styles/shared-colors.css';
-
-/* Import calendar styles */
-@import url('./modules/calendar-scheduling/index.css');
 
 @layer base {
   :root {
@@ -78,43 +78,43 @@
   .ri-page-header {
     @apply space-y-2 pb-6;
   }
-  
+
   .ri-page-title {
     @apply text-3xl font-bold tracking-tight text-foreground;
   }
-  
+
   .ri-page-description {
     @apply text-muted-foreground text-base;
   }
-  
+
   .ri-stats-grid {
     @apply grid gap-4 md:grid-cols-2 lg:grid-cols-4;
   }
-  
+
   .ri-content-grid {
     @apply grid gap-6 md:grid-cols-2;
   }
-  
+
   .ri-search-bar {
     @apply relative flex-1;
   }
-  
+
   .ri-search-icon {
     @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground;
   }
-  
+
   .ri-search-input {
     @apply pl-10;
   }
-  
+
   .ri-table-row {
     @apply flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors;
   }
-  
+
   .ri-badge-status {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
-  
+
   .ri-action-buttons {
     @apply flex items-center space-x-2;
   }
