@@ -474,7 +474,6 @@ export default function AgreementForm() {
     }
   }, [formData.accountId, contacts])
 
-  return (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Account Association */}
                 <div className="space-y-2">

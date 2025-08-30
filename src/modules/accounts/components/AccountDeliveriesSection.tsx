@@ -61,7 +61,7 @@ export function AccountDeliveriesSection({
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary">{deliveries.length}</Badge>
-            <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
+          <Button variant="outline" size="sm" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
             Schedule Delivery
           </Button>
