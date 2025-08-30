@@ -1,7 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import ErrorBoundary from '@/components/ErrorBoundary'
+import { default as ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -41,6 +41,8 @@ import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling
 import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt/index'
 import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-builder'
+import AccountsModule from '@/modules/accounts'
+import ContactsModule from '@/modules/contacts'
 
 // Property Listings (Admin + Public)
 import PropertyListings from '@/modules/property-listings/PropertyListings'
@@ -106,7 +108,15 @@ function App() {
                           <ProtectedRoute>
                             <Layout>
                               <ErrorBoundary>
-                                <Routes>
+                                <React.Suspense fallback={
+                                  <div className="min-h-screen flex items-center justify-center">
+                                    <div className="text-center">
+                                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                                      <p className="text-muted-foreground">Loading...</p>
+                                    </div>
+                                  </div>
+                                }>
+                                  <Routes>
                                   {/* Home */}
                                   <Route path="/" element={<Dashboard />} />
 
@@ -116,6 +126,8 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/accounts/*" element={<AccountsModule />} />
+                                  <Route path="/contacts/*" element={<ContactsModule />} />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 
@@ -178,6 +190,7 @@ function App() {
                                   {/* Fallback inside app */}
                                   <Route path="*" element={<Navigate to="/" replace />} />
                                 </Routes>
+                                </React.Suspense>
                               </ErrorBoundary>
                             </Layout>
                           </ProtectedRoute>
