@@ -1,348 +1,264 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import { generateId } from '@/lib/utils'
-import { mockFinanceApplications } from '../mocks/financeApplicationMock'
-
-interface FinanceApplication {
-  id: string
-  customerId: string
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  accountId?: string
-  contactId?: string
-  applicationType: string
-  status: string
-  requestedAmount: number
-  vehicleInfo?: string
-  employmentInfo: {
-    employer: string
-    position: string
-    income: number
-    yearsEmployed: number
-  }
-  creditInfo: {
-    creditScore?: number
-    hasCoSigner: boolean
-    coSignerName?: string
-  }
-  notes: string
-  submittedAt: string
-  updatedAt: string
-  createdAt: string
-}
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, ArrowRight, Save, Send, FileText, ListTodo } from 'lucide-react'
+import { FinanceApplication, ApplicationData } from '../types'
+import { useFinanceApplications } from '../hooks/useFinanceApplications'
+import ApplicationSectionForm from './ApplicationSectionForm' // <-- FIX: default import
+import { useTenant } from '@/contexts/TenantContext'
 
 interface FinanceApplicationFormProps {
-  application?: FinanceApplication
-  onSave?: (application: FinanceApplication) => void
-  onCancel?: () => void
-  accountId?: string
-  contactId?: string
+  application: FinanceApplication
+  onSave: (data: Partial<FinanceApplication>) => void
+  onCancel: () => void
+  onSubmit: (data: Partial<FinanceApplication>) => void
+  onCreateTask?: (application: FinanceApplication) => void
 }
 
-export function FinanceApplicationForm({ 
-  application, 
-  onSave, 
+export function FinanceApplicationForm({
+  application,
+  onSave,
   onCancel,
-  accountId,
-  contactId 
+  onSubmit,
+  onCreateTask,
 }: FinanceApplicationFormProps) {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  
-  const [formData, setFormData] = useState({
-    customerId: application?.customerId || '',
-    customerName: application?.customerName || '',
-    customerEmail: application?.customerEmail || '',
-    customerPhone: application?.customerPhone || '',
-    applicationType: application?.applicationType || 'vehicle_purchase',
-    status: application?.status || 'draft',
-    requestedAmount: application?.requestedAmount || 0,
-    vehicleInfo: application?.vehicleInfo || '',
-    employer: application?.employmentInfo?.employer || '',
-    position: application?.employmentInfo?.position || '',
-    income: application?.employmentInfo?.income || 0,
-    yearsEmployed: application?.employmentInfo?.yearsEmployed || 0,
-    creditScore: application?.creditInfo?.creditScore || 0,
-    hasCoSigner: application?.creditInfo?.hasCoSigner || false,
-    coSignerName: application?.creditInfo?.coSignerName || '',
-    notes: application?.notes || ''
-  })
+  const { tenant } = useTenant()
+  const { getTemplateById } = useFinanceApplications()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  const [formData, setFormData] = useState<ApplicationData>(application.data || {})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-    try {
-      const applicationData: FinanceApplication = {
-        id: application?.id || generateId(),
-        customerId: formData.customerId,
-        customerName: formData.customerName,
-        customerEmail: formData.customerEmail,
-        customerPhone: formData.customerPhone,
-        accountId: accountId || application?.accountId,
-        contactId: contactId || application?.contactId,
-        applicationType: formData.applicationType,
-        status: formData.status,
-        requestedAmount: formData.requestedAmount,
-        vehicleInfo: formData.vehicleInfo,
-        employmentInfo: {
-          employer: formData.employer,
-          position: formData.position,
-          income: formData.income,
-          yearsEmployed: formData.yearsEmployed
-        },
-        creditInfo: {
-          creditScore: formData.creditScore || undefined,
-          hasCoSigner: formData.hasCoSigner,
-          coSignerName: formData.hasCoSigner ? formData.coSignerName : undefined
-        },
-        notes: formData.notes,
-        submittedAt: application?.submittedAt || new Date().toISOString(),
-        createdAt: application?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+  const template = getTemplateById(application.templateId)
 
-      onSave?.(applicationData)
-      
-      toast({
-        title: 'Success',
-        description: `Finance application ${application ? 'updated' : 'created'} successfully`
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save finance application',
-        variant: 'destructive'
-      })
-    } finally {
-      setLoading(false)
+  if (!template) {
+    return (
+      <div className="text-center py-12">
+        <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground">Template not found</p>
+        <Button onClick={onCancel} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    )
+  }
+
+  // non-mutating sort for safety
+  const sections = [...template.sections].sort((a, b) => a.order - b.order)
+  const currentSection = sections[currentSectionIndex]
+  const progress = ((currentSectionIndex + 1) / sections.length) * 100
+
+  // Platform-aware label
+  const getApplicationLabel = () => {
+    const platformType = tenant?.settings?.platformType || 'mh'
+    const labelOverrides = tenant?.settings?.labelOverrides || {}
+
+    if (labelOverrides['finance.application']) {
+      return labelOverrides['finance.application']
+    }
+
+    switch (platformType) {
+      case 'rv':
+        return 'RV Loan Application'
+      case 'auto':
+        return 'Auto Loan Application'
+      case 'mh':
+      default:
+        return 'MH Finance Application'
     }
   }
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  const handleSectionDataChange = (sectionId: string, sectionData: Record<string, any>) => {
+    setFormData(prev => ({
+      ...prev,
+      [sectionId]: {
+        ...(prev[sectionId] || {}),
+        ...sectionData,
+      },
+    }))
+  }
+
+  const validateCurrentSection = (): boolean => {
+    const errors: Record<string, string> = {}
+    const sectionData = formData[currentSection.id] || {}
+
+    currentSection.fields.forEach(field => {
+      if (field.required && !sectionData[field.id]) {
+        errors[`${currentSection.id}.${field.id}`] = `${field.label} is required`
+      }
+
+      if (sectionData[field.id] && field.validation) {
+        const value = sectionData[field.id]
+        const { minLength, maxLength, pattern } = field.validation
+
+        if (minLength && value.length < minLength) {
+          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be at least ${minLength} characters`
+        }
+        if (maxLength && value.length > maxLength) {
+          errors[`${currentSection.id}.${field.id}`] = `${field.label} must be no more than ${maxLength} characters`
+        }
+        if (pattern && !new RegExp(pattern).test(value)) {
+          errors[`${currentSection.id}.${field.id}`] = `${field.label} format is invalid`
+        }
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          errors[`${currentSection.id}.${field.id}`] = 'Please enter a valid email address'
+        }
+      }
+    })
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleNext = () => {
+    if (validateCurrentSection() && currentSectionIndex < sections.length - 1) {
+      setCurrentSectionIndex(i => i + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentSectionIndex > 0) setCurrentSectionIndex(i => i - 1)
+  }
+
+  const handleSave = () => {
+    onSave({ data: formData, status: 'draft' })
+  }
+
+  const handleSubmit = async () => {
+    // Validate all sections
+    let allValid = true
+    const allErrors: Record<string, string> = {}
+
+    sections.forEach(section => {
+      const sectionData = formData[section.id] || {}
+      section.fields.forEach(field => {
+        if (field.required && !sectionData[field.id]) {
+          allErrors[`${section.id}.${field.id}`] = `${field.label} is required`
+          allValid = false
+        }
+      })
+    })
+
+    if (!allValid) {
+      setValidationErrors(allErrors)
+      const firstErrorSection = sections.findIndex(section =>
+        Object.keys(allErrors).some(key => key.startsWith(section.id)),
+      )
+      if (firstErrorSection !== -1) setCurrentSectionIndex(firstErrorSection)
+      return
+    }
+
+    setIsSubmitting(true)
+    await new Promise(resolve => setTimeout(resolve, 1000)) // simulate submit
+    onSubmit({
+      data: formData,
+      status: 'submitted',
+      submittedAt: new Date().toISOString(),
+    })
+    setIsSubmitting(false)
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{application ? 'Edit Finance Application' : 'New Finance Application'}</CardTitle>
-        <CardDescription>
-          {application ? 'Update application details' : 'Create a new finance application'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Customer Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Customer Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerName">Customer Name</Label>
-                <Input
-                  id="customerName"
-                  value={formData.customerName}
-                  onChange={(e) => handleChange('customerName', e.target.value)}
-                  placeholder="Enter customer name"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="customerEmail">Customer Email</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => handleChange('customerEmail', e.target.value)}
-                  placeholder="Enter customer email"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="customerPhone">Customer Phone</Label>
-                <Input
-                  id="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={(e) => handleChange('customerPhone', e.target.value)}
-                  placeholder="Enter customer phone"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="applicationType">Application Type</Label>
-                <Select value={formData.applicationType} onValueChange={(value) => handleChange('applicationType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vehicle_purchase">Vehicle Purchase</SelectItem>
-                    <SelectItem value="vehicle_lease">Vehicle Lease</SelectItem>
-                    <SelectItem value="refinance">Refinance</SelectItem>
-                    <SelectItem value="home_purchase">Home Purchase</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Application Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Application Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="requestedAmount">Requested Amount</Label>
-                <Input
-                  id="requestedAmount"
-                  type="number"
-                  value={formData.requestedAmount}
-                  onChange={(e) => handleChange('requestedAmount', parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  step="0.01"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="vehicleInfo">Vehicle/Property Info</Label>
-                <Input
-                  id="vehicleInfo"
-                  value={formData.vehicleInfo}
-                  onChange={(e) => handleChange('vehicleInfo', e.target.value)}
-                  placeholder="Enter vehicle or property details"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Employment Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Employment Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="employer">Employer</Label>
-                <Input
-                  id="employer"
-                  value={formData.employer}
-                  onChange={(e) => handleChange('employer', e.target.value)}
-                  placeholder="Enter employer name"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  value={formData.position}
-                  onChange={(e) => handleChange('position', e.target.value)}
-                  placeholder="Enter job position"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="income">Annual Income</Label>
-                <Input
-                  id="income"
-                  type="number"
-                  value={formData.income}
-                  onChange={(e) => handleChange('income', parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  step="0.01"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="yearsEmployed">Years Employed</Label>
-                <Input
-                  id="yearsEmployed"
-                  type="number"
-                  value={formData.yearsEmployed}
-                  onChange={(e) => handleChange('yearsEmployed', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
-                  step="0.1"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Credit Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Credit Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="creditScore">Credit Score (Optional)</Label>
-                <Input
-                  id="creditScore"
-                  type="number"
-                  value={formData.creditScore}
-                  onChange={(e) => handleChange('creditScore', parseInt(e.target.value) || 0)}
-                  placeholder="700"
-                  min="300"
-                  max="850"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="hasCoSigner">Co-Signer</Label>
-                <Select value={formData.hasCoSigner.toString()} onValueChange={(value) => handleChange('hasCoSigner', value === 'true')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Has co-signer?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="false">No Co-Signer</SelectItem>
-                    <SelectItem value="true">Has Co-Signer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.hasCoSigner && (
-                <div className="md:col-span-2">
-                  <Label htmlFor="coSignerName">Co-Signer Name</Label>
-                  <Input
-                    id="coSignerName"
-                    value={formData.coSignerName}
-                    onChange={(e) => handleChange('coSignerName', e.target.value)}
-                    placeholder="Enter co-signer name"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" onClick={onCancel}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
           <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional notes or comments"
-              rows={3}
-            />
+            <h1 className="text-2xl font-bold">{getApplicationLabel()}</h1>
+            <p className="text-muted-foreground">{application.customerName || 'New Application'}</p>
+            {onCreateTask && (
+              <Button variant="outline" size="sm" onClick={() => onCreateTask(application)} className="mt-2">
+                <ListTodo className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            )}
           </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline">{application.status.replace('_', ' ').toUpperCase()}</Badge>
+          {application.fraudCheckStatus && (
+            <Badge variant="secondary">
+              IDV: {application.fraudCheckStatus.charAt(0).toUpperCase() + application.fraudCheckStatus.slice(1)}
+            </Badge>
+          )}
+        </div>
+      </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : (application ? 'Update Application' : 'Create Application')}
-            </Button>
+      {/* Progress */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>
+                Step {currentSectionIndex + 1} of {sections.length}
+              </span>
+              <span>{Math.round(progress)}% Complete</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            <p className="text-sm text-muted-foreground">{currentSection.title}</p>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Current Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{currentSection.title}</CardTitle>
+          {currentSection.description && <CardDescription>{currentSection.description}</CardDescription>}
+        </CardHeader>
+        <CardContent>
+          <ApplicationSectionForm
+            section={currentSection}
+            data={formData[currentSection.id] || {}}
+            onChange={data => handleSectionDataChange(currentSection.id, data)}
+            validationErrors={validationErrors}
+            applicationId={application.id}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={handlePrevious} disabled={currentSectionIndex === 0}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+
+        <div className="flex space-x-3">
+          <Button variant="outline" onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Draft
+          </Button>
+
+          {currentSectionIndex === sections.length - 1 ? (
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit Application
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button onClick={handleNext}>
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
-
-export default FinanceApplicationForm
