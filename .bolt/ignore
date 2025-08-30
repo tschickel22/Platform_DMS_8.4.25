@@ -1,4 +1,6 @@
-# Ignore node modules and build artifacts
+# ===========================
+# General Ignored Files
+# ===========================
 node_modules/
 dist/
 .vite/
@@ -6,25 +8,21 @@ build/
 out/
 package-lock.json
 
-# Ignore environment variables
 .env
 .env.local
 .env.*.local
 
-# Ignore editor/IDE specific files
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# Ignore logs and debug files
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.pnpm-debug.log*
 
-# Ignore test/coverage reports
 coverage/
 .nyc_output/
 *.tap
@@ -32,7 +30,6 @@ coverage/
 *.lcov
 *.lcov.info
 
-# Ignore temporary files and caches
 *.tmp
 *.bak
 *.swp
@@ -48,31 +45,25 @@ coverage/
 .yarn/
 .pnpm-store/
 
-# Ignore user-specific files
 .bash_history
 .zsh_history
 .npm/
 .yarn-cache/
 
-# Ignore separate app deployments (not part of core)
 apps/
 public-site/
 
-# Ignore large documentation files
 *.md
 !README.md
 
-# Ignore patch files and analysis files
 *.patch
 analysis-files.md
 WEBSITE_BUILDER_IMPLEMENTATION_PLAN.md
 
-# Ignore large config files we don't need to see
 netlify.toml
 renter_insight_openapi.yaml
 renter_insight_bolt_manifest.json
 
-# Ignore test files to save tokens
 src/__tests__/
 **/*.test.ts
 **/*.test.tsx
@@ -81,41 +72,38 @@ src/__tests__/
 vitest.setup.ts
 vitest.config.ts
 
-# Ignore Netlify functions (assume working correctly, not part of core app logic)
 netlify/
 
-# Ignore all src/modules/ directories by default
-src/modules/
+# ===========================
+# Limit Visible Modules
+# ===========================
+# Hide everything by default
 src/modules/**
 
-# EXCEPTION: Explicitly re-include only the modules we are working on
+# Re-include only the working modules
 !src/modules/accounts/
 !src/modules/accounts/**
-!src/modules/agreement-vault/
-!src/modules/agreement-vault/**
 !src/modules/finance/
 !src/modules/finance/**
 !src/modules/finance-application/
 !src/modules/finance-application/**
+!src/modules/agreement-vault/
+!src/modules/agreement-vault/**
 
-# Keep core src/ directories visible
+# ===========================
+# Core App Files (needed for Bolt context)
+# ===========================
 !src/App.tsx
 !src/main.tsx
 !src/index.css
-!src/types/
-!src/lib/
-!src/contexts/
-!src/hooks/
-!src/components/ui/
-!src/components/layout/
-!src/components/auth/
+!src/types/**
+!src/lib/**
+!src/contexts/**
+!src/hooks/**
+!src/components/ui/**
+!src/components/layout/**
+!src/components/auth/**
 !src/components/ErrorBoundary.tsx
-!src/pages/
-!src/utils/apiClient.ts
-!src/utils/logger.ts
-!src/utils/colorUtils.ts
-!src/utils/versionManager.ts
-!src/utils/mockDataDiscovery.ts
-!src/shared/featureFlags.ts
-!src/mocks/
-!src/mocks/**
+!src/pages/**
+!src/utils/**
+!src/shared/**
