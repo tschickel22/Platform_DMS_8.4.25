@@ -41,6 +41,8 @@ import CalendarScheduling from '@/modules/calendar-scheduling/CalendarScheduling
 import ContractorManagement from '@/modules/contractor-management/ContractorManagement'
 import WarrantyMgmt from '@/modules/warranty-mgmt/index'
 import { WebsiteBuilderRoutes, CompanyWebsiteRoutes } from '@/modules/website-builder'
+import AccountsModule from '@/modules/accounts'
+import ContactsModule from '@/modules/contacts'
 
 // Property Listings (Admin + Public)
 import PropertyListings from '@/modules/property-listings/PropertyListings'
@@ -116,6 +118,8 @@ function App() {
 
                                   {/* CRM & Sales */}
                                   <Route path="/crm/*" element={<CRMProspecting />} />
+                                  <Route path="/accounts/*" element={<AccountsModule />} />
+                                  <Route path="/contacts/*" element={<ContactsModule />} />
                                   <Route path="/deals/*" element={<CRMSalesDeal />} />
                                   <Route path="/quotes/*" element={<QuoteBuilder />} />
 

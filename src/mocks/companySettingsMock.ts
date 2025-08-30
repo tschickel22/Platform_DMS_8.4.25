@@ -197,9 +197,6 @@ export const mockCompanySettings = {
     timezone: 'America/New_York',
     currency: 'USD',
     dateFormat: 'MM/dd/yyyy',
-    allowPhone: true,
-    allowSMS: true,
-    allowEmail: true,
     platformType: 'both',
     businessHours: {
       monday: { open: '09:00', close: '18:00', closed: false },

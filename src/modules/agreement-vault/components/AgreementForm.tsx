@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,9 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Upload, X, Save, Send, Eye, Calendar, ArrowLeft } from 'lucide-react'
-import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
-import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { FileText, Upload, X, Save, Send, Eye, Calendar } from 'lucide-react'
 import { Agreement, AgreementType, AgreementStatus, Document } from '@/types'
 import { useTenant } from '@/contexts/TenantContext'
 import { useToast } from '@/hooks/use-toast'
@@ -407,118 +404,3 @@ export function AgreementForm({
     </div>
   )
 }
-
-export default function AgreementForm() {
-  const { agreementId } = useParams<{ agreementId: string }>()
-  const navigate = useNavigate()
-  const { getAccounts } = useAccountManagement()
-  const { getContacts } = useContactManagement()
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(!!agreementId)
-  const [accounts, setAccounts] = useState<any[]>([])
-  const [contacts, setContacts] = useState<any[]>([])
-  const [filteredContacts, setFilteredContacts] = useState<any[]>([])
-
-  const isEditing = !!agreementId
-
-  const [formData, setFormData] = useState({
-    ...mockAgreements.defaultAgreement,
-    accountId: '',
-    contactId: '',
-    documents: [] as any[]
-  })
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load accounts and contacts
-        const [accountsData, contactsData] = await Promise.all([
-          getAccounts(),
-          getContacts()
-        ])
-        setAccounts(accountsData)
-        setContacts(contactsData)
-        
-        // Load agreement data if editing
-        if (agreementId) {
-          // TODO: Implement getAgreementById when needed
-          console.log('Loading agreement for editing:', agreementId)
-        }
-      } catch (error) {
-        console.error('Error loading data:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load form data',
-          variant: 'destructive'
-        })
-      } finally {
-        setInitialLoading(false)
-      }
-    }
-
-    loadData()
-  }, [agreementId, getAccounts, getContacts, toast])
-
-  // Filter contacts when account changes
-  useEffect(() => {
-    if (formData.accountId) {
-      const accountContacts = contacts.filter(contact => contact.accountId === formData.accountId)
-      setFilteredContacts(accountContacts)
-      // Clear contact selection if it's not in the filtered list
-      if (formData.contactId && !accountContacts.find(c => c.id === formData.contactId)) {
-        setFormData(prev => ({ ...prev, contactId: '' }))
-      }
-    } else {
-      setFilteredContacts(contacts)
-    }
-  }, [formData.accountId, contacts])
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Account Association */}
-                <div className="space-y-2">
-                  <Label htmlFor="accountId">Account</Label>
-                  <Select
-                    value={formData.accountId}
-                    onValueChange={(value) => setFormData({ ...formData, accountId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Account</SelectItem>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Contact Association */}
-                <div className="space-y-2">
-                  <Label htmlFor="contactId">Contact</Label>
-                  <Select
-                    value={formData.contactId}
-                    onValueChange={(value) => setFormData({ ...formData, contactId: value })}
-                    disabled={!formData.accountId && filteredContacts.length === 0}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select contact (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Contact</SelectItem>
-                      {filteredContacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.firstName} {contact.lastName}
-                          {contact.title && ` - ${contact.title}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Agreement Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="type">Agreement Type *</Label>

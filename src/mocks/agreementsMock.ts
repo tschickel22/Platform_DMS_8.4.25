@@ -65,8 +65,6 @@ export const mockAgreements = {
       customerId: 'cust-002',
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
-      accountId: 'acc-002',
-      contactId: 'cont-003',
       vehicleId: 'veh-002',
       vehicleInfo: '2024 Keystone Montana 3761FL',
       quoteId: 'quote-002',
@@ -126,33 +124,6 @@ export const mockAgreements = {
       createdBy: 'service@company.com',
       annualFee: 1200,
       coverageLevel: 'Comprehensive'
-    }
-  ],
-
-  sampleQuotes: [
-    {
-      id: 'quote-001',
-      number: 'Q-2024-001',
-      accountId: 'acc-001',
-      amount: 35000,
-      status: 'sent',
-      createdAt: '2024-01-10T09:30:00Z'
-    },
-    {
-      id: 'quote-002', 
-      number: 'Q-2024-002',
-      accountId: 'acc-002',
-      amount: 62000,
-      status: 'accepted',
-      createdAt: '2024-01-15T11:00:00Z'
-    },
-    {
-      id: 'quote-003',
-      number: 'Q-2024-003', 
-      accountId: 'acc-002',
-      amount: 48000,
-      status: 'viewed',
-      createdAt: '2024-01-20T14:30:00Z'
     }
   ],
 
