@@ -5,55 +5,46 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/ui/empty-state'
-import { ShieldCheck, Plus, ExternalLink, GripVertical, Calendar } from 'lucide-react'
-import { loadFromLocalStorage, formatDate } from '@/lib/utils'
+import { Handshake, Plus, ExternalLink, GripVertical, Calendar } from 'lucide-react'
+import { loadFromLocalStorage } from '@/lib/utils'
 
-type Warranty = {
+type AgreementStatus = 'active' | 'pending' | 'cancelled' | 'expired'
+
+type Agreement = {
   id: string
-  accountId?: string
-  policyNumber: string
-  product?: string
+  accountId: string
+  agreementNumber: string
+  type: string // Retail Installment, Lease, Service Contract, etc.
   provider?: string
-  status?: 'active' | 'expired' | 'pending' | 'cancelled'
-  startDate?: string | Date
-  endDate?: string | Date
+  startDate?: string
+  endDate?: string
+  amount?: number
+  status?: AgreementStatus
   notes?: string
 }
 
-interface AccountWarrantySectionProps {
+interface Props {
   accountId: string
   onRemove?: () => void
   isDragging?: boolean
-  /** Prefer this to open the New Claim modal from AccountDetail */
-  onAddWarranty?: () => void
-  /** Generic create fallback (kept for compatibility) */
   onCreate?: () => void
 }
 
-export function AccountWarrantySection({
-  accountId,
-  onRemove,
-  isDragging,
-  onAddWarranty,
-  onCreate,
-}: AccountWarrantySectionProps) {
-  // Demo persistence — align with how Deliveries are handled
-  const all = loadFromLocalStorage<Warranty[]>('warranties', [])
-  const warranties = (all || []).filter(w => w.accountId === accountId)
+export function AccountAgreementsSection({ accountId, onRemove, isDragging, onCreate }: Props) {
+  const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
+  const agreements = all.filter(a => a.accountId === accountId)
 
   const handleAdd = () => {
-    if (onAddWarranty) return onAddWarranty()
-    if (onCreate) return onCreate()
-    // Last-resort fallback: jump to warranty module list with account filter
-    window.location.href = `/inventory/warranty?accountId=${accountId}&returnTo=account`
+    if (onCreate) onCreate()
+    else window.location.href = `/finance/agreements?accountId=${accountId}&returnTo=account`
   }
 
-  const statusTone = (s?: Warranty['status']) => {
+  const statusTone = (s?: AgreementStatus) => {
     switch (s) {
       case 'active': return 'bg-green-50 text-green-700 border-green-200'
-      case 'expired': return 'bg-red-50 text-red-700 border-red-200'
       case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      case 'cancelled': return 'bg-gray-50 text-gray-700 border-gray-200'
+      case 'cancelled': return 'bg-red-50 text-red-700 border-red-200'
+      case 'expired': return 'bg-gray-50 text-gray-700 border-gray-200'
       default: return 'bg-gray-50 text-gray-700 border-gray-200'
     }
   }
@@ -65,17 +56,17 @@ export function AccountWarrantySection({
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
           <div>
             <CardTitle className="text-lg flex items-center">
-              <ShieldCheck className="h-5 w-5 mr-2" />
-              Warranty
+              <Handshake className="h-5 w-5 mr-2" />
+              Agreements
             </CardTitle>
-            <CardDescription>Warranty registrations and coverage</CardDescription>
+            <CardDescription>Retail/lease agreements & service contracts</CardDescription>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{warranties.length}</Badge>
-          <Button variant="outline" size="sm" type="button" onClick={handleAdd}>
+          <Badge variant="secondary">{agreements.length}</Badge>
+          <Button variant="outline" size="sm" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Warranty
+            Record Agreement
           </Button>
           {onRemove && (
             <Button variant="ghost" size="sm" onClick={onRemove}>×</Button>
@@ -84,50 +75,48 @@ export function AccountWarrantySection({
       </CardHeader>
 
       <CardContent>
-        {warranties.length === 0 ? (
+        {agreements.length === 0 ? (
           <EmptyState
-            title="No warranties yet"
-            description="Record a warranty for this account"
-            icon={<ShieldCheck className="h-12 w-12" />}
-            action={{ label: 'Record Warranty', onClick: handleAdd }}
+            title="No agreements yet"
+            description="Record an agreement for this account"
+            icon={<Handshake className="h-12 w-12" />}
+            action={{ label: 'Record Agreement', onClick: handleAdd }}
           />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Policy #</TableHead>
-                  <TableHead>Product</TableHead>
+                  <TableHead>#</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Provider</TableHead>
-                  <TableHead>Coverage</TableHead>
+                  <TableHead>Term</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {warranties.slice(0, 5).map((w) => (
-                  <TableRow key={w.id}>
-                    <TableCell className="font-medium">{w.policyNumber || w.id}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{w.product || '—'}</TableCell>
-                    <TableCell>{w.provider || '—'}</TableCell>
+                {agreements.slice(0, 5).map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-medium">{a.agreementNumber || a.id}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{a.type || '—'}</TableCell>
+                    <TableCell>{a.provider || '—'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <span className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
-                          {w.startDate ? formatDate(w.startDate) : '—'}
+                          {a.startDate || '—'}
                         </span>
                         <span>→</span>
-                        <span>{w.endDate ? formatDate(w.endDate) : '—'}</span>
+                        <span>{a.endDate || '—'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={statusTone(w.status)}>
-                        {(w.status || 'active').toUpperCase()}
-                      </Badge>
+                      <Badge className={statusTone(a.status)}>{(a.status || 'active').toUpperCase()}</Badge>
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to={`/inventory/warranty?focus=${w.id}`}>
+                        <Link to={`/finance/agreements?focus=${a.id}`}>
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
@@ -143,4 +132,4 @@ export function AccountWarrantySection({
   )
 }
 
-export default AccountWarrantySection
+export default AccountAgreementsSection
