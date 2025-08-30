@@ -1,7 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import ErrorBoundary from '@/components/ErrorBoundary'
+import { default as ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -108,7 +108,15 @@ function App() {
                           <ProtectedRoute>
                             <Layout>
                               <ErrorBoundary>
-                                <Routes>
+                                <React.Suspense fallback={
+                                  <div className="min-h-screen flex items-center justify-center">
+                                    <div className="text-center">
+                                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                                      <p className="text-muted-foreground">Loading...</p>
+                                    </div>
+                                  </div>
+                                }>
+                                  <Routes>
                                   {/* Home */}
                                   <Route path="/" element={<Dashboard />} />
 
@@ -182,6 +190,7 @@ function App() {
                                   {/* Fallback inside app */}
                                   <Route path="*" element={<Navigate to="/" replace />} />
                                 </Routes>
+                                </React.Suspense>
                               </ErrorBoundary>
                             </Layout>
                           </ProtectedRoute>

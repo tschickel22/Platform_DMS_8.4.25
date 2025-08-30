@@ -1,598 +1,337 @@
-import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { X, Save, Plus, Trash2, DollarSign, Calendar, User, Target, Package } from 'lucide-react'
-import { Deal, DealStage, DealStatus, DealPriority, DealProduct } from '../types'
-import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { Save } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { mockCrmSalesDeal } from '@/mocks/crmSalesDealMock'
-import { TagSelector } from '@/modules/tagging-engine'
-import { TagType } from '@/modules/tagging-engine/types'
+import { useReturnTargets, ReturnToBehavior } from '@/hooks/useReturnTargets'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { useDealManagement } from '@/modules/crm-sales-deal/hooks/useDealManagement'
+import { mockInventory } from '@/mocks/inventoryMock'
+import type { Deal, DealStage } from '@/modules/crm-sales-deal/types'
+import { formatCurrency } from '@/lib/utils'
 
-interface DealFormProps {
-  deal?: Deal
-  customers: any[] // Using existing customer data
-  salesReps: any[] // Using existing sales rep data
-  territories: any[] // Using existing territory data
-  products: any[] // Using existing product data
-  onSave: (dealData: Partial<Deal>) => Promise<void>
-  onCancel: () => void
+type Maybe<T> = T | undefined
+
+type Props = ReturnToBehavior & {
+  // When opened from DealsList
+  deal?: Partial<Deal>
+  customers?: Array<{ id: string; name?: string }>
+  salesReps?: Array<{ id: string; name: string }>
+  territories?: Array<{ id: string; name: string }>
+  products?: Array<{ id: string; name: string; price?: number }>
+  onSave?: (dealData: Partial<Deal>) => Promise<void> | void
+  onCancel?: () => void
 }
 
-export function DealForm({ deal, customers, salesReps, territories, products, onSave, onCancel }: DealFormProps) {
+const STAGES: DealStage[] = [
+  'PROSPECTING',
+  'QUALIFICATION',
+  'NEEDS_ANALYSIS',
+  'PROPOSAL',
+  'NEGOTIATION',
+  'CLOSED_WON',
+  'CLOSED_LOST',
+] as unknown as DealStage[]
+
+const STAGE_BADGE: Record<string, string> = {
+  PROSPECTING: 'bg-sky-100 text-sky-800',
+  QUALIFICATION: 'bg-indigo-100 text-indigo-800',
+  NEEDS_ANALYSIS: 'bg-amber-100 text-amber-800',
+  PROPOSAL: 'bg-purple-100 text-purple-800',
+  NEGOTIATION: 'bg-blue-100 text-blue-800',
+  CLOSED_WON: 'bg-green-100 text-green-800',
+  CLOSED_LOST: 'bg-red-100 text-red-800',
+}
+
+export function DealForm(props: Props) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<Deal>>({
-    name: '',
-    customerId: '',
-    customerName: '',
-    stage: DealStage.PROSPECTING,
-    status: DealStatus.ACTIVE,
-    priority: DealPriority.MEDIUM,
-    value: 0,
-    probability: 10,
-    expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    assignedTo: '',
-    territoryId: '',
-    sourceId: '',
-    competitorIds: [],
-    products: [],
-    notes: '',
-    requiresApproval: false,
-    customFields: {}
+  const { afterSave, accountId: ctxAccountId } = useReturnTargets(props)
+  const isModalFromAccount = !!props.onSaved // AccountDetail passes onSaved
+  const { getAccount } = useAccountManagement()
+  const { contacts } = useContactManagement()
+  const { createDeal } = useDealManagement()
+
+  const accountId = ctxAccountId || (props.deal as any)?.accountId || ''
+
+  const account = accountId ? getAccount(accountId) : undefined
+  const accountContacts = useMemo(
+    () => contacts.filter((c) => !accountId || c.accountId === accountId),
+    [contacts, accountId]
+  )
+
+  // initial values (support both modes)
+  const [form, setForm] = useState({
+    name: props.deal?.name || (account ? `${account.name} – New Opportunity` : ''),
+    accountId: accountId || '',
+    contactId: '',
+    vehicleId: '',
+    customerName: props.deal?.customerName || account?.name || '',
+    assignedTo: props.deal?.assignedTo || '',
+    stage: (props.deal?.stage as DealStage) || STAGES[0],
+    value: props.deal?.value?.toString?.() || '',
+    probability: props.deal?.probability?.toString?.() || '20', // percent 0–100
+    expectedCloseDate: props.deal?.expectedCloseDate || '',
+    notes: props.deal?.notes || '',
   })
 
-  const [showAddProduct, setShowAddProduct] = useState(false)
-  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false)
-  const [newProduct, setNewProduct] = useState<Partial<DealProduct>>({
-    productId: '',
-    productName: '',
-    quantity: 1,
-    unitPrice: 0,
-    discount: 0,
-    total: 0
-  })
+  const onChange = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm((p) => ({ ...p, [key]: value }))
 
-  // Initialize form with deal data if editing
-  useEffect(() => {
-    if (deal) {
-      setFormData({
-        ...deal,
-        expectedCloseDate: new Date(deal.expectedCloseDate)
-      })
-    }
-  }, [deal])
+  const selectedVehicle = useMemo(
+    () => mockInventory.sampleVehicles.find((v) => v.id === form.vehicleId),
+    [form.vehicleId]
+  )
 
-  // Update customer name when customer is selected
-  useEffect(() => {
-    if (formData.customerId) {
-      const customer = customers.find(c => c.id === formData.customerId)
-      if (customer) {
-        setFormData(prev => ({
-          ...prev,
-          customerName: `${customer.firstName} ${customer.lastName}`
-        }))
-      }
-    }
-  }, [formData.customerId, customers])
+  const numericValue = Math.max(0, parseFloat(form.value || '0') || 0)
+  const percent = Math.min(100, Math.max(0, parseFloat(form.probability || '0') || 0))
+  const weighted = (numericValue * percent) / 100
 
-  // Calculate total value when products change
-  useEffect(() => {
-    if (formData.products && formData.products.length > 0) {
-      const totalValue = formData.products.reduce((sum, product) => sum + product.total, 0)
-      setFormData(prev => ({
-        ...prev,
-        value: totalValue
-      }))
-    }
-  }, [formData.products])
+  const [saving, setSaving] = useState(false)
 
-  // Update new product total when quantity, price, or discount changes
-  useEffect(() => {
-    const quantity = newProduct.quantity || 1
-    const unitPrice = newProduct.unitPrice || 0
-    const discount = newProduct.discount || 0
-    const total = (quantity * unitPrice) - discount
-    
-    setNewProduct(prev => ({
-      ...prev,
-      total
-    }))
-  }, [newProduct.quantity, newProduct.unitPrice, newProduct.discount])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!formData.name?.trim() || !formData.customerId || !formData.expectedCloseDate) {
+    if (!form.name.trim()) {
+      toast({ title: 'Validation error', description: 'Deal name is required', variant: 'destructive' })
+      return
+    }
+    if (!form.customerName.trim() && !form.accountId) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in Deal Name, Customer, and Expected Close Date',
-        variant: 'destructive'
+        title: 'Validation error',
+        description: 'Customer/Account is required',
+        variant: 'destructive',
       })
       return
     }
 
-    setLoading(true)
+    const payload: Partial<Deal> = {
+      // core (what your Deals module expects)
+      name: form.name.trim(),
+      customerName: form.customerName || account?.name || '',
+      stage: form.stage as DealStage,
+      value: numericValue,
+      probability: percent, // your module uses % (0–100)
+      expectedCloseDate: form.expectedCloseDate || undefined,
+      assignedTo: form.assignedTo || undefined,
+      notes: form.notes || undefined,
+      // helpful extra links for Account view
+      // @ts-ignore – these fields are fine to include in Partial<Deal>
+      accountId: form.accountId || undefined,
+      // @ts-ignore
+      contactId: form.contactId || undefined,
+      // @ts-ignore
+      vehicleId: form.vehicleId || undefined,
+    }
+
+    setSaving(true)
     try {
-      await onSave(formData)
-      toast({
-        title: 'Success',
-        description: `Deal ${deal ? 'updated' : 'created'} successfully`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${deal ? 'update' : 'create'} deal`,
-        variant: 'destructive'
-      })
+      if (typeof props.onSave === 'function') {
+        // Opened from the Deals module: delegate to parent
+        await props.onSave(payload)
+        props.onCancel?.()
+      } else {
+        // Opened from AccountDetail: create via DealManagement, then afterSave
+        await createDeal(payload)
+        toast({ title: 'Success', description: 'Deal created successfully' })
+        afterSave(payload as Deal, '/deals')
+      }
+    } catch (err) {
+      console.error(err)
+      toast({ title: 'Error', description: 'Failed to save deal', variant: 'destructive' })
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
-  }
-
-  const handleAddProduct = () => {
-    if (!newProduct.productId || !newProduct.productName) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a product',
-        variant: 'destructive'
-      })
-      return
-    }
-
-    const product: DealProduct = {
-      id: Math.random().toString(36).substr(2, 9),
-      productId: newProduct.productId,
-      productName: newProduct.productName,
-      quantity: newProduct.quantity || 1,
-      unitPrice: newProduct.unitPrice || 0,
-      discount: newProduct.discount || 0,
-      total: newProduct.total || 0
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      products: [...(prev.products || []), product]
-    }))
-
-    setNewProduct({
-      productId: '',
-      productName: '',
-      quantity: 1,
-      unitPrice: 0,
-      discount: 0,
-      total: 0
-    })
-
-    setShowAddProduct(false)
-  }
-
-  const handleRemoveProduct = (productId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products?.filter(p => p.id !== productId) || []
-    }))
-  }
-
-  const handleProductSelect = (productId: string) => {
-    const product = products.find(p => p.id === productId)
-    if (product) {
-      setNewProduct({
-        productId: product.id,
-        productName: product.name,
-        quantity: 1,
-        unitPrice: product.price,
-        discount: 0,
-        total: product.price
-      })
-    }
-  }
-
-  const handleNewCustomerSuccess = (newCustomer: any) => {
-    // Update the customer dropdown with the new customer and select it
-    setFormData(prev => ({
-      ...prev,
-      customerId: newCustomer.id,
-      customerName: `${newCustomer.firstName} ${newCustomer.lastName}`
-    }))
-    setShowNewCustomerForm(false)
-    
-    toast({
-      title: 'Customer Added',
-      description: `${newCustomer.firstName} ${newCustomer.lastName} has been added as a customer.`,
-    })
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      {/* New Customer Form Modal */}
-      {showNewCustomerForm && (
-        <NewLeadForm
-          onClose={() => setShowNewCustomerForm(false)}
-          onSuccess={handleNewCustomerSuccess}
-        />
+    <div className={isModalFromAccount ? 'p-6' : ''}>
+      {!isModalFromAccount && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">{props.deal ? 'Edit Deal' : 'Create Deal'}</h1>
+          <p className="text-muted-foreground">Track a sales opportunity through your pipeline</p>
+        </div>
       )}
-      
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{deal ? 'Edit Deal' : 'Create Deal'}</CardTitle>
-              <CardDescription>
-                {deal ? 'Update deal details' : 'Create a new sales deal'}
-              </CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <Target className="h-4 w-4 mr-2" />
-                Deal Information
-              </h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="name">Deal Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter deal name"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="customerId">Customer *</Label>
-                  <Select 
-                    value={formData.customerId || ''} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="px-2 py-1.5">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full justify-start" 
-                          onClick={() => setShowNewCustomerForm(true)}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-2" />
-                          Add New Customer
-                        </Button>
-                      </div>
-                      <div className="px-2 py-1 border-t"></div>
-                      {customers.map(customer => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.firstName} {customer.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+      <form onSubmit={submit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Deal Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Label>Deal Name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => onChange('name', e.target.value)}
+                  placeholder="e.g., 2023 Airstream Classic – Upgrade Package"
+                />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <Label htmlFor="stage">Stage</Label>
-                  <Select 
-                    value={formData.stage} 
-                    onValueChange={(value: DealStage) => setFormData(prev => ({ 
-                      ...prev, 
-                      stage: value,
-                      probability: value === DealStage.PROSPECTING ? 10 :
-                                  value === DealStage.QUALIFICATION ? 25 :
-                                  value === DealStage.NEEDS_ANALYSIS ? 40 :
-                                  value === DealStage.PROPOSAL ? 60 :
-                                  value === DealStage.NEGOTIATION ? 80 :
-                                  value === DealStage.CLOSED_WON ? 100 :
-                                  value === DealStage.CLOSED_LOST ? 0 : 10
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={DealStage.PROSPECTING}>Prospecting</SelectItem>
-                      <SelectItem value={DealStage.QUALIFICATION}>Qualification</SelectItem>
-                      <SelectItem value={DealStage.NEEDS_ANALYSIS}>Needs Analysis</SelectItem>
-                      <SelectItem value={DealStage.PROPOSAL}>Proposal</SelectItem>
-                      <SelectItem value={DealStage.NEGOTIATION}>Negotiation</SelectItem>
-                      <SelectItem value={DealStage.CLOSED_WON}>Closed Won</SelectItem>
-                      <SelectItem value={DealStage.CLOSED_LOST}>Closed Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select 
-                    value={formData.priority} 
-                    onValueChange={(value: DealPriority) => setFormData(prev => ({ ...prev, priority: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={DealPriority.LOW}>Low</SelectItem>
-                      <SelectItem value={DealPriority.MEDIUM}>Medium</SelectItem>
-                      <SelectItem value={DealPriority.HIGH}>High</SelectItem>
-                      <SelectItem value={DealPriority.CRITICAL}>Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="probability">Probability (%)</Label>
-                  <Input
-                    id="probability"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.probability}
-                    onChange={(e) => setFormData(prev => ({ ...prev, probability: parseInt(e.target.value) || 0 }))}
-                  />
-                </div>
+              <div>
+                <Label>Account</Label>
+                <Input value={account?.name || ''} disabled placeholder="(optional)" />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <Label htmlFor="expectedCloseDate">Expected Close Date *</Label>
-                  <Input
-                    id="expectedCloseDate"
-                    type="date"
-                    value={formData.expectedCloseDate ? new Date(formData.expectedCloseDate).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, expectedCloseDate: new Date(e.target.value) }))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="assignedTo">Assigned To</Label>
-                  <Select 
-                    value={formData.assignedTo} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assignedTo: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sales rep" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {salesReps.map(rep => (
-                        <SelectItem key={rep.id} value={rep.id}>
-                          {rep.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="territoryId">Territory</Label>
-                  <Select 
-                    value={formData.territoryId} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, territoryId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select territory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {territories.map(territory => (
-                        <SelectItem key={territory.id} value={territory.id}>
-                          {territory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Products */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center">
-                  <Package className="h-4 w-4 mr-2" />
-                  Products
-                </h3>
-                <Button type="button" onClick={() => setShowAddProduct(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
+              <div>
+                <Label>Contact</Label>
+                <Select
+                  value={form.contactId}
+                  onValueChange={(v) => onChange('contactId', v)}
+                  disabled={!accountId || accountContacts.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contact (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Contact</SelectItem>
+                    {accountContacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Add Product Form */}
-              {showAddProduct && (
-                <Card className="border-dashed">
-                  <CardContent className="pt-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label>Product</Label>
-                        <Select onValueChange={handleProductSelect}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map(product => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name} - {formatCurrency(product.price)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Quantity</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={newProduct.quantity}
-                          onChange={(e) => setNewProduct(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Unit Price</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newProduct.unitPrice}
-                          onChange={(e) => setNewProduct(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Discount</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newProduct.discount}
-                          onChange={(e) => setNewProduct(prev => ({ ...prev, discount: parseFloat(e.target.value) || 0 }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <div>
-                        <span className="text-sm font-medium">Total: </span>
-                        <span className="font-bold">{formatCurrency(newProduct.total || 0)}</span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setShowAddProduct(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="button" onClick={handleAddProduct}>
-                          Add Product
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <div>
+                <Label>Vehicle / Product</Label>
+                <Select value={form.vehicleId} onValueChange={(v) => onChange('vehicleId', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockInventory.sampleVehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {/* Products List */}
-              <div className="space-y-3">
-                {formData.products && formData.products.length > 0 ? (
-                  formData.products.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium">{product.productName}</span>
-                          <Badge variant="outline">
-                            {product.quantity} × {formatCurrency(product.unitPrice)}
+              <div>
+                <Label>Stage *</Label>
+                <Select
+                  value={form.stage}
+                  onValueChange={(v) => onChange('stage', v as DealStage)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAGES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <div className="flex items-center gap-2">
+                          <Badge className={STAGE_BADGE[s] || 'bg-gray-100 text-gray-800'}>
+                            {s.replace('_', ' ')}
                           </Badge>
                         </div>
-                        {product.discount > 0 && (
-                          <div className="text-sm text-green-600 mt-1">
-                            Discount: {formatCurrency(product.discount)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <span className="font-bold">{formatCurrency(product.total)}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveProduct(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>No products added yet</p>
-                    <p className="text-sm">Add products to calculate deal value</p>
-                  </div>
-                )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {formData.products && formData.products.length > 0 && (
-                <div className="flex justify-end p-3 bg-muted/30 rounded-lg">
-                  <div className="text-right">
-                    <span className="text-sm font-medium">Total Deal Value: </span>
-                    <span className="text-lg font-bold text-primary">{formatCurrency(formData.value || 0)}</span>
+              <div>
+                <Label>Assigned To</Label>
+                <Input
+                  value={form.assignedTo}
+                  onChange={(e) => onChange('assignedTo', e.target.value)}
+                  placeholder="Sales rep (optional)"
+                />
+              </div>
+
+              <div>
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.value}
+                  onChange={(e) => onChange('value', e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label>Probability (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={form.probability}
+                  onChange={(e) => onChange('probability', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Expected Close</Label>
+                <Input
+                  type="date"
+                  value={form.expectedCloseDate}
+                  onChange={(e) => onChange('expectedCloseDate', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-md border p-3 bg-muted/30">
+                <div className="text-sm">Weighted Amount</div>
+                <div className="text-xl font-semibold">{formatCurrency(weighted)}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(numericValue)} × {Math.round(percent)}%
+                </div>
+              </div>
+              {selectedVehicle && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <div className="text-sm">Selected</div>
+                  <div className="text-base font-medium">
+                    {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
                   </div>
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Notes */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Notes</h3>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Add any additional notes about this deal..."
-                rows={3}
-              />
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+        </Card>
+        <Textarea
+          rows={4}
+          value={form.notes}
+          onChange={(e) => onChange('notes', e.target.value)}
+          placeholder="Internal notes about this opportunity…"
+        />
 
-            {/* Tags */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Tags</h3>
-              <TagSelector
-                entityId={deal?.id || 'new-deal'}
-                entityType={TagType.DEAL}
-                onTagsChange={() => {}}
-                placeholder="Add deal tags..."
-                className="w-full"
-              />
-            </div>
-
-            {/* Approval Settings */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Approval Settings</h3>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="requiresApproval"
-                  checked={formData.requiresApproval}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requiresApproval: !!checked }))}
-                />
-                <Label htmlFor="requiresApproval">This deal requires approval</Label>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Deals over $100,000 automatically require approval
-              </p>
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {deal ? 'Updating...' : 'Creating...'}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {deal ? 'Update' : 'Create'} Deal
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <div className="flex justify-end gap-3">
+          {props.onCancel && (
+            <Button type="button" variant="outline" onClick={props.onCancel} disabled={saving}>
+              Cancel
+            </Button>
+          )}
+          {!props.onCancel && (
+            <Button type="button" variant="outline" onClick={() => afterSave(null, '/deals')} disabled={saving}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving…' : props.deal ? 'Save Changes' : 'Create Deal'}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }
+
+export default DealForm

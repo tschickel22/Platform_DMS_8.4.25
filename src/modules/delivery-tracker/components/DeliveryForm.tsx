@@ -12,6 +12,8 @@ import { Delivery, DeliveryStatus, Vehicle } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { useDropzone } from 'react-dropzone'
 import { NewLeadForm } from '@/modules/crm-prospecting/components/NewLeadForm'
+import { Camera } from 'lucide-react'
+
 
 interface DeliveryFormProps {
   delivery?: Delivery

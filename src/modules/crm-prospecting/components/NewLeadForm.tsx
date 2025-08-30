@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
 import { Label } from '@/components/ui/label'
 import { X, Save, User, Mail, Phone, MapPin, Tag, DollarSign, CheckCircle } from 'lucide-react'
 import { Lead, LeadStatus } from '../types'
@@ -19,8 +21,13 @@ interface NewLeadFormProps {
 
 export function NewLeadForm({ onClose, onSuccess }: NewLeadFormProps) {
   const { sources, salesReps, createLead } = useLeadManagement()
+  const { getAccounts } = useAccountManagement()
+  const { getContacts } = useContactManagement()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [contacts, setContacts] = useState<any[]>([])
+  const [filteredContacts, setFilteredContacts] = useState<any[]>([])
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,6 +35,8 @@ export function NewLeadForm({ onClose, onSuccess }: NewLeadFormProps) {
     phone: '',
     source: '',
     sourceId: '',
+    accountId: '',
+    contactId: '',
     assignedTo: '',
     notes: '',
     customFields: {
@@ -38,6 +47,37 @@ export function NewLeadForm({ onClose, onSuccess }: NewLeadFormProps) {
       preferredContact: 'email'
     }
   })
+
+  // Load accounts and contacts
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [accountsData, contactsData] = await Promise.all([
+          getAccounts(),
+          getContacts()
+        ])
+        setAccounts(accountsData)
+        setContacts(contactsData)
+      } catch (error) {
+        console.error('Error loading accounts/contacts:', error)
+      }
+    }
+    loadData()
+  }, [getAccounts, getContacts])
+
+  // Filter contacts when account changes
+  React.useEffect(() => {
+    if (formData.accountId) {
+      const accountContacts = contacts.filter(contact => contact.accountId === formData.accountId)
+      setFilteredContacts(accountContacts)
+      // Clear contact selection if it's not in the filtered list
+      if (formData.contactId && !accountContacts.find(c => c.id === formData.contactId)) {
+        setFormData(prev => ({ ...prev, contactId: '' }))
+      }
+    } else {
+      setFilteredContacts(contacts)
+    }
+  }, [formData.accountId, contacts])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -161,6 +201,50 @@ export function NewLeadForm({ onClose, onSuccess }: NewLeadFormProps) {
                 Contact Information
               </h3>
               
+                {/* Account Association */}
+                <div className="space-y-2">
+                  <Label htmlFor="accountId">Account</Label>
+                  <Select
+                    value={formData.accountId}
+                    onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Account</SelectItem>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Contact Association */}
+                <div className="space-y-2">
+                  <Label htmlFor="contactId">Contact</Label>
+                  <Select
+                    value={formData.contactId}
+                    onValueChange={(value) => setFormData({ ...formData, contactId: value })}
+                    disabled={!formData.accountId && filteredContacts.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select contact (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Contact</SelectItem>
+                      {filteredContacts.map((contact) => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.firstName} {contact.lastName}
+                          {contact.title && ` - ${contact.title}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>

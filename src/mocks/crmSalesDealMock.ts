@@ -58,6 +58,8 @@ export const mockCrmSalesDeal = {
       customerName: 'Maria Rodriguez',
       customerEmail: 'maria.rodriguez@email.com',
       customerPhone: '(555) 987-6543',
+      accountId: 'acc-002',
+      contactId: 'cont-003',
       vehicleId: 'veh-002',
       vehicleInfo: '2024 Keystone Montana 3761FL',
       stage: 'Proposal Sent',
@@ -101,6 +103,7 @@ export const mockCrmSalesDeal = {
       expectedCloseDate: '2024-02-10',
       createdAt: '2024-01-08T13:20:00Z',
       updatedAt: '2024-01-22T10:30:00Z',
+      accountId: 'acc-002',
       notes: 'Negotiating trade-in value, close to agreement',
       activities: [
         {
