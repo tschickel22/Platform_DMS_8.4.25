@@ -4,161 +4,287 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { ApplicationSection, ApplicationField } from '../types'
 import { FileUploadSection } from './FileUploadSection'
 
-type SectionData = Record<string, any>
-type ValidationMap = Record<string, string | undefined>
-
-interface Props {
+interface ApplicationSectionFormProps {
   section: ApplicationSection
-  data: SectionData
-  onChange: (data: SectionData) => void
-  validationErrors?: ValidationMap
-  applicationId?: string
+  data: Record<string, any>
+  onChange: (data: Record<string, any>) => void
+  validationErrors: Record<string, string>
+  applicationId: string
 }
 
-function FieldRenderer({
-  field,
-  value,
-  onValue,
-  applicationId,
-  error,
-}: {
-  field: ApplicationField
-  value: any
-  onValue: (v: any) => void
-  applicationId?: string
-  error?: string
-}) {
-  const id = field.id
-
-  switch (field.type) {
-    case 'textarea':
-      return (
-        <div className="space-y-2">
-          <Label htmlFor={id}>{field.label}</Label>
-          <Textarea id={id} value={value || ''} onChange={e => onValue(e.target.value)} placeholder={field.placeholder} />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'select':
-    case 'radio':
-      return (
-        <div className="space-y-2">
-          <Label htmlFor={id}>{field.label}</Label>
-          <Select value={value ?? ''} onValueChange={(v) => onValue(v)}>
-            <SelectTrigger id={id}>
-              <SelectValue placeholder={field.placeholder || 'Select…'} />
-            </SelectTrigger>
-            <SelectContent>
-              {(field.options || []).map(opt => (
-                <SelectItem key={String(opt)} value={String(opt)}>{String(opt)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'checkbox':
-      return (
-        <div className="flex items-center space-x-2">
-          <Checkbox id={id} checked={!!value} onCheckedChange={(v) => onValue(Boolean(v))} />
-          <Label htmlFor={id}>{field.label}</Label>
-          {error && <p className="text-xs text-red-600 ml-2">{error}</p>}
-        </div>
-      )
-    case 'number':
-      return (
-        <div className="space-y-2">
-          <Label htmlFor={id}>{field.label}</Label>
-          <Input id={id} type="number" value={value ?? ''} onChange={e => onValue(e.target.value === '' ? '' : Number(e.target.value))} placeholder={field.placeholder} />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'date':
-      return (
-        <div className="space-y-2">
-          <Label htmlFor={id}>{field.label}</Label>
-          <Input id={id} type="date" value={value ?? ''} onChange={e => onValue(e.target.value)} />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'file':
-      return (
-        <div className="space-y-2">
-          <Label>{field.label}</Label>
-          {applicationId ? (
-            <FileUploadSection fieldId={id} applicationId={applicationId} validation={field.validation} multiple={!!field.validation?.allowMultiple} />
-          ) : (
-            <Card>
-              <CardContent className="text-sm text-muted-foreground p-3">
-                File uploads are available after the application is created.
-              </CardContent>
-            </Card>
-          )}
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'address':
-      const addr = value || {}
-      return (
-        <div className="space-y-2">
-          <Label>{field.label}</Label>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Street" value={addr.street || ''} onChange={e => onValue({ ...addr, street: e.target.value })} />
-            <Input placeholder="City" value={addr.city || ''} onChange={e => onValue({ ...addr, city: e.target.value })} />
-            <Input placeholder="State" value={addr.state || ''} onChange={e => onValue({ ...addr, state: e.target.value })} />
-            <Input placeholder="Postal Code" value={addr.postalCode || ''} onChange={e => onValue({ ...addr, postalCode: e.target.value })} />
-          </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-    case 'email':
-    case 'ssn':
-    case 'phone':
-    case 'text':
-    default:
-      return (
-        <div className="space-y-2">
-          <Label htmlFor={id}>{field.label}</Label>
-          <Input id={id} type={field.type === 'email' ? 'email' : 'text'} value={value ?? ''} onChange={e => onValue(e.target.value)} placeholder={field.placeholder} />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-        </div>
-      )
-  }
-}
-
-export default function ApplicationSectionForm({
+export function ApplicationSectionForm({
   section,
   data,
   onChange,
-  validationErrors = {},
-  applicationId,
-}: Props) {
-  const updateField = (fieldId: string, v: any) => {
-    const next = { ...data, [fieldId]: v }
-    onChange(next)
+  validationErrors,
+  applicationId
+}: ApplicationSectionFormProps) {
+  const fields = section.fields.sort((a, b) => a.order - b.order)
+
+  const handleFieldChange = (fieldId: string, value: any) => {
+    onChange({
+      ...data,
+      [fieldId]: value
+    })
+  }
+
+  const shouldShowField = (field: ApplicationField): boolean => {
+    if (!field.conditionalLogic) return true
+    
+    const dependentValue = data[field.conditionalLogic.dependsOn]
+    const condition = field.conditionalLogic.condition
+    const expectedValue = field.conditionalLogic.value
+    
+    switch (condition) {
+      case 'equals':
+        return dependentValue === expectedValue
+      case 'not_equals':
+        return dependentValue !== expectedValue
+      case 'contains':
+        return dependentValue && dependentValue.includes(expectedValue)
+      case 'greater_than':
+        return Number(dependentValue) > Number(expectedValue)
+      case 'less_than':
+        return Number(dependentValue) < Number(expectedValue)
+      default:
+        return true
+    }
+  }
+
+  const renderField = (field: ApplicationField) => {
+    const fieldKey = `${section.id}.${field.id}`
+    const hasError = validationErrors[fieldKey]
+    const value = data[field.id] || ''
+
+    if (!shouldShowField(field)) {
+      return null
+    }
+
+    const commonProps = {
+      id: field.id,
+      value,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => 
+        handleFieldChange(field.id, e.target.value),
+      placeholder: field.placeholder,
+      className: hasError ? 'border-red-500' : ''
+    }
+
+    switch (field.type) {
+      case 'text':
+      case 'email':
+      case 'phone':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              {...commonProps}
+              type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
+            />
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'number':
+      case 'currency':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <div className="relative">
+              {field.type === 'currency' && (
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
+              )}
+              <Input
+                {...commonProps}
+                type="number"
+                className={`${hasError ? 'border-red-500' : ''} ${field.type === 'currency' ? 'pl-8' : ''}`}
+                min={field.validation?.min}
+                max={field.validation?.max}
+                step={field.type === 'currency' ? '0.01' : '1'}
+              />
+            </div>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'date':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              {...commonProps}
+              type="date"
+            />
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'select':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Select
+              value={value}
+              onValueChange={(newValue) => handleFieldChange(field.id, newValue)}
+            >
+              <SelectTrigger className={hasError ? 'border-red-500' : ''}>
+                <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {field.options?.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'radio':
+        return (
+          <div key={field.id} className="space-y-3">
+            <Label>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <div className="space-y-2">
+              {field.options?.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id={`${field.id}-${option}`}
+                    name={field.id}
+                    value={option}
+                    checked={value === option}
+                    onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor={`${field.id}-${option}`} className="font-normal">
+                    {option.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'checkbox':
+        return (
+          <div key={field.id} className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={field.id}
+                checked={value === true}
+                onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
+              />
+              <Label htmlFor={field.id} className="font-normal">
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+            </div>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'textarea':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Textarea
+              id={field.id}
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              placeholder={field.placeholder}
+              className={hasError ? 'border-red-500' : ''}
+              rows={4}
+            />
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'file':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <FileUploadSection
+              fieldId={field.id}
+              applicationId={applicationId}
+              validation={field.validation}
+              multiple={true}
+            />
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      case 'signature':
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+              <p className="text-muted-foreground mb-4">Electronic signature will be captured here</p>
+              <Button variant="outline" type="button">
+                Add Signature
+              </Button>
+            </div>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[fieldKey]}</p>
+            )}
+          </div>
+        )
+
+      default:
+        return null
+    }
   }
 
   return (
-    <div className="space-y-4">
-      {section.description && (
-        <p className="text-sm text-muted-foreground">{section.description}</p>
-      )}
-      <div className="grid gap-4 md:grid-cols-2">
-        {section.fields.map((field) => (
-          <FieldRenderer
-            key={field.id}
-            field={field}
-            value={data[field.id]}
-            onValue={(v) => updateField(field.id, v)}
-            applicationId={applicationId}
-            error={validationErrors[field.id]}
-          />
-        ))}
-      </div>
+    <div className="space-y-6">
+      {fields.map(renderField)}
     </div>
   )
 }

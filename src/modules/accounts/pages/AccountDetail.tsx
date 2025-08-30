@@ -1,346 +1,788 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+// src/modules/accounts/pages/AccountDetail.tsx
+import React, { useState, useEffect, useMemo } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Edit, Building2, Mail, Phone, Globe, MapPin, Calendar, User, Plus } from 'lucide-react'
-import { TagInput } from '@/components/common/TagInput'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAccountManagement } from '@/modules/accounts/hooks/useAccountManagement'
+import { useContactManagement } from '@/modules/contacts/hooks/useContactManagement'
+import { useInventoryManagement } from '@/modules/inventory-management/hooks/useInventoryManagement'
 import { useToast } from '@/hooks/use-toast'
-import { useReturnTargets } from '@/hooks/useReturnTargets'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  Building2, 
-  Mail, 
-  Phone, 
-  Globe, 
-  MapPin,
-  Calendar,
-  User
+import { saveToLocalStorage, loadFromLocalStorage, generateId } from '@/lib/utils'
+
+import ContactForm from '@/modules/contacts/components/ContactForm'
+import DealForm from '@/modules/crm-sales-deal/components/DealForm'
+import NewQuoteForm from '@/modules/quote-builder/components/NewQuoteForm'
+import ServiceTicketForm from '@/modules/service-ops/components/ServiceTicketForm'
+import { DeliveryForm } from '@/modules/delivery-tracker/components/DeliveryForm'
+import { WarrantyClaimForm } from '@/modules/warranty-mgmt/components/WarrantyClaimForm'
+import AgreementForm from '@/modules/agreement-vault/components/AgreementForm'
+
+import {
+  ArrowLeft, Edit, Globe, Mail, MapPin, Phone, Plus, Save, RotateCcw, Settings,
 } from 'lucide-react'
-import { mockAccounts } from '@/mocks/accountsMock'
-import { mockContacts } from '@/mocks/contactsMock'
-import { Account, Contact } from '@/types'
-import { formatDate } from '@/lib/utils'
 
-export default function AccountDetail() {
-  const { accountId } = useParams<{ accountId: string }>()
-  const navigate = useNavigate()
+// Static sections already in the app
+import { AccountContactsSection } from '@/modules/accounts/components/AccountContactsSection'
+import { AccountDealsSection } from '@/modules/accounts/components/AccountDealsSection'
+import { AccountQuotesSection } from '@/modules/accounts/components/AccountQuotesSection'
+import { AccountServiceTicketsSection } from '@/modules/accounts/components/AccountServiceTicketsSection'
+import { AccountNotesSection } from '@/modules/accounts/components/AccountNotesSection'
+import { AccountDeliveriesSection } from '@/modules/accounts/components/AccountDeliveriesSection'
+
+// ---------- Types ----------
+type SectionType =
+  | 'contacts'
+  | 'deals'
+  | 'quotes'
+  | 'service'
+  | 'deliveries'
+  | 'warranty'
+  | 'payments'
+  | 'agreements'
+  | 'applications'
+  | 'invoices'
+  | 'notes'
+
+interface AccountSectionDescriptor {
+  id: string
+  type: SectionType
+  title: string
+  description: string
+  component: React.ComponentType<any>
+  sort?: number
+  defaultVisible?: boolean
+}
+interface AccountSection extends AccountSectionDescriptor {}
+
+// ---------- Dynamic Section Registry ----------
+const sectionModules = import.meta.glob('@/modules/**/account-section.{ts,tsx}', { eager: true }) as Record<
+  string,
+  { default?: AccountSectionDescriptor }
+>
+
+const dynamicSections: AccountSection[] = Object.values(sectionModules)
+  .map((m) => m?.default)
+  .filter(Boolean)
+  .map((d) => ({
+    ...d!,
+    sort: d?.sort ?? 100,
+    defaultVisible: d?.defaultVisible ?? true,
+  })) as AccountSection[]
+
+// Static core sections
+const coreSections: AccountSection[] = [
+  {
+    id: 'contacts',
+    type: 'contacts',
+    title: 'Associated Contacts',
+    description: 'Contacts linked to this account',
+    component: AccountContactsSection,
+    sort: 10,
+    defaultVisible: true,
+  },
+  {
+    id: 'deals',
+    type: 'deals',
+    title: 'Sales Deals',
+    description: 'Active and historical deals',
+    component: AccountDealsSection,
+    sort: 20,
+    defaultVisible: true,
+  },
+  {
+    id: 'quotes',
+    type: 'quotes',
+    title: 'Quotes',
+    description: 'Quotes and proposals',
+    component: AccountQuotesSection,
+    sort: 30,
+    defaultVisible: true,
+  },
+  {
+    id: 'service',
+    type: 'service',
+    title: 'Service Tickets',
+    description: 'Service requests and maintenance',
+    component: AccountServiceTicketsSection,
+    sort: 40,
+    defaultVisible: true,
+  },
+  {
+    id: 'deliveries',
+    type: 'deliveries',
+    title: 'Deliveries',
+    description: 'Delivery records and scheduling',
+    component: AccountDeliveriesSection,
+    sort: 50,
+    defaultVisible: true,
+  },
+  {
+    id: 'notes',
+    type: 'notes',
+    title: 'Notes & Comments',
+    description: 'Internal notes and comments',
+    component: AccountNotesSection,
+    sort: 999,
+    defaultVisible: true,
+  },
+]
+
+// Merge dynamic + core by type (dynamic can override)
+function mergeSections(core: AccountSection[], dyn: AccountSection[]): AccountSection[] {
+  const byType = new Map<SectionType, AccountSection>()
+  for (const s of core) byType.set(s.type, s)
+  for (const s of dyn) byType.set(s.type, { ...byType.get(s.type), ...s })
+  return Array.from(byType.values()).sort((a, b) => (a.sort ?? 100) - (b.sort ?? 100))
+}
+
+const AVAILABLE_SECTIONS = mergeSections(coreSections, dynamicSections)
+
+// ---------------- Quick Payment (inline modal) ----------------
+type QuickPayment = {
+  id: string
+  accountId: string
+  date: string // ISO date
+  amount: number
+  method: 'cash' | 'card' | 'ach' | 'check' | 'other'
+  reference?: string
+  notes?: string
+}
+
+function QuickPaymentForm({
+  accountId,
+  onSaved,
+  onCancel,
+}: {
+  accountId: string
+  onSaved: (p: QuickPayment | null) => void
+  onCancel: () => void
+}) {
   const { toast } = useToast()
-  const { afterSave } = useReturnTargets({})
-  
-  const [account, setAccount] = useState<Account | null>(null)
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
+  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10))
+  const [amount, setAmount] = useState<string>('')
+  const [method, setMethod] = useState<QuickPayment['method']>('card')
+  const [reference, setReference] = useState('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!accountId) {
-      navigate('/accounts')
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!amount) {
+      toast({ title: 'Amount required', description: 'Please enter a payment amount.', variant: 'destructive' })
       return
     }
-
-    // Load account data
-    const foundAccount = mockAccounts.sampleAccounts.find(acc => acc.id === accountId)
-    if (!foundAccount) {
-      toast({
-        title: 'Account not found',
-        description: 'The requested account could not be found.',
-        variant: 'destructive'
-      })
-      navigate('/accounts')
-      return
-    }
-
-    setAccount(foundAccount)
-    
-    // Load related contacts
-    const accountContacts = mockContacts.sampleContacts.filter(contact => 
-      contact.accountId === accountId
-    )
-    setContacts(accountContacts)
-    
-    setLoading(false)
-  }, [accountId, navigate, toast])
-
-  const handleEdit = () => {
-    navigate(`/accounts/${accountId}/edit`)
-  }
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this account?')) {
-      toast({
-        title: 'Account deleted',
-        description: 'The account has been successfully deleted.',
-      })
-      navigate('/accounts')
+    setSaving(true)
+    try {
+      const item: QuickPayment = {
+        id: generateId(),
+        accountId,
+        date,
+        amount: Number(amount),
+        method,
+        reference: reference || undefined,
+        notes: notes || undefined,
+      }
+      const existing = loadFromLocalStorage<QuickPayment[]>('payments', []) || []
+      saveToLocalStorage('payments', [item, ...existing])
+      toast({ title: 'Payment recorded', description: 'Payment has been saved.' })
+      onSaved(item)
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save payment.', variant: 'destructive' })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const getTypeColor = (type: string) => {
-    const typeConfig = mockAccounts.accountTypes.find(t => t.value === type)
-    return typeConfig?.color || 'bg-gray-100 text-gray-800'
-  }
+  return (
+    <DialogContent className="sm:max-w-lg w-[95vw] max-h-[85vh] overflow-y-auto">
+      <DialogTitle>Record Payment</DialogTitle>
+      <DialogDescription>Add a new payment for this account.</DialogDescription>
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="h-64 bg-gray-200 rounded"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
+      <form onSubmit={handleSave} className="space-y-4 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Date</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>Amount</Label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
           </div>
         </div>
-      </div>
-    )
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Method</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as QuickPayment['method'])}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="ach">ACH</SelectItem>
+                <SelectItem value="check">Check</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Reference #</Label>
+            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" />
+          </div>
+        </div>
+
+        <div>
+          <Label>Notes</Label>
+          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save Payment'}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  )
+}
+
+// ---------------- Page ----------------
+export default function AccountDetail() {
+  const { accountId } = useParams<{ accountId: string }>()
+  const { getAccount } = useAccountManagement()
+  const { contacts } = useContactManagement()
+  const { vehicles } = useInventoryManagement()
+  const { toast } = useToast()
+
+  const [account, setAccount] = useState<any>(null)
+
+  // Build default layout from currently-available sections (respecting defaultVisible)
+  const defaultLayout = useMemo(
+    () => AVAILABLE_SECTIONS.filter((s) => s.defaultVisible !== false).map((s) => s.type),
+    []
+  )
+
+  const [sections, setSections] = useState<SectionType[]>(defaultLayout as SectionType[])
+
+  // Modals
+  const [openContact, setOpenContact] = useState(false)
+  const [openDeal, setOpenDeal] = useState(false)
+  const [openQuote, setOpenQuote] = useState(false)
+  const [openService, setOpenService] = useState(false)
+  const [openDelivery, setOpenDelivery] = useState(false)
+  const [openPayment, setOpenPayment] = useState(false)
+  const [openWarranty, setOpenWarranty] = useState(false)
+  const [openAgreement, setOpenAgreement] = useState(false)
+
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  const storageKey = `account-detail-layout-${accountId ?? 'unknown'}`
+
+  useEffect(() => {
+    if (!accountId) return
+    const data = getAccount(accountId)
+    setAccount(data ?? null)
+  }, [accountId, getAccount])
+
+  // Load & merge saved layout with any new defaults
+  useEffect(() => {
+    if (!accountId) return
+    const saved = loadFromLocalStorage<SectionType[]>(storageKey, []) || []
+
+    const validTypes = new Set<SectionType>(AVAILABLE_SECTIONS.map((s) => s.type))
+    const cleaned = saved.filter((t) => validTypes.has(t))
+    const mergedUnique = Array.from(new Set<SectionType>([...cleaned, ...(defaultLayout as SectionType[])]))
+
+    setSections(mergedUnique)
+    if (saved.length && mergedUnique.length !== saved.length) setHasUnsavedChanges(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId])
+
+  const saveLayout = () => {
+    if (!accountId) return
+    saveToLocalStorage(storageKey, sections)
+    setHasUnsavedChanges(false)
+    toast({ title: 'Layout Saved', description: 'Your customized view has been saved successfully.' })
+  }
+
+  const resetLayout = () => {
+    setSections(defaultLayout as SectionType[])
+    setHasUnsavedChanges(true)
+    toast({ title: 'Layout Reset', description: 'Layout has been reset to default. Click Save to persist changes.' })
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    const newSections = Array.from(sections)
+    const [moved] = newSections.splice(result.source.index, 1)
+    newSections.splice(result.destination.index, 0, moved)
+    setSections(newSections)
+    setHasUnsavedChanges(true)
+  }
+
+  const addSection = (type: SectionType) => {
+    if (!sections.includes(type)) {
+      setSections([...sections, type])
+      setHasUnsavedChanges(true)
+      setIsAddSectionOpen(false)
+      toast({ title: 'Section Added', description: 'New section has been added to your view.' })
+    }
+  }
+
+  const removeSection = (type: SectionType) => {
+    setSections(sections.filter((s) => s !== type))
+    setHasUnsavedChanges(true)
+    toast({ title: 'Section Removed', description: 'Section has been removed from your view.' })
+  }
+
+  const refreshSection = (_: string) => {
+    // placeholder — sections read from local state / mocks / localStorage
+  }
+
+  // Save handlers (localStorage demos)
+  const handleContactSaved = (contact: any) => {
+    setOpenContact(false)
+    if (contact) {
+      refreshSection('contacts')
+      toast({ title: 'Success', description: 'Contact created successfully' })
+    }
+  }
+  const handleDealSaved = (deal: any) => {
+    setOpenDeal(false)
+    if (deal) {
+      refreshSection('deals')
+      toast({ title: 'Success', description: 'Deal created successfully' })
+    }
+  }
+  const handleQuoteSaved = (quote: any) => {
+    setOpenQuote(false)
+    if (quote) {
+      refreshSection('quotes')
+      toast({ title: 'Success', description: 'Quote created successfully' })
+    }
+  }
+  const handleServiceSaved = (ticket: any) => {
+    setOpenService(false)
+    if (ticket) {
+      refreshSection('service')
+      toast({ title: 'Success', description: 'Service ticket created successfully' })
+    }
+  }
+
+  const handleDeliverySaved = async (delivery: any | null) => {
+    setOpenDelivery(false)
+    if (!delivery) return
+    const existing = loadFromLocalStorage<any[]>('deliveries', [])
+    const withId = delivery.id ? delivery : { ...delivery, id: generateId() }
+    saveToLocalStorage('deliveries', [withId, ...existing])
+    refreshSection('deliveries')
+    toast({ title: 'Success', description: 'Delivery saved successfully' })
+  }
+
+  const handleWarrantySaved = async (claim: any | null) => {
+    setOpenWarranty(false)
+    if (!claim) return
+    const existing = loadFromLocalStorage<any[]>('warranties', [])
+    const withId = claim.id ? claim : { ...claim, id: generateId() }
+    saveToLocalStorage('warranties', [withId, ...existing])
+    refreshSection('warranty')
+    toast({ title: 'Success', description: 'Warranty claim saved successfully' })
+  }
+
+  const handleAgreementSaved = async (agreement: any | null) => {
+    setOpenAgreement(false)
+    if (!agreement) return
+    const existing = loadFromLocalStorage<any[]>('agreements', [])
+    const withId = agreement.id ? agreement : { ...agreement, id: generateId() }
+    saveToLocalStorage('agreements', [withId, ...existing])
+    // refreshSection('agreements') // enable if your section reads from LS
+    toast({ title: 'Success', description: 'Agreement saved successfully' })
+  }
+
+  // Generic fallback create (not used for payments/warranty/agreements)
+  const routeCreateForType = (t: SectionType) => {
+    const map: Partial<Record<SectionType, string>> = {
+      deals: `/deals/new?accountId=${accountId}&returnTo=account`,
+      quotes: `/quotes/new?accountId=${accountId}&returnTo=account`,
+      service: `/service/new?accountId=${accountId}&returnTo=account`,
+      deliveries: `/delivery/new?accountId=${accountId}&returnTo=account`,
+      applications: `/client-applications/new?accountId=${accountId}&returnTo=account`,
+      invoices: `/invoices/new?accountId=${accountId}&returnTo=account`,
+      // payments, warranty, agreements handled by modals below
+    }
+    const href = map[t]
+    if (href) window.location.href = href
   }
 
   if (!account) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Account not found</h2>
-        <p className="text-gray-600 mb-4">The requested account could not be found.</p>
-        <Button onClick={() => navigate('/accounts')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Accounts
-        </Button>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading account...</p>
+        </div>
       </div>
     )
   }
 
+  const getAccountTypeColor = (type: string) => {
+    const map: Record<string, string> = {
+      customer: 'bg-green-100 text-green-800',
+      prospect: 'bg-blue-100 text-blue-800',
+      vendor: 'bg-purple-100 text-purple-800',
+      partner: 'bg-orange-100 text-orange-800',
+      competitor: 'bg-red-100 text-red-800',
+    }
+    return map[type] || 'bg-gray-100 text-gray-800'
+  }
+
+  const availableToAdd = AVAILABLE_SECTIONS.filter(
+    (s) => !sections.includes(s.type) && s.defaultVisible !== false
+  )
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/accounts')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{account.name}</h1>
-            <div className="flex items-center space-x-2 mt-1">
-              <Badge className={getTypeColor(account.type)}>
-                {mockAccounts.accountTypes.find(t => t.value === account.type)?.label || account.type}
-              </Badge>
-              {account.industry && (
-                <span className="text-muted-foreground">• {account.industry}</span>
-              )}
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/accounts">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Accounts
+              </Link>
+            </Button>
+            <div>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-2xl font-bold">{account?.name}</h1>
+                {account?.type && <span className={`px-2 py-0.5 rounded-md text-xs ${getAccountTypeColor(account.type)}`}>{account.type}</span>}
+              </div>
+              <p className="text-muted-foreground">
+                {account?.industry ?? '—'} • Created{' '}
+                {account?.createdAt ? new Date(account.createdAt).toLocaleDateString() : '—'}
+              </p>
             </div>
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
+          <div className="flex items-center space-x-2">
+            {hasUnsavedChanges && (
+              <Button variant="outline" size="sm" onClick={saveLayout}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Layout
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={resetLayout}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset Layout
+            </Button>
 
-      {/* Account Information */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Basic Information */}
+            {/* Add Section */}
+            <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Section
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <div className="space-y-2">
+                  {availableToAdd.map((s) => (
+                    <Button
+                      key={s.id}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => addSection(s.type)}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">{s.title}</div>
+                        <div className="text-xs text-muted-foreground">{s.description}</div>
+                      </div>
+                    </Button>
+                  ))}
+                  {availableToAdd.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      All available sections are already added to this view.
+                    </p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button size="sm" asChild>
+              <Link to={`/accounts/${accountId}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Account
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Account info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Building2 className="h-5 w-5 mr-2" />
+              <Settings className="h-5 w-5 mr-2" />
               Account Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Type</label>
-                <p className="text-sm">{mockAccounts.accountTypes.find(t => t.value === account.type)?.label || account.type}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Industry</label>
-                <p className="text-sm">{account.industry || '—'}</p>
-              </div>
-            </div>
-            
-            {account.website && (
-              <div className="flex items-center space-x-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <a 
-                  href={account.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  {account.website}
-                </a>
-              </div>
-            )}
-            
-            {account.phone && (
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{account.phone}</span>
-              </div>
-            )}
-            
-            {account.email && (
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a 
-                  href={`mailto:${account.email}`}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  {account.email}
-                </a>
-              </div>
-            )}
-            
-            {account.address && (
-              <div className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div className="text-sm">
-                  <p>{account.address.street}</p>
-                  <p>{account.address.city}, {account.address.state} {account.address.zipCode}</p>
-                  {account.address.country && account.address.country !== 'USA' && (
-                    <p>{account.address.country}</p>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            <div className="pt-4 border-t">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <label className="text-muted-foreground">Created</label>
-                  <p>{formatDate(account.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground">Updated</label>
-                  <p>{formatDate(account.updatedAt)}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contacts */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                Contacts ({contacts.length})
-              </CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate(`/contacts/new?accountId=${accountId}&returnTo=account`)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Contact
-              </Button>
-            </div>
-          </CardHeader>
           <CardContent>
-            {contacts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">No contacts yet</p>
-                <p className="text-sm">Add a contact to get started</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {contacts.slice(0, 5).map((contact) => (
-                  <div key={contact.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{contact.firstName} {contact.lastName}</p>
-                      {contact.title && (
-                        <p className="text-sm text-muted-foreground">{contact.title}</p>
-                      )}
-                      <div className="flex items-center space-x-4 mt-1">
-                        {contact.email && (
-                          <a 
-                            href={`mailto:${contact.email}`}
-                            className="text-xs text-blue-600 hover:underline"
-                          >
-                            {contact.email}
-                          </a>
-                        )}
-                        {contact.phone && (
-                          <span className="text-xs text-muted-foreground">{contact.phone}</span>
-                        )}
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => navigate(`/contacts/${contact.id}`)}
-                    >
-                      View
-                    </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                {!!account?.website && (
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={account.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {account.website}
+                    </a>
                   </div>
-                ))}
-                {contacts.length > 5 && (
-                  <div className="text-center pt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => navigate(`/contacts?accountId=${accountId}`)}
-                    >
-                      View all {contacts.length} contacts
-                    </Button>
+                )}
+                {!!account?.email && (
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${account.email}`} className="text-primary hover:underline">
+                      {account.email}
+                    </a>
+                  </div>
+                )}
+                {!!account?.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${account.phone}`} className="text-primary hover:underline">
+                      {account.phone}
+                    </a>
                   </div>
                 )}
               </div>
+
+              <div className="space-y-4">
+                {!!account?.address && (
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="text-sm">
+                      <div>{account.address?.street}</div>
+                      <div>
+                        {account.address?.city}, {account.address?.state} {account.address?.zipCode}
+                      </div>
+                      <div>{account.address?.country}</div>
+                    </div>
+                  </div>
+                )}
+
+                {Array.isArray(account?.tags) && account.tags.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {account.tags.map((tag: string) => (
+                        <span key={tag} className="text-xs px-2 py-0.5 rounded-md border">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!!account?.notes && (
+              <div className="mt-6 pt-6 border-t">
+                <p className="text-sm font-medium mb-2">Notes</p>
+                <p className="text-sm text-muted-foreground">{account.notes}</p>
+              </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Sections (drag & drop) */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="account-sections">
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6">
+                {sections.map((type, index) => {
+                  const config = AVAILABLE_SECTIONS.find((s) => s.type === type)
+                  if (!config) return null
+                  const Section = config.component as any
+
+                  // Base props
+                  const commonProps = {
+                    accountId: accountId!,
+                    onRemove: () => removeSection(type),
+                    onCreate: () => routeCreateForType(type),
+                  }
+
+                  // Override “create” for specific sections to open modals instead of routing
+                  const withSpecialHandlers =
+                    type === 'deliveries'
+                      ? { ...commonProps, onAddDelivery: () => setOpenDelivery(true) }
+                      : type === 'payments'
+                        ? { ...commonProps, onCreate: () => setOpenPayment(true) }
+                        : type === 'warranty'
+                          ? { ...commonProps, onCreate: () => setOpenWarranty(true) }
+                          : type === 'agreements'
+                            ? { ...commonProps, onCreate: () => setOpenAgreement(true) }
+                            : commonProps
+
+                  return (
+                    <Draggable key={type} draggableId={type} index={index}>
+                      {(p, s) => (
+                        <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
+                          {type === 'deals' ? (
+                            <AccountDealsSection
+                              {...withSpecialHandlers}
+                              isDragging={s.isDragging}
+                              onAddDeal={() => setOpenDeal(true)}
+                            />
+                          ) : type === 'quotes' ? (
+                            <AccountQuotesSection
+                              {...withSpecialHandlers}
+                              isDragging={s.isDragging}
+                              onAddQuote={() => setOpenQuote(true)}
+                            />
+                          ) : type === 'service' ? (
+                            <AccountServiceTicketsSection
+                              {...withSpecialHandlers}
+                              isDragging={s.isDragging}
+                              onAddService={() => setOpenService(true)}
+                            />
+                          ) : type === 'deliveries' ? (
+                            <AccountDeliveriesSection
+                              {...withSpecialHandlers}
+                              isDragging={s.isDragging}
+                            />
+                          ) : (
+                            <Section
+                              {...withSpecialHandlers}
+                              isDragging={s.isDragging}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  )
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+
+        {/* Unsaved indicator */}
+        {hasUnsavedChanges && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <Card className="shadow-lg border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                  <p className="text-sm font-medium text-orange-800">You have unsaved layout changes</p>
+                  <Button size="sm" onClick={saveLayout}>Save Now</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
-      {/* Tabs for additional sections */}
-      <Tabs defaultValue="notes" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="tags">Tags</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="notes">
-          <NotesSection 
-            entityId={accountId!}
-            entityType="account"
+      {/* Contact Modal */}
+      <Dialog open={openContact} onOpenChange={setOpenContact}>
+        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Contact</DialogTitle>
+          <DialogDescription className="sr-only">Add a new contact for this account.</DialogDescription>
+          <ContactForm accountId={account.id} returnTo="account" onSaved={handleContactSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Deal Modal */}
+      <Dialog open={openDeal} onOpenChange={setOpenDeal}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Deal</DialogTitle>
+          <DialogDescription className="sr-only">Create a new sales deal for this account.</DialogDescription>
+          <DealForm accountId={account.id} returnTo="account" onSaved={handleDealSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Quote Modal */}
+      <Dialog open={openQuote} onOpenChange={setOpenQuote}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Quote</DialogTitle>
+          <DialogDescription className="sr-only">Create a new quote for this account.</DialogDescription>
+          <NewQuoteForm accountId={account.id} returnTo="account" onSaved={handleQuoteSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Ticket Modal */}
+      <Dialog open={openService} onOpenChange={setOpenService}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Create Service Ticket</DialogTitle>
+          <DialogDescription className="sr-only">Create a new service request for this account.</DialogDescription>
+          <ServiceTicketForm accountId={account.id} returnTo="account" onSaved={handleServiceSaved} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delivery Modal (DeliveryForm has its own overlay) */}
+      {openDelivery && (
+        <DeliveryForm
+          customers={contacts}
+          vehicles={vehicles}
+          onSave={async (d) => handleDeliverySaved({ ...d, accountId })}
+          onCancel={() => setOpenDelivery(false)}
+        />
+      )}
+
+      {/* Payments Modal */}
+      <Dialog open={openPayment} onOpenChange={setOpenPayment}>
+        <QuickPaymentForm
+          accountId={account.id}
+          onSaved={() => {
+            setOpenPayment(false)
+            toast({ title: 'Success', description: 'Payment recorded successfully' })
+            refreshSection('payments')
+          }}
+          onCancel={() => setOpenPayment(false)}
+        />
+      </Dialog>
+
+      {/* Warranty Claim Modal */}
+      <Dialog open={openWarranty} onOpenChange={setOpenWarranty}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">New Warranty Claim</DialogTitle>
+          <DialogDescription className="sr-only">Create a warranty claim for this account.</DialogDescription>
+          <WarrantyClaimForm
+            accountId={account.id}
+            onSaved={(claim) => handleWarrantySaved(claim)}
+            onCancel={() => setOpenWarranty(false)}
           />
-        </TabsContent>
-        
-        <TabsContent value="tags">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags</CardTitle>
-              <CardDescription>
-                Organize and categorize this account with tags
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagInput
-                tags={account.tags || []}
-                onTagsChange={(newTags) => {
-                  // In a real app, this would update the account
-                  console.log('Tags updated:', newTags)
-                  toast({
-                    title: 'Tags updated',
-                    description: 'Account tags have been updated successfully.'
-                  })
-                }}
-                placeholder="Add tags..."
-                suggestions={['VIP Customer', 'High Value', 'Commercial', 'Referral Source', 'Priority']}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agreement Modal */}
+      <Dialog open={openAgreement} onOpenChange={setOpenAgreement}>
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">New Agreement</DialogTitle>
+          <DialogDescription className="sr-only">Create a new agreement for this account.</DialogDescription>
+          <AgreementForm
+            accountId={account.id}
+            returnTo="account"
+            onSaved={handleAgreementSaved}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
