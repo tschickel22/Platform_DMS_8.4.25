@@ -25,12 +25,12 @@ interface Props {
   isDragging?: boolean
 }
 
-const AccountAgreementsSection: React.FC<Props> = ({
+export function AccountAgreementsSection({
   accountId,
   onCreate,
   onRemove,
   isDragging,
-}) => {
+}: Props) {
   const items = useMemo(() => {
     const all = loadFromLocalStorage<Agreement[]>('agreements', []) || []
     return all.filter(a => a.accountId === accountId)
